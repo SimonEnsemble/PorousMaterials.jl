@@ -1,4 +1,17 @@
+"""
+    Frame = Framework(a,b,c,α,β,γ,N,Ele,f_coords,convM)
 
+Represents a 3D crystal structure read through a .cssr file.
+
+#Arguments
+* a,b,c::Float64 : are unit cell dimensions
+* α,β,γ::Float64 : are unit cell angles
+* N::Int64 : is number of atoms
+* Ele::Array{String,1} : is a vector of elements in order
+* f_coords::Array{Float64,2} : is a 2D array of fractional coordinates of the atoms in order
+* convM::Array{Float64,2} : is a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
+
+"""
 struct Framework
     a::Float64
     b::Float64
@@ -12,6 +25,11 @@ struct Framework
     convM::Array{Float64,2}
 end
 
+"""
+    Frame = readcssr("filename.cssr")
+
+Read a .cssr file and construct a Framework object
+"""
 function readcssr(cssrfilename::String)
     f = open(cssrfilename,"r")
     lines = readlines(f)
@@ -40,6 +58,11 @@ end
 
 HKUST = readcssr("HKUST-1.cssr");
 
+"""
+    replicate_to_xyz(framework, xyzfilename, comment="")
+
+Write a .xyz file from a Framework object. Write an optional comment to the .xyz file if desired.
+"""
 function replicate_to_xyz(framework::Framework, xyzfilename::String, comment::String="")
     n_x = 1
     n_y = 2
