@@ -1,3 +1,9 @@
+module Frame
+export Framework, readcssr, replicate_to_xyz
+end
+
+global PATH_TO_STRUCTURE_FILES = homedir()*"/Box/School/Code/StructureFiles"
+
 """
     Frame = Framework(a,b,c,α,β,γ,N,Ele,f_coords,convM)
 
@@ -7,6 +13,7 @@ Represents a 3D crystal structure read through a .cssr file.
 * a,b,c::Float64 : are unit cell dimensions
 * α,β,γ::Float64 : are unit cell angles
 * N::Int64 : is number of atoms
+* Ω::Float64 is the volume of the cell
 * Ele::Array{String,1} : is a vector of elements in order
 * f_coords::Array{Float64,2} : is a 2D array of fractional coordinates of the atoms in order
 * convM::Array{Float64,2} : is a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
@@ -20,10 +27,13 @@ struct Framework
     β::Float64
     γ::Float64
     N::Int64
+    Ω::Float64
     Ele::Array{String,1}
     f_coords::Array{Float64,2}
     convM::Array{Float64,2}
 end
+
+methods(Framework)
 
 """
     Frame = readcssr("filename.cssr")
@@ -53,7 +63,7 @@ function readcssr(cssrfilename::String)
     close(f)
     Ω = a*b*c*sqrt(1-cos(α)^2-cos(β)^2-cos(γ)^2+2*cos(α)*cos(β)*cos(γ))
     M = [[a, b*cos(γ), c*cos(β)] [0, b*sin(γ), c*(cos(α)-cos(β)*cos(γ))/sin(γ)] [0, 0, Ω/(a*b*sin(γ))]]
-    return Framework(a,b,c,α,β,γ,N,Ele,([x y z]),M)
+    return Framework(a,b,c,α,β,γ,N,Ω,Ele,([x y z]),M)
 end
 
 HKUST = readcssr("HKUST-1.cssr");
@@ -63,25 +73,20 @@ HKUST = readcssr("HKUST-1.cssr");
 
 Write a .xyz file from a Framework object. Write an optional comment to the .xyz file if desired.
 """
-function replicate_to_xyz(framework::Framework, xyzfilename::String, comment::String="")
-    n_x = 1
-    n_y = 2
-    n_z = 1
-    N = framework.N*n_x*n_y*n_z
-    Ele = framework.Ele
-    c_coords = framework.convM*framework.f_coords'
+function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::String="", nx = 0, ny = 0, nz = 0)
     f = open(xyzfilename,"w")
-    write(f, "$N\n")
-    write(f, "$comment\n")
-    for i = 1:n_x, j = 1:n_y, k = 1:n_z
+    @printf(f,"%d\n%s\n", framework.N*(nx+1)*(ny+1)*(nz+1),comment)
+    c_coords = similar(framework.f_coords)
+    fcoord_temp = similar(framework.f_coords)
+    
+    for i = 0:nx, j = 0:ny, k = 0:nz
+        fcoord_temp = framework.f_coords .+ [i j k]
+        c_coords = framework.convM*fcoord_temp'
         for ii = 1:size(c_coords,2)
-            str = "$(Ele[ii])\t$(c_coords[1,ii])\t$(c_coords[2,ii])\t$(c_coords[3,ii])\n"
-            write(f,str)
+            @printf(f,"%s\t%.4f\t%.4f\t%.4f\n",framework.Ele[ii],c_coords[1,ii],c_coords[2,ii],c_coords[3,ii])
         end
     end
     close(f)
 end
 
-replicate_to_xyz(HKUST,"testfile1.xyz","Test run")
-
-
+replicate_to_xyz(HKUST,"testfile2.xyz",comment="Replicated once in the x-direction",nx=1)
