@@ -14,7 +14,7 @@ Data structure for a 3D crystal structure.
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: degrees)
 - `n_atoms::Int64`: number of atoms in a unit cell
-- `Ω::Float64`: the volume of the unit cell
+- `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `atoms::Array{String,1}`: list of atoms composing crystal unit cell, in strict order
 - `f_coords::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms in order
 - `f_to_c::Array{Float64,2}`: is a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
@@ -45,29 +45,36 @@ end
 Read a .cssr file and construct a Framework object
 """
 function readcssr(cssrfilename::String)
-    f = open(cssrfilename,"r")
+    f = open(cssrfilename, "r")
     lines = readlines(f)
-    N = length(lines)-4
-    a,b,c,α,β,γ = Array{Float64}(6)
-    x = Array{Float64}(N)
+
+    n_atoms = length(lines) - 4
+
+    a, b, c, α, β, γ = Array{Float64}(6)
+    x = Array{Float64}(N) # fractional
     y = similar(x)
     z = similar(x)
     atoms = Array{String}(N)
+
     for (i,line) in enumerate(lines)
         str = split(line)
         if (i == 1)
-            a,b,c = map(x->parse(Float64,x),str)
+            a, b, c = map(x->parse(Float64, x), str)
         elseif (i == 2)
-            α,β,γ = map(x->parse(Float64,x),str[1:3])
+            α, β, γ = map(x->parse(Float64, x), str[1:3])
         elseif (i > 4)
-            atoms[i-4] = str[2]
-            x[i-4],y[i-4],z[i-4] = map(x->parse(Float64,x),str[3:5])
+            atoms[i - 4] = str[2]
+            x[i - 4], y[i - 4], z[i - 4] = map(x->parse(Float64, x), str[3:5])
         end
     end
     close(f)
-    Ω = a*b*c*sqrt(1-cos(α)^2-cos(β)^2-cos(γ)^2+2*cos(α)*cos(β)*cos(γ))
-    M = [[a, b*cos(γ), c*cos(β)] [0, b*sin(γ), c*(cos(α)-cos(β)*cos(γ))/sin(γ)] [0, 0, Ω/(a*b*sin(γ))]]
-    return Framework(a,b,c,α,β,γ,N,Ω,atoms,([x y z]),M)
+
+    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
+    f_to_C = [[a, b * cos(γ), c * cos(β)] [0, b * sin(γ), c * (cos(α) - cos(β) * cos(γ)) / sin(γ)] [0, 0, Ω / (a * b * sin(γ))]]
+    error("Arni: implement Cartesian to fractional matrix")
+ #     C_to_f = 
+    @assert(f_to_C * C_to_f == eye(3))
+    return Framework(a, b, c, α, β, γ, n_atoms, Ω, atoms, ([x y z]), f_to_C, C_to_f)
 end
 
 """
