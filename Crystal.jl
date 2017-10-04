@@ -84,20 +84,21 @@ Write a .xyz file from a Framework object. Write an optional comment to the .xyz
 Extend the structure in the x-,y- or z-direction by changing nx, ny or nz respectively. 
 A value of 1 replicates the structure once in the desired direction
 """
-function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::String="", nx = 0, ny = 0, nz = 0)
-    f = open(xyzfilename,"w")
-    @printf(f,"%d\n%s\n", framework.n_atoms*(nx+1)*(ny+1)*(nz+1),comment)
-    c_coords = similar(framework.f_coords)
-    fcoord_temp = similar(framework.f_coords)
+function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::String="", nx::Int=0, ny::Int=0, nz::Int=0)
+    f = open(xyzfilename, "w")
+    @printf(f, "%d\n%s\n", framework.n_atoms * (nx + 1) * (ny + 1) * (nz + 1), comment)
     
     for i = 0:nx, j = 0:ny, k = 0:nz
-        fcoord_temp = framework.f_coords .+ [i j k]
-        c_coords = framework.f_to_c*fcoord_temp'
-        for ii = 1:size(c_coords,2)
-            @printf(f,"%s\t%.4f\t%.4f\t%.4f\n",framework.atoms[ii],c_coords[1,ii],c_coords[2,ii],c_coords[3,ii])
+        f_coords = framework.f_coords .+ [i j k]
+        c_coords = framework.f_to_c * f_coords'
+        for ii = 1:size(c_coords, 2)
+            @printf(f, "%s\t%.4f\t%.4f\t%.4f\n", framework.atoms[ii], c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
         end
     end
     close(f)
+
+    println("See ", xyzfilename)
+    return
 end
 
 end # end module
