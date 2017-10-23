@@ -1,9 +1,9 @@
 """All things crystal structures"""
 module Crystal 
 
-export Framework, readcssr, replicate_to_xyz
+export Framework, readcssr, replicate_to_xyz, correct_cssr_line
 
-global PATH_TO_STRUCTURE_FILES = homedir() * "/Box/School/Code/StructureFiles"
+global PATH_TO_STRUCTURE_FILES = homedir() * "/Dropbox/Code/StructureFiles"
 
 """
     framework = Framework(a, b, c, α, β, γ, N, atoms, f_coords, f_to_c, c_to_f)
@@ -36,8 +36,8 @@ struct Framework
     atoms::Array{String, 1}
     f_coords::Array{Float64, 2}
 
-    f_to_c::Array{Float64, 2}
-    c_to_f::Array{Float64, 2}
+    f_to_C::Array{Float64, 2}
+    C_to_f::Array{Float64, 2}
 end
 
 """
@@ -50,20 +50,20 @@ function readcssr(cssrfilename::String)
     lines = readlines(f)
 
     n_atoms = length(lines) - 4
-
     a, b, c, α, β, γ = Array{Float64}(6)
-    x = Array{Float64}(N) # fractional
+    x = Array{Float64}(n_atoms) # fractional
     y = similar(x)
     z = similar(x)
-    atoms = Array{String}(N)
+    atoms = Array{String}(n_atoms)
 
     for (i,line) in enumerate(lines)
         str = split(line)
         if (i == 1)
-            a, b, c = map(x->parse(Float64, x), str)
+            a, b, c = map(x->parse(Float64, x), str[end-2:end])
         elseif (i == 2)
-            α, β, γ = map(x->parse(Float64, x), str[1:3]).*π/180
-        elseif (i > 4)
+            α, β, γ = map(x->parse(Float64, x), str[3:5]).*π/180
+        elseif (i > 5)
+	    str = correct_cssr_line(str)
             atoms[i - 4] = str[2]
             x[i - 4], y[i - 4], z[i - 4] = map(x->parse(Float64, x), str[3:5])
         end
@@ -72,10 +72,10 @@ function readcssr(cssrfilename::String)
 
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
     f_to_C = [[a, b * cos(γ), c * cos(β)] [0, b * sin(γ), c * (cos(α) - cos(β) * cos(γ)) / sin(γ)] [0, 0, Ω / (a * b * sin(γ))]]
-    error("Arni: implement Cartesian to fractional matrix")
+#    error("Arni: implement Cartesian to fractional matrix")
     C_to_f = [[1/a, -cos(γ)/(a*sin(γ)), b*c*(cos(α)*cos(γ)-cos(β))/(Ω*sin(γ))] [0, 1/(b*sin(γ)), a*c*(cos(β)*cos(γ)-cos(α))/(Ω*sin(γ))] [0, 0, a*b*sin(γ)/Ω]]
-    @assert(f_to_C * C_to_f == eye(3))
-    return Framework(a, b, c, α, β, γ, n_atoms, Ω, atoms, ([x y z]), f_to_C, C_to_f)
+#    @assert(f_to_C * C_to_f == eye(3))
+    return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, ([x y z]), f_to_C, C_to_f)
 end
 
 """
@@ -102,4 +102,24 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::St
     return
 end
 
+function correct_cssr_line(str)
+    if (length(str) == 14)
+	tempbool = Array{Bool}(length(str[1]),1)
+	for (k,ch) in enumerate(str[1])
+	    tempbool[k] = isdigit(ch)
+	end
+
+	ind = findfirst(tempbool,false);
+	unshift!(str,str[1][1:ind-1])
+	str[2] = str[2][ind:end]
+    end
+    for (k,ch) in enumerate(str[2])
+	if isdigit(ch)
+	    str[2] = str[2][1:k-1]
+	    break
+	end
+    end
+    return str
+end
+ 
 end # end module
