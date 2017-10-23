@@ -62,7 +62,7 @@ function readcssr(cssrfilename::String)
         if (i == 1)
             a, b, c = map(x->parse(Float64, x), str)
         elseif (i == 2)
-            α, β, γ = map(x->parse(Float64, x), str[1:3])
+            α, β, γ = map(x->parse(Float64, x), str[1:3]).*π/180
         elseif (i > 4)
             atoms[i - 4] = str[2]
             x[i - 4], y[i - 4], z[i - 4] = map(x->parse(Float64, x), str[3:5])
@@ -73,7 +73,7 @@ function readcssr(cssrfilename::String)
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
     f_to_C = [[a, b * cos(γ), c * cos(β)] [0, b * sin(γ), c * (cos(α) - cos(β) * cos(γ)) / sin(γ)] [0, 0, Ω / (a * b * sin(γ))]]
     error("Arni: implement Cartesian to fractional matrix")
- #     C_to_f = 
+    C_to_f = [[1/a, -cos(γ)/(a*sin(γ)), b*c*(cos(α)*cos(γ)-cos(β))/(Ω*sin(γ))] [0, 1/(b*sin(γ)), a*c*(cos(β)*cos(γ)-cos(α))/(Ω*sin(γ))] [0, 0, a*b*sin(γ)/Ω]]
     @assert(f_to_C * C_to_f == eye(3))
     return Framework(a, b, c, α, β, γ, n_atoms, Ω, atoms, ([x y z]), f_to_C, C_to_f)
 end
