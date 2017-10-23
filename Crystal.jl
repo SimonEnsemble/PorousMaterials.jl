@@ -3,7 +3,7 @@ module Crystal
 
 export Framework, readcssr, replicate_to_xyz, correct_cssr_line
 
-global PATH_TO_STRUCTURE_FILES = homedir() * "/Dropbox/Code/StructureFiles"
+global PATH_TO_STRUCTURE_FILES = homedir() * "/Dropbox/Code/PorousMaterials.jl/cssrFiles"
 
 """
     framework = Framework(a, b, c, α, β, γ, N, atoms, f_coords, f_to_c, c_to_f)
