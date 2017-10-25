@@ -9,7 +9,12 @@ export LennardJonesForceField, ljffConstruct, lennard_jones_potential_energy
 Data structure for a Lennard Jones forcefield, read from a file containing UFF parameters.
 
 # Arguments
-- `cutoffradius::Float64
+- `cutoffradius::Float64`: cut-off radius to define where the potential energy goes to zero, rather than taking the limit as r → ∞ (units: Angstrom)
+- `epsilon_dict::Dict{String, Float64}`: Dictionary that connects element acronyms to an ϵ, which is the depth of a Lennard Jones potential well
+- `sigma_dict::Dict{String, Float64}`: Dictionary that connects element acronyms to a σ, which is the finite distance where the potential between atoms goes to zero
+- `atom_to_id::Dict{String, Int64}`: Dictionary that connects element acronyms to a unique integer value.
+- `epsilons::Array{Float64,2}`: Two dimensional matrix that contains the ϵ interacting values between two elements. Row/Column number correspond to id's from atom_to_id (units: kcal/mol)
+- `sigmas::Array{Float64,2}`: Two dimensional matrix that contains the σ interacting values between two elements. Row/Column number correspond to id's from atom_to_id (units: Angstrom)
 """
 struct LennardJonesForceField
 	cutoffradius::Float64
@@ -20,6 +25,11 @@ struct LennardJonesForceField
 	sigmas::Array{Float64,2}
 end
 
+"""
+	ljforcefield = ljffConstruct("filename.csv")
+
+Read a .csv file containing UFF parameters (with the following column order: [Element, σ, ϵ]) and constructs a LennardJonesForceField object
+"""
 function ljffConstruct(filename::String)
 	f = open(filename,"r")
 	lines = readlines(f)
@@ -59,6 +69,11 @@ function ljffConstruct(filename::String)
 
 end # function end
 
+"""
+	V = lennard_jones_potential_energy(r, ljforcefield, ele1, ele2)
+
+Calculate the lennard jones potential energy between two elements (ele1 and ele2). A cut-off radius defines where the potential goes to zero
+"""
 function lennard_jones_potential_energy(r::Float64, ljforcefield::LennardJonesForceField, ele1::String, ele2::String)
 	σ = ljforcefield.sigmas[ljforcefield.atom_to_id[ele1], ljforcefield.atom_to_id[ele2]]
 	if (r > ljforcefield.cutoffradius)
