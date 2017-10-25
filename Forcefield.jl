@@ -1,10 +1,18 @@
-""" """
+"""All things energy related"""
 module Forcefield
 
 export LennardJonesForceField, ljffConstruct, lennard_jones_potential_energy
 
+"""
+	ljforcefield = LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
+
+Data structure for a Lennard Jones forcefield, read from a file containing UFF parameters.
+
+# Arguments
+- `cutoffradius::Float64
+"""
 struct LennardJonesForceField
-	cutoffradius::Array{Float64}
+	cutoffradius::Float64
 	epsilon_dict::Dict{String, Float64}
 	sigma_dict::Dict{String, Float64}
 	atom_to_id::Dict{String, Int64}
@@ -18,7 +26,7 @@ function ljffConstruct(filename::String)
 
 	n_ele = length(lines)-1
 	
-	cutoffradius = Array{Float64}(n_ele)
+	cutoffradius = 14.0
 	epsilon_dict = Dict{String, Float64}()
 	sigma_dict = Dict{String, Float64}()
 	atom_to_id = Dict{String, Int64}()
@@ -32,7 +40,6 @@ function ljffConstruct(filename::String)
 			σ,ϵ = map(x->parse(Float64, x), str[2:3])
 			epsilon_dict[str[1]] = ϵ
 			sigma_dict[str[1]] = σ	
-			cutoffradius[i-1] = 2.5*σ
 			atom_to_id[str[1]] = i-1
 			elements[i-1] = str[1]
 		end
@@ -47,14 +54,14 @@ function ljffConstruct(filename::String)
 		end
 	end
 
-	@printf("%s\t%s\t%s\t%s\t%s\t%s",typeof(cutoffradius),typeof(epsilon_dict),typeof(sigma_dict),typeof(atom_to_id),typeof(epsilons),typeof(sigmas))
+#	@printf("%s\t%s\t%s\t%s\t%s\t%s",typeof(cutoffradius),typeof(epsilon_dict),typeof(sigma_dict),typeof(atom_to_id),typeof(epsilons),typeof(sigmas))
 	return LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
 
 end # function end
 
 function lennard_jones_potential_energy(r::Float64, ljforcefield::LennardJonesForceField, ele1::String, ele2::String)
 	σ = ljforcefield.sigmas[ljforcefield.atom_to_id[ele1], ljforcefield.atom_to_id[ele2]]
-	if (r > 2.5*σ)
+	if (r > ljforcefield.cutoffradius)
 		NA = 6.022e23
 		kcal_to_kJ = 4.184
 		ratio = (σ/r)^2
