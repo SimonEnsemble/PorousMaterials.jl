@@ -57,9 +57,9 @@ function lennard_jones_potential_energy(r::Float64, ljforcefield::LennardJonesFo
 	if (r > 2.5*σ)
 		NA = 6.022e23
 		kcal_to_kJ = 4.184
-		ratio = σ/r 
+		ratio = (σ/r)^2
 		epsilon = ljforcefield.epsilons[ljforcefield.atom_to_id[ele1], ljforcefield.atom_to_id[ele2]]*kcal_to_kJ*NA
-		return 4*epsilon*(ratio^12 - ratio^6)
+		return 4*epsilon*(ratio^2 - ratio)
 	else
 		return 0
 	end
