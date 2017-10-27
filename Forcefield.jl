@@ -1,7 +1,10 @@
 """All things energy related"""
 module Forcefield
 
-export LennardJonesForceField, ljffConstruct, lennard_jones_potential_energy
+export LennardJonesForceField, ljffConstruct, lennard_jones
+
+const NA = 6.022e23
+const kcal_to_kJ = 4.184
 
 """
 	ljforcefield = LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
@@ -70,23 +73,19 @@ function ljffConstruct(filename::String)
 end # function end
 
 """
-	V = lennard_jones_potential_energy(r, ljforcefield, ele1, ele2)
+	V = lennard_jones_potential_energy(r, σ, ϵ)
 
-Calculate the lennard jones potential energy between two elements (ele1 and ele2). A cut-off radius defines where the potential goes to zero
+Calculate the lennard jones potential energy given a radius r between two molecules. σ and ϵ are specific to interaction between two elements
 """
-function lennard_jones_potential_energy(r::Float64, ljforcefield::LennardJonesForceField, ele1::String, ele2::String)
-	σ = ljforcefield.sigmas[ljforcefield.atom_to_id[ele1], ljforcefield.atom_to_id[ele2]]
-	if (r > ljforcefield.cutoffradius)
-		NA = 6.022e23
-		kcal_to_kJ = 4.184
-		ratio = (σ/r)^2
-		epsilon = ljforcefield.epsilons[ljforcefield.atom_to_id[ele1], ljforcefield.atom_to_id[ele2]]*kcal_to_kJ*NA
-		return 4*epsilon*(ratio^2 - ratio)
-	else
-		return 0
-	end
+function lennard_jones(r::Float64, σ::Float64, ϵ::Float64 )
+	ϵ = ϵ*kcal_to_kJ*NA
+	ratio = (σ/r)^2
+	return 4*ϵ*(ratio^2 - ratio)
 end # function end
 
+function vdw_energy(ljforcefield::LennardJonesForceField, molecule::Molecule, pos)
+	@pass
+end # function end
 
 
 end # end module
