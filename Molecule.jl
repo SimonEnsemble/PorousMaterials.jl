@@ -6,7 +6,7 @@ type Molecule
 	n_atoms::Int64
 	atoms::Array{String}
 	x::Array{Float64,2}
-#	charges::Array{Float64}
+	charges::Array{Float64}
 end
 
 function ConstructMolecule(filename::String)
@@ -29,12 +29,33 @@ function ConstructMolecule(filename::String)
 			vals = split(line)
 			pos[i-4,:] = map(x->parse(Float64,x), vals[1:3])
 			Atoms[i-4] = vals[4]
-#			Charge[i-4] = readcharge(vals[5])
+			Charge[i-4] = readcharge(vals[6])
 		end
 	end
 	close(f)
 
 	return Molecule(nAtoms, Atoms, pos)
+end # End function
+
+function readcharge(val::String)
+	num = parse(Int64,val)
+	if (num == 7)
+		return -3
+	elseif (num == 6)
+		return -2
+	elseif (num == 5)
+		return -1
+	elseif (num == 0)
+		return 0
+	elseif (num == 3)
+		return 1
+	elseif (num == 2)
+		return 2
+	elseif (num == 1)
+		return 3
+	else
+		error("Charge not valid")
+	end # End if/if-else/else
 end # End function
 
 end # End module

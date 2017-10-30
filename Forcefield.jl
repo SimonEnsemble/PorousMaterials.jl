@@ -57,7 +57,7 @@ function ljffConstruct(filename::String)
 			elements[i-1] = str[1]
 		end
 	end
-
+	close(f)
 	for (i,ele1) in enumerate(elements)
 		for (k,ele2) in enumerate(elements[i:end])
 			epsilons[i,k+i-1] = sqrt(epsilon_dict[ele1]*epsilon_dict[ele2])
@@ -83,9 +83,21 @@ function lennard_jones(r::Float64, σ::Float64, ϵ::Float64 )
 	return 4*ϵ*(ratio^2 - ratio)
 end # function end
 
-function vdw_energy(ljforcefield::LennardJonesForceField, molecule::Molecule, pos)
-	@pass
+function vdw_energy(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, pos)
+	r = 0.0
+	σ = 0.0
+	ϵ = 0.0
+	for i=1:molecule.n_atoms
+		sum = 0
+		for k=1:frame.n_atoms
+			r = norm(molecule.x[i,:]-(frame.f_coords*frame.f_to_C)[k,:])
+			σ = ljforcefield.sigmas[ljforcefield.atom_to_id[frame.atoms[k]],ljforcefield.atom_to_id[molecule.atoms[i]]]
+			ϵ = ljforcefield.epsilons[ljforcefield.atom_to_id[frame.atoms[k]], ljforcefield.atom_to_id[molecule.atoms[i]]]
+			if (r < 14 && r > 0.1)
+				sum += lennard_jones(r,σ,ϵ)	
+			end
+		end
+	end	
 end # function end
-
 
 end # end module
