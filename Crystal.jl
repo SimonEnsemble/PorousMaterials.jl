@@ -19,7 +19,7 @@ Data structure for a 3D crystal structure.
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `atoms::Array{String,1}`: list of atoms composing crystal unit cell, in strict order
 - `f_coords::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order;
-    f_coords[:, 1] is first atom's fractional coords
+    f_coords[1,:] is first atom's fractional coords
 - `f_to_c::Array{Float64,2}`: is a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
 - `c_to_f::Array{Float64,2}`: is a 3x3 matrix used to convert cartesian coordinates to fractional coordinates
 """

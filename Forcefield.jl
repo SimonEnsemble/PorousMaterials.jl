@@ -1,7 +1,10 @@
 """All things energy related"""
 module Forcefield
 
-export LennardJonesForceField, ljffConstruct, lennard_jones
+using Crystal
+using Mols
+
+export LennardJonesForceField, ljffConstruct, lennard_jones, readElementProps, rep_factors, centerOfMass
 
 const NA = 6.022e23
 const kcal_to_kJ = 4.184
@@ -106,6 +109,7 @@ function rep_factors(frame::Framework, cutoff::Float64)
 	rep = [1, 1, 1]
 
 	# Repeat for `a`
+	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
 	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff
 		rep[1] += 1
 		a += frame.f_to_C[:,1]
@@ -129,8 +133,58 @@ function rep_factors(frame::Framework, cutoff::Float64)
 	return rep
 end
 
+"""
+	readElementProps("filepath")
 
-function vdw_energy(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, pos)
+Reads a .csv file with the following header: Element name, Molecular mass, Atomic radius, Ionic radius and returns a dictionary with an element name pointing at an array of values,
+EleProps[Element] => [Molecular mass(amu), Atomic radius(Angstrom), Ionic radius(Angstrom)]
+"""
+function readElementProps(filename::String)
+	EleProps = Dict{String,Array{Float64}}()
+	f = open(filename,"r")
+	lines = readlines(f)
+
+	for (i,line) in enumerate(lines)
+		if (i>1)
+			str = split(line,",")
+			temp = zeros(3)
+			for (k,val) in enumerate(str[2:4])
+				if val!="NA"
+					temp[k] = parse(Float64,val)
+				else
+					temp[k] = 0.0
+				end
+			end
+			EleProps[str[1]] = temp 
+		end
+	end
+	close(f)
+	return EleProps
+end
+
+
+"""
+	centerOfMass(frame,"~/example/properties.csv")
+
+Uses `readElementProps` to get a dictionary of element properties and uses that to calculate the center of mass of a Framework. (See readElementProps for more info on that function)
+"""
+function centerOfMass(frame::Framework, filename::String)
+	EleProps = readElementProps(filename)	
+	rvec = zeros(3)
+	mtot = 0.0
+	for i=1:frame.n_atoms
+		rvec += frame.f_coords[i,:]*EleProps[frame.atoms[i]][1]
+		mtot += EleProps[frame.atoms[i]][1]	
+	end
+	return rvec/mtot
+end
+
+"""
+	vdw_energy(frame, molecule, ljforcefield, pos, repfactors)
+
+Calculates the van der Waals energy for a molecule locates at a specific position in a MOF framework.
+"""
+function vdw_energy(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, pos::Array{Float64}, repfactors::Array{Int64})
 	r = 0.0
 	σ = 0.0
 	ϵ = 0.0
