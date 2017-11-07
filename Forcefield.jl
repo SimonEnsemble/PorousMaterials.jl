@@ -79,25 +79,73 @@ Calculate the lennard jones potential energy given a radius r between two molecu
 """
 function lennard_jones(r::Float64, σ::Float64, ϵ::Float64 )
 	ϵ = ϵ*kcal_to_kJ*NA
-	ratio = (σ/r)^2
+	ratio = (σ/r)^6
 	return 4*ϵ*(ratio^2 - ratio)
 end # function end
+
+"""
+	repfactors = rep_factors(frame,cutoff)
+
+Find the repetition factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius.
+Rather than adding all the new atoms to the coordinate matrix, we only keep check on how many times they're repeated.
+"""
+
+function rep_factors(frame::Framework, cutoff::Float64)
+	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be 
+	a = frame.f_to_C[:,1]
+	b = frame.f_to_C[:,2]
+	c = frame.f_to_C[:,3]
+	
+	n_ab = cross(a,b)
+	n_ac = cross(a,c)
+	n_bc = cross(b,c)
+	
+	# c0 defines a center in the unit cell
+	c0 = [a b c] * [.5, .5, .5]
+
+	rep = [1, 1, 1]
+
+	# Repeat for `a`
+	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff
+		rep[1] += 1
+		a += frame.f_to_C[:,1]
+		c0 = [a b c] * [.5, .5, .5]
+	end
+	
+	# Repeat for `b`
+	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff
+		rep[2] += 1
+		b += frame.f_to_C[:,2]
+		c0 = [a b c] * [.5, .5, .5]
+	end
+	
+	# Repeat for `c`
+	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff
+		rep[3] += 1
+		c += frame.f_to_C[:,3]
+		c0 = [a b c] * [.5, .5, .5]
+	end
+
+	return rep
+end
+
 
 function vdw_energy(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, pos)
 	r = 0.0
 	σ = 0.0
 	ϵ = 0.0
+	sum = 0
 	for i=1:molecule.n_atoms
-		sum = 0
 		for k=1:frame.n_atoms
 			r = norm(molecule.x[i,:]-(frame.f_coords*frame.f_to_C)[k,:])
 			σ = ljforcefield.sigmas[ljforcefield.atom_to_id[frame.atoms[k]],ljforcefield.atom_to_id[molecule.atoms[i]]]
 			ϵ = ljforcefield.epsilons[ljforcefield.atom_to_id[frame.atoms[k]], ljforcefield.atom_to_id[molecule.atoms[i]]]
-			if (r < 14 && r > 0.1)
+			if (r < ljforcefield.cutoffradius && r > 0.1)
 				sum += lennard_jones(r,σ,ϵ)	
 			end
 		end
 	end	
+	return sum
 end # function end
 
 end # end module

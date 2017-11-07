@@ -73,8 +73,8 @@ function readcssr(cssrfilename::String)
     close(f)
 
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
-    f_to_C = [[a, b * cos(γ), c * cos(β)] [0, b * sin(γ), c * (cos(α) - cos(β) * cos(γ)) / sin(γ)] [0, 0, Ω / (a * b * sin(γ))]]
-    C_to_f = [[1/a, -cos(γ)/(a*sin(γ)), b*c*(cos(α)*cos(γ)-cos(β))/(Ω*sin(γ))] [0, 1/(b*sin(γ)), a*c*(cos(β)*cos(γ)-cos(α))/(Ω*sin(γ))] [0, 0, a*b*sin(γ)/Ω]]
+	f_to_C = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
+	C_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]] 
     @test f_to_C * C_to_f ≈ eye(3) 
     return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, ([x y z]), f_to_C, C_to_f)
 end
