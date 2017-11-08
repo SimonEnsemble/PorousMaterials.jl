@@ -4,7 +4,7 @@ using Mols
 
 @printf("=================================\n")
 # Path to cssr files
-strucPath = homedir()*"/Dropbox/Code/PorousMaterials.jl/cssrFiles/"
+strucPath = "/cssrFiles/"
 
 
 # Make a framework for the MOF
