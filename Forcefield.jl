@@ -167,7 +167,7 @@ end
 	centerOfMass(frame,"~/example/properties.csv")
 
 Uses `readElementProps` to get a dictionary of element properties and uses that to calculate the center of mass of a supercell made from Framework and replication factors. (See readElementProps for more info on that function)
-Calculates the center of mass according to r_cm = ∑r_i*m_i/m_tot
+Calculates the center of mass according to r_cm = ∑r_i*m_i/m_tot in fractional coordinates but returns in cartesian coordinates
 """
 function centerOfMass(frame::Framework, filename::String, rep_factors::Array{Int64})
 	repA = rep_factors[1]
@@ -183,7 +183,7 @@ function centerOfMass(frame::Framework, filename::String, rep_factors::Array{Int
 			mtot += EleProps[frame.atoms[i]][1]
 		end
 	end
-	return rvec/mtot
+	return frame.f_to_C*(rvec/mtot)
 end
 
 """

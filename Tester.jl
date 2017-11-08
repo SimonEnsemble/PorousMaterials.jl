@@ -4,7 +4,7 @@ using Mols
 
 @printf("=================================\n")
 # Path to cssr files
-strucPath = "/cssrFiles/"
+strucPath = pwd()*"/cssrFiles/"
 
 
 # Make a framework for the MOF
@@ -27,4 +27,4 @@ ljforcefield = ljffConstruct(homedir()*"/Dropbox/Code/PorousMaterials.jl/UFF.csv
 
 # Try to calculate energy at one position
 energy = vdw_energy(frame, mol, ljforcefield, c0, reps)
-@printf("\n Energy calculated! Energy = %f\n=================================\n",energy/6.022e23)
+@printf("\n Energy calculated! Energy = %f\n=================================\n",energy)
