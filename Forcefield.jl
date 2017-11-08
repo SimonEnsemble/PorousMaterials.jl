@@ -4,7 +4,7 @@ module Forcefield
 using Crystal
 using Mols
 
-export LennardJonesForceField, ljffConstruct, lennard_jones, readElementProps, rep_factors, centerOfMass
+export LennardJonesForceField, ljffConstruct, lennard_jones, readElementProps, rep_factors, centerOfMass, vdw_energy
 
 const NA = 6.022e23
 const kcal_to_kJ = 4.184
@@ -41,7 +41,7 @@ function ljffConstruct(filename::String)
 	lines = readlines(f)
 
 	n_ele = length(lines)-1
-	
+
 	cutoffradius = 14.0
 	epsilon_dict = Dict{String, Float64}()
 	sigma_dict = Dict{String, Float64}()
@@ -55,7 +55,7 @@ function ljffConstruct(filename::String)
 			str = split(line,",")
 			σ,ϵ = map(x->parse(Float64, x), str[2:3])
 			epsilon_dict[str[1]] = ϵ
-			sigma_dict[str[1]] = σ	
+			sigma_dict[str[1]] = σ
 			atom_to_id[str[1]] = i-1
 			elements[i-1] = str[1]
 		end
@@ -89,20 +89,20 @@ end # function end
 """
 	repfactors = rep_factors(frame,cutoff)
 
-Find the repetition factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius.
-Rather than adding all the new atoms to the coordinate matrix, we only keep check on how many times they're repeated.
+Find the replication factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius.
+Rather than adding all the new atoms to the coordinate matrix, we only keep check on how many times they're replicated.
 """
 
 function rep_factors(frame::Framework, cutoff::Float64)
-	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be 
+	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
 	a = frame.f_to_C[:,1]
 	b = frame.f_to_C[:,2]
 	c = frame.f_to_C[:,3]
-	
+
 	n_ab = cross(a,b)
 	n_ac = cross(a,c)
 	n_bc = cross(b,c)
-	
+
 	# c0 defines a center in the unit cell
 	c0 = [a b c] * [.5, .5, .5]
 
@@ -115,14 +115,14 @@ function rep_factors(frame::Framework, cutoff::Float64)
 		a += frame.f_to_C[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
-	
+
 	# Repeat for `b`
 	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff
 		rep[2] += 1
 		b += frame.f_to_C[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
-	
+
 	# Repeat for `c`
 	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff
 		rep[3] += 1
@@ -155,7 +155,7 @@ function readElementProps(filename::String)
 					temp[k] = 0.0
 				end
 			end
-			EleProps[str[1]] = temp 
+			EleProps[str[1]] = temp
 		end
 	end
 	close(f)
@@ -166,15 +166,22 @@ end
 """
 	centerOfMass(frame,"~/example/properties.csv")
 
-Uses `readElementProps` to get a dictionary of element properties and uses that to calculate the center of mass of a Framework. (See readElementProps for more info on that function)
+Uses `readElementProps` to get a dictionary of element properties and uses that to calculate the center of mass of a supercell made from Framework and replication factors. (See readElementProps for more info on that function)
+Calculates the center of mass according to r_cm = ∑r_i*m_i/m_tot
 """
-function centerOfMass(frame::Framework, filename::String)
-	EleProps = readElementProps(filename)	
+function centerOfMass(frame::Framework, filename::String, rep_factors::Array{Int64})
+	repA = rep_factors[1]
+	repB = rep_factors[2]
+	repC = rep_factors[3]
+
+	EleProps = readElementProps(filename)
 	rvec = zeros(3)
 	mtot = 0.0
-	for i=1:frame.n_atoms
-		rvec += frame.f_coords[i,:]*EleProps[frame.atoms[i]][1]
-		mtot += EleProps[frame.atoms[i]][1]	
+	for nA=1:repA, nB=1:repB, nC=1:repC
+		for i=1:frame.n_atoms
+			rvec += (frame.f_coords[i,:]+[nA-1, nB-1, nC-1])*EleProps[frame.atoms[i]][1]
+			mtot += EleProps[frame.atoms[i]][1]
+		end
 	end
 	return rvec/mtot
 end
@@ -185,21 +192,39 @@ end
 Calculates the van der Waals energy for a molecule locates at a specific position in a MOF framework.
 """
 function vdw_energy(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, pos::Array{Float64}, repfactors::Array{Int64})
-	r = 0.0
+	repA = repfactors[1]
+	repB = repfactors[2]
+	repC = repfactors[3]
+	repvec = Array{Int64}(3)
 	σ = 0.0
+	r = 0.0
 	ϵ = 0.0
-	sum = 0
-	for i=1:molecule.n_atoms
-		for k=1:frame.n_atoms
-			r = norm(molecule.x[i,:]-(frame.f_coords*frame.f_to_C)[k,:])
-			σ = ljforcefield.sigmas[ljforcefield.atom_to_id[frame.atoms[k]],ljforcefield.atom_to_id[molecule.atoms[i]]]
-			ϵ = ljforcefield.epsilons[ljforcefield.atom_to_id[frame.atoms[k]], ljforcefield.atom_to_id[molecule.atoms[i]]]
-			if (r < ljforcefield.cutoffradius && r > 0.1)
-				sum += lennard_jones(r,σ,ϵ)	
+	potsum = 0
+	for nA=0:repA-1, nB=0:repB-1, nC=0:repC-1
+		for i=1:molecule.n_atoms
+			for k=1:frame.n_atoms
+				# Nearest image convention. If the interaction between the probe molecule and atom k is being looked at, we'll only look at the interaction between the probe molecule and the closest replication of atom k. This is done with fractional coordinates for simplication and transformation to cartesian is done later.
+				repvec = [nA, nB, nC]
+				if frame.f_coords[k,1]+nA > repA/2
+					repvec -= [1,0,0]
+				end
+				if frame.f_coords[k,2]+nB > repB/2
+					repvec -= [0,1,0]
+				end
+				if frame.f_coords[k,3]+nC > repC/2
+					repvec -= [0,0,1]
+				end
+
+				r = norm((pos+molecule.x[i,:])-frame.f_to_C*(frame.f_coords[k,:]+repvec))
+				σ = ljforcefield.sigmas[ljforcefield.atom_to_id[frame.atoms[k]],ljforcefield.atom_to_id[molecule.atoms[i]]]
+				ϵ = ljforcefield.epsilons[ljforcefield.atom_to_id[frame.atoms[k]], ljforcefield.atom_to_id[molecule.atoms[i]]]
+				if (r < ljforcefield.cutoffradius)
+					potsum += lennard_jones(r,σ,ϵ)
+				end
 			end
 		end
-	end	
-	return sum
+	end
+	return potsum
 end # function end
 
 end # end module

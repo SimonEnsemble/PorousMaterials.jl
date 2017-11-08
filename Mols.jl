@@ -1,6 +1,6 @@
 module Mols
 
-export Molecule, ConstructMolecule
+export Molecule, ConstructMolecule, readcharge
 
 type Molecule
 	n_atoms::Int64
@@ -34,7 +34,7 @@ function ConstructMolecule(filename::String)
 	end
 	close(f)
 
-	return Molecule(nAtoms, Atoms, pos)
+	return Molecule(nAtoms, Atoms, pos, Charge)
 end # End function
 
 function readcharge(val::String)
