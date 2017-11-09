@@ -6,8 +6,8 @@ using Mols
 
 export LennardJonesForceField, ljffConstruct, lennard_jones, readElementProps, rep_factors, centerOfMass, vdw_energy
 
-const NA = 6.022e23
-const kcal_to_kJ = 4.184
+const NA = 6.022e23 # 1/mol
+const R = 1.9872036e-3 # kcal/(mol K)
 
 """
 	ljforcefield = LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
@@ -54,7 +54,7 @@ function ljffConstruct(filename::String)
 		if (i > 1)
 			str = split(line,",")
 			σ,ϵ = map(x->parse(Float64, x), str[2:3])
-			epsilon_dict[str[1]] = ϵ
+			epsilon_dict[str[1]] = ϵ/(NA*R)
 			sigma_dict[str[1]] = σ
 			atom_to_id[str[1]] = i-1
 			elements[i-1] = str[1]
@@ -81,7 +81,6 @@ end # function end
 Calculate the lennard jones potential energy given a radius r between two molecules. σ and ϵ are specific to interaction between two elements
 """
 function lennard_jones(r::Float64, σ::Float64, ϵ::Float64 )
-	ϵ = ϵ*kcal_to_kJ*NA
 	ratio = (σ/r)^6
 	return 4*ϵ*(ratio^2 - ratio)
 end # function end

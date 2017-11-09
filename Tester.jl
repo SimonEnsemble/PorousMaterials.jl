@@ -4,19 +4,19 @@ using Mols
 
 @printf("=================================\n")
 # Path to cssr files
-strucPath = pwd()*"/cssrFiles/"
+strucPath = pwd()*"/../"
 
 
 # Make a framework for the MOF
-frame = readcssr(strucPath*"ABUWOJ_clean_min_charges.cssr")
+frame = readcssr(strucPath*"SBMOF-1.cssr")
 @printf("\n Framework successfully made! \n=================================\n")
 
 
 # Finding replication factors for a supercell that can contain a sphere with a 14 Angstrom radius
-reps = rep_factors(frame, 14.0)
+reps = rep_factors(frame, 12.5)
 
 # Hard coding a He atom in
-mol = Molecule(1,["He"], [0 0 0], [0.0])
+mol = Molecule(1,["Xe"], [0 0 0], [0.0])
 @printf("\n Molecule successfully made! \n=================================\n")
 
 # Finding the center of mass in the supercell
@@ -26,5 +26,5 @@ ljforcefield = ljffConstruct(homedir()*"/Dropbox/Code/PorousMaterials.jl/UFF.csv
 @printf("\n LJForceField successfully made! \n=================================\n")
 
 # Try to calculate energy at one position
-energy = vdw_energy(frame, mol, ljforcefield, c0, reps)
+energy = vdw_energy(frame, mol, ljforcefield, [0,0,0], reps)
 @printf("\n Energy calculated! Energy = %f\n=================================\n",energy)
