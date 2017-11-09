@@ -1,20 +1,20 @@
 """All things crystal structures"""
 module Crystal
 
-export Framework, readcssr, replicate_to_xyz, correct_cssr_line, atom_error_check
+export Framework, constructframework, replicate_to_xyz, correct_cssr_line, atom_error_check
 
 global PATH_TO_STRUCTURE_FILES = homedir() * "/Dropbox/Code/PorousMaterials.jl/cssrFiles"
 
 using Base.Test
 
 """
-framework = Framework(a, b, c, α, β, γ, N, atoms, f_coords, f_to_c, c_to_f)
+    framework = Framework(a, b, c, α, β, γ, N, atoms, f_coords, f_to_c, c_to_f)
 
 Data structure for a 3D crystal structure.
 
 # Arguments
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
-- `α,β,γ::Float64`: unit cell angles (units: degrees)
+- `α,β,γ::Float64`: unit cell angles (units: radians)
 - `n_atoms::Int64`: number of atoms in a unit cell
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `atoms::Array{String,1}`: list of atoms composing crystal unit cell, in strict order
@@ -40,17 +40,18 @@ struct Framework
 
     f_to_C::Array{Float64, 2}
     C_to_f::Array{Float64, 2}
-end
+end # Framework end
 
 """
-framework = readcssr("filename.cssr")
+    framework = constructframework("filename.cssr")
 
 Read a .cssr file and construct a Framework object
 """
-function readcssr(cssrfilename::String)
+function constructframework(cssrfilename::String)
     f = open(cssrfilename, "r")
     lines = readlines(f)
 
+    # Initialize variables
     n_atoms = length(lines) - 5
     a, b, c, α, β, γ = Array{Float64}(6)
     x = Array{Float64}(n_atoms) # fractional
@@ -58,13 +59,27 @@ function readcssr(cssrfilename::String)
     z = similar(x)
     atoms = Array{String}(n_atoms)
 
+    # Make a boolean variable to fix discrepency with fractional and cartesian coordinates in cssr files
+    corr = false
+    for line in lines[6:6+16]
+        str = split(line)
+        for val in str[3:5]
+            # Check if values are fractional or not. I only check 10 lines, which is probably enough.
+            if parse(Float64,val)>1
+                corr = true
+                break
+            end
+        end
+    end
+
+    # Iterate through the lines of the cssr file.
     for (i,line) in enumerate(lines)
         str = split(line)
         # Unit cell dimension line
-        if (i == 1)
+        if i == 1
             a, b, c = map(x->parse(Float64, x), str[end-2:end])
         # Unit cell angle line
-        elseif (i == 2)
+        elseif i == 2
             temp = zeros(3)
             cnt = 1
             for val in str
@@ -75,22 +90,27 @@ function readcssr(cssrfilename::String)
             end
             α, β, γ = temp[1:3]
         # Atom lines
-        elseif (i > 5)
-            try # Fix faulty cssr files where columns merge
+        elseif i > 5
+            try # Fix faulty cssr files where columns one and two merge for some reason
                 parse(Float64,str[1])
             catch
                 str = correct_cssr_line(str)
             end
 
+            # Fix element column where some cssr files have a number concated to the end of the element tag (e.g. H3)
             tempch = ""
             for ch in str[2]
                 if !isdigit(ch)
                     tempch = string(tempch,ch)
                 end
             end
-
             atoms[i - 5] = tempch
-            x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])./[a, b, c]
+            # Use the correction boolean to fix fractional/cartesian discrepency
+            if corr
+                x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])./[a, b, c]
+            else
+                x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])
+            end
         end
     end
     close(f)
@@ -98,12 +118,14 @@ function readcssr(cssrfilename::String)
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
     f_to_C = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
     C_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
+
     @test f_to_C * C_to_f ≈ eye(3)
+
     return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, ([x y z]), f_to_C, C_to_f)
-end
+end # constructframework end
 
 """
-replicate_to_xyz(framework, xyzfilename, comment="")
+    replicate_to_xyz(framework, xyzfilename, comment="", nx=0, ny=0, nz=0)
 
 Write a .xyz file from a Framework object. Write an optional comment to the .xyz file if desired.
 Extend the structure in the x-,y- or z-direction by changing nx, ny or nz respectively.
@@ -124,10 +146,10 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::St
 
     println("See ", xyzfilename)
     return
-end
+end # replicate_to_xyz end
 
 """
-correct_cssr_line(str)
+    corrected_line = correct_cssr_line(str)
 
 Take an array of string values and correct an error from the openbabel python module.
 The error merges two values together if the element abbreviation contains two letters,
@@ -150,10 +172,10 @@ function correct_cssr_line(str)
         end
     end
     return str
-end
+end #correct_cssr_line end
 
 """
-atom_error_check(frame)
+    atom_error_check(frame)
 
 Check if any two atoms are lying on top of each other by calculating the 2-norm distance
 between every two atoms.
@@ -169,6 +191,6 @@ function atom_error_check(framework::Framework)
     end
     @printf("No atoms are on top of each other!")
     return
-end
+end # atom_error_check end
 
 end # end module

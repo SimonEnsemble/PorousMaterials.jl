@@ -1,16 +1,32 @@
 module Mols
 
-export Molecule, ConstructMolecule, readcharge
+export Molecule, constructmolecule, readcharge
 
+"""
+	molecule = Molecule(n_atoms::Int64, atoms::Array{String}, x::Array{Float64,2}, charges::Array{Float64})
+
+Construct a molecule used to probe a MOF framework
+
+# Arguments
+- `n_atoms::Int64`: Number of atoms in the molecule
+- `atoms::Array{String}`: List of element abbreviations
+- `x::Array{Float64,2}`: A matrix of cartesian coordinates for atoms in the molecule. x[1,:] is the 3D coordinate for atom 1. The order is the same as in `atoms`
+- `charges::Array{Float64}`: An array of charges for each specific atom.
+"""
 type Molecule
 	n_atoms::Int64
 	atoms::Array{String}
 	x::Array{Float64,2}
 	charges::Array{Float64}
-end
+end # end Molecule
 
-function ConstructMolecule(filename::String)
-	f = open(filename,"r")
+"""
+	Mol = constructmolecule("~/example/filename.mol")
+
+Reads a .mol file and gathers the relevant information to construct a Molecule.
+"""
+function constructmolecule(mol_filename::String)
+	f = open(mol_filename,"r")
 	lines = readlines(f)
 
 	nAtoms = 0
@@ -35,8 +51,13 @@ function ConstructMolecule(filename::String)
 	close(f)
 
 	return Molecule(nAtoms, Atoms, pos, Charge)
-end # End function
+end # end constructmolecule
 
+"""
+	charge::Int64 = readcharge(val::String)
+
+Converts the .mol charge convention into real charges. Grabs a string and returns an integer value
+"""
 function readcharge(val::String)
 	num = parse(Int64,val)
 	if (num == 7)
@@ -55,7 +76,7 @@ function readcharge(val::String)
 		return 3
 	else
 		error("Charge not valid")
-	end # End if/if-else/else
-end # End function
+	end # end if/if-else/else
+end # end readcharge
 
 end # End module
