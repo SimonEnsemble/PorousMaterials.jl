@@ -19,7 +19,7 @@ Data structure for a 3D crystal structure.
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `atoms::Array{String,1}`: list of atoms composing crystal unit cell, in strict order
 - `f_coords::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order;
-f_coords[1,:] is first atom's fractional coords
+f_coords[:,1] is first atom's fractional coords
 - `f_to_c::Array{Float64,2}`: is a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
 - `c_to_f::Array{Float64,2}`: is a 3x3 matrix used to convert cartesian coordinates to fractional coordinates
 """
@@ -220,8 +220,9 @@ function constructframework(filename::String)
     C_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
 
     @test f_to_C * C_to_f ≈ eye(3)
-
-    return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, ([x y z]), f_to_C, C_to_f)
+	mat = Array{Float64,2}(3,length(x))
+	mat[1,:] = x[:]; mat[2,:] = y[:]; mat[3,:] = z[:]
+    return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, mat, f_to_C, C_to_f)
 end # constructframework end
 
 """
@@ -236,8 +237,8 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::St
     @printf(f, "%d\n%s\n", framework.n_atoms * (nx + 1) * (ny + 1) * (nz + 1), comment)
 
     for i = 0:nx, j = 0:ny, k = 0:nz
-        f_coords = framework.f_coords .+ [i j k]
-        c_coords = framework.f_to_C * f_coords'
+        f_coords = framework.f_coords .+ [i, j, k]
+        c_coords = framework.f_to_C * f_coords
         for ii = 1:size(c_coords, 2)
             @printf(f, "%s\t%.4f\t%.4f\t%.4f\n", framework.atoms[ii], c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
         end
@@ -283,7 +284,7 @@ between every two atoms.
 function atom_error_check(framework::Framework)
     for i = 1:framework.n_atoms
         for k = i+1:framework.n_atoms
-            distvec = [framework.f_coords[i,1]-framework.f_coords[k,1] framework.f_coords[i,2]-framework.f_coords[k,2] framework.f_coords[i,3]-framework.f_coords[k,3]].*[framework.a, framework.b, framework.c]
+            distvec = [framework.f_coords[1,i]-framework.f_coords[1,k] framework.f_coords[2,i]-framework.f_coords[2,k] framework.f_coords[3,i]-framework.f_coords[3,k]].*[framework.a, framework.b, framework.c]
             if (norm(distvec) < 0.1)
                 error("At least two atoms are too close to each other (<0.1 Å)")
             end
