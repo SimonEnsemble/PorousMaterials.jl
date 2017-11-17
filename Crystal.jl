@@ -43,14 +43,14 @@ struct Framework
 end
 
 """
-    framework = constructframework("filename.cssr")
+    framework = read_crystal_structure_file("filename.cssr")
 
-Read a .cssr file and construct a Framework object
+Read a crystal structure file (.cif or .cssr) and construct a Framework object
 """
-function constructframework(filename::String)
+function read_crystal_structure_file(filename::String)
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
-    if ! (extension in [".cif", ".cssr"])
+    if ! (extension in ["cif", "cssr"])
         error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
     end
     
@@ -136,7 +136,6 @@ function constructframework(filename::String)
     if extension == "cif"
         data = Dict()
         charges = Float64[]
-        a, b, c, α, β, γ = Array{Float64}(6)
         x = Float64[]
         y = Float64[]
         z = Float64[]
@@ -228,9 +227,9 @@ function constructframework(filename::String)
     C_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
 
     @test f_to_C * C_to_f ≈ eye(3)
-	mat = Array{Float64,2}(3,length(x))
-	mat[1,:] = x[:]; mat[2,:] = y[:]; mat[3,:] = z[:]
-    return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, mat, f_to_C, C_to_f)
+	fractional_coords = Array{Float64,2}(3,length(x))
+	fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
+    return Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, fractional_coords, f_to_C, C_to_f)
 end # constructframework end
 
 """
@@ -298,7 +297,7 @@ function check_for_atom_overlap(framework::Framework; threshold_distance_for_ove
             # vector pointing from atom j to atom i in carteisan coords
             dx = framework.f_to_C * (xf_i - xf_j)
             if (norm(dx) < threshold_distance_for_overlap)
-                error(@printf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, threshold_distance_for_overlap))
+                error(@printf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
             end
         end
     end
