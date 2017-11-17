@@ -60,8 +60,8 @@ function constructframework(filename::String)
     end
     f = open(filename, "r")
     lines = readlines(f)
+    close(f)
     # TODO This reader is a mishmash of a lot of things. This needs to be cleaned up!
-
 
     if extension == "cssr"
         # Initialize variables
@@ -222,7 +222,6 @@ function constructframework(filename::String)
         β = data["beta"]
         γ = data["gamma"]
     end
-    close(f)
 
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
     f_to_C = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
