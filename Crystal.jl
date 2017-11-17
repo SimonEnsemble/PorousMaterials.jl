@@ -284,22 +284,28 @@ function correct_cssr_line(str)
 end #correct_cssr_line end
 
 """
-    atom_error_check(frame)
+    check_for_atom_overlap(framework; threshold_distance_for_overlap=0.1, verbose=false)
 
 Check if any two atoms are lying on top of each other by calculating the 2-norm distance
-between every two atoms.
+between every pair of atoms and ensuring distance is greater than a threshold.
+Throw error if atoms overlap and tell which atoms are culprit.
 """
-function atom_error_check(framework::Framework)
+function check_for_atom_overlap(framework::Framework; threshold_distance_for_overlap::Float64=0.1, verbose::Bool=false)
     for i = 1:framework.n_atoms
-        for k = i+1:framework.n_atoms
-            distvec = [framework.f_coords[1,i]-framework.f_coords[1,k] framework.f_coords[2,i]-framework.f_coords[2,k] framework.f_coords[3,i]-framework.f_coords[3,k]].*[framework.a, framework.b, framework.c]
-            if (norm(distvec) < 0.1)
-                error("At least two atoms are too close to each other (<0.1 Å)")
+        xf_i = framework.f_coords[:, i]
+        for j = i+1:framework.n_atoms
+            xf_j = framework.f_coords[:, j]
+            # vector pointing from atom j to atom i in carteisan coords
+            dx = framework.f_to_C * (xf_i - xf_j)
+            if (norm(dx) < threshold_distance_for_overlap)
+                error(@printf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, threshold_distance_for_overlap))
             end
         end
     end
-    @printf("No atoms are on top of each other!")
+    if verbose
+        @printf("No atoms are on top of each other!")
+    end
     return
-end # atom_error_check end
+end
 
 end # end module
