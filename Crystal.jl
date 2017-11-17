@@ -15,13 +15,13 @@ Data structure for a 3D crystal structure.
 # Arguments
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
-- `n_atoms::Int64`: number of atoms in a unit cell
+- `n_atoms::Int64`: number of atoms in the unit cell
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `atoms::Array{String,1}`: list of atoms composing crystal unit cell, in strict order
-- `f_coords::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order;
-f_coords[:,1] is first atom's fractional coords
-- `f_to_c::Array{Float64,2}`: is a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
-- `c_to_f::Array{Float64,2}`: is a 3x3 matrix used to convert cartesian coordinates to fractional coordinates
+- `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order
+- `f_coords::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order corresponding to `atoms`.
+stored column-wise so that f_coords[:, 1] is first atom's fractional coordinates.
+- `f_to_c::Array{Float64,2}`: a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
+- `c_to_f::Array{Float64,2}`: a 3x3 matrix used to convert cartesian coordinates to fractional coordinates
 """
 struct Framework
     a::Float64
@@ -40,7 +40,7 @@ struct Framework
 
     f_to_C::Array{Float64, 2}
     C_to_f::Array{Float64, 2}
-end # Framework end
+end
 
 """
     framework = constructframework("filename.cssr")
@@ -48,10 +48,19 @@ end # Framework end
 Read a .cssr file and construct a Framework object
 """
 function constructframework(filename::String)
-    extension = split(filename,".")[end]
+    # read file extension, ensure reader implemented.
+    extension = split(filename, ".")[end]
+    if ! (extension in [".cif", ".cssr"])
+        error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
+    end
+    
+    # read in crystal structure file
+    if ! isfile(filename)
+        error(@printf("Could not open crystal structure file %s\n", filename))
+    end
     f = open(filename, "r")
     lines = readlines(f)
-    # This reader is a mishmash of a lot of things. This needs to be cleaned up!
+    # TODO This reader is a mishmash of a lot of things. This needs to be cleaned up!
 
 
     if extension == "cssr"
