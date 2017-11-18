@@ -1,11 +1,4 @@
-"""All things energy related"""
-module Forcefield
-
 using DataFrames
-using Crystal
-using Mols
-
-export LennardJonesForceField, read_forcefield_file, lennard_jones, readproperties, rep_factors, centerofmass, vdw_energy, rotate, exploreframe
 
 """
 	ljforcefield = LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
@@ -39,8 +32,9 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    df = readtable(filename, allowcomments=true)
-
+    df = readtable(filename, allowcomments=true) # from DataFrames
+    
+    # pure X-X interactions (X = (pseudo)atom)
     pure_sigmas = Dict{AbstractString, Float64}()
     pure_epsilons = Dict{AbstractString, Float64}()
     for row in eachrow(df)
@@ -48,7 +42,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
         pure_epsilons[row[:atom]] = row[:epsilon]
     end
     
-    # cross interactions
+    # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
     epsilons = Dict{AbstractString, Dict{AbstractString, Float64}}()
     sigmas = Dict{AbstractString, Dict{AbstractString, Float64}}()
 	for atom in keys(pure_sigmas)
@@ -61,25 +55,29 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
 	end
 
 	return LennardJonesForceField(pure_sigmas, pure_epsilons, sigmas, epsilons, cutoffradius)
-end # constructforcefield end
+end # read_forcefield_file end
 
 """
-	repfactors = rep_factors(frame::Framework,cutoff::Float64)
+	repfactors = replication_factors(framework::Framework, cutoff::Float64)
 
 Find the replication factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius.
 In PorousMaterials.jl, rather than replicating the atoms in the home unit cell to build the supercell that
 serves as a simulation box, we replicate the home unit cell to form the supercell (simulation box) in a for loop.
 This function ensures enough replication factors such that the nearest image convention can be applied.
-"""
-function rep_factors(frame::Framework, cutoff::Float64)
-	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
-	a = frame.f_to_C[:,1]
-	b = frame.f_to_C[:,2]
-	c = frame.f_to_C[:,3]
 
-	n_ab = cross(a,b)
-	n_ac = cross(a,c)
-	n_bc = cross(b,c)
+Returns tuple of replication factors in the a, b, c directions.
+
+# TODO comment on whether it starts at 0 or 1.. like, repfactors = [0, 0, 0] is that possible?
+"""
+function replication_factors(framework::Framework, cutoff::Float64)
+	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
+	a = framework.f_to_C[:, 1]
+	b = framework.f_to_C[:, 2]
+	c = framework.f_to_C[:, 3]
+
+	n_ab = cross(a, b)
+	n_ac = cross(a, c)
+	n_bc = cross(b, c)
 
 	# c0 defines a center in the unit cell
 	c0 = [a b c] * [.5, .5, .5]
@@ -90,25 +88,23 @@ function rep_factors(frame::Framework, cutoff::Float64)
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
 	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff
 		rep[1] += 1
-		a += frame.f_to_C[:,1]
+		a += framework.f_to_C[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
 	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff
 		rep[2] += 1
-		b += frame.f_to_C[:,2]
+		b += framework.f_to_C[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
 	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff
 		rep[3] += 1
-		c += frame.f_to_C[:,3]
+		c += framework.f_to_C[:,3]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
-	return rep
+	return (rep[1], rep[2], rep[3])::Tuple{Int, Int, Int}
 end # end rep_factors
-
-end # end module

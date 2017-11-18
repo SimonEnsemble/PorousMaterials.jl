@@ -1,10 +1,3 @@
-"""All things crystal structures"""
-module Crystal
-
-export Framework, read_crystal_structure_file, replicate_to_xyz
-
-global PATH_TO_STRUCTURE_FILES = homedir() * "/Dropbox/Code/PorousMaterials.jl/cssrFiles"
-
 using Base.Test
 
 """
@@ -42,11 +35,13 @@ struct Framework
 end
 
 """
-    framework = read_crystal_structure_file("filename.cssr")
+    framework = read_crystal_structure_file("filename.cssr"; run_checks=true)
 
 Read a crystal structure file (.cif or .cssr) and construct a Framework object.
+If `run_checks=True`, ensures no atom overlap or atoms outside of the unit cell box [0, 1]^3 fractional coordinates.
 """
-function read_crystal_structure_file(filename::String)
+function read_crystal_structure_file(filename::String; run_checks::Bool=true)
+    # TODO add charges
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -146,6 +141,7 @@ function read_crystal_structure_file(filename::String)
             if length(line) == 0
                 continue
             end
+
             if line[1] == "_symmetry_space_group_name_H-M"
                 if length(line) == 3
                     @assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1"), ".cif must have P1 symmetry.\n")
@@ -162,6 +158,7 @@ function read_crystal_structure_file(filename::String)
                     data[axis] = parse(Float64, line[2])
                 end
             end
+
             for angle in ["alpha", "beta", "gamma"]
                 if line[1] == @sprintf("_cell_angle_%s", angle)
                     data[angle] = parse(Float64, line[2]) * pi / 180.0
@@ -221,37 +218,39 @@ function read_crystal_structure_file(filename::String)
         γ = data["gamma"]
     end
 
-    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
+    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
     f_to_C = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
     C_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
     
     @test f_to_C * C_to_f ≈ eye(3)
 
-	fractional_coords = Array{Float64,2}(3, length(x))
+	fractional_coords = Array{Float64, 2}(3, length(x))
 	fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
     
     # finally construct the framework
     framework = Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, fractional_coords, f_to_C, C_to_f)
-
-    check_for_atom_overlap(framework)
-
-    check_for_atoms_out_of_unit_cell_box(framework)
+    
+    if run_checks
+        check_for_atom_overlap(framework)
+        check_for_atoms_out_of_unit_cell_box(framework)
+    end
 
     return framework
 end # constructframework end
 
 """
-    replicate_to_xyz(framework, xyzfilename, comment="", nx=0, ny=0, nz=0)
+    replicate_to_xyz(framework, xyzfilename, comment="", repfactors=(0, 0, 0))
 
-Write a .xyz file from a Framework object. Write an optional comment to the .xyz file if desired.
-Extend the structure in the x-,y- or z-direction by changing nx, ny or nz respectively.
-A value of 1 replicates the structure once in the desired direction
+Write a .xyz file representation of a crystal structure from a Framework type.
+Write an optional `comment` to the .xyz file if desired.
+Extend the structure in the x-,y- or z-direction by changing the tuple `repfactors`
+A value of 1 replicates the structure once in the desired direction, so `repfactors=(0, 0, 0)` includes only the "home" unit cell.
 """
-function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::String="", nx::Int=0, ny::Int=0, nz::Int=0)
+function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::String="", repfactors::Tuple{Int, Int, Int}=(0, 0, 0))
     f = open(xyzfilename, "w")
-    @printf(f, "%d\n%s\n", framework.n_atoms * (nx + 1) * (ny + 1) * (nz + 1), comment)
+    @printf(f, "%d\n%s\n", framework.n_atoms * (repfactors[1] + 1) * (repfactors[2] + 1) * (repfactors[3] + 1), comment)
 
-    for i = 0:nx, j = 0:ny, k = 0:nz
+    for i = 0:repfactors[1], j = 0:repfactors[2], k = 0:repfactors[3]
         xf = framework.xf .+ [i, j, k]
         c_coords = framework.f_to_C * xf
         for ii = 1:size(c_coords, 2)
@@ -264,6 +263,7 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::St
     return
 end # replicate_to_xyz end
 
+# TODO: remove this once we figure out how to read .cssr another way.
 """
     corrected_line = correct_cssr_line(str)
 
@@ -331,5 +331,3 @@ function check_for_atoms_out_of_unit_cell_box(framework::Framework)
     end
     return true
 end
-
-end # end module

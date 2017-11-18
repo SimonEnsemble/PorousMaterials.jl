@@ -8,7 +8,7 @@ Example use:
 using PorousMaterials
 
 # load abstract data structure containg crystal structure info
-framework = read_crystal_structure_file("JAVTAC_clean.cif")
+framework = read_crystal_structure_file("cifFiles/JAVTAC_clean.cif")
 
 # replicate framework to .xyz for visualization
 replicate_to_xyz(framework, "replicated_framework.xyz", repfactors=(2,3,1))
