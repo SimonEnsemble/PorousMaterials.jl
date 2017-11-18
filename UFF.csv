@@ -1,4 +1,9 @@
-atom_type, distance [Å], energy [kcal/mol] 
+# Lennard-Jones parameters
+# units for sigma: Angstrom
+# units for epsilon: Kelvin
+# functional form for Lennard Jones potential assumed:
+# V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ], where x = sigma / r
+atom,sigma,epsilon
 H,2.886,0.044
 H_b,2.886,0.044
 He,2.640,0.02166
