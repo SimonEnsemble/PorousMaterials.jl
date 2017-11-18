@@ -32,7 +32,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    df = readtable(filename, allowcomments=true) # from DataFrames
+    df = readtable(PATH_TO_DATA * "forcefields/" * filename, allowcomments=true) # from DataFrames
     
     # pure X-X interactions (X = (pseudo)atom)
     pure_sigmas = Dict{AbstractString, Float64}()

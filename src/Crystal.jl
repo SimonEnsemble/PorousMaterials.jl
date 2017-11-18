@@ -54,10 +54,11 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     end
     
     # read in crystal structure file
-    if ! isfile(filename)
-        error(@printf("Could not open crystal structure file %s\n", filename))
+    if ! isfile(PATH_TO_DATA * "crystals/" * filename)
+        error(@sprintf("Could not open crystal structure file %s\n", 
+                       PATH_TO_DATA * "crystals/" * filename))
     end
-    f = open(filename, "r")
+    f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
     # TODO This reader is a mishmash of a lot of things. This needs to be cleaned up!
@@ -315,7 +316,7 @@ function check_for_atom_overlap(framework::Framework;
             # vector pointing from atom j to atom i in carteisan coords
             dx = framework.f_to_C * (xf_i - xf_j)
             if (norm(dx) < threshold_distance_for_overlap)
-                error(@srintf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
+                error(@sprintf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
             end
         end
     end
