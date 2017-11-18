@@ -10,10 +10,15 @@ Data structure for a 3D crystal structure.
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `n_atoms::Int64`: number of atoms in the unit cell
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order
-- `xf::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first atom's fractional coordinates.
-- `f_to_c::Array{Float64,2}`: a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
-- `c_to_f::Array{Float64,2}`: a 3x3 matrix used to convert cartesian coordinates to fractional coordinates
+- `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit 
+cell, in strict order
+- `xf::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict 
+order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first atom's 
+fractional coordinates.
+- `f_to_c::Array{Float64,2}`: a 3x3 matrix used to convert fractional coordinates to 
+cartesian coordinates
+- `c_to_f::Array{Float64,2}`: a 3x3 matrix used to convert cartesian coordinates to 
+fractional coordinates
 """
 struct Framework
     a::Float64
@@ -38,7 +43,7 @@ end
     framework = read_crystal_structure_file("filename.cssr"; run_checks=true)
 
 Read a crystal structure file (.cif or .cssr) and construct a Framework object.
-If `run_checks=True`, ensures no atom overlap or atoms outside of the unit cell box [0, 1]^3 fractional coordinates.
+If `run_checks=True`, ensures no atom overlap or atoms outside of the unit cell box.
 """
 function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     # TODO add charges
@@ -67,12 +72,14 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         z = similar(x)
         atoms = Array{String}(n_atoms)
 
-        # Make a boolean variable to fix discrepency with fractional and cartesian coordinates in cssr files
+        # Make a boolean variable to fix discrepency with fractional and cartesian 
+        #  coordinates in cssr files
         corr = false
         for line in lines[6:6+16]
             str = split(line)
             for val in str[3:5]
-                # Check if values are fractional or not. I only check 10 lines, which is probably enough.
+                # Check if values are fractional or not. I only check 10 lines, 
+                #  which is probably enough.
                 if parse(Float64,val)>1
                     corr = true
                     break
@@ -105,7 +112,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
                     str = correct_cssr_line(str)
                 end
 
-                # Fix element column where some cssr files have a number concated to the end of the element tag (e.g. H3)
+                # Fix element column where some cssr files have a number concated to the 
+                #  end of the element tag (e.g. H3)
                 tempch = ""
                 for ch in str[2]
                     if !isdigit(ch)
@@ -116,9 +124,9 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
                 # Use the correction boolean to fix fractional/cartesian discrepency
                 if corr
                     x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])./[a, b, c]
-    				if i == 6
-    					@printf("x = %f, y = %f, z = %f\n",x[i-5],y[i-5],z[i-5])
-    				end
+                    if i == 6
+                        @printf("x = %f, y = %f, z = %f\n",x[i-5],y[i-5],z[i-5])
+                    end
                 else
                     x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])
                 end
@@ -141,7 +149,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             if length(line) == 0
                 continue
             end
-
+                        
             if line[1] == "_symmetry_space_group_name_H-M"
                 if length(line) == 3
                     @assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1"), ".cif must have P1 symmetry.\n")
@@ -224,8 +232,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     
     @test f_to_C * C_to_f ≈ eye(3)
 
-	fractional_coords = Array{Float64, 2}(3, length(x))
-	fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
+    fractional_coords = Array{Float64, 2}(3, length(x))
+    fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
     
     # finally construct the framework
     framework = Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, fractional_coords, f_to_C, C_to_f)
@@ -297,7 +305,9 @@ Check if any two atoms are lying on top of each other by calculating the 2-norm 
 between every pair of atoms and ensuring distance is greater than a threshold.
 Throw error if atoms overlap and tell which atoms are culprit.
 """
-function check_for_atom_overlap(framework::Framework; threshold_distance_for_overlap::Float64=0.1, verbose::Bool=false)
+function check_for_atom_overlap(framework::Framework; 
+                                threshold_distance_for_overlap::Float64=0.1,
+                                verbose::Bool=false)
     for i = 1:framework.n_atoms
         xf_i = framework.xf[:, i]
         for j = i+1:framework.n_atoms
@@ -305,7 +315,7 @@ function check_for_atom_overlap(framework::Framework; threshold_distance_for_ove
             # vector pointing from atom j to atom i in carteisan coords
             dx = framework.f_to_C * (xf_i - xf_j)
             if (norm(dx) < threshold_distance_for_overlap)
-                error(@printf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
+                error(@srintf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
             end
         end
     end
