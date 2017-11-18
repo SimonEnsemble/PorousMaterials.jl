@@ -7,9 +7,6 @@ using Mols
 
 export LennardJonesForceField, read_forcefield_file, lennard_jones, readproperties, rep_factors, centerofmass, vdw_energy, rotate, exploreframe
 
-const NA = 6.022e23 # 1/mol
-const R = 1.9872036e-3 # kcal/(mol K)
-
 """
 	ljforcefield = LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
 
@@ -77,7 +74,7 @@ returns potential energy in units Kelvin.
 - `ϵ::Float64`: epsilon parameter in Lennard Jones potential (units: Kelvin)
 """
 function lennard_jones(r::Float64, σ::Float64, ϵ::Float64)
-	ratio = (σ/r)^6
+	ratio = (σ / r) ^ 6
 	return 4 * ϵ * (ratio ^ 2 - ratio)
 end
 
@@ -180,57 +177,6 @@ function centerofmass(frame::Framework, filename::AbstractString, rep_factors::A
 	return frame.f_to_C*(rvec/mtot)
 end
 
-"""
-	V = vdw_energy(frame, molecule, ljforcefield, pos, repfactors)
-
-Calculates the van der Waals energy for a molecule locates at a specific position in a MOF supercell. Uses the nearest image convention to find the closest replicate of a specific atom
-"""
-function vdw_energy(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Array{Int64})
-	repA = repfactors[1]
-	repB = repfactors[2]
-	repC = repfactors[3]
-	repvec = Array{Int64}(3)
-	σ = 0.0
-	r = 0.0
-	ϵ = 0.0
-	potsum = 0
-	for nA=0:repA-1, nB=0:repB-1, nC=0:repC-1
-		for i=1:molecule.n_atoms
-			for k=1:frame.n_atoms
-				# Nearest image convention. If the interaction between the probe molecule and atom k is being looked at, we'll only look at the interaction between the probe molecule and the closest replication of atom k. This is done with fractional coordinates for simplication and transformation to cartesian is done later.
-				repvec = [nA, nB, nC]
-				dx = abs((frame.C_to_f*molecule.pos)[1]-(frame.f_coords[1,k]+nA))
-				if dx > repA/2
-					repvec -= sign(dx)*[repA,0,0]
-				end
-				dy = abs((frame.C_to_f*molecule.pos)[2]-(frame.f_coords[2,k]+nB))
-				if dy > repB/2
-					repvec -= sign(dy)*[0,repB,0]
-				end
-				dz = abs((frame.C_to_f*molecule.pos)[3]-(frame.f_coords[3,k]+nC))
-				if dz > repC/2
-					repvec -= sign(dz)*[0,0,repC]
-				end
-#				println(repvec)
-#				println("==========================\n")
-
-				temp = frame.f_to_C*(frame.f_coords[:,k]+repvec)
-				r = vecnorm( (molecule.pos[:,i]) - frame.f_to_C*(frame.f_coords[:,k]+repvec) )
-				σ = ljforcefield.sigmas[ ljforcefield.atom_to_id[ frame.atoms[k] ] , ljforcefield.atom_to_id[ molecule.atoms[i] ] ]
-				ϵ = ljforcefield.epsilons[ ljforcefield.atom_to_id[ frame.atoms[k] ] , ljforcefield.atom_to_id[ molecule.atoms[i] ] ]
-				if (r < ljforcefield.cutoffradius)
-#					@printf("Calling lennard_jones(%f,%f,%f)\n",r,σ,ϵ)
-					if lennard_jones(r,σ,ϵ) > 0
-#						@printf("%s-%d (nA = %d, nB = %d, nC = %d) and %s-%d -> r = %f | pos = [%f,%f,%f]\n",frame.atoms[k],k,nA,nB,nC,molecule.atoms[i],i,r,pos[1],pos[2],pos[3])
-#					@printf("pos = [%f,%f,%f], frame.f_to_C*(frame.f_coords[k,:]+repvec) = [%f,%f,%f]\n",molecule.x[1],molecule.x[2],molecule.x[3],temp[1],temp[2],temp[3])
-					end
-					potsum += lennard_jones(r,σ,ϵ)
-				end
-			end
-		end
-	end
-	return potsum
-end # vdw_energy end
 
 """
 	rotate!(rotMatrix::Array{Float64,2},θ::Float64,ϕ::Float64,ψ::Float64)
