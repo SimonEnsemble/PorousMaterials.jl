@@ -41,3 +41,6 @@ Forcefield input files are stored in `PorousMaterials.PATH_TO_DATA * "forcefield
 Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`.
 
 ## Energetics
+
+## TODO
+-- `UFF.csv` epsilon units should be in Kelvin. Also the functional form for LJ potential is different for UFF.
