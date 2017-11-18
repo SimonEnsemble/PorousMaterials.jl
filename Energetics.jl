@@ -30,24 +30,27 @@ function vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::Lenn
 			for k = 1:framework.n_atoms # loop over framework atoms in the home unit cell
 				# Nearest image convention. If the interaction between the probe molecule and atom k is being looked at, we'll only look at the interaction between the probe molecule and the closest replication of atom k. This is done with fractional coordinates for simplication and transformation to cartesian is done later.
 				repvec = [nA, nB, nC]
+
 				dx = abs((framework.C_to_f*molecule.pos)[1]-(framework.f_coords[1,k]+nA))
-				if dx > repfactors[1]/2
-					repvec -= sign(dx)*[repfactors[1],0,0]
+				if dx > repfactors[1] / 2
+					repvec -= sign(dx) * [repfactors[1], 0, 0]
 				end
+
 				dy = abs((framework.C_to_f*molecule.pos)[2]-(framework.f_coords[2,k]+nB))
-				if dy > repfactors[2]/2
-					repvec -= sign(dy)*[0,repfactors[2],0]
+				if dy > repfactors[2] / 2 # TODO need to check sign.
+					repvec -= sign(dy) * [0, repfactors[2], 0]
 				end
+
 				dz = abs((framework.C_to_f*molecule.pos)[3]-(framework.f_coords[3,k]+nC))
-				if dz > repfactors[3]/2
-					repvec -= sign(dz)*[0,0,repfactors[3]]
+				if dz > repfactors[3] / 2
+					repvec -= sign(dz) * [0, 0, repfactors[3]]
 				end
 #				println(repvec)
 #				println("==========================\n")
 
-				temp = framework.f_to_C*(framework.f_coords[:,k]+repvec)
+				temp = framework.f_to_C*(framework.f_coords[:, k] + repvec)
 				r = vecnorm( (molecule.pos[:,i]) - framework.f_to_C*(framework.f_coords[:,k]+repvec) )
-				σ = ljforcefield.sigmas[ ljforcefield.atom_to_id[ framework.atoms[k] ] , ljforcefield.atom_to_id[ molecule.atoms[i] ] ]
+				σ = ljforcefield.sigmas[ ljforcefield.atom_to_id[ framework.atoms[k] ] , ljforcefield.atom_to_id[ molecule.atoms[i] ] ] # TODO this is easier now with new lj force field format.
 				ϵ = ljforcefield.epsilons[ ljforcefield.atom_to_id[ framework.atoms[k] ] , ljforcefield.atom_to_id[ molecule.atoms[i] ] ]
 				if (r < ljforcefield.cutoffradius)
 #					@printf("Calling lennard_jones(%f,%f,%f)\n",r,σ,ϵ)
