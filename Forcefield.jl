@@ -1,10 +1,11 @@
 """All things energy related"""
 module Forcefield
 
+using DataFrames
 using Crystal
 using Mols
 
-export LennardJonesForceField, constructforcefield, lennard_jones, readproperties, rep_factors, centerofmass, vdw_energy, rotate, exploreframe
+export LennardJonesForceField, read_forcefield_file, lennard_jones, readproperties, rep_factors, centerofmass, vdw_energy, rotate, exploreframe
 
 const NA = 6.022e23 # 1/mol
 const R = 1.9872036e-3 # kcal/(mol K)
@@ -15,73 +16,70 @@ const R = 1.9872036e-3 # kcal/(mol K)
 Data structure for a Lennard Jones forcefield, read from a file containing UFF parameters.
 
 # Arguments
-- `cutoffradius::Float64`: cut-off radius to define where the potential energy goes to zero, rather than taking the limit as r → ∞ (units: Angstrom)
-- `epsilon_dict::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to an ϵ, which is the depth of a Lennard Jones potential well
-- `sigma_dict::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to a σ, which is the finite distance where the potential between atoms goes to zero
-- `atom_to_id::Dict{AbstractString, Int64}`: Dictionary that connects element acronyms to a unique integer value.
-- `epsilons::Array{Float64,2}`: Two dimensional matrix that contains the ϵ interacting values between two elements. Row/Column number correspond to id's from atom_to_id (units: kcal/mol)
-- `sigmas::Array{Float64,2}`: Two dimensional matrix that contains the σ interacting values between two elements. Row/Column number correspond to id's from atom_to_id (units: Angstrom)
+- `pure_sigmas::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to a σ, which is the finite distance where the potential between atoms goes to zero
+- `pure_epsilons::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to an ϵ, which is the depth of a Lennard Jones potential well
+- `epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
+- `sigmas::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ (units: A) for cross-interactions. Example use is `sigmas["He"]["C"]`
+- `cutoffradius::Float64`: cut-off radius beyond which we define the potential energy to be zero (units: Angstrom)
 """
 struct LennardJonesForceField
+	pure_sigmas::Dict{AbstractString, Float64}
+	pure_epsilons::Dict{AbstractString, Float64}
+
+	sigmas::Dict{AbstractString, Dict{AbstractString, Float64}}
+	epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}
+
 	cutoffradius::Float64
-	epsilon_dict::Dict{AbstractString, Float64}
-	sigma_dict::Dict{AbstractString, Float64}
-	atom_to_id::Dict{AbstractString, Int64}
-	epsilons::Array{Float64, 2}
-	sigmas::Array{Float64,2}
 end
 
 """
-	ljforcefield = constructforcefield("filename.csv")
+	ljforcefield = read_forcefield_file("filename.csv")
 
-Read a .csv file containing UFF parameters (with the following column order: [Element, σ, ϵ]) and constructs a LennardJonesForceField object
+Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LennardJonesForceField object.
 """
-function constructforcefield(filename::AbstractString; cutoffradius::Float64=14.0)
-	f = open(filename,"r")
-	lines = readlines(f)
+function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
+    if ! (mixing_rules in ["Lorentz-Berthelot"])
+        error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
+    end
 
-	n_ele = length(lines)-1
+    df = readtable(filename, allowcomments=true)
 
-	epsilon_dict = Dict{AbstractString, Float64}()
-	sigma_dict = Dict{AbstractString, Float64}()
-	atom_to_id = Dict{AbstractString, Int64}()
-	elements = Array{AbstractString}(n_ele)
-	epsilons = Array{Float64,2}(n_ele,n_ele)
-	sigmas = similar(epsilons)
-
-	for (i,line) in enumerate(lines)
-		if i > 1
-			str = split(line,",")
-			σ,ϵ = map(x->parse(Float64, x), str[2:3])
-			epsilon_dict[str[1]] = ϵ/R
-			sigma_dict[str[1]] = σ
-			atom_to_id[str[1]] = i-1
-			elements[i-1] = str[1]
-		end
-	end
-	close(f)
-	for (i,ele1) in enumerate(elements)
-		for (k,ele2) in enumerate(elements[i:end])
-			epsilons[i,k+i-1] = sqrt(epsilon_dict[ele1]*epsilon_dict[ele2])
-			epsilons[k+i-1,i] = epsilons[i,k+i-1]
-			sigmas[i,k+i-1] = (sigma_dict[ele1]+sigma_dict[ele2])/2
-			sigmas[k+i-1,i] = sigmas[i,k+i-1]
+    pure_sigmas = Dict{AbstractString, Float64}()
+    pure_epsilons = Dict{AbstractString, Float64}()
+    for row in eachrow(df)
+        pure_sigmas[row[:atom]] = row[:sigma]
+        pure_epsilons[row[:atom]] = row[:epsilon]
+    end
+    
+    # cross interactions
+    epsilons = Dict{AbstractString, Dict{AbstractString, Float64}}()
+    sigmas = Dict{AbstractString, Dict{AbstractString, Float64}}()
+	for atom in keys(pure_sigmas)
+        epsilons[atom] = Dict{AbstractString, Float64}()
+        sigmas[atom] = Dict{AbstractString, Float64}()
+        for other_atom in keys(pure_sigmas)
+			epsilons[atom][other_atom] = sqrt(pure_epsilons[atom] * pure_epsilons[other_atom])
+			sigmas[atom][other_atom] = (pure_sigmas[atom] + pure_sigmas[other_atom]) / 2.0
 		end
 	end
 
-	return LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
-
+	return LennardJonesForceField(pure_sigmas, pure_epsilons, sigmas, epsilons, cutoffradius)
 end # constructforcefield end
 
 """
-	V = lennard_jones_potential_energy(r::Float64, σ::Float64, ϵ::Float64)
+	V = lennard_jones_potential_energy(r::Float64, σ::Float64, ϵ::Float64) # returns units Kelvin
 
-Calculate the lennard jones potential energy given a radius r between two molecules. σ and ϵ are specific to interaction between two elements
+Calculate the lennard jones potential energy given a radius r between two molecules. σ and ϵ are specific to interaction between two elements.
+returns potential energy in units Kelvin.
+# Arguments
+- `r::Float64`: distance between two (pseudo)atoms in question (Angstrom)
+- `σ::Float64`: sigma parameter in Lennard Jones potential (units: Angstrom)
+- `ϵ::Float64`: epsilon parameter in Lennard Jones potential (units: Kelvin)
 """
-function lennard_jones(r::Float64, σ::Float64, ϵ::Float64 )
+function lennard_jones(r::Float64, σ::Float64, ϵ::Float64)
 	ratio = (σ/r)^6
-	return 4*ϵ*(ratio^2 - ratio)
-end # lennard_jones end
+	return 4 * ϵ * (ratio ^ 2 - ratio)
+end
 
 """
 	repfactors = rep_factors(frame::Framework,cutoff::Float64)
