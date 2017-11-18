@@ -27,7 +27,9 @@ function readproperties(filename::AbstractString)
 	return eleprops
 end # end readproperties
 
-
+# TODO: Note sure if you will actually use this function, but consider that computing
+# TODO   center of mass for a periodic image is tricky. https://en.wikipedia.org/wiki/Center_of_mass#Systems_with_periodic_boundary_conditions
+# TODO   is this function invariant to shifting the home unit cell?
 """
 	c0 = centerofmass(frame,"~/example/properties.csv")
 
