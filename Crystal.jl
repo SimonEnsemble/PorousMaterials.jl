@@ -1,14 +1,14 @@
 """All things crystal structures"""
 module Crystal
 
-export Framework, constructframework, replicate_to_xyz, correct_cssr_line, atom_error_check
+export Framework, read_crystal_structure_file, replicate_to_xyz
 
 global PATH_TO_STRUCTURE_FILES = homedir() * "/Dropbox/Code/PorousMaterials.jl/cssrFiles"
 
 using Base.Test
 
 """
-    framework = Framework(a, b, c, α, β, γ, N, atoms, f_coords, f_to_c, c_to_f)
+    framework = Framework(a, b, c, α, β, γ, N, atoms, xf, f_to_c, c_to_f)
 
 Data structure for a 3D crystal structure.
 
@@ -18,8 +18,7 @@ Data structure for a 3D crystal structure.
 - `n_atoms::Int64`: number of atoms in the unit cell
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order
-- `f_coords::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order corresponding to `atoms`.
-stored column-wise so that f_coords[:, 1] is first atom's fractional coordinates.
+- `xf::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first atom's fractional coordinates.
 - `f_to_c::Array{Float64,2}`: a 3x3 matrix used to convert fractional coordinates to cartesian coordinates
 - `c_to_f::Array{Float64,2}`: a 3x3 matrix used to convert cartesian coordinates to fractional coordinates
 """
@@ -36,7 +35,7 @@ struct Framework
 
     n_atoms::Int64
     atoms::Array{String, 1}
-    f_coords::Array{Float64, 2}
+    xf::Array{Float64, 2}
 
     f_to_C::Array{Float64, 2}
     C_to_f::Array{Float64, 2}
@@ -45,7 +44,7 @@ end
 """
     framework = read_crystal_structure_file("filename.cssr")
 
-Read a crystal structure file (.cif or .cssr) and construct a Framework object
+Read a crystal structure file (.cif or .cssr) and construct a Framework object.
 """
 function read_crystal_structure_file(filename::String)
     # read file extension, ensure reader implemented.
@@ -228,14 +227,15 @@ function read_crystal_structure_file(filename::String)
     
     @test f_to_C * C_to_f ≈ eye(3)
 
-	fractional_coords = Array{Float64,2}(3,length(x))
+	fractional_coords = Array{Float64,2}(3, length(x))
 	fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
     
     # finally construct the framework
     framework = Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, fractional_coords, f_to_C, C_to_f)
 
-    # check for atom overlap
     check_for_atom_overlap(framework)
+
+    check_for_atoms_out_of_unit_cell_box(framework)
 
     return framework
 end # constructframework end
@@ -252,8 +252,8 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::St
     @printf(f, "%d\n%s\n", framework.n_atoms * (nx + 1) * (ny + 1) * (nz + 1), comment)
 
     for i = 0:nx, j = 0:ny, k = 0:nz
-        f_coords = framework.f_coords .+ [i, j, k]
-        c_coords = framework.f_to_C * f_coords
+        xf = framework.xf .+ [i, j, k]
+        c_coords = framework.f_to_C * xf
         for ii = 1:size(c_coords, 2)
             @printf(f, "%s\t%.4f\t%.4f\t%.4f\n", framework.atoms[ii], c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
         end
@@ -299,9 +299,9 @@ Throw error if atoms overlap and tell which atoms are culprit.
 """
 function check_for_atom_overlap(framework::Framework; threshold_distance_for_overlap::Float64=0.1, verbose::Bool=false)
     for i = 1:framework.n_atoms
-        xf_i = framework.f_coords[:, i]
+        xf_i = framework.xf[:, i]
         for j = i+1:framework.n_atoms
-            xf_j = framework.f_coords[:, j]
+            xf_j = framework.xf[:, j]
             # vector pointing from atom j to atom i in carteisan coords
             dx = framework.f_to_C * (xf_i - xf_j)
             if (norm(dx) < threshold_distance_for_overlap)
@@ -313,6 +313,23 @@ function check_for_atom_overlap(framework::Framework; threshold_distance_for_ove
         @printf("No atoms are on top of each other!")
     end
     return
+end
+
+"""
+    check_for_atoms_out_of_unit_cell_box(framework)
+
+Check if any atoms lie outside of the unit cell box and print a warning if so.
+"""
+function check_for_atoms_out_of_unit_cell_box(framework::Framework)
+    for i = 1:framework.n_atoms
+        if sum(framework.xf[:, i] .< 0.0) != 0
+            @printf("WARNING: Atom %d has fractional coordinate less than 0.0\n", i)
+        end
+        if sum(framework.xf[:, i] .> 1.0) != 0
+            @printf("WARNING: Atom %d has fractional coordinate greater than 1.0\n", i)
+        end
+    end
+    return true
 end
 
 end # end module
