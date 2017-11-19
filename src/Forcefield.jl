@@ -108,3 +108,24 @@ function replication_factors(framework::Framework, cutoff::Float64)
 
 	return (rep[1], rep[2], rep[3])::Tuple{Int, Int, Int}
 end # end rep_factors
+
+"""
+    check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField; verbose::Bool=true)
+
+Check that the force field contains parameters for every atom present in the framework.
+returns true or false; prints which atoms are missing by default if `verbose=true`.
+"""
+function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField, verbose::Bool=true)
+    framework_atoms = unique(framework.atoms)
+    forcefield_atoms = keys(ljforcefield.pure_epsilons)
+
+    full_coverage = true
+
+    for atom in framework_atoms
+        if !(atom in forcefield_atoms)
+            @printf("[Pseudo]atom type \"%s\" in framework is not covered by the forcefield.\n", atom)
+            full_coverage = false
+        end
+    end
+    return full_coverage
+end

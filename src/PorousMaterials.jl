@@ -9,7 +9,7 @@ include("Molecules.jl")
 include("Energetics.jl")
  
 export Framework, read_crystal_structure_file, replicate_to_xyz, # Crystal.jl
-       LennardJonesForceField, read_forcefield_file, replication_factors, # Forcefield.jl
+       LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl
        Molecule, constructmolecule, readcharge, # Molecules.jl
        lennard_jones, vdw_energy # Energetics.jl
 
