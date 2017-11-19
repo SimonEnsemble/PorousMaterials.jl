@@ -33,6 +33,9 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
     end
 
     df = readtable(PATH_TO_DATA * "forcefields/" * filename, allowcomments=true) # from DataFrames
+    # assert that all atoms in the force field are unique (i.e. no duplicates)
+    @assert(length(unique(df[:atom])) == size(df, 1), 
+        @sprintf("Duplicate atoms found in force field file %s\n", filename))
     
     # pure X-X interactions (X = (pseudo)atom)
     pure_sigmas = Dict{AbstractString, Float64}()
