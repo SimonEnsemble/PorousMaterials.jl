@@ -11,7 +11,7 @@ include("Energetics.jl")
 export Framework, read_crystal_structure_file, replicate_to_xyz, 
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, # Crystal.jl
        LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl
-       Molecule, constructmolecule, readcharge, # Molecules.jl
+       Molecule, read_molecule_file, readcharge, # Molecules.jl
        lennard_jones, vdw_energy # Energetics.jl
 
 end

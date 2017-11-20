@@ -23,6 +23,11 @@ Reads a .mol file and gathers the relevant information to construct a Molecule.
 # TODO describe the format of the input file
 """
 function read_molecule_file(mol_filename::String)
+	extension = split(filename, ".")[end]
+	if ! (extension in ["mol"])
+		error("PorousMaterials.jl can only read .mol molecule files.")
+	end
+
 	f = open(mol_filename, "r")
 	lines = readlines(f)
 	close(f)
