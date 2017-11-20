@@ -45,20 +45,19 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 #  later.
 				repvec = [nA, nB, nC]
 
-                # TODO need to check sign. This is incorrect.
 				dx = abs((framework.C_to_f*molecule.pos)[1]-(framework.f_coords[1,k]+nA))
 				if dx > repfactors[1] / 2
-					repvec -= sign(dx) * [repfactors[1], 0, 0]
+					repvec += sign(dx) * [repfactors[1], 0, 0]
 				end
 
 				dy = abs((framework.C_to_f*molecule.pos)[2]-(framework.f_coords[2,k]+nB))
 				if dy > repfactors[2] / 2
-					repvec -= sign(dy) * [0, repfactors[2], 0]
+					repvec += sign(dy) * [0, repfactors[2], 0]
 				end
 
 				dz = abs((framework.C_to_f*molecule.pos)[3]-(framework.f_coords[3,k]+nC))
 				if dz > repfactors[3] / 2
-					repvec -= sign(dz) * [0, 0, repfactors[3]]
+					repvec += sign(dz) * [0, 0, repfactors[3]]
 				end
 #				println(repvec)
 #				println("==========================\n")
