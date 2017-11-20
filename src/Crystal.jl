@@ -1,11 +1,12 @@
 using Base.Test
 
 """
-    framework = Framework(a, b, c, α, β, γ, N, atoms, xf, f_to_c, c_to_f)
+    framework = Framework(name, a, b, c, α, β, γ, Ω, n_atoms, atoms, xf, f_to_c, c_to_f)
 
 Data structure for a 3D crystal structure.
 
 # Arguments
+- `name::String`: corresponds to crystal structure filename from which it was read.
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `n_atoms::Int64`: number of atoms in the unit cell
@@ -21,6 +22,8 @@ cartesian coordinates
 fractional coordinates
 """
 struct Framework
+    name::String
+
     a::Float64
     b::Float64
     c::Float64
@@ -239,7 +242,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
     
     # finally construct the framework
-    framework = Framework(a, b, c, α, β, γ, Ω, n_atoms, atoms, fractional_coords, f_to_C, C_to_f)
+    framework = Framework(filename, a, b, c, α, β, γ, Ω, n_atoms, atoms, fractional_coords, f_to_C, C_to_f)
     
     if run_checks
         check_for_atom_overlap(framework)
@@ -404,3 +407,29 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::String)
 	println("See ", filename)
 	return
 end              
+
+    
+function chemical_formula(framework::Framework)
+    # use dictionary to count atom types
+    atom_counts = Dict(zip(unique(framework.atoms), zeros(Int, length(unique(framework.atoms)))))
+    for i = 1:framework.n_atoms
+        atom_counts[framework.atoms[i]] += 1
+    end
+    
+    # get greatest common divisor
+    gcd_ = gcd([k for k in values(atom_counts)]...)
+            
+    # turn into irreducible chemical formula
+    for atom in keys(atom_counts)
+        atom_counts[atom] = atom_counts[atom] / gcd_
+    end
+            
+    # print result 
+    @printf("Chemical formula of %s:\n\t", framework.name)
+    for (atom, formula_unit) in atom_counts
+        @printf("%s_%d", atom, formula_unit)
+    end
+    @printf("\n")
+
+    return atom_counts
+end
