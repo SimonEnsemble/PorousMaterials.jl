@@ -358,3 +358,18 @@ function check_for_atoms_out_of_unit_cell_box(framework::Framework)
     end
     return true
 end
+
+"""
+    strip_numbers_from_atom_labels(framework::Framework)
+
+Strip numbers from labels for `framework.atoms`.
+e.g. C12 --> C
+"""
+function strip_numbers_from_atom_labels!(framework::Framework)
+    for i = 1:framework.n_atoms
+        while !isalpha(framework.atoms[i][end])
+            framework.atoms[i] = chop(framework.atoms[i])
+        end
+    end
+    return 
+end
