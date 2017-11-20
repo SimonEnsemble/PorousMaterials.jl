@@ -152,6 +152,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             end
                         
             if line[1] == "_symmetry_space_group_name_H-M"
+                # TODO use Pycall to call ASE package and convert to P1 symmetry
+                # TODO long-term write our own replicator?
                 if length(line) == 3
                     @assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1"), ".cif must have P1 symmetry.\n")
                 elseif length(line) == 2
@@ -248,18 +250,32 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 end # constructframework end
 
 """
-    replicate_to_xyz(framework, xyzfilename, comment="", repfactors=(0, 0, 0))
+    replicate_to_xyz(framework, xyzfilename; comment="", repfactors=(0, 0, 0),
+                     negative_replications=false)
 
 Write a .xyz file representation of a crystal structure from a Framework type.
 Write an optional `comment` to the .xyz file if desired.
-Extend the structure in the x-,y- or z-direction by changing the tuple `repfactors`
-A value of 1 replicates the structure once in the desired direction, so `repfactors=(0, 0, 0)` includes only the "home" unit cell.
+Extend the structure in the x-,y- or z-direction by changing the tuple `repfactors`.
+A value of 1 replicates the structure once in the desired direction, so 
+`repfactors=(0, 0, 0)` includes only the "home" unit cell. Ensure `negative_replications`
+is true if home unit cell should be replicated in the negative directions too.
 """
-function replicate_to_xyz(framework::Framework, xyzfilename::String; comment::String="", repfactors::Tuple{Int, Int, Int}=(0, 0, 0))
-    f = open(xyzfilename, "w")
-    @printf(f, "%d\n%s\n", framework.n_atoms * (repfactors[1] + 1) * (repfactors[2] + 1) * (repfactors[3] + 1), comment)
+function replicate_to_xyz(framework::Framework, xyzfilename::String; 
+                          comment::String="", repfactors::Tuple{Int, Int, Int}=(0, 0, 0),
+                          negative_replications::Bool=false)
+    # pre-calculate # of total atoms in .xyz
+    if negative_replications
+        n_atoms = framework.n_atoms * (2 * repfactors[1] + 1) * (2 * repfactors[2] + 1) * (2 * repfactors[3] + 1)
+        neg_repfactors = (-repfactors[1], -repfactors[2], -repfactors[3])
+    else
+        n_atoms = framework.n_atoms * (repfactors[1] + 1) * (repfactors[2] + 1) * (repfactors[3] + 1)
+        neg_repfactors = (0, 0, 0)
+    end
 
-    for i = 0:repfactors[1], j = 0:repfactors[2], k = 0:repfactors[3]
+    f = open(xyzfilename, "w")
+    @printf(f, "%d\n%s\n", n_atoms, comment)
+
+    for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
         xf = framework.xf .+ [i, j, k]
         c_coords = framework.f_to_C * xf
         for ii = 1:size(c_coords, 2)
