@@ -30,7 +30,22 @@ All input files are stored in `PorousMaterials.PATH_TO_DATA`, which by default i
 
 ## Crystal
 
-Crystal structure files are stored in `PorousMaterials.PATH_TO_DATA * "crystals/"`.
+Crystal structure files are stored in `PorousMaterials.PATH_TO_DATA * "crystals/"`. Crystals 
+in .cif format must be in P1 symmetry. If your .cif is not in P1 symmetry, use the Atomic 
+Simulation Environment (ASE) in Python to convert to P1 symmetry as follows (Thanks Efrem):
+
+```python
+import ase
+import ase.io
+import ase.build
+
+input_cif_filename='FAU_Si.cif'
+output_cif_filename='FAU_Si_unwrapped.cif'
+
+orig_cif = ase.io.read(input_cif_filename, format='cif')
+cif_unwrapped = ase.build.make_supercell(orig_cif, [[1,0,0], [0,1,0], [0,0,1]])
+ase.io.write(output_cif_filename, cif_unwrapped, format='cif')
+```
 
 ## Forcefield
 
