@@ -435,20 +435,29 @@ function chemical_formula(framework::Framework)
 end
 
 """
-    convert_cif_to_P1_symmetry(filename::String, outputfilename::String)
+    convert_cif_to_P1_symmetry(filename::String, outputfilename::String; verbose::Bool=true)
 
 Use Atomic Simulation Environment (ASE) Python package to convert .cif file in non-P1 
 symmetry to P1 symmetry. Writes .cif with P1 symmetry to `outputfilename1`.
+Filenames correspond to files in `PATH_TO_DATA/crystals`.
 """
-function convert_cif_to_P1_symmetry(filename::String, outputfilename::String)               
+function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; verbose::Bool=true)
     # Import Atomic Simulation Environment Python package                                   
     @pyimport ase
     @pyimport ase.io as aseio
     @pyimport ase.build as asebuild
-                                                                                            
-    non_p1_cif = aseio.read(filename, format="cif")
+    
+    non_p1_cif_location = PATH_TO_DATA * "crystals/" * filename
+    non_p1_cif = aseio.read(non_p1_cif_location, format="cif")
+    
     p1_cif = asebuild.make_supercell(non_p1_cif, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    aseio.write(outputfilename, p1_cif, format="cif")
+
+    p1_cif_location = PATH_TO_DATA * "crystals/" * outputfilename
+    aseio.write(p1_cif_location, p1_cif, format="cif")
+
+    if verbose
+        @printf("Converting to P1 symmetry using ASE.\n\t%s\n\t\t--->\n\t%s\n\n", non_p1_cif_location, p1_cif_location)
+    end
 
     return
 end 
