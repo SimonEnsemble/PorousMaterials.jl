@@ -1,4 +1,5 @@
 using Base.Test
+using PyCall
 
 """
     framework = Framework(name, a, b, c, α, β, γ, Ω, n_atoms, atoms, xf, f_to_c, c_to_f)
@@ -155,7 +156,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             end
                         
             if line[1] == "_symmetry_space_group_name_H-M"
-                # TODO use Pycall to call ASE package and convert to P1 symmetry
                 # TODO long-term write our own replicator?
                 if length(line) == 3
                     @assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1"), ".cif must have P1 symmetry.\n")
@@ -163,7 +163,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
                     @assert(contains(line[2], "P1") || contains(line[2], "P 1"), ".cif must have P1 symmetry\n")
                 else
                     println(line)
-                    error("Does this .cif have P1 symmetry?")
+                    error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
                 end
             end
 
@@ -433,3 +433,31 @@ function chemical_formula(framework::Framework)
 
     return atom_counts
 end
+
+"""
+    convert_cif_to_P1_symmetry(filename::String, outputfilename::String; verbose::Bool=true)
+
+Use Atomic Simulation Environment (ASE) Python package to convert .cif file in non-P1 
+symmetry to P1 symmetry. Writes .cif with P1 symmetry to `outputfilename1`.
+Filenames correspond to files in `PATH_TO_DATA/crystals`.
+"""
+function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; verbose::Bool=true)
+    # Import Atomic Simulation Environment Python package                                   
+    @pyimport ase
+    @pyimport ase.io as aseio
+    @pyimport ase.build as asebuild
+    
+    non_p1_cif_location = PATH_TO_DATA * "crystals/" * filename
+    non_p1_cif = aseio.read(non_p1_cif_location, format="cif")
+    
+    p1_cif = asebuild.make_supercell(non_p1_cif, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+    p1_cif_location = PATH_TO_DATA * "crystals/" * outputfilename
+    aseio.write(p1_cif_location, p1_cif, format="cif")
+
+    if verbose
+        @printf("Converting to P1 symmetry using ASE.\n\t%s\n\t\t--->\n\t%s\n\n", non_p1_cif_location, p1_cif_location)
+    end
+
+    return
+end 
