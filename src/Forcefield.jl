@@ -1,7 +1,7 @@
 using DataFrames
 
 """
-	ljforcefield = LennardJonesForceField(cutoffradius, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas)
+	ljforcefield = LennardJonesForceField(cutoffradius_squared, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas_squared)
 
 Data structure for a Lennard Jones forcefield, read from a file containing UFF parameters.
 
@@ -9,17 +9,17 @@ Data structure for a Lennard Jones forcefield, read from a file containing UFF p
 - `pure_sigmas::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to a σ, which is the finite distance where the potential between atoms goes to zero
 - `pure_epsilons::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to an ϵ, which is the depth of a Lennard Jones potential well
 - `epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
-- `sigmas::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ (units: A) for cross-interactions. Example use is `sigmas["He"]["C"]`
-- `cutoffradius::Float64`: cut-off radius beyond which we define the potential energy to be zero (units: Angstrom)
+- `sigmas_squared::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ^2 (units: A^2) for cross-interactions. Example use is `sigmas_squared["He"]["C"]`
+- `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom^2)
 """
 struct LennardJonesForceField
 	pure_sigmas::Dict{AbstractString, Float64}
 	pure_epsilons::Dict{AbstractString, Float64}
 
-	sigmas::Dict{AbstractString, Dict{AbstractString, Float64}}
+	sigmas_squared::Dict{AbstractString, Dict{AbstractString, Float64}}
 	epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}
 
-	cutoffradius::Float64
+	cutoffradius_squared::Float64
 end
 
 """
@@ -47,17 +47,18 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
     
     # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
     epsilons = Dict{AbstractString, Dict{AbstractString, Float64}}()
-    sigmas = Dict{AbstractString, Dict{AbstractString, Float64}}()
+    sigmas_squared = Dict{AbstractString, Dict{AbstractString, Float64}}()
 	for atom in keys(pure_sigmas)
         epsilons[atom] = Dict{AbstractString, Float64}()
-        sigmas[atom] = Dict{AbstractString, Float64}()
+        sigmas_squared[atom] = Dict{AbstractString, Float64}()
         for other_atom in keys(pure_sigmas)
 			epsilons[atom][other_atom] = sqrt(pure_epsilons[atom] * pure_epsilons[other_atom])
-			sigmas[atom][other_atom] = (pure_sigmas[atom] + pure_sigmas[other_atom]) / 2.0
+			# Store sigma as sigma squared so we can compare it with r^2. r^2 is faster to compute than r
+			sigmas_squared[atom][other_atom] = ((pure_sigmas[atom] + pure_sigmas[other_atom]) / 2.0)^2
 		end
 	end
 
-	return LennardJonesForceField(pure_sigmas, pure_epsilons, sigmas, epsilons, cutoffradius)
+	return LennardJonesForceField(pure_sigmas, pure_epsilons, sigmas_squared, epsilons, cutoffradius^2)
 end # read_forcefield_file end
 
 """
