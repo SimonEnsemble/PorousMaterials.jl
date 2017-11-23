@@ -53,8 +53,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     # TODO add charges
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
-    if ! (extension in ["cif", "cssr"])
-        error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
+    if ! (extension in ["cif"])
+        error("PorousMaterials.jl can only read .cif crystal structure files.")
     end
     
     # read in crystal structure file
@@ -65,79 +65,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
-    # TODO This reader is a mishmash of a lot of things. This needs to be cleaned up!
-
-    if extension == "cssr"
-        # Initialize variables
-        charges = Float64[]
-        n_atoms = length(lines) - 5
-        a, b, c, α, β, γ = Array{Float64}(6)
-        x = Array{Float64}(n_atoms) # fractional
-        y = similar(x)
-        z = similar(x)
-        atoms = Array{String}(n_atoms)
-
-        # Make a boolean variable to fix discrepency with fractional and cartesian 
-        #  coordinates in cssr files
-        corr = false
-        for line in lines[6:6+16]
-            str = split(line)
-            for val in str[3:5]
-                # Check if values are fractional or not. I only check 10 lines, 
-                #  which is probably enough.
-                if parse(Float64,val)>1
-                    corr = true
-                    break
-                end
-            end
-        end
-
-        # Iterate through the lines of the cssr file.
-        for (i,line) in enumerate(lines)
-            str = split(line)
-            # Unit cell dimension line
-            if i == 1
-                a, b, c = map(x->parse(Float64, x), str[end-2:end])
-            # Unit cell angle line
-            elseif i == 2
-                temp = zeros(3)
-                cnt = 1
-                for val in str
-                    try
-                        temp[cnt] = parse(Float64,val)*π/180
-                        cnt += 1
-                    end
-                end
-                α, β, γ = temp[1:3]
-            # Atom lines
-            elseif i > 5
-                try # Fix faulty cssr files where columns one and two merge for some reason
-                    parse(Float64,str[1])
-                catch
-                    str = correct_cssr_line(str)
-                end
-
-                # Fix element column where some cssr files have a number concated to the 
-                #  end of the element tag (e.g. H3)
-                tempch = ""
-                for ch in str[2]
-                    if !isdigit(ch)
-                        tempch = string(tempch,ch)
-                    end
-                end
-                atoms[i - 5] = tempch
-                # Use the correction boolean to fix fractional/cartesian discrepency
-                if corr
-                    x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])./[a, b, c]
-                    if i == 6
-                        @printf("x = %f, y = %f, z = %f\n",x[i-5],y[i-5],z[i-5])
-                    end
-                else
-                    x[i - 5], y[i - 5], z[i - 5] = map(x->parse(Float64, x), str[3:5])
-                end
-            end
-        end
-    end
 
     # Cif reader from Cory Simon
     if extension == "cif"
@@ -291,32 +218,6 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String;
     return
 end # replicate_to_xyz end
 
-# TODO: remove this once we figure out how to read .cssr another way.
-"""
-    corrected_line = correct_cssr_line(str)
-
-Take an array of string values and correct an error from the openbabel python module.
-The error merges two values together if the element abbreviation contains two letters,
-such as Zn, Cl and so on.
-"""
-function correct_cssr_line(str)
-    tempbool = Array{Bool}(length(str[1]),1)
-    for (k,ch) in enumerate(str[1])
-        tempbool[k] = isdigit(ch)
-    end
-
-    ind = findfirst(tempbool,false);
-    unshift!(str,str[1][1:ind-1])
-    str[2] = str[2][ind:end]
-
-    for (k,ch) in enumerate(str[2])
-        if isdigit(ch)
-            str[2] = str[2][1:k-1]
-            break
-        end
-    end
-    return str
-end #correct_cssr_line end
 
 """
     check_for_atom_overlap(framework; threshold_distance_for_overlap=0.1, verbose=false)

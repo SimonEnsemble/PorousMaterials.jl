@@ -57,17 +57,13 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				if abs(dx[3]) > repfactors[3] / 2
 					repvec += sign(dx[3]) * [0, 0, repfactors[3]]
 				end
-#				println(repvec)
-#				println("==========================\n")
                 
                 # Cartesian coordinates of nearest image framework atom.
 				x_k = framework.f_to_C * (framework.xf[:, k] + repvec)
                 
                 # TODO for speedup, wouldn't r2 be faster? then work with r2.
-				r = vecnorm(molecule.pos[:, i] - x_k)
-				println(r)
+#				r = vecnorm(molecule.pos[:, i] - x_k)
 				r_squared = sum((molecule.pos[:,i] - x_k).^2)
-				println(sqrt(r_squared))
 				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
                 # TODO note that r^2 is faster; maybe store sigma2
 				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
