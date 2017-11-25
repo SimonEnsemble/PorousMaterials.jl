@@ -45,7 +45,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 #  later.
 				repvec = [nA, nB, nC]
 
-				dx = (framework.C_to_f*molecule.pos) - (framework.xf[:,k]+repvec)
+				dx = (framework.box.c_to_f*molecule.pos) - (framework.xf[:,k]+repvec)
 				if abs(dx[1]) > repfactors[1] / 2
 					repvec += sign(dx[1]) * [repfactors[1], 0, 0]
 				end
@@ -59,7 +59,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				end
                 
                 # Cartesian coordinates of nearest image framework atom.
-				x_k = framework.f_to_C * (framework.xf[:, k] + repvec)
+				x_k = framework.box.f_to_c * (framework.xf[:, k] + repvec)
                 
                 # TODO for speedup, wouldn't r2 be faster? then work with r2.
 #				r = vecnorm(molecule.pos[:, i] - x_k)
