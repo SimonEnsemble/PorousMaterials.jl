@@ -75,9 +75,9 @@ Returns tuple of replication factors in the a, b, c directions.
 """
 function replication_factors(unitcell::Box, cutoff::Float64)
 	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
-	a = box.f_to_C[:, 1]
-	b = box.f_to_C[:, 2]
-	c = box.f_to_C[:, 3]
+	a = unitcell.f_to_c[:, 1]
+	b = unitcell.f_to_c[:, 2]
+	c = unitcell.f_to_c[:, 3]
 
 	n_ab = cross(a, b)
 	n_ac = cross(a, c)
@@ -92,21 +92,21 @@ function replication_factors(unitcell::Box, cutoff::Float64)
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
 	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff
 		rep[1] += 1
-		a += box.f_to_C[:,1]
+		a += unitcell.f_to_c[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
 	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff
 		rep[2] += 1
-		b += box.f_to_C[:,2]
+		b += unitcell.f_to_c[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
 	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff
 		rep[3] += 1
-		c += box.f_to_C[:,3]
+		c += unitcell.f_to_c[:,3]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 

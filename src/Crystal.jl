@@ -320,7 +320,7 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void,
         for j = 0:1
             for k = 0:1
                 xf = [i, j, k] # fractional coordinates of corner
-                cornerpoint = framework.box.f_to_C * xf
+                cornerpoint = framework.box.f_to_c * xf
                 @printf(vtk_file, "%.3f %.3f %.3f\n",
                         cornerpoint[1], cornerpoint[2], cornerpoint[3])
             end
