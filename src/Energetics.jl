@@ -47,34 +47,22 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 
                 # distance in fractional coordinate space
 				dxf = (framework.box.c_to_f * molecule.pos) - (framework.xf[:, k ] + repvec)
-                # TODO is there a way to write this as a for loop?
-				if abs(dx[1]) > repfactors[1] / 2
-					repvec += sign(dx[1]) * [repfactors[1], 0, 0]
-				end
+				dx = zeros(3)
 
-				if abs(dx[2]) > repfactors[2] / 2
-					repvec += sign(dx[2]) * [0, repfactors[2], 0]
-				end
-
-				if abs(dx[3]) > repfactors[3] / 2
-					repvec += sign(dx[3]) * [0, 0, repfactors[3]]
+				for j = 3:-1:1
+					if abs(dxf[j]) > repfactors[j] / 2
+						repvec[j] += sign(dxf[j]) * repfactors[j]
+						dx[j] = framework.box.f_to_c[j,j:end]' * repvec[j:end]	
+					end
 				end
                 
                 # Cartesian coordinates of nearest image framework atom.
-				x_k = framework.box.f_to_c * (framework.xf[:, k] + repvec)
-                # TODO I think we are computing the distance vector twice here;
-                #   we can compute dxf once above, then modify dx directly
-                #   instead of the repvec. This avoids computing dxf twice as we are.
+				x_k = framework.xf[:, k] + dx
                 
-                # TODO for speedup, wouldn't r2 be faster? then work with r2.
-#				r = vecnorm(molecule.pos[:, i] - x_k)
 				r_squared = sum((molecule.pos[:,i] - x_k).^2)
 				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
-                # TODO note that r^2 is faster; maybe store sigma2
 				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
                 
-                # TODO if changing to r2, easier to story cutoffradis_squared and compare to
-                # TODO  r^2 instead.
 				if r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
 				    energy += lennard_jones(r_squared, σ_squared, ϵ)
