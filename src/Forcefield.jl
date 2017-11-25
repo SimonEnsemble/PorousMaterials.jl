@@ -62,7 +62,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
 end # read_forcefield_file end
 
 """
-	repfactors = replication_factors(framework::Framework, cutoff::Float64)
+	repfactors = replication_factors(unitcell::Box, cutoff::Float64)
 
 Find the replication factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius.
 In PorousMaterials.jl, rather than replicating the atoms in the home unit cell to build the supercell that
@@ -73,11 +73,11 @@ Returns tuple of replication factors in the a, b, c directions.
 
 # TODO comment on whether it starts at 0 or 1.. like, repfactors = [0, 0, 0] is that possible?
 """
-function replication_factors(framework::Framework, cutoff::Float64)
+function replication_factors(unitcell::Box, cutoff::Float64)
 	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
-	a = framework.f_to_C[:, 1]
-	b = framework.f_to_C[:, 2]
-	c = framework.f_to_C[:, 3]
+	a = box.f_to_C[:, 1]
+	b = box.f_to_C[:, 2]
+	c = box.f_to_C[:, 3]
 
 	n_ab = cross(a, b)
 	n_ac = cross(a, c)
@@ -92,21 +92,21 @@ function replication_factors(framework::Framework, cutoff::Float64)
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
 	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff
 		rep[1] += 1
-		a += framework.f_to_C[:,1]
+		a += box.f_to_C[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
 	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff
 		rep[2] += 1
-		b += framework.f_to_C[:,2]
+		b += box.f_to_C[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
 	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff
 		rep[3] += 1
-		c += framework.f_to_C[:,3]
+		c += box.f_to_C[:,3]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
