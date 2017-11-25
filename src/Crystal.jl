@@ -180,7 +180,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 end # constructframework end
 
 """
-    replicate_to_xyz(framework, xyzfilename; comment="", repfactors=(0, 0, 0),
+    replicate_to_xyz(framework, xyzfilename=nothing; comment="", repfactors=(0, 0, 0),
                      negative_replications=false)
 
 Write a .xyz file representation of a crystal structure from a Framework type.
@@ -190,7 +190,7 @@ A value of 1 replicates the structure once in the desired direction, so
 `repfactors=(0, 0, 0)` includes only the "home" unit cell. Ensure `negative_replications`
 is true if home unit cell should be replicated in the negative directions too.
 """
-function replicate_to_xyz(framework::Framework, xyzfilename::String; 
+function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractString, Void}=nothing; 
                           comment::String="", repfactors::Tuple{Int, Int, Int}=(0, 0, 0),
                           negative_replications::Bool=false)
     # pre-calculate # of total atoms in .xyz
@@ -200,6 +200,11 @@ function replicate_to_xyz(framework::Framework, xyzfilename::String;
     else
         n_atoms = framework.n_atoms * (repfactors[1] + 1) * (repfactors[2] + 1) * (repfactors[3] + 1)
         neg_repfactors = (0, 0, 0)
+    end
+    
+    # if no filename given, use framework's name
+    if xyzfilename == nothing
+        xyzfilename = split(framework.name, ".")[1] * ".xyz"
     end
 
     f = open(xyzfilename, "w")
@@ -279,36 +284,39 @@ function strip_numbers_from_atom_labels!(framework::Framework)
 end
 
 """       
-	write_unitcell_boundary_vtk(framework::Framework, filename::String)
+    write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void, AbstractString})
 
 Write unit cell boundary as a .vtk file for visualizing the unit cell boundary.    
 """                                                                             
-function write_unitcell_boundary_vtk(framework::Framework, filename::String)
-	vtk_file = open(filename, "w")                          
-																					
-	@printf(vtk_file, "# vtk DataFile Version 2.0\nunit cell boundary\n             
-					   ASCII\nDATASET POLYDATA\nPOINTS 8 double\n")                 
-																					
-	# write points on boundary of unit cell                                         
-	for i = 0:1                                                                     
-		for j = 0:1                                                                 
-			for k = 0:1                                                             
-				xf = [i, j, k] # fractional coordinate                               
-				cellpoint = framework.f_to_C * xf                    
-				@printf(vtk_file, "%.3f %.3f %.3f\n", 
-						cellpoint[1], cellpoint[2], cellpoint[3])
-			end                                                                     
-		end                                                                         
-	end                                                                             
-																					
-	# define connections                                                            
-	@printf(vtk_file, "LINES 12 36\n2 0 1\n2 0 2\n2 1 3\n2 2 3\n2 4 5\n             
-					   2 4 6\n2 5 7\n2 6 7\n2 0 4\n2 1 5\n2 2 6\n2 3 7\n")          
-	close(vtk_file)                                                                 
-	println("See ", filename)
-	return
-end              
+function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void, AbstractString}=nothing)
+    # if no filename given, use framework's name
+    if filename == nothing
+        filename = split(framework.name, ".")[1] * ".vtk"
+    end
 
+    vtk_file = open(filename, "w")                          
+                                                                                    
+    @printf(vtk_file, "# vtk DataFile Version 2.0\nunit cell boundary\n
+                       ASCII\nDATASET POLYDATA\nPOINTS 8 double\n")
+    
+    # write points on boundary of unit cell                                         
+    for i = 0:1
+        for j = 0:1                                                              
+            for k = 0:1
+                xf = [i, j, k] # fractional coordinates of corner
+                cornerpoint = framework.f_to_C * xf
+                @printf(vtk_file, "%.3f %.3f %.3f\n", 
+                        cornerpoint[1], cornerpoint[2], cornerpoint[3])
+            end                                                                     
+        end                                                                         
+    end                                                                             
+                                                                                    
+    # define connections                                                            
+    @printf(vtk_file, "LINES 12 36\n2 0 1\n2 0 2\n2 1 3\n2 2 3\n2 4 5\n2 4 6\n2 5 7\n2 6 7\n2 0 4\n2 1 5\n2 2 6\n2 3 7\n")          
+    close(vtk_file)
+    println("See ", filename)
+    return
+end              
     
 function chemical_formula(framework::Framework)
     # use dictionary to count atom types
