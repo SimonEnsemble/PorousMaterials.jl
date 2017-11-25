@@ -29,7 +29,7 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 - `energy::Array{Float64, 3}`: 3D array containing e.g. energy 
 """
 function write_to_cube(grid::Grid, filename::AbstractString)
-    cubefile = open(filename, "w")
+    cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
     
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.data)
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
@@ -57,7 +57,7 @@ function write_to_cube(grid::Grid, filename::AbstractString)
         end # loop over y points
     end # loop over x points
     close(cubefile)
-    println("See ", cubefile)
+    println("See ", PATH_TO_DATA * "grids/" * filename)
     return 
 end
 
