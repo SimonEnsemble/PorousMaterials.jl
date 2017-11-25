@@ -19,6 +19,7 @@ struct Grid{T}
 end
 
 """
+    write_to_cube(grid::Grid, filename::AbstractString)
 
 Write volume data to a .cube file format. This format is described here:
 http://paulbourke.net/dataformats/cube/
@@ -26,7 +27,8 @@ The origin is assumed to be (0, 0, 0).
 The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files.
 
 # Arguments
-- `energy::Array{Float64, 3}`: 3D array containing e.g. energy 
+- `grid::Grid`: grid with associated volume data (see Grid struct)
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
 """
 function write_to_cube(grid::Grid, filename::AbstractString)
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
