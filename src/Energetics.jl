@@ -44,8 +44,10 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 #  coordinates for simplication and transformation to cartesian is done 
                 #  later.
 				repvec = [nA, nB, nC]
-
-				dx = (framework.box.c_to_f*molecule.pos) - (framework.xf[:,k]+repvec)
+                
+                # distance in fractional coordinate space
+				dxf = (framework.box.c_to_f * molecule.pos) - (framework.xf[:, k ] + repvec)
+                # TODO is there a way to write this as a for loop?
 				if abs(dx[1]) > repfactors[1] / 2
 					repvec += sign(dx[1]) * [repfactors[1], 0, 0]
 				end
@@ -60,6 +62,9 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 
                 # Cartesian coordinates of nearest image framework atom.
 				x_k = framework.box.f_to_c * (framework.xf[:, k] + repvec)
+                # TODO I think we are computing the distance vector twice here;
+                #   we can compute dxf once above, then modify dx directly
+                #   instead of the repvec. This avoids computing dxf twice as we are.
                 
                 # TODO for speedup, wouldn't r2 be faster? then work with r2.
 #				r = vecnorm(molecule.pos[:, i] - x_k)
