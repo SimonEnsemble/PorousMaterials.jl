@@ -47,12 +47,14 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 # distance in fractional coordinate space
 				dxf = (framework.box.c_to_f * molecule.pos) - (framework.xf[:, k ] + [nA, nB, nC])
 
-				for j = 3:-1:1
+				# NIC condensed into a for-loop
+				for j = 1:3
 					if abs(dxf[j]) > repfactors[j] / 2
 						dxf[j] += sign(dxf[j]) * repfactors[j]
 					end
 				end
                 
+				# distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
                 # Cartesian coordinates of nearest image framework atom.
 				x_k = framework.xf[:, k] + dx
