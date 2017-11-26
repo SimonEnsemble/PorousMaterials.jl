@@ -43,19 +43,17 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 #  the closest replication of atom k. This is done with fractional 
                 #  coordinates for simplication and transformation to cartesian is done 
                 #  later.
-				repvec = [nA, nB, nC]
                 
                 # distance in fractional coordinate space
-				dxf = (framework.box.c_to_f * molecule.pos) - (framework.xf[:, k ] + repvec)
-				dx = zeros(3)
+				dxf = (framework.box.c_to_f * molecule.pos) - (framework.xf[:, k ] + [nA, nB, nC])
 
 				for j = 3:-1:1
 					if abs(dxf[j]) > repfactors[j] / 2
-						repvec[j] += sign(dxf[j]) * repfactors[j]
-						dx[j] = framework.box.f_to_c[j,j:end]' * repvec[j:end]	
+						dxf[j] += sign(dxf[j]) * repfactors[j]
 					end
 				end
                 
+				dx = framework.box.f_to_c * dxf
                 # Cartesian coordinates of nearest image framework atom.
 				x_k = framework.xf[:, k] + dx
                 
