@@ -33,7 +33,7 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 function write_to_cube(grid::Grid, filename::AbstractString)
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
     
-    @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.data)
+    @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
     # the next three floats correspond to the origin, assumed to be (0,0,0)
     @printf(cubefile, "%d %f %f %f\n" , 0, 0.0, 0.0, 0.0)
@@ -42,14 +42,14 @@ function write_to_cube(grid::Grid, filename::AbstractString)
     for k = 1:3
         # TODO re-evaluate this. depending on how you define grid, may be
         #   / (grid.nb_grid_pts[k] - 1) e.g. if you 
-        voxel_vector = box.f_to_c[:, k] / grid.nb_grid_pts[k]
+        voxel_vector = grid.box.f_to_c[:, k] / grid.nb_grid_pts[k]
         @printf(cubefile, "%d %f %f %f\n" , grid.nb_grid_pts[k],
             voxel_vector[1], voxel_vector[2], voxel_vector[3])
     end
 
-    for i = 1:grid.nx
-        for j = 1:grid.ny
-            for k = 1:grid.nz
+    for i = 1:grid.nb_grid_pts[1]
+        for j = 1:grid.nb_grid_pts[2]
+            for k = 1:grid.nb_grid_pts[3]
                 @printf(cubefile, "%e", grid.data[i, j, k])
                 if (k % 6) == 0
                     @printf(cubefile, "\n")
