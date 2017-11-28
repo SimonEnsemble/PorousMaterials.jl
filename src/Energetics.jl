@@ -28,13 +28,14 @@ the supercell, which is the simulation box, such that the nearest image conventi
 applied in this function.
 """
 function vdw_energy(framework::Framework, molecule::Molecule, 
-                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
+                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
 	energy = 0.0
     # loop over replications of the home unit cell to build the supercell (simulation box)
 	for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
         # loop over atoms of the molecule/adsorbate
         # TODO: think about whether i or k loop should go first for speed. might not matter.
 		for i = 1:molecule.n_atoms 
+			xf_molecule_atom = framework.box.c_to_f * molecule.pos[:,i]
             # loop over framework atoms in the home unit cell
 			for k = 1:framework.n_atoms
 				# Nearest image convention. 
@@ -45,21 +46,19 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 #  later.
                 
                 # distance in fractional coordinate space
-				dxf = (framework.box.c_to_f * molecule.pos) - (framework.xf[:, k ] + [nA, nB, nC])
+				dxf = xf_molecule_atom - (framework.xf[:, k] + [nA, nB, nC])
 
 				# NIC condensed into a for-loop
 				for j = 1:3
 					if abs(dxf[j]) > repfactors[j] / 2
-						dxf[j] += sign(dxf[j]) * repfactors[j]
+						dxf[j] -= sign(dxf[j]) * repfactors[j]
 					end
 				end
-                
+                @assert(size(dxf) == (3,)) 
 				# distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
-                # Cartesian coordinates of nearest image framework atom.
-				x_k = framework.xf[:, k] + dx
                 
-				r_squared = sum((molecule.pos[:,i] - x_k).^2)
+				r_squared = sum(dx .* dx)
 				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
 				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
                 
@@ -70,5 +69,6 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 			end
 		end
 	end
+#	@printf("Position of molecule is:\n\tCartesian: [%f,%f,%f]\n\tFractional: [%f,%f,%f]\nEnergy is:\n\t V(r) = %f\n===================================\n",molecule.pos[1],molecule.pos[2],molecule.pos[3],(framework.box.c_to_f * molecule.pos)[1], (framework.box.c_to_f * molecule.pos)[2], (framework.box.c_to_f * molecule.pos)[3], energy)
 	return energy
 end # vdw_energy end
