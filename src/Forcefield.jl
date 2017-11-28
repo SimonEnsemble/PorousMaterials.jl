@@ -110,7 +110,7 @@ function replication_factors(unitcell::Box, cutoff::Float64)
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
-	return (rep[1], rep[2], rep[3])::Tuple{Int, Int, Int}
+	return (rep[1], rep[2], rep[3])::Tuple{Int64, Int64, Int64}
 end # end rep_factors
 
 """
