@@ -46,6 +46,14 @@ convert_cif_to_P1_symmetry("myMOF_notP1.cif", "myMOF_P1.cif")
 
 Forcefield input files are stored in `PorousMaterials.PATH_TO_DATA * "forcefields/"`.
 
+### Lennard-Jones forcefield
+
+Interaction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:
+
+`V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ], where x = sigma / r`
+
+The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in `PorousMaterials.jl`.
+
 ## Molecule/Adsorbate
 
 Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`.
@@ -53,10 +61,11 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 ## Energetics
 
 ## TODO
-* :cactus: document nearest image convention code (why the sign)
-* :cactus: in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]
-* :cactus: create `test_structure.cif` and `test_forcefield.csv` and test functions.
-* :cactus: (for Cory) generate test data from RASPA
-* :cactus: change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)
-* :cactus: `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
-* :cactus: `print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`
+* document nearest image convention code (why the sign)
+* in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]
+* create `test_structure.cif` and `test_forcefield.csv` and test functions.
+* (for Cory) generate test data from RASPA
+* change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)
+* `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
+* `print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`
+* Read in charges, assign to `Framework` in `read_crystal_structure`

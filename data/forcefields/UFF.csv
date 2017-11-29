@@ -1,9 +1,4 @@
-# Lennard-Jones parameters
-# units for sigma: Angstrom
-# units for epsilon: Kelvin
-# functional form for Lennard Jones potential assumed:
-# V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ], where x = sigma / r
-"atom","sigma","epsilon"
+"atom","sigma(A)","epsilon(K)"
 "H",2.5711337005530193,22.141666812600377
 "H_b",2.5711337005530193,22.141666812600377
 "He",2.351972615890496,10.899738708202822

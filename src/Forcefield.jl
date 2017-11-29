@@ -1,4 +1,5 @@
 using DataFrames
+using CSV
 
 """
 	ljforcefield = LennardJonesForceField(cutoffradius_squared, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas_squared)
@@ -32,7 +33,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    df = readtable(PATH_TO_DATA * "forcefields/" * filename, allowcomments=true) # from DataFrames
+    df = CSV.read(PATH_TO_DATA * "forcefields/" * filename) # from DataFrames
     # assert that all atoms in the force field are unique (i.e. no duplicates)
     @assert(length(unique(df[:atom])) == size(df, 1), 
         @sprintf("Duplicate atoms found in force field file %s\n", filename))
@@ -41,8 +42,8 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
     pure_sigmas = Dict{AbstractString, Float64}()
     pure_epsilons = Dict{AbstractString, Float64}()
     for row in eachrow(df)
-        pure_sigmas[row[:atom]] = row[:sigma]
-        pure_epsilons[row[:atom]] = row[:epsilon]
+        pure_sigmas[row[:atom]] = row[Symbol("sigma(A)")]
+        pure_epsilons[row[:atom]] = row[Symbol("epsilon(K)")]
     end
     
     # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
