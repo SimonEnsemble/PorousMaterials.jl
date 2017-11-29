@@ -53,9 +53,9 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 ## Energetics
 
 ## TODO
-:cactus: document nearest image convention code (why the sign)
-:cactus: in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]
-:cactus: create `test_structure.cif` and `test_forcefield.csv` and test functions.
-:cactus: (for Cory) generate test data from RASPA
-:cactus: change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)
-:cactus: `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
+* :cactus: document nearest image convention code (why the sign)
+* :cactus: in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]
+* :cactus: create `test_structure.cif` and `test_forcefield.csv` and test functions.
+* :cactus: (for Cory) generate test data from RASPA
+* :cactus: change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)
+* :cactus: `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
