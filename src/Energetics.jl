@@ -51,6 +51,28 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				# NIC condensed into a for-loop
 				for j = 1:3
 					if abs(dxf[j]) > repfactors[j] / 2
+						# If the absolute value of the distance between the adsorbate atom and the
+						# framework atom is greater than half the replication factor, we know that
+						# there is a closer replication of the framework atom.
+						# 
+						# {Replication} {Supercell} {Replication}
+						# |-----|----o||--x--|----o||-----|----o|
+						#
+						# x = adsorbate atom, o = framework atom
+						# dxf is the `x_ads - x_framework` so when the adsorbate is to the left of
+						# the framework, we have a negative value for dxf.
+						# When correcting for the position of the framework atom with the Nearest Image Convention
+						# we use `sign(dxf[j]) * repfactors[j]` to change the distance dxf so it gives the distance
+						# between the adsorbate atom and the replication of the framework atom.
+						#
+						# In the above example, the framework atom is to the right of the adsorbate atom, and dxf < 0
+						# We see that the left replication of `o` is closer to `x`, and we should be calculating the
+						# distance between that atom and the adsorbate. So by subtracting `sign(dxf[j]) * repfactors[j]`
+						# (remember that `sign(dxf[j]) = -1` in this case) we're adding `repfactors[j]` to the dxf[j] value
+						# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
+						# When checking the other case (where the adsorbate atom is to the right of the framework atom),
+						# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
+
 						dxf[j] -= sign(dxf[j]) * repfactors[j]
 					end
 				end
