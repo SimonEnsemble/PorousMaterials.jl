@@ -12,7 +12,7 @@ Data structure for a molecule/adsorbate.
 type Molecule
 	n_atoms::Int64
 	atoms::Array{AbstractString}
-	pos::Array{Float64, 2}
+	x::Array{Float64, 2}
 	charges::Array{Float64}
 end
 
