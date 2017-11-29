@@ -35,7 +35,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
         # loop over atoms of the molecule/adsorbate
         # TODO: think about whether i or k loop should go first for speed. might not matter.
 		for i = 1:molecule.n_atoms 
-			xf_molecule_atom = framework.box.c_to_f * molecule.pos[:,i]
+			xf_molecule_atom = mod.(framework.box.c_to_f * molecule.x[:,i],repfactors)
             # loop over framework atoms in the home unit cell
 			for k = 1:framework.n_atoms
 				# Nearest image convention. 
@@ -69,6 +69,5 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 			end
 		end
 	end
-#	@printf("Position of molecule is:\n\tCartesian: [%f,%f,%f]\n\tFractional: [%f,%f,%f]\nEnergy is:\n\t V(r) = %f\n===================================\n",molecule.pos[1],molecule.pos[2],molecule.pos[3],(framework.box.c_to_f * molecule.pos)[1], (framework.box.c_to_f * molecule.pos)[2], (framework.box.c_to_f * molecule.pos)[3], energy)
 	return energy
 end # vdw_energy end
