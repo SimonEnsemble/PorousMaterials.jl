@@ -53,9 +53,9 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 ## Energetics
 
 ## TODO
--- `UFF.csv` epsilon units should be in Kelvin. Also the functional form for LJ potential is different for UFF so the sigmas should be modified. This can be done in DataFrames
--- Make a new `struct UnitCell` that stores attributes of unit cell, \alpha, \beta, \gamma, a, b, c, \Omega, f_to_c, c_to_f. This will be easier to pass around in downstream functions that only require the box instead of the entire framework.
--- Some requirements file?
--- (Cory can do) use PyCall to call ASE when unit cell does not exhibit P1 symmetry.
--- remove the .cssr reader support for now, but keep it in your Box? Seems that everyone works with .cif.
--- (Cory can do) put in function to write energy array to .cube file. Arni: might be faster to write to cube directly instead of store in gigantic matrix. Could cause computer to crash.
+:cactus: document nearest image convention code (why the sign)
+:cactus: in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]
+:cactus: create `test_structure.cif` and `test_forcefield.csv` and test functions.
+:cactus: (for Cory) generate test data from RASPA
+:cactus: change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)
+:cactus: `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
