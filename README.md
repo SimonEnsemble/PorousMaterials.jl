@@ -59,3 +59,4 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 * :cactus: (for Cory) generate test data from RASPA
 * :cactus: change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)
 * :cactus: `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
+* :cactus: `print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`
