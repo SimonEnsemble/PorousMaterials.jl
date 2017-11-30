@@ -6,6 +6,7 @@ const R_OVERLAP_squared = 0.0001
 Calculate the lennard jones potential energy given a radius r between two molecules.
 σ and ϵ are specific to interaction between two elements.
 returns potential energy in units Kelvin.
+
 # Arguments
 - `r_squared::Float64`: distance between two (pseudo)atoms in question squared (Angstrom^2)
 - `σ_squared::Float64`: sigma parameter in Lennard Jones potential squared (units: Angstrom^2)
@@ -21,6 +22,7 @@ end
 
 Calculates the van der Waals energy for a molecule locates at a specific position in a MOF 
 supercell. Uses the nearest image convention to find the closest replicate of a specific atom
+
 # Arguments
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation)
