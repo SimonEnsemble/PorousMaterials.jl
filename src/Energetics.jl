@@ -100,4 +100,4 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 		end
 	end
 	return energy
-end # vdw_energy end
+end # end vdw_energy
