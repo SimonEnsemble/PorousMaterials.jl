@@ -1,3 +1,5 @@
+const R_OVERLAP_squared = 0.0001
+
 """
 	V = lennard_jones_potential_energy(r_squared::Float64, σ_squared::Float64, ϵ::Float64) # units: Kelvin
 
@@ -11,7 +13,7 @@ returns potential energy in units Kelvin.
 """
 function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
 	ratio = (σ_squared / r_squared) ^ 3
-	return 4 * ϵ * (ratio ^ 2 - ratio)
+	return 4 * ϵ * (ratio^2 - ratio)
 end
 
 """
@@ -55,11 +57,12 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 						# framework atom is greater than half the replication factor, we know that
 						# there is a closer replication of the framework atom.
 						# 
-						# {Replication} {Supercell} {Replication}
+						# {Replicat.} ||{Supercell}||{Replicat.}
 						# |-----|----o||--x--|----o||-----|----o|
+						#				  |--dxf--|
 						#
 						# x = adsorbate atom, o = framework atom
-						# dxf is the `x_ads - x_framework` so when the adsorbate is to the left of
+						# dxf is `x_ads - x_framework` so when the adsorbate is to the left of
 						# the framework, we have a negative value for dxf.
 						# When correcting for the position of the framework atom with the Nearest Image Convention
 						# we use `sign(dxf[j]) * repfactors[j]` to change the distance dxf so it gives the distance
@@ -76,7 +79,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 						dxf[j] -= sign(dxf[j]) * repfactors[j]
 					end
 				end
-                @assert(size(dxf) == (3,)) 
+
 				# distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
                 
@@ -84,7 +87,10 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
 				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
                 
-				if r_squared < ljforcefield.cutoffradius_squared
+				if r_squared < R_OVERLAP_squared
+					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom^2)
+					return Inf
+				elseif r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
 				    energy += lennard_jones(r_squared, σ_squared, ϵ)
 				end
