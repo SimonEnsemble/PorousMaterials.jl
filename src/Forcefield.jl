@@ -23,6 +23,17 @@ struct LennardJonesForceField
 	cutoffradius_squared::Float64
 end
 
+import Base.print
+function print(io::IO, ljforcefield::LennardJonesForceField)
+	println(io, "Amount of atoms included: ",length(ljforcefield.pure_sigmas))
+	print(io, "Cut-off radius = ",sqrt(ljforcefield.cutoffradius_squared))
+end
+
+import Base.show
+function show(io::IO, ljforcefield::LennardJonesForceField) 
+	print(io, ljforcefield)
+end
+
 """
 	ljforcefield = read_forcefield_file("filename.csv")
 

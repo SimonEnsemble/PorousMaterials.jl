@@ -56,6 +56,23 @@ struct Framework
     xf::Array{Float64, 2}
 end
 
+import Base.print
+function print(io::IO, framework::Framework)
+	println(io, framework.name)
+	println(io, "a = ", framework.box.a, " Angstrom")
+	println(io, "b = ", framework.box.b, " Angstrom")
+	println(io, "c = ", framework.box.c, " Angstrom")
+	println(io, "α = ", framework.box.α, " radians")
+	println(io, "β = ", framework.box.β, " radians")
+	println(io, "γ = ", framework.box.γ, " radians")
+	println(io, "Ω = ", framework.box.Ω, " Angstrom^3")
+	print(io, "Number of atoms = ", framework.n_atoms)
+end
+
+import Base.show
+function show(io::IO, framework::Framework) 
+	print(io, framework)
+end
 """
     framework = read_crystal_structure_file("filename.cssr"; run_checks=true)
 
