@@ -67,5 +67,5 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 * (for Cory) generate test data from RASPA
 * ~~change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)~~
 * `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
-* `print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`
+* ~~`print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`~~
 * Read in charges, assign to `Framework` in `read_crystal_structure`
