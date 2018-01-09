@@ -56,23 +56,6 @@ struct Framework
     xf::Array{Float64, 2}
 end
 
-import Base.print
-function print(io::IO, framework::Framework)
-	println(io, framework.name)
-	println(io, "a = ", framework.box.a, " Angstrom")
-	println(io, "b = ", framework.box.b, " Angstrom")
-	println(io, "c = ", framework.box.c, " Angstrom")
-	println(io, "α = ", framework.box.α, " radians")
-	println(io, "β = ", framework.box.β, " radians")
-	println(io, "γ = ", framework.box.γ, " radians")
-	println(io, "Ω = ", framework.box.Ω, " Angstrom^3")
-	print(io, "Number of atoms = ", framework.n_atoms)
-end
-
-import Base.show
-function show(io::IO, framework::Framework) 
-	print(io, framework)
-end
 """
     framework = read_crystal_structure_file("filename.cssr"; run_checks=true)
 
@@ -271,7 +254,7 @@ function check_for_atom_overlap(framework::Framework;
         xf_i = framework.xf[:, i]
         for j = i+1:framework.n_atoms
             xf_j = framework.xf[:, j]
-            # vector pointing from atom j to atom i in carteisan coords
+            # vector pointing from atom j to atom i in cartesian coords
             dx = framework.box.f_to_c * (xf_i - xf_j)
             if (norm(dx) < threshold_distance_for_overlap)
                 error(@sprintf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
@@ -402,4 +385,23 @@ function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; ve
     end
 
     return
+end
+
+
+import Base.print
+function print(io::IO, framework::Framework)
+	println(io, framework.name)
+	println(io, "a = ", framework.box.a, " Angstrom")
+	println(io, "b = ", framework.box.b, " Angstrom")
+	println(io, "c = ", framework.box.c, " Angstrom")
+	println(io, "α = ", framework.box.α, " radians")
+	println(io, "β = ", framework.box.β, " radians")
+	println(io, "γ = ", framework.box.γ, " radians")
+	println(io, "Ω = ", framework.box.Ω, " Angstrom^3")
+	print(io, "Number of atoms = ", framework.n_atoms)
+end
+
+import Base.show
+function show(io::IO, framework::Framework) 
+	print(io, framework)
 end

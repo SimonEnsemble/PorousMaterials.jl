@@ -1,4 +1,5 @@
-const R_OVERLAP_squared = 0.0001
+const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
+#TODO Keep consistant with `check_for_atom_overlap` in src/Crystal.jl? `check_for_atom_overlap` uses the threshold 0.1 Angstrom (0.01 Angstrom²). Which one to use?
 
 """
 	V = lennard_jones_potential_energy(r_squared::Float64, σ_squared::Float64, ϵ::Float64)  (units: Kelvin)
@@ -8,8 +9,8 @@ Calculate the lennard jones potential energy given a radius r between two molecu
 returns potential energy in units Kelvin.
 
 # Arguments
-- `r_squared::Float64`: distance between two (pseudo)atoms in question squared (Angstrom^2)
-- `σ_squared::Float64`: sigma parameter in Lennard Jones potential squared (units: Angstrom^2)
+- `r_squared::Float64`: distance between two (pseudo)atoms in question squared (Angstrom²)
+- `σ_squared::Float64`: sigma parameter in Lennard Jones potential squared (units: Angstrom²)
 - `ϵ::Float64`: epsilon parameter in Lennard Jones potential (units: Kelvin)
 """
 function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
@@ -43,8 +44,8 @@ function vdw_energy(framework::Framework, molecule::Molecule,
             # loop over framework atoms in the home unit cell
 			for k = 1:framework.n_atoms
 				# Nearest image convention. 
-                #  If the interaction between the probe molecule and atom k is being looked 
-                #  at, we'll only look at the interaction between the probe molecule and 
+                #  If the interaction between the adsorbate molecule and atom k is being looked 
+                #  at, we'll only look at the interaction between the adsorbate molecule and 
                 #  the closest replication of atom k. This is done with fractional 
                 #  coordinates for simplication and transformation to cartesian is done 
                 #  later.
@@ -52,45 +53,50 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 # distance in fractional coordinate space
 				dxf = xf_molecule_atom - (framework.xf[:, k] + [nA, nB, nC])
 
+
 				# NIC condensed into a for-loop
+				#
+				# If the absolute value of the distance between the adsorbate atom and the
+				# framework atom is greater than half the replication factor, we know that
+				# there is a closer replication of the framework atom.
+				# 
+				# {Replicat.} ||{Supercell}||{Replicat.}
+				# |-----|----o||--x--|----o||-----|----o|
+				#				  |--dxf--|
+				#
+				# x = adsorbate atom, o = framework atom
+				#
+				# dxf is `x_adsorbate - x_framework` so when the adsorbate atom is to the left of
+				# the framework atom, dxf is negative.
+				# When correcting for the position of the framework atom with the Nearest Image Convention
+				# we use `sign(dxf[j]) * repfactors[j]` to change the distance dxf so it gives the distance
+				# between the adsorbate atom and the closest replication of the framework atom.
+				#
+				# In the above example, the framework atom is to the right of the adsorbate atom, and dxf < 0
+				# We see that the left replication of `o` is closer to `x`, and we should be calculating the
+				# distance between that atom and the adsorbate. So by subtracting `sign(dxf[j]) * repfactors[j]`
+				# (remember that `sign(dxf[j]) = -1` in this case) we're adding `repfactors[j]` to the dxf[j] value
+				# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
+				# When checking the other case (where the adsorbate atom is to the right of the framework atom),
+				# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
+				
 				for j = 1:3
 					if abs(dxf[j]) > repfactors[j] / 2
-						# If the absolute value of the distance between the adsorbate atom and the
-						# framework atom is greater than half the replication factor, we know that
-						# there is a closer replication of the framework atom.
-						# 
-						# {Replicat.} ||{Supercell}||{Replicat.}
-						# |-----|----o||--x--|----o||-----|----o|
-						#				  |--dxf--|
-						#
-						# x = adsorbate atom, o = framework atom
-						# dxf is `x_ads - x_framework` so when the adsorbate is to the left of
-						# the framework, we have a negative value for dxf.
-						# When correcting for the position of the framework atom with the Nearest Image Convention
-						# we use `sign(dxf[j]) * repfactors[j]` to change the distance dxf so it gives the distance
-						# between the adsorbate atom and the replication of the framework atom.
-						#
-						# In the above example, the framework atom is to the right of the adsorbate atom, and dxf < 0
-						# We see that the left replication of `o` is closer to `x`, and we should be calculating the
-						# distance between that atom and the adsorbate. So by subtracting `sign(dxf[j]) * repfactors[j]`
-						# (remember that `sign(dxf[j]) = -1` in this case) we're adding `repfactors[j]` to the dxf[j] value
-						# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
-						# When checking the other case (where the adsorbate atom is to the right of the framework atom),
-						# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
-
 						dxf[j] -= sign(dxf[j]) * repfactors[j]
 					end
 				end
 
-				# distance in cartesian coordinate space
+
+				# Distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
                 
+				# Lennard Jones parameters (and distance)
 				r_squared = sum(dx .* dx)
 				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
 				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
                 
 				if r_squared < R_OVERLAP_squared
-					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom^2)
+					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
 					return Inf
 				elseif r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy

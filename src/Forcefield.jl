@@ -10,8 +10,8 @@ Data structure for a Lennard Jones forcefield, read from a file containing UFF p
 - `pure_sigmas::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to a σ, which is the finite distance where the potential between atoms goes to zero
 - `pure_epsilons::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to an ϵ, which is the depth of a Lennard Jones potential well
 - `epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
-- `sigmas_squared::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ^2 (units: A^2) for cross-interactions. Example use is `sigmas_squared["He"]["C"]`
-- `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom^2)
+- `sigmas_squared::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared["He"]["C"]`
+- `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²)
 """
 struct LennardJonesForceField
 	pure_sigmas::Dict{AbstractString, Float64}
@@ -23,16 +23,6 @@ struct LennardJonesForceField
 	cutoffradius_squared::Float64
 end
 
-import Base.print
-function print(io::IO, ljforcefield::LennardJonesForceField)
-	println(io, "Amount of atoms included: ",length(ljforcefield.pure_sigmas))
-	print(io, "Cut-off radius = ",sqrt(ljforcefield.cutoffradius_squared))
-end
-
-import Base.show
-function show(io::IO, ljforcefield::LennardJonesForceField) 
-	print(io, ljforcefield)
-end
 
 """
 	ljforcefield = read_forcefield_file("filename.csv")
@@ -65,7 +55,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
         sigmas_squared[atom] = Dict{AbstractString, Float64}()
         for other_atom in keys(pure_sigmas)
 			epsilons[atom][other_atom] = sqrt(pure_epsilons[atom] * pure_epsilons[other_atom])
-			# Store sigma as sigma squared so we can compare it with r^2. r^2 is faster to compute than r
+			# Store sigma as sigma squared so we can compare it with r². r² is faster to compute than r
 			sigmas_squared[atom][other_atom] = ((pure_sigmas[atom] + pure_sigmas[other_atom]) / 2.0)^2
 		end
 	end
@@ -83,7 +73,8 @@ This function ensures enough replication factors such that the nearest image con
 
 Returns tuple of replication factors in the a, b, c directions.
 
-# TODO comment on whether it starts at 0 or 1.. like, repfactors = [0, 0, 0] is that possible?
+A non-replicated supercell has 1 as the replication factor in each dimension (`repfactors = [1, 1, 1]`).
+#TODO comment on whether it starts at 0 or 1.. like, repfactors = [0, 0, 0] is that possible?
 """
 function replication_factors(unitcell::Box, cutoff::Float64)
 	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
@@ -144,4 +135,15 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
         end
     end
     return full_coverage
+end
+
+import Base.print
+function print(io::IO, ljforcefield::LennardJonesForceField)
+	println(io, "Amount of atoms included: ",length(ljforcefield.pure_sigmas))
+	print(io, "Cut-off radius = ",sqrt(ljforcefield.cutoffradius_squared))
+end
+
+import Base.show
+function show(io::IO, ljforcefield::LennardJonesForceField) 
+	print(io, ljforcefield)
 end
