@@ -207,15 +207,15 @@ A value of 1 replicates the structure once in the desired direction, so
 is true if home unit cell should be replicated in the negative directions too.
 """
 function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractString, Void}=nothing;
-                          comment::String="", repfactors::Tuple{Int, Int, Int}=(0, 0, 0),
+                          comment::String="", repfactors::Tuple{Int, Int, Int}=(1, 1, 1),
                           negative_replications::Bool=false)
     # pre-calculate # of total atoms in .xyz
     if negative_replications
-        n_atoms = framework.n_atoms * (2 * repfactors[1] + 1) * (2 * repfactors[2] + 1) * (2 * repfactors[3] + 1)
-        neg_repfactors = (-repfactors[1], -repfactors[2], -repfactors[3])
+        n_atoms = 2 ^ 3 * framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
+        neg_repfactors = (-repfactors[1] + 1, -repfactors[2] + 1, -repfactors[3] + 1)
     else
-        n_atoms = framework.n_atoms * (repfactors[1] + 1) * (repfactors[2] + 1) * (repfactors[3] + 1)
-        neg_repfactors = (0, 0, 0)
+        n_atoms = framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
+        neg_repfactors = (1, 1, 1)
     end
 
     # if no filename given, use framework's name
@@ -397,7 +397,7 @@ function print(io::IO, framework::Framework)
 	println(io, "α = ", framework.box.α, " radians")
 	println(io, "β = ", framework.box.β, " radians")
 	println(io, "γ = ", framework.box.γ, " radians")
-	println(io, "Ω = ", framework.box.Ω, " Angstrom^3")
+	println(io, "Ω = ", framework.box.Ω, " Angstrom³")
 	print(io, "Number of atoms = ", framework.n_atoms)
 end
 
