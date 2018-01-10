@@ -390,15 +390,14 @@ end
 
 import Base.print
 function print(io::IO, framework::Framework)
-	println(io, framework.name)
-	println(io, "a = ", framework.box.a, " Angstrom")
-	println(io, "b = ", framework.box.b, " Angstrom")
-	println(io, "c = ", framework.box.c, " Angstrom")
-	println(io, "α = ", framework.box.α, " radians")
-	println(io, "β = ", framework.box.β, " radians")
-	println(io, "γ = ", framework.box.γ, " radians")
-	println(io, "Ω = ", framework.box.Ω, " Angstrom³")
-	print(io, "Number of atoms = ", framework.n_atoms)
+	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
+	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
+	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
+	@printf(io, "α = %.3f radians\n", framework.box.α)
+	@printf(io, "β = %.3f radians\n", framework.box.β)
+	@printf(io, "γ = %.3f radians\n", framework.box.γ)
+	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
+	@printf(io, "Number of atoms = %d", framework.n_atoms)
 end
 
 import Base.show
