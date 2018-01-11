@@ -19,7 +19,7 @@ function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
 end
 
 """
-    V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Array{Int64})
+    V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
 
 Calculates the van der Waals energy for a molecule locates at a specific position in a MOF 
 supercell. Uses the nearest image convention to find the closest replicate of a specific atom
@@ -28,7 +28,7 @@ supercell. Uses the nearest image convention to find the closest replicate of a 
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation)
 - `ljforcefield::LennardJonesForceField`: Lennard Jones force field
-- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build 
+- `repfactors::Tuple{Int64, Int64, Int64}`: replication factors of the home unit cell to build 
 the supercell, which is the simulation box, such that the nearest image convention can be 
 applied in this function.
 """
