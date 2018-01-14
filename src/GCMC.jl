@@ -1,7 +1,7 @@
 module GCMC
 using PorousMaterials
 
-export gcmc_sim
+export gcmc_sim, sim_for_N_equilibrium, sim_for_energy_equilibrium
 
 """
     insert(molecule_pos::Array, framework::framework, repfactor::Tuple)
