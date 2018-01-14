@@ -21,35 +21,35 @@ end
 """
     V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Array{Int64})
 
-Calculates the van der Waals energy for a molecule locates at a specific position in a MOF 
+Calculates the van der Waals energy for a molecule locates at a specific position in a MOF
 supercell. Uses the nearest image convention to find the closest replicate of a specific atom
 
 # Arguments
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation)
 - `ljforcefield::LennardJonesForceField`: Lennard Jones force field
-- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build 
-the supercell, which is the simulation box, such that the nearest image convention can be 
+- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build
+the supercell, which is the simulation box, such that the nearest image convention can be
 applied in this function.
 """
-function vdw_energy(framework::Framework, molecule::Molecule, 
+function vdw_energy(framework::Framework, molecule::Molecule,
                     ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
 	energy = 0.0
     # loop over replications of the home unit cell to build the supercell (simulation box)
 	for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
         # loop over atoms of the molecule/adsorbate
         # TODO: think about whether i or k loop should go first for speed. might not matter.
-		for i = 1:molecule.n_atoms 
+		for i = 1:molecule.n_atoms
 			xf_molecule_atom = mod.(framework.box.c_to_f * molecule.x[:,i],repfactors)
             # loop over framework atoms in the home unit cell
 			for k = 1:framework.n_atoms
-				# Nearest image convention. 
-                #  If the interaction between the adsorbate molecule and atom k is being looked 
-                #  at, we'll only look at the interaction between the adsorbate molecule and 
-                #  the closest replication of atom k. This is done with fractional 
-                #  coordinates for simplication and transformation to cartesian is done 
+				# Nearest image convention.
+                #  If the interaction between the adsorbate molecule and atom k is being looked
+                #  at, we'll only look at the interaction between the adsorbate molecule and
+                #  the closest replication of atom k. This is done with fractional
+                #  coordinates for simplication and transformation to cartesian is done
                 #  later.
-                
+
                 # distance in fractional coordinate space
 				dxf = xf_molecule_atom - (framework.xf[:, k] + [nA, nB, nC])
 
@@ -59,7 +59,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				# If the absolute value of the distance between the adsorbate atom and the
 				# framework atom is greater than half the replication factor, we know that
 				# there is a closer replication of the framework atom.
-				# 
+				#
 				# {Replicat.} ||{Supercell}||{Replicat.}
 				# |-----|----o||--x--|----o||-----|----o|
 				#				  |--dxf--|
@@ -79,7 +79,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
 				# When checking the other case (where the adsorbate atom is to the right of the framework atom),
 				# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
-				
+
 				for j = 1:3
 					if abs(dxf[j]) > repfactors[j] / 2
 						dxf[j] -= sign(dxf[j]) * repfactors[j]
@@ -89,12 +89,12 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 
 				# Distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
-                
+
 				# Lennard Jones parameters (and distance)
 				r_squared = sum(dx .* dx)
 				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
 				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
-                
+
 				if r_squared < R_OVERLAP_squared
 					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
 					return Inf
