@@ -64,7 +64,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
 end # read_forcefield_file end
 
 """
-	repfactors = replication_factors(unitcell::Box, cutoff::Float64)
+	repfactors = replication_factors(unitcell::Box, cutoffradius::Float64)
 
 Find the replication factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius.
 In PorousMaterials.jl, rather than replicating the atoms in the home unit cell to build the supercell that
@@ -76,7 +76,7 @@ Returns tuple of replication factors in the a, b, c directions.
 A non-replicated supercell has 1 as the replication factor in each dimension (`repfactors = [1, 1, 1]`).
 #TODO comment on whether it starts at 0 or 1.. like, repfactors = [0, 0, 0] is that possible?
 """
-function replication_factors(unitcell::Box, cutoff::Float64)
+function replication_factors(unitcell::Box, ljforcefield::LennardJonesForceField)
 	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
 	a = unitcell.f_to_c[:, 1]
 	b = unitcell.f_to_c[:, 2]
@@ -90,6 +90,7 @@ function replication_factors(unitcell::Box, cutoff::Float64)
 	c0 = [a b c] * [.5, .5, .5]
 
 	rep = [1, 1, 1]
+	cutoff = sqrt(ljforcefield.cutoffradius_squared)
 
 	# Repeat for `a`
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
