@@ -63,8 +63,8 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 ## TODO
 * ~~document nearest image convention code (why the sign)~~
 * ~~in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]~~
-* create `test_structure.cif` and `test_forcefield.csv` and test functions.
-* (for Cory) generate test data from RASPA
+* ~~create `test_structure.cif` and `test_forcefield.csv` and test functions.~~
+* ~~(for Cory) generate test data from RASPA~~
 * ~~change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)~~
 * `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
 * ~~`print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`~~
