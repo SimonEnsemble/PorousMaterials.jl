@@ -4,7 +4,7 @@ using PyCall
 """
     unit_cell_box = Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
 
-Data structure to describe a unit cell box (Bravais lattice) and convert between 
+Data structure to describe a unit cell box (Bravais lattice) and convert between
 fractional and Cartesian coordinates.
 
 # Arguments
@@ -401,6 +401,6 @@ function print(io::IO, framework::Framework)
 end
 
 import Base.show
-function show(io::IO, framework::Framework) 
+function show(io::IO, framework::Framework)
 	print(io, framework)
 end
