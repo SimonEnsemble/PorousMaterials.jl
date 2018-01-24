@@ -28,8 +28,8 @@ supercell. Uses the nearest image convention to find the closest replicate of a 
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation)
 - `ljforcefield::LennardJonesForceField`: Lennard Jones force field
-- `repfactors::Tuple{Int64, Int64, Int64}`: replication factors of the home unit cell to build 
-the supercell, which is the simulation box, such that the nearest image convention can be 
+- `repfactors::Tuple{Int64, Int64, Int64}`: replication factors of the home unit cell to build
+the supercell, which is the simulation box, such that the nearest image convention can be
 applied in this function.
 """
 function vdw_energy(framework::Framework, molecule::Molecule,
@@ -80,27 +80,22 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				# When checking the other case (where the adsorbate atom is to the right of the framework atom),
 				# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
 
-				for j = 1:3
-					if abs(dxf[j]) > repfactors[j] / 2
-						dxf[j] -= sign(dxf[j]) * repfactors[j]
-					end
-				end
-
+				nearest_image!(dxf, repfactors)
 
 				# Distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
 
 				# Lennard Jones parameters (and distance)
-				r_squared = sum(dx .* dx)
-				σ_squared = ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]]
-				ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]]
+				r_squared = dot(dx, dx)
 
 				if r_squared < R_OVERLAP_squared
 					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
 					return Inf
 				elseif r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
-				    energy += lennard_jones(r_squared, σ_squared, ϵ)
+				    energy += lennard_jones(r_squared,
+						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
+						ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
 				end
 			end
 		end

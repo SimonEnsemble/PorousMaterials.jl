@@ -14,7 +14,7 @@ hastings acceptance rules to find whether the proposed insertion is accepted or
 rejected. Function then returns the new list of molecules
 """
 function insert(molecules::Array{Molecule}, framework::framework, sim_box::Box)
-    U_old = gg_energy(molecules, framework.box)
+    U_old = gg_energy(molecules, simulation_box)
     new_mol = Molecule()
     prop_energy = get_energy(proposal, framework)
     #Metropolis Hastings Acceptance rules for inserting a random particle
@@ -43,141 +43,93 @@ function delete(molecules::Array{Molecule}, framework::Framework)
 end
 
 """
-    move(molecules, framework, repfactor)
+    translate_random_molecule(molecules)
 
-Translates a random molecule to a nearby coordinate. Then uses metropolis hastings
-to approve or reject the move. This then returns the new list of molecules
+Translates a random molecule a random amount in the given array and simulation
+box
+reflects if entire molecule goes outside in any cartesian direction
 """
-function move(molecules::Array{Molecule}, framework::framework)
-    mol_k = rand(1:length(molecules))
-    U_old = one_mol_energy(k, molecules, framework)
-    old_mol = molecules[k]
-    new_mol = old_mol
-    new_mol.x[1,:] += δ * (rand() - 0.5)
-    new_mol.x[2,:] += δ * (rand() - 0.5)
-    new_mol.x[3,:] += δ * (rand() - 0.5)
-    molecules[k] = new_mol
-    U_new = one_mol_energy(k, molecules, framework)
-    #Metropolis Hastings Acceptance rules for moving a random particle
-    if(rand() > metropolis_hastings_acceptance)
-        molecules[k] = old_mol
-    end
-end
-
-"""
-    num_molecules = get_N(molecules)
-
-returns the number of molecules currently in the framework/simulation
-"""
-function get_N(molecules::Array{Molecule})
-    return length(molecules)
-end
-
-"""
-    current_energy = one_mol_energy(k, molecules, framework)
-
-returns the current energy in the system. Calculates energy based on each molecule
-interacting with the framework and every other molecule.
-
-Code copied from Arni's Energetics.jl with minor adjustments to calculate interactions
-between the adsorbates as well as the framework
-"""
-function one_mol_energy(m::Int, molecules::Array{Molecule}, framework::framework
-                        ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64,Int64,Int64})
-    #TODO Use vdw_energy to find energy initially
-    #TODO Develop guest-guest interactions equation
-    #TODO find a way to get ljforcefield quickly, get initial input from higher function?
-    energy = 0.0
-    # loop over replications of the home unit cell to build the supercell (simulation box)
-    for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
-        #Loop over all atoms in the given molecule
-        for i = 1:molecules[m].n_atoms
-            xf_molecule_atom = mod.(framework.box.c_to_f * molecules[m].x[:,i],repfactors)
-            # loop over framework atoms in the home unit cell
-			for k = 1:framework.n_atoms
-                dxf = xf_molecule_atom - (framework.xf[:,k] + [nA, nB, nC])
-
-                #runs nearest image convention and adjusts accordingly
-                nearest_image(dxf,repfactors)
-                #converts fractional distance to cartesian distance
-                dx = framework.box.f_to_c * dxf
-
-                r_squared = sum(dx .* dx)
-                if r_squared < R_OVERLAP_squared
-                    #the atoms are overlapping, return inf energy
-                    return Inf
-                elseif r_squared < ljforcefield.cutoffradius_squared
-                    #atoms can interact and won't produce Inf energy
-                    #I removed the sigma_squared and ϵ variables because they are only used once and would
-                    #have to be initialized for every energy pair
-                    energy += lennard_jones(r_squared,
-                                            ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
-                                            ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
-                end
-            end
-
-            #loop over other adsorbate atoms leading up to central atom in array
-            for l = 1:m-1
-                #loop over every atom in second molecules
-                for k = 1:molecules[l].n_atoms
-                    dxf = xf_molecule_atom - molecules[l].x[:,k]
-
-                    #runs nearest image convention and adjusts accordingly
-                    nearest_image(dxf,repfactors)
-                    #converts fractional distance to cartesian distance
-                    dx = framework.box.f_to_c * dxf
-
-                    r_squared = sum(dx .* dx)
-                    if r_squared < R_OVERLAP_squared
-                        #the atoms are overlapping, return inf energy
-                        return Inf
-                    elseif r_squared < ljforcefield.cutoffradius_squared
-                        #atoms can interact and won't produce Inf energy
-                        #I removed the sigma_squared and ϵ variables because they are only used once and would
-                        #have to be initialized for every energy pair
-                        energy += lennard_jones(r_squared,
-                                                ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
-                                                ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
-                    end
-                end
-            end
-
-            #Loop over other adsorbate atoms following central atom in array
-            for l = (m+1):length(molecules)
-                #loop over every atom in the second molecule
-                for k = 1:molecules[l].n_atoms
-                    dxf = xf_molecule_atom - molecule[l].x[:,k]
-
-                    #runs nearest image convention and adjusts accordingly
-                    nearest_image(dxf,repfactors)
-                    #converts fractional distance to cartesian distance
-                    dx = framework.box.f_to_c * dxf
-
-                    r_squared = sum(dx .* dx)
-                    if r_squared < R_OVERLAP_squared
-                        #the atoms are overlapping, return inf energy
-                        return Inf
-                    elseif r_squared < ljforcefield.cutoffradius_squared
-                        #atoms can interact and won't produce Inf energy
-                        #I removed the sigma_squared and ϵ variables because they are only used once and would
-                        #have to be initialized for every energy pair
-                        energy += lennard_jones(r_squared,
-                                                ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
-                                                ϵ = ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
-                    end
-                end
-            end
+function translate_random_molecule!(molecules::Array{Molecule}, simulation_box::Box)
+    molecule_id = rand(1:length(molecules))
+    dx = [δ * (rand() - 0.5) for i = 1:3]
+    molecules[molecule_id].x .+= dx
+    xf_molecule = simulation_box.c_to_f * molecules[molecule_id]
+    for coords = 1:3
+        if sum(xf_molecule[coords, :] .< 1.0) == 0
+            xf_molecule[coords, :] -= 1.0
+        elseif sum(xf_molecules[coords, :] .>) == 0
+            xf_molecules[coords, :] += 1.0
         end
     end
 end
 
 """
-    nearest_image(distance,repfactors)
+    proposal_energy = guest_guest_vdw_energy(molecule_id, molecules,
+        ljforcefield, simulation_box)
+
+Calculates energy of a single adsorbate in the system. This can be used to find
+the change in energy after an accepted proposal
+
+Code copied from Arni's Energetics.jl with minor adjustments to calculate interactions
+between the adsorbates as well as the framework
 """
-function nearest_image(distance,repfactors)
+function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
+                        ljforcefield::LennardJonesForceField, simulation_box::Box)
+    #start energy at 0 and add to it as comparisons are made
+    energy = 0.0
+    #Loop over all atoms in the given molecule
+    for atom_id = 1:molecules[molecule_id].n_atoms
+        xf_molecule_atom = mod.(simulation_box.c_to_f *
+            molecules[molecule_id].x[:, atom_id], 1.0)
+
+        #loop over other adsorbate atoms leading up to central atom in array
+        for other_molecule_id = 1:length(molecules)
+            #molecule cannot interact with itself
+            if other_molecule_id == molecule_id
+                continue
+            end
+            #loop over every atom in second molecules
+            for other_atom_id = 1:molecules[other_molecule_id].n_atoms
+                xf_other_molecule_atom = mod.(simulation_box.c_to_f *
+                    molecules[other_molecule_id].x[:, other_atom_id], 1.0)
+                dxf = xf_molecule_atom - xf_other_molecule_atom
+
+                #runs nearest image convention and adjusts accordingly
+                nearest_image!(dxf, 1.0)
+                #converts fractional distance to cartesian distance
+                dx = simulation_box.f_to_c * dxf
+
+                r_squared = dot(dx, dx)
+                if r_squared < R_OVERLAP_squared
+                    #the atoms are overlapping, return inf energy
+                    return Inf
+                elseif r_squared < ljforcefield.cutoffradius_squared
+                    #atoms can interact and won't produce Inf energy
+                    #TODO test whether it is more efficient to store this as a variable up top
+                    energy += lennard_jones(r_squared,
+                        ljforcefield.sigmas_squared[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]],
+                        ljforcefield.epsilons[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
+                end
+            end
+        end
+    end #TODO label what these ends end
+    return energy #units are the same as in ϵ for forcefield (Kelvin)
+end #function
+
+"""
+    nearest_image!(fractional_distance,repfactors)
+
+runs the nearest image convention given an array of fractional coordinates and
+the repfactors of the supercell. This code was pulled from Arni's vdw_energy
+function in his Energetics module
+
+See comments in vdw_energy for more description
+"""
+#TODO put in Energetics_Utils.jl
+function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64})
     for j = 1:3
-        if abs(distance[j]) > repfactors[j] / 2
-            distance[j] -= sign(distance[j]) * repfactors[j]
+        if abs(fractional_distance[j]) > repfactors[j] / 2
+            fractional_distance[j] -= sign(fractional_distance[j]) * repfactors[j]
         end
     end
 end
@@ -199,7 +151,17 @@ end
 Copied Arni's vdw-energy function, and added a line to calculate the energy of
 multiple molecules in the MOF interacting with the framework
 """
-function gh_energy(framework::Framework, )
+function gh_energy(framework::Framework, molecules::Array{Molecule},
+                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
+    energy = 0.0
+    #loop over replications of the home unit cell to build the supercell
+    for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
+        #loop over all molecules in the framework
+        for l = 1:length(molecules)
+            #loop over atoms in the current molecule/adosrbate
+            for i = 1:molecules[l].n_atoms
+                xf_molecule_atom = mod.(simulation_box.c_to_f * molecule.x[:,i],repfactors)
+                #loop over framework atoms in the current cell
 
 end
 
