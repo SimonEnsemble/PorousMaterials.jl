@@ -116,23 +116,7 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
     return energy #units are the same as in ϵ for forcefield (Kelvin)
 end #function
 
-"""
-    nearest_image!(fractional_distance,repfactors)
 
-runs the nearest image convention given an array of fractional coordinates and
-the repfactors of the supercell. This code was pulled from Arni's vdw_energy
-function in his Energetics module
-
-See comments in vdw_energy for more description
-"""
-#TODO put in Energetics_Utils.jl
-function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64})
-    for j = 1:3
-        if abs(fractional_distance[j]) > repfactors[j] / 2
-            fractional_distance[j] -= sign(fractional_distance[j]) * repfactors[j]
-        end
-    end
-end
 
 """
 
