@@ -7,40 +7,28 @@ export gcmc_sim
 const δ = 0.1
 
 """
-    insert(molecules::Array, framework::framework, repfactor::Tuple)
+    insert_random_molecule!(molecules, simulation_box)
 
 Inserts an additional molecule into the system and then checks the metropolis
 hastings acceptance rules to find whether the proposed insertion is accepted or
 rejected. Function then returns the new list of molecules
 """
-function insert(molecules::Array{Molecule}, framework::framework, sim_box::Box)
-    U_old = gg_energy(molecules, simulation_box)
-    new_mol = Molecule()
-    prop_energy = get_energy(proposal, framework)
-    #Metropolis Hastings Acceptance rules for inserting a random particle
-    if(rand() < metropolis_hastings_acceptance)
-        return proposal
-    else
-        return molecules
-    end
-end
+function insert_random_molecule!(molecules::Array{Molecule}, simulation_box::Box)
+    #TODO how do I randomly create a Molecule? It should be a given type, but
+    #     then how do I generate locations for the atoms in the molecule
+    new_molecule = Molecule(n_atoms, atoms, new_molecule_position, charges)
+    push!(molecules, new_molecule)
+end #insert_random_molecule!
 
 """
-    delete(molecules,framework,repfactor)
+    delete_random_molecule!(molecules, simulation_box)
 
-Removes a random molecule from the current molecules in the framework. Checks
-metropolis hastings to see whether this is approved or rejected, and returns the
-new list of molecules
+Removes a random molecule from the current molecules in the framework.
 """
-#TODO add guest-guest interactions, using this as a baseline to make sure it works
-function delete(molecules::Array{Molecule}, framework::Framework)
-    U_old = gg_energy(molecules, framework.box) + gh_energy(molecules, framework)
-
-    #Metropolis Hastings Acceptance rules for deleting a random particle
-    if(rand() > metropolis_hastings_acceptance)
-
-    end
-end
+function delete_random_molecule!(molecules::Array{Molecule}, simulation_box::Box)
+    molecule_id = rand(1:length(molecules))
+    deleteat!(molecules, molecule_id)
+end #delete_random_molecule!
 
 """
     translate_random_molecule(molecules)
@@ -58,10 +46,10 @@ function translate_random_molecule!(molecules::Array{Molecule}, simulation_box::
         if sum(xf_molecule[coords, :] .< 1.0) == 0
             xf_molecule[coords, :] -= 1.0
         elseif sum(xf_molecules[coords, :] .>) == 0
-            xf_molecules[coords, :] += 1.0
-        end
-    end
-end
+            xf_molecule[coords, :] += 1.0
+        end #if statement that checks for reflection
+    end #for loop to go over x, y, and, z coordinate systems
+end #translate_random_molecule!
 
 """
     proposal_energy = guest_guest_vdw_energy(molecule_id, molecules,
@@ -87,7 +75,7 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
             #molecule cannot interact with itself
             if other_molecule_id == molecule_id
                 continue
-            end
+            end #if statement prevents molecule from interacting with itself
             #loop over every atom in second molecules
             for other_atom_id = 1:molecules[other_molecule_id].n_atoms
                 xf_other_molecule_atom = mod.(simulation_box.c_to_f *
@@ -109,48 +97,20 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
                     energy += lennard_jones(r_squared,
                         ljforcefield.sigmas_squared[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]],
                         ljforcefield.epsilons[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
-                end
-            end
-        end
-    end #TODO label what these ends end
+                end #if statement for whether energy will be calculated
+            end #for loop to check all atoms in other molecule
+        end #for loop to go over all other molecules
+    end #for loop for every atom in test molecule
     return energy #units are the same as in ϵ for forcefield (Kelvin)
 end #function
 
-
-
 """
-
-Need sim_box in order to do nearest image convention
+    gcmc_sim(framework, molecules, temperature, pressure)
 """
-function gg_energy(molecules::Array{Molecule},sim_box::Box)
-#    for every atom in the molecule
-#        for every molecule in the sim
-#            for every atom in the pairing molecule
-#                calculate lennard jones energy, add to sum
-#    return sum of all energy
-end
+function gcmc_sim(framework::Framework, molecules::Array{Molecule},
+                        temperature::Float64, pressure::Float64)
+    const NUMBER_SIMULATIONS = 1000000 #one million
 
-"""
-
-Copied Arni's vdw-energy function, and added a line to calculate the energy of
-multiple molecules in the MOF interacting with the framework
-"""
-function gh_energy(framework::Framework, molecules::Array{Molecule},
-                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
-    energy = 0.0
-    #loop over replications of the home unit cell to build the supercell
-    for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
-        #loop over all molecules in the framework
-        for l = 1:length(molecules)
-            #loop over atoms in the current molecule/adosrbate
-            for i = 1:molecules[l].n_atoms
-                xf_molecule_atom = mod.(simulation_box.c_to_f * molecule.x[:,i],repfactors)
-                #loop over framework atoms in the current cell
-
-end
-
-function gcmc_sim(framework::Framework, molecule::Molecule, T, P)
-
-end
+end #gcmc_sim
 
 end
