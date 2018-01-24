@@ -1,6 +1,6 @@
 module GCMC
 using PorousMaterials
-
+using Energetics_Util
 export gcmc_sim
 
 #Arbitrary value for delta for now, can change or make more complex later
