@@ -30,7 +30,10 @@ struct Box
     f_to_c::Array{Float64, 2}
     c_to_f::Array{Float64, 2}
 end
-# TODO write a nice show function for Box :)
+# TODO write a nice show & print function for Box :)
+# TODO can we write a constructor for this? because once a, b, c, α, β, γ are given,
+#   Ω, f_to_c, and c_to_f follow. so could construct as Box(a, b, c, α, β, γ).
+# TODO for Cory, add reciprocal lattice after constructor put in https://en.wikipedia.org/wiki/Reciprocal_lattice
 
 """
     framework = Framework(name, box, n_atoms, atoms, xf)
@@ -316,6 +319,8 @@ function check_for_atoms_out_of_unit_cell_box(framework::Framework)
     end
     return true
 end
+# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when 
+#  loading in crystal structure files, right?
 
 """
     strip_numbers_from_atom_labels(framework::Framework)
