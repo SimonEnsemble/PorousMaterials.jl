@@ -29,6 +29,7 @@ import Base.show
 function show(io::IO, molecule::Molecule)
 	print(io, molecule)
 end
+
 """
 	molecule = read_molecule_file("~/example/filename.mol")
 
@@ -46,6 +47,7 @@ function read_molecule_file(mol_filename::AbstractString)
 	close(f)
 
 	nAtoms = 0
+    # TODO n_atoms, not nAtoms, no capital letters in var names = convention
 	pos = Array{Float64,2}(0,0)
 	Atoms = Array{AbstractString}(0)
 	Charge = Array{Float64}(0)
@@ -61,6 +63,7 @@ function read_molecule_file(mol_filename::AbstractString)
 			vals = split(line)
 			pos[:, i-4] = map(x -> parse(Float64, x), vals[1:3])
 			Atoms[i-4] = vals[4]
+            # TODO Atoms --> atoms, Charge --> charge. Capital letters reserved for structs, types!
 			Charge[i-4] = readcharge(vals[6])
 		end
 	end
@@ -93,3 +96,5 @@ function readcharge(val::AbstractString)
 		error("Charge not valid")
 	end # end if/if-else/else
 end # end readcharge
+# TODO remove this? what is this doing? charges can be floats... so why not just read in 
+#  the floats that are the charges assigned to that bead of the molecule?
