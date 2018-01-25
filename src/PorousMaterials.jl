@@ -8,6 +8,8 @@ include("Forcefield.jl")
 include("Molecules.jl")
 include("Energetics.jl")
 include("Misc.jl")
+#TODO Remove this later! Arnifunctions should not be here permanently
+include("Arnifunctions.jl")
 include("Grid.jl")
  
 export Framework, read_crystal_structure_file, replicate_to_xyz, 
@@ -17,5 +19,6 @@ export Framework, read_crystal_structure_file, replicate_to_xyz,
        Molecule, read_molecule_file, readcharge, # Molecules.jl
        lennard_jones, vdw_energy, # Energetics.jl
        read_xyz, read_cpk_colors, read_atomic_masses, read_atomic_radii, # Misc.jl
+	   exploreframe, takesnapshot, # Arnifunctions.jl #TODO Remove this line later!
 	   Grid, write_to_cube # Grid.jl
 end
