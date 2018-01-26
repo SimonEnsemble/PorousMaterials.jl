@@ -42,12 +42,17 @@ function rotate(rotMatrix::Array{Float64,2},θ::Float64,ϕ::Float64,ψ::Float64)
 end
 
 
-function exploreframe(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64}; mesh=101)
-	EnergyMatrix = zeros(mesh,mesh,mesh)
+function exploreframe(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64}; roughness = 0.01)
 	coordmatrix = Dict{AbstractString,Array{Float64,2}}()
-	frac_range_x = linspace(0,repfactors[1],mesh)	
-	frac_range_y = linspace(0,repfactors[2],mesh)	
-	frac_range_z = linspace(0,repfactors[3],mesh)	
+	a_cnt, b_cnt, c_cnt = [repfactors[1], repfactors[2], repfactors[3]] / roughness
+	a_cnt, b_cnt, c_cnt = [convert(Int64, floor(a_cnt)), convert(Int64, floor(b_cnt)), convert(Int64, floor(c_cnt))]
+	cnt = (a_cnt, b_cnt, c_cnt)
+	@printf("%f, %f, %f\n",a_cnt, b_cnt, c_cnt)
+	EnergyMatrix = zeros(a_cnt,b_cnt,c_cnt)
+	frac_range_x = range(0.,roughness,a_cnt)
+	frac_range_y = range(0.,roughness,b_cnt)
+	frac_range_z = range(0.,roughness,c_cnt)
+	@printf("%f, %f, %f\n",length(frac_range_x), length(frac_range_y), length(frac_range_z))
 
 	for (i,xf) in enumerate(frac_range_x), (j,yf) in enumerate(frac_range_y), (k,zf) in enumerate(frac_range_z)
 		molecule.x = (frame.box.f_to_c*[xf,yf,zf])[:,:]
@@ -55,7 +60,7 @@ function exploreframe(frame::Framework, molecule::Molecule, ljforcefield::Lennar
 		tempstr = @sprintf("%d-%d-%d",i,j,k)
 		coordmatrix[tempstr] = molecule.x
 	end
-	return (EnergyMatrix,coordmatrix)
+	return (EnergyMatrix,coordmatrix, cnt)
 end
 """
 	occupancy = takesnapshot(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, dimensions::Array{Float64}, repfactors::Tuple(Int64, Int64, Int64}; startpoint::Array{Float64}=[0.0,0.0,0.0], mesh::Array{Int64}=[11,11,11])

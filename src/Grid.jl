@@ -51,7 +51,7 @@ function write_to_cube(grid::Grid, filename::AbstractString)
     for i = 1:grid.nb_grid_pts[1]
         for j = 1:grid.nb_grid_pts[2]
             for k = 1:grid.nb_grid_pts[3]
-                @printf(cubefile, "%e", grid.data[i, j, k])
+                @printf(cubefile, "%e ", grid.data[i, j, k])
                 if (k % 6) == 0
                     @printf(cubefile, "\n")
                 end
