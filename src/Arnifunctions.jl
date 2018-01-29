@@ -63,20 +63,23 @@ function exploreframe(frame::Framework, molecule::Molecule, ljforcefield::Lennar
 	return (EnergyMatrix,coordmatrix, cnt)
 end
 """
-	occupancy = takesnapshot(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, dimensions::Array{Float64}, repfactors::Tuple(Int64, Int64, Int64}; startpoint::Array{Float64}=[0.0,0.0,0.0], mesh::Array{Int64}=[11,11,11])
+occupancy = takesnapshot(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, dimensions::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64}; startpoint::Array{Float64}=[0.0,0.0,0.0], roughness = 0.1) 
 
 Forms a bitArray corresponding to the van Der Waals energy in the Framework. bitArray will be a three dimensional matrix with dimensions described in `dimensions` in cartesian coordinates. The startpoint will determine where the iteration starts at. If the van Der Waals interaction between the adsorbate `molecule` and the Framework `frame` is positive, that corresponds to a true (occupied) value in the bitArray. If the interaction is negative (not occupied) it will correspond to a false value in the bitArray.
 
 `mesh` is an array describing how fine we want our grid (how big of a matrix). The three numbers in the array correspond to the x-, y- and z-direction respectively. 
 """
-function takesnapshot(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, dimensions::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64}; startpoint::Array{Float64}=[0.0,0.0,0.0], mesh::Array{Int64}=[11,11,11])
+function takesnapshot(frame::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, dimensions::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64}; startpoint::Array{Float64}=[0.0,0.0,0.0], roughness = 0.1) 
 	# If vdw_energy > 0 at a certain point, it will correspond to a 'true' in the bitArray. If vdw_energy < 0 (void space) it will correspond to a 'false' in the bitArray.	
-	occupancy = trues(mesh[1],mesh[2],mesh[3])
+	x_cnt, y_cnt, z_cnt = floor.(Int64, dimensions ./ roughness)
+	@printf("%f, %f, %f\n",x_cnt,y_cnt,z_cnt)
+	@printf("%s, %s, %s\n",typeof(x_cnt),typeof(y_cnt),typeof(z_cnt))
+	occupancy = trues(x_cnt, y_cnt, z_cnt)
 
 	# Cartesian range in x,y and z-dimensions
-	cart_range_x = startpoint[1] + linspace(0,dimensions[1],mesh[1])
-	cart_range_y = startpoint[2] + linspace(0,dimensions[2],mesh[2])
-	cart_range_z = startpoint[3] + linspace(0,dimensions[3],mesh[3])
+	cart_range_x = startpoint[1] + linspace(0,dimensions[1],x_cnt)
+	cart_range_y = startpoint[2] + linspace(0,dimensions[2],y_cnt)
+	cart_range_z = startpoint[3] + linspace(0,dimensions[3],z_cnt)
 	endpoints = [cart_range_x[1] cart_range_x[end]; cart_range_y[1] cart_range_y[end]; cart_range_z[1] cart_range_z[end]]
 
 	for (i,x) in enumerate(cart_range_x), (j,y) in enumerate(cart_range_y), (k,z) in enumerate(cart_range_z)
