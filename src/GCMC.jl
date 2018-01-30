@@ -21,12 +21,19 @@ function insert_random_molecule!(molecules::Array{Molecule}, simulation_box::Box
 end #insert_random_molecule!
 
 """
-    delete_random_molecule!(molecules, simulation_box)
+    delete_random_molecule!(molecule_id, molecules, simulation_box)
 
 Removes a random molecule from the current molecules in the framework.
+molecule_id decides which molecule will be deleted, for a simulation, it must
+    be a randomly generated value
 """
-function delete_random_molecule!(molecules::Array{Molecule}, simulation_box::Box)
-    molecule_id = rand(1:length(molecules))
+function delete_random_molecule!(molecule_id::Int, molecules::Array{Molecule},
+        simulation_box::Box)
+    # could also generate a value here, would it work to return two values?
+    #molecule_id = rand(0:length(molecules))
+    if molecule_id < 0 || molecule_id > length(molecules)
+        error("molecule_id must be >= 0 and less than the length of molecules")
+    end #makes sure molecule_id is a valid input
     deleted_molecule = molecules[molecule_id]
     deleteat!(molecules, molecule_id)
     return deleted_molecule
@@ -47,7 +54,7 @@ function translate_random_molecule!(molecules::Array{Molecule}, simulation_box::
     for coords = 1:3
         if sum(xf_molecule[coords, :] .< 1.0) == 0
             xf_molecule[coords, :] -= 1.0
-        elseif sum(xf_molecules[coords, :] .>) == 0
+        elseif sum(xf_molecules[coords, :] .> 0.0) == 0
             xf_molecule[coords, :] += 1.0
         end #if statement that checks for reflection
     end #for loop to go over x, y, and, z coordinate systems
