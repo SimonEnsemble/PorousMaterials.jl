@@ -27,7 +27,9 @@ Removes a random molecule from the current molecules in the framework.
 """
 function delete_random_molecule!(molecules::Array{Molecule}, simulation_box::Box)
     molecule_id = rand(1:length(molecules))
+    deleted_molecule = molecules[molecule_id]
     deleteat!(molecules, molecule_id)
+    return deleted_molecule
 end #delete_random_molecule!
 
 """
