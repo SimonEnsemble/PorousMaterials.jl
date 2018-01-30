@@ -8,9 +8,9 @@ include("Forcefield.jl")
 include("Molecules.jl")
 include("Energetics.jl")
 include("Misc.jl")
-#TODO Remove this later! Arnifunctions should not be here permanently
-include("Arnifunctions.jl")
 include("Grid.jl")
+#TODO Remove Snapshot.jl from PorousMaterials.jl (This is from Arni's project)
+include("Snapshot.jl")
  
 export Framework, read_crystal_structure_file, replicate_to_xyz, 
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula,
@@ -19,6 +19,6 @@ export Framework, read_crystal_structure_file, replicate_to_xyz,
        Molecule, read_molecule_file, readcharge, # Molecules.jl
        lennard_jones, vdw_energy, # Energetics.jl
        read_xyz, read_cpk_colors, read_atomic_masses, read_atomic_radii, # Misc.jl
-	   exploreframe, takesnapshot, # Arnifunctions.jl #TODO Remove this line later!
-	   Grid, write_to_cube # Grid.jl
+	   Grid, write_to_cube, # Grid.jl
+	   Snapshot, snap, write_snapshot_to_vtk, write_to_npy # Snapshot.jl #TODO Remove this line later
 end
