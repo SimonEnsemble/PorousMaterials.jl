@@ -3,7 +3,7 @@ const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
 using Energetics_Util
 
 """
-	V = lennard_jones_potential_energy(r_squared::Float64, σ_squared::Float64, ϵ::Float64)  (units: Kelvin)
+	V = lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)  (units: Kelvin)
 
 Calculate the lennard jones potential energy given a radius r between two molecules.
 σ and ϵ are specific to interaction between two elements.

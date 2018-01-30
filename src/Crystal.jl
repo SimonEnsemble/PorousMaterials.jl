@@ -1,5 +1,5 @@
 using Base.Test
-using PyCall
+using PyCall # see pyimport, requires ASE
 
 """
     unit_cell_box = Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
@@ -30,6 +30,10 @@ struct Box
     f_to_c::Array{Float64, 2}
     c_to_f::Array{Float64, 2}
 end
+# TODO write a nice show & print function for Box :)
+# TODO can we write a constructor for this? because once a, b, c, α, β, γ are given,
+#   Ω, f_to_c, and c_to_f follow. so could construct as Box(a, b, c, α, β, γ).
+# TODO for Cory, add reciprocal lattice after constructor put in https://en.wikipedia.org/wiki/Reciprocal_lattice
 
 """
     framework = Framework(name, box, n_atoms, atoms, xf)
@@ -66,8 +70,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     # TODO add charges
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
-    if ! (extension in ["cif"])
-        error("PorousMaterials.jl can only read .cif crystal structure files.")
+    if ! (extension in ["cif", "cssr"])
+        error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
     end
 
     # read in crystal structure file
@@ -78,16 +82,17 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
+    
+    # populate these arrays when reading the xtal structure file.
+    charges = Float64[] # point charges on each atom
+    xf = Float64[] # fractional coords
+    yf = Float64[]
+    zf = Float64[]
+    atoms = String[] # atom names
 
     # Cif reader from Cory Simon
     if extension == "cif"
         data = Dict()
-        charges = Float64[]
-        x = Float64[]
-        y = Float64[]
-        z = Float64[]
-        atoms = String[]
-
         loop_starts = -1
         for i = 1:length(lines)
             line = split(lines[i])
@@ -153,9 +158,9 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
                 break
             end
             push!(atoms, line[name_to_column[atom_column_name]])
-            push!(x, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
-            push!(y, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
-            push!(z, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
+            push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
+            push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
+            push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
             # if charges present, import them
             if haskey(name_to_column, "_atom_site_charge")
                 push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
@@ -163,13 +168,44 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
                 push!(charges, 0.0)
             end
         end
-        n_atoms = length(x)
+        n_atoms = length(xf)
+        # TODO remove this data dictionary and just fill in a, b, c etc. it is more code
+        #  and more place for error by copying data into the data dictionary then
+        #  assigning a, b, c etc.
         a = data["a"]
         b = data["b"]
         c = data["c"]
         α = data["alpha"]
         β = data["beta"]
         γ = data["gamma"]
+
+    elseif extension == "cssr"
+        # get unit cell sizes
+        line = split(lines[1]) # first line is (a, b, c)
+        a = parse(Float64, line[1])
+        b = parse(Float64, line[2])
+        c = parse(Float64, line[3])
+
+        # get unit cell angles. Convert to radians
+        line = split(lines[2])
+        α = parse(Float64, line[1]) * pi / 180.0
+        β = parse(Float64, line[2]) * pi / 180.0
+        γ = parse(Float64, line[3]) * pi / 180.0
+
+        n_atoms = parse(Int, split(lines[3])[1])
+
+        # read in atoms and fractional coordinates
+        for a = 1:n_atoms
+            line = split(lines[4 + a])
+            
+            push!(atoms, line[2])
+
+            push!(xf, mod(parse(Float64, line[3]), 1.0)) # wrap to [0,1]
+            push!(yf, mod(parse(Float64, line[4]), 1.0)) # wrap to [0,1]
+            push!(zf, mod(parse(Float64, line[5]), 1.0)) # wrap to [0,1]
+
+            push!(charges, parse(Float64, line[14]))
+        end
     end
 
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
@@ -181,8 +217,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     # construct the unit cell box
     box = Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
 
-    fractional_coords = Array{Float64, 2}(3, length(x))
-    fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]
+    fractional_coords = Array{Float64, 2}(3, n_atoms)
+    fractional_coords[1, :] = xf[:]; fractional_coords[2, :] = yf[:]; fractional_coords[3, :] = zf[:]
 
     # finally construct the framework
     framework = Framework(filename, box, n_atoms, atoms, fractional_coords)
@@ -283,6 +319,8 @@ function check_for_atoms_out_of_unit_cell_box(framework::Framework)
     end
     return true
 end
+# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when 
+#  loading in crystal structure files, right?
 
 """
     strip_numbers_from_atom_labels(framework::Framework)
@@ -365,6 +403,7 @@ end
 Use Atomic Simulation Environment (ASE) Python package to convert .cif file in non-P1
 symmetry to P1 symmetry. Writes .cif with P1 symmetry to `outputfilename1`.
 Filenames correspond to files in `PATH_TO_DATA/crystals`.
+# TODO add to README that ase is required. Later look at Crystals.jl
 """
 function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; verbose::Bool=true)
     # Import Atomic Simulation Environment Python package
