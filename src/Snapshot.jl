@@ -141,9 +141,14 @@ function write_snapshot_to_vtk(snapshot::Snapshot, filename::Union{Void, Abstrac
 end
 
 
+"""
+	write_to_npy(matrix, "my_file.npy")
+
+writes the information in `matrix` to a .npy file. The .npy file is able to be read from Python 3 using the numpy package
+"""
 function write_to_npy(matrix::Union{Array{Float64,3}, BitArray{3}}, filename::Union{Void, AbstractString}=nothing)
 	if filename == nothing
-		filename = split(snapshot.frame.name, ".")[1] * ".npy"
+		filename = "numpy_data.npy"
 	end
 
 	if typeof(matrix) == BitArray{3}
