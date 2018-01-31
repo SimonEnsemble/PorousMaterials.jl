@@ -36,6 +36,35 @@ end
 # TODO for Cory, add reciprocal lattice after constructor put in https://en.wikipedia.org/wiki/Reciprocal_lattice
 
 """
+    box = construct_box(a, b, c, α, β, γ)
+
+constructs a box with dimensions a, b, and c with angles α, β, and γ
+based on these inputs, it calculates the volume, f_to_c, and c_to_f
+"""
+function construct_box(a::Float64, b::Float64, c::Float64, α::Float64,
+        β::Float64, γ::Float64)
+    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
+    f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
+    c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
+
+    @test f_to_c * c_to_f ≈ eye(3)
+
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+end
+
+"""
+    new_box = replicate_box(original_box, repfactors)
+
+Replicates a box to make a supercell using a base box and repfactors
+The new fractional coords are still between 0 and 1
+"""
+function replicate_box(box::Box, repfactors::Tuple{Int64, Int64, Int64})
+    #because this uses construct_box, its fractional coords still go 0 - 1
+    return construct_box(box.a * repfactors[1], box.b * repfactors[2],
+        box.c * repfactors[3], box.α, box.β, box.γ)
+end
+
+"""
     framework = Framework(name, box, n_atoms, atoms, xf)
 
 Data structure for a 3D crystal structure.
@@ -82,7 +111,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
-    
+
     # populate these arrays when reading the xtal structure file.
     charges = Float64[] # point charges on each atom
     xf = Float64[] # fractional coords
@@ -197,7 +226,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         # read in atoms and fractional coordinates
         for a = 1:n_atoms
             line = split(lines[4 + a])
-            
+
             push!(atoms, line[2])
 
             push!(xf, mod(parse(Float64, line[3]), 1.0)) # wrap to [0,1]
@@ -208,14 +237,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         end
     end
 
-    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
-    f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
-    c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
-
-    @test f_to_c * c_to_f ≈ eye(3)
-
     # construct the unit cell box
-    box = Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+    box = construct_box(a, b, c, α, β, γ)
 
     fractional_coords = Array{Float64, 2}(3, n_atoms)
     fractional_coords[1, :] = xf[:]; fractional_coords[2, :] = yf[:]; fractional_coords[3, :] = zf[:]
@@ -319,7 +342,7 @@ function check_for_atoms_out_of_unit_cell_box(framework::Framework)
     end
     return true
 end
-# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when 
+# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when
 #  loading in crystal structure files, right?
 
 """
