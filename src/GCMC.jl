@@ -152,7 +152,7 @@ function gcmc_sim(framework::Framework,
 
     for t = 1:number_mc_trials
         proposal_id = rand(1:3)
-        if proposal_id == 1
+        if proposal_id == 1 #insert
             insert_molecule!(molecules, framework.box)
             U_gg = guest_guest_vdw_energy(length(molecules), molecules,
                 ljforcefield, simulation_box)
@@ -165,18 +165,22 @@ function gcmc_sim(framework::Framework,
                 #reject the move, remove the added molecule
                 pop!(molecules)
             end
-        elseif proposal_id == 2
+        elseif proposal_id == 2 #delete
             molecule_id = rand(1:length(molecules))
             U_gg = guest_guest_vdw_energy(molecule_id, molecules, ljforcefield,
                 simulation_box)
             U_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield,
                 repfactors)
 
-        else
+        else #move
             molecule_id = rand(1:length(molecules))
+            U_gg_old = guest_guest_vdw_energy(molecule_id, molecules,
+                ljforcefield, simulation_box)
+            U_gh_old = vdw_energy(framework, molecules[molecule_id],
+                ljforcefield, repfactors)
+
             old_molecule = translate_molecule(molecule_id, molecules,
                 simulation_box)
-            
         end
         total_energy += current_energy
     end

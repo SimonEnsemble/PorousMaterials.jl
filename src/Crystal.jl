@@ -35,6 +35,12 @@ end
 #   Ω, f_to_c, and c_to_f follow. so could construct as Box(a, b, c, α, β, γ).
 # TODO for Cory, add reciprocal lattice after constructor put in https://en.wikipedia.org/wiki/Reciprocal_lattice
 
+"""
+    box = construct_box(a, b, c, α, β, γ)
+
+constructs a box with dimensions a, b, and c with angles α, β, and γ
+based on these inputs, it calculates the volume, f_to_c, and c_to_f
+"""
 function construct_box(a::Float64, b::Float64, c::Float64, α::Float64,
         β::Float64, γ::Float64)
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
@@ -105,7 +111,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
-    
+
     # populate these arrays when reading the xtal structure file.
     charges = Float64[] # point charges on each atom
     xf = Float64[] # fractional coords
@@ -220,7 +226,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         # read in atoms and fractional coordinates
         for a = 1:n_atoms
             line = split(lines[4 + a])
-            
+
             push!(atoms, line[2])
 
             push!(xf, mod(parse(Float64, line[3]), 1.0)) # wrap to [0,1]
@@ -336,7 +342,7 @@ function check_for_atoms_out_of_unit_cell_box(framework::Framework)
     end
     return true
 end
-# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when 
+# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when
 #  loading in crystal structure files, right?
 
 """
