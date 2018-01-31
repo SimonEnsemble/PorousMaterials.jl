@@ -31,6 +31,29 @@ struct Box
     c_to_f::Array{Float64, 2}
 end
 
+function construct_box(a::Float64, b::Float64, c::Float64, α::Float64,
+        β::Float64, γ::Float64)
+    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
+    f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
+    c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
+
+    @test f_to_c * c_to_f ≈ eye(3)
+
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+end
+
+"""
+    new_box = replicate_box(original_box, repfactors)
+
+Replicates a box to make a supercell using a base box and repfactors
+The new fractional coords are still between 0 and 1
+"""
+function replicate_box(box::Box, repfactors::Tuple{Int64, Int64, Int64})
+    #because this uses construct_box, its fractional coords still go 0 - 1
+    return construct_box(box.a * repfactors[1], box.b * repfactors[2],
+        box.c * repfactors[3], box.α, box.β, box.γ)
+end
+
 """
     framework = Framework(name, box, n_atoms, atoms, xf)
 
@@ -172,14 +195,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         γ = data["gamma"]
     end
 
-    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
-    f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
-    c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
-
-    @test f_to_c * c_to_f ≈ eye(3)
-
     # construct the unit cell box
-    box = Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+    box = construct_box(a, b, c, α, β, γ)
 
     fractional_coords = Array{Float64, 2}(3, length(x))
     fractional_coords[1, :] = x[:]; fractional_coords[2, :] = y[:]; fractional_coords[3, :] = z[:]

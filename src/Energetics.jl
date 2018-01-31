@@ -41,7 +41,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
         # loop over atoms of the molecule/adsorbate
         # TODO: think about whether i or k loop should go first for speed. might not matter.
 		for i = 1:molecule.n_atoms
-			xf_molecule_atom = mod.(framework.box.c_to_f * molecule.x[:,i],repfactors)
+			xf_molecule_atom = mod.(framework.box.c_to_f * molecule.x[:, i], repfactors)
             # loop over framework atoms in the home unit cell
 			for k = 1:framework.n_atoms
 				# Nearest image convention.

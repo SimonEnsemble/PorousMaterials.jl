@@ -1,6 +1,8 @@
 module GCMC
-using PorousMaterials
-using Energetics_Util
+
+#TODO how to include other porous materials files
+include ("Crystal.jl")
+using Energetics_Util.jl
 export gcmc_sim
 
 #Arbitrary value for delta for now, can change or make more complex later
@@ -122,29 +124,62 @@ end
 """
     gcmc_sim(framework, molecules, temperature, pressure)
 """
-function gcmc_sim(framework::Framework, molecules::Array{Molecule},
+#will pass in molecules::Array{Molecule} later
+function gcmc_sim(framework::Framework,
                         temperature::Float64, pressure::Float64,
-                        adsorbate::String, ljforcefield::LennardJonesForceField)
-    const NUMBER_SIMULATIONS = 1000000 #one million
+                        adsorbate::String, ljforcefield::LennardJonesForceField;
+                        number_mc_trials::Int64=100000)
+    const repfactors = replication_factors(framework.box, ljforcefield)
+    const simulation_box = replicate_box(framework.box, repfactors)
 
-    repfactors = replication_factors(framework.box, ljforcefield)
-
-    simulation_box =
-
-    current_energy = 0
+    #used to calculate average energy of the system
+    total_energy = 0.0
+    #used to add accurate values to total_energy
+    current_energy = 0.0
+    #used to calculate average number of molecules
+    total_n = 0.0
+    #start with 0 molecules
+    molecules = Molecule[]
+"""
+#will need this later for when starting with a list of molecules
     for molecule_id = 1:length(molecules)
-        current_energy += (guest_guest_vdw_energy(molecule_id, molecules,
-            ljforcefield, framework.box)/2)
+        current_energy += guest_guest_vdw_energy(molecule_id, molecules,
+            ljforcefield, framework.box)/2
         current_energy += vdw_energy(framework, molecules[molecule_id],
             ljforcefield, repfactors)
+    end
+"""
 
-    for current_simulation_number = 1:NUMBER_SIMULATIONS
+    for t = 1:number_mc_trials
         proposal_id = rand(1:3)
         if proposal_id == 1
-            insert_random_molecule(molecules, framework.box)
-            δ_energy = guest_guest_vdw_energy(length(molecules), molecules,
-                ljforcefield, framework.box)
-            if rand() < #metropolis hastings insert rules
+            insert_molecule!(molecules, framework.box)
+            U_gg = guest_guest_vdw_energy(length(molecules), molecules,
+                ljforcefield, simulation_box)
+            U_gh = vdw_energy(framework, molecules[end],
+                ljforcefield, repfactors)
+            if rand() < exp(-(U_gg + U_gh) / temperature)
+                #accept the move, add the energy of the molecule to the total energy of the system
+                current_energy += U_gg + U_gh
+            else
+                #reject the move, remove the added molecule
+                pop!(molecules)
+            end
+        elseif proposal_id == 2
+            molecule_id = rand(1:length(molecules))
+            U_gg = guest_guest_vdw_energy(molecule_id, molecules, ljforcefield,
+                simulation_box)
+            U_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield,
+                repfactors)
+
+        else
+            molecule_id = rand(1:length(molecules))
+            old_molecule = translate_molecule(molecule_id, molecules,
+                simulation_box)
+            
+        end
+        total_energy += current_energy
+    end
 
 end #gcmc_sim
 
