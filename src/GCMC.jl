@@ -1,8 +1,13 @@
 module GCMC
 
 #TODO how to include other porous materials files
-using ("Crystal.jl")
-using Energetics_Util.jl
+
+include("Crystal.jl")
+include("Energetics_Util.jl")
+include("Energetics.jl")
+include("Molecule.jl")
+include("Forcefield.jl")
+
 export gcmc_sim
 
 #Arbitrary value for delta for now, can change or make more complex later
