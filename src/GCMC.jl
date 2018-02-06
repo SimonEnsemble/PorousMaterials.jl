@@ -1,7 +1,7 @@
 module GCMC
 
 #TODO how to include other porous materials files
-include ("Crystal.jl")
+using ("Crystal.jl")
 using Energetics_Util.jl
 export gcmc_sim
 
@@ -17,8 +17,6 @@ rejected. Function then returns the new list of molecules
 """
 function insert_molecule!(molecules::Array{Molecule}, simulation_box::Box,
         adsorbate::String)
-    #TODO how do I randomly create a Molecule? It should be a given type, but
-    #     then how do I generate locations for the atoms in the molecule
     #TODO create template to handle more complex molecules
     x_new = simulation_box.f_to_c * [rand(), rand(), rand()]
     new_molecule = Molecule(1, [adsorbate], x_new, [0.0])
@@ -33,8 +31,6 @@ molecule_id decides which molecule will be deleted, for a simulation, it must
     be a randomly generated value
 """
 function delete_molecule!(molecule_id::Int, molecules::Array{Molecule})
-    # could also generate a value here, would it work to return two values?
-    #molecule_id = rand(0:length(molecules))
     deleted_molecule = molecules[molecule_id]
     deleteat!(molecules, molecule_id)
     return deleted_molecule
@@ -122,7 +118,10 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
 end
 
 """
-    gcmc_sim(framework, molecules, temperature, pressure)
+    gcmc_sim(framework, temperature, pressure, adsorbate, ljforcefield)
+
+runs a monte carlo simulation using the given framework and adsorbate.
+runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_sim(framework::Framework,
@@ -159,7 +158,7 @@ function gcmc_sim(framework::Framework,
             U_gh = vdw_energy(framework, molecules[end],
                 ljforcefield, repfactors)
             if rand() < exp(-(U_gg + U_gh) / temperature)
-                #accept the move, add the energy of the molecule to the total energy of the system
+                #accept the move, adjust current_energy
                 current_energy += U_gg + U_gh
             else
                 #reject the move, remove the added molecule
@@ -171,9 +170,15 @@ function gcmc_sim(framework::Framework,
                 simulation_box)
             U_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield,
                 repfactors)
+            if rand() < exp((U_gg + U_gh) / temperature)
+                #accept the deletion, delete molecule, adjust current_energy
+                delete_molecule(molecule_id, molecules)
+                current_energy += U_gg + U_gh
+            end
 
         else #move
             molecule_id = rand(1:length(molecules))
+            #energy of the molecule before it was moved
             U_gg_old = guest_guest_vdw_energy(molecule_id, molecules,
                 ljforcefield, simulation_box)
             U_gh_old = vdw_energy(framework, molecules[molecule_id],
@@ -181,9 +186,33 @@ function gcmc_sim(framework::Framework,
 
             old_molecule = translate_molecule(molecule_id, molecules,
                 simulation_box)
+
+            #energy of the molecule after it is moved
+            U_gg_new = guest_guest_vdw_energy(molecule_id, molecules,
+                ljforcefield, simulation_box)
+            U_gh_new = vdw_energy(framework, molecules[molecule_id],
+                ljforcefield, rep_factors)
+
+            if rand() < exp(-((U_gg_new + U_gh_new) - (U_gg_old + U_gh_old))
+                / temperature)
+                #accept the move, adjust current energy
+                #remove energy from old molecule coords
+                current_energy -= U_gg_old + U_gh_old
+                #add energy from new moleculde coords
+                current_energy += U_gg_new + U_gh_new
+            else
+                #reject the move, reset the molecule at molecule_id
+                molecules[molecule_id] = old_molecule
+            end
+
         end
+        #adjust these values to calculate average values later
         total_energy += current_energy
+        total_n += length(molecules)
     end
+
+    average_n = total_n / number_mc_trials
+    average_energy = total_energy / number_mc_trials
 
 end #gcmc_sim
 
