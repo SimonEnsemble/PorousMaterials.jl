@@ -159,3 +159,17 @@ function write_to_npy(matrix::Union{Array{Float64,3}, BitArray{3}}, filename::Un
 		@printf("Array{Float64,3} saved in %s\n","data/db/" * filename)
 	end
 end
+
+import Base.print
+function print(io::IO, snapshot::Snapshot)
+	 @printf(io, "Using frame = %s\n",snapshot.frame.name)
+	 @printf(io, "Corners of snapshot:\n")
+	 @printf(io, "\t%.3f\t%.3f\t%.3f\n", snapshot.startpoint[1], snapshot.startpoint[2], snapshot.startpoint[3])
+	 @printf(io, "\t%.3f\t%.3f\t%.3f\n", snapshot.dimensions[1] + snapshot.startpoint[1], snapshot.dimensions[2] + snapshot.startpoint[2], snapshot.dimensions[3] + snapshot.startpoint[3])
+	 @printf(io, "Roughness = %.3f", snapshot.roughness)
+ end
+
+ import Base.show
+ function show(io::IO, snapshot::Snapshot)
+	 print(io, snapshot)
+ end
