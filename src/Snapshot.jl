@@ -15,7 +15,7 @@ The mesh is calculated using `roughness` to measure distance between points in a
 - `repfactors::Tuple{Int64, Int64, Int64}`: Replication factors used to simulate the simulation box
 - `roughness::Float64`: Distance between points in all dimensions. Used to calculate the meshgrid
 """
-type Snapshot
+mutable struct Snapshot
 	frame::Framework
 	molecule::Molecule
 	ljforcefield::LennardJonesForceField
@@ -24,6 +24,7 @@ type Snapshot
 	repfactors::Tuple{Int64, Int64, Int64}
 	roughness::Float64
 end
+
 
 """
 	{occupancy, energy} = snap(snapshot::Snapshot, output_type::AbstractString="occupancy")
@@ -159,6 +160,48 @@ function write_to_npy(matrix::Union{Array{Float64,3}, BitArray{3}}, filename::Un
 		@printf("Array{Float64,3} saved in %s\n","data/db/" * filename)
 	end
 end
+
+"""
+	write_snapshot_to_cube(grid::Grid, filename::AbstractString, dimensions::Array{Float64,1}, startpoint::Array{Float64,1})
+
+writes the energy to a .cube file from a snapshot. `write_to_cube` is also available but that uses the fractional unitcell, while this uses the dimensions and startpoint specified in `snapshot`.
+
+# Arguments
+- `grid::Grid`: grid with associated volume data (see Grid struct)
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
+- `snapshot::Snapshot`: stores the relevant information for the snapshot. The snapshot is a square grid defined from dimensions and a startpoint.
+"""
+function write_snapshot_to_cube(grid::Grid, filename::AbstractString, snapshot::Snapshot)
+	cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
+
+	@printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
+	# the integer refers to 0 atoms (just use .xyz to visualize atoms)
+	# the next three floats correspond to the origin, gotten from `startpoint`
+	@printf(cubefile, "%d %f %f %f\n", 0, snapshot.startpoint[1], snapshot.startpoint[2], snapshot.startpoint[3])
+
+	eigvectors = diagm(snapshot.dimensions)
+	#these are the vectors that form the voxels of each grid parallelogram
+	for k = 1:3
+		voxel_vector = eigvectors[:,k] / grid.nb_grid_pts[k]
+		@printf(cubefile, "%d %f %f %f\n", grid.nb_grid_pts[k], voxel_vector[1], voxel_vector[2], voxel_vector[3])
+	end
+
+	for i = 1:grid.nb_grid_pts[1]
+		for j = 1:grid.nb_grid_pts[2]
+			for k = 1:grid.nb_grid_pts[3]
+				@printf(cubefile, "%e ", grid.data[i,j,k])
+				if (k % 6) == 0
+					@printf(cubefile, "\n")
+				end
+			end # loop over z points
+			@printf(cubefile, "\n")
+		end # loop over y points
+	end # loop over x points
+	close(cubefile)
+	println("See ", PATH_TO_DATA * "grids/" * filename)
+	return
+end
+
 
 import Base.print
 function print(io::IO, snapshot::Snapshot)
