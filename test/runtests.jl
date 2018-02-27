@@ -18,8 +18,8 @@ frame = read_crystal_structure_file("test_structure.cif")
 	@test frame.atoms == ["Zn"]
 end;
 
-@printf("------------------------------\nTesting Forcefield.jl\n\n") 
-ljforcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot")
+@printf("------------------------------\nTesting Forcefield.jl\n\n")
+const ljforcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot")
 rep_factors = replication_factors(frame.box, ljforcefield)
 @testset "Forcefield Tests" begin
 	@test ljforcefield.pure_sigmas["He"] == 1.0
@@ -102,7 +102,8 @@ for i = 1:10000
     old_coords = molecules[1].x
     translate_molecule!(1, molecules, sim_box)
     @assert(sum(molecules[1].x .≈ old_coords) == 0, "Molecule not moved")
-    @assert(completely_outside_box(molecules[1], sim_box), "Molecule completely outside of simulation box")
+    @assert(completely_outside_box(molecules[1], sim_box),
+        "Molecule completely outside of simulation box")
 end
 
 #
@@ -110,4 +111,16 @@ end
 #
 #TODO make sim box of 25 25 25
 
-sim_box = Box()
+sim_box = construct_box(25, 25, 25, π/2, π/2, π/2)
+#TODO add CH4 to UFF file to have sigmas and epsilons ready
+molecules = [Molecule(1, "C", [5.0, 12.0, 12.0], [0.0],
+    Molecule(1, "C", [11.0, 12.0, 12.0], [0.0])]
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == -6.11807,
+    "Did not calculate energy correctly between two molecules")
+delete_molecule!(2, molecules)
+push!(molecules, Molecule(1, "C", [24.0, 12.0, 12.0], [0.0]))
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == -6.11087,
+    "Did not use nearest image convention")
+push!(molecules, Molecule(1, "C", [11.0, 12.0, 12.0], [0.0]))
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == -6.11087 * 2,
+    "Did not calculate guest-guest energy correctly for more than two molecules")

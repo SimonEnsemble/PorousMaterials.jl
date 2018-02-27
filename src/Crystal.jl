@@ -40,6 +40,7 @@ end
 
 constructs a box with dimensions a, b, and c with angles α, β, and γ
 based on these inputs, it calculates the volume, f_to_c, and c_to_f
+dimensions in angstroms, degrees in radians
 """
 function construct_box(a::Float64, b::Float64, c::Float64, α::Float64,
         β::Float64, γ::Float64)
