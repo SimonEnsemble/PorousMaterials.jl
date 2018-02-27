@@ -9,7 +9,7 @@ Data structure for a molecule/adsorbate.
 - `x::Array{Float64,2}`: A matrix of cartesian coordinates characterizing the position of the atoms in the molecule, stored column-wise so that x[:, i] is the coordinate for atom `atoms[i]`.
 - `charges::Array{Float64}`: An array of charges for each specific atom.
 """
-type Molecule
+mutable struct Molecule
 	n_atoms::Int64
 	atoms::Array{AbstractString}
 	x::Array{Float64, 2}

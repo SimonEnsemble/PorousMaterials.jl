@@ -25,7 +25,7 @@ end
 
 
 """
-	ljforcefield = read_forcefield_file("filename.csv")
+	ljforcefield = read_forcefield_file("filename.csv", cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
 
 Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LennardJonesForceField object.
 """
