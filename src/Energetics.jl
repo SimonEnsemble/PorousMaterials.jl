@@ -1,6 +1,5 @@
 const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
 #TODO Keep consistant with `check_for_atom_overlap` in src/Crystal.jl? `check_for_atom_overlap` uses the threshold 0.1 Angstrom (0.01 Angstrom²). Which one to use?
-using Energetics_Util
 
 """
 	V = lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)  (units: Kelvin)
