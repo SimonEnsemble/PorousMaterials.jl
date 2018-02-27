@@ -80,6 +80,7 @@ order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first ato
 fractional coordinates.
 """
 struct Framework
+    #TODO molecular mass
     name::String
 
     box::Box
@@ -465,4 +466,45 @@ end
 import Base.show
 function show(io::IO, framework::Framework)
 	print(io, framework)
+end
+
+"""
+
+    atomic_mass_dict = atomic_mass_dict()
+
+reads the `data/atomicmasses.csv` file to construct a dictionary of
+atoms and their atomic weights
+The resulting dictionary will have units of weight in amu
+"""
+function atomic_mass_dict()
+    if ! isfile("data/atomicmasses.csv")
+        error("Cannot find atomicmasses.csv file in your data folder\n")
+    end
+
+    df_am = CSV.read("data/atomicmasses.csv")
+
+    atomic_mass_dict = Dict{String, Float64}()
+
+    for row in eachrow(df_am)
+        atomic_mass_dict[row[:atom]] = row[:mass]
+    end
+
+    return atomic_mass_dict
+end
+
+"""
+
+    mass_of_framework = molecular_weight(framework)
+
+returns the molecular weight of a unit cell of the framework in amu
+"""
+function molecular_weight(framework::Framework)
+    mass = 0.0
+    atomic_mass_dict = atomic_mass_dict()
+
+    for atom in framework.atoms
+        mass += atomic_mass_dict[atom]
+    end
+
+    return mass #amu
 end
