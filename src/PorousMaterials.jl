@@ -11,8 +11,9 @@ include("Misc.jl")
 include("Grid.jl")
 #TODO Remove Snapshot.jl from PorousMaterials.jl (This is from Arni's project)
 include("Snapshot.jl")
- 
-export Framework, read_crystal_structure_file, replicate_to_xyz, 
+include("GCMC.jl")
+
+export Framework, read_crystal_structure_file, replicate_to_xyz,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula,
        convert_cif_to_P1_symmetry, # Crystal.jl
        LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl
