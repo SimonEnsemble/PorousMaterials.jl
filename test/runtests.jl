@@ -109,18 +109,40 @@ end
 #
 #VAN DER WAALS GUEST-GUEST ENERGY TESTS
 #
-#TODO make sim box of 25 25 25
 
 sim_box = construct_box(25, 25, 25, π/2, π/2, π/2)
 #TODO add CH4 to UFF file to have sigmas and epsilons ready
 molecules = [Molecule(1, "C", [5.0, 12.0, 12.0], [0.0],
     Molecule(1, "C", [11.0, 12.0, 12.0], [0.0])]
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == -6.11807,
+#calculate the energy between the two molecules using lennard_jones
+energy_1 = lennard_jones((molecules[1].x - molecules[2].x) ^ 2,
+    ljforcefield.sigmas_squared[molecules[1].atoms[1]][molecules[2].atoms[1]],
+    ljforcefield.epsilons[molecules[1].atoms[1][molecules[2].atoms[1]]])
+#calculate the energy between two molecules to make sure it works correctly
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ==
+    lennard_jones((molecules[1].x - molecules[2].x) ^ 2,
+    ljforcefield.sigmas_squared[molecules[1].atoms[1]][molecules[2].atoms[1]],
+    ljforcefield.epsilons[molecules[1].atoms[1][molecules[2].atoms[1]]])
     "Did not calculate energy correctly between two molecules")
+#calculate the energy between the same two molecules with the order reversed
+#   to make sure that the energy between them stays the same
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ==
+    guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box),
+    "Energy is not the same between two molecules when reversing ")
+#this removes the second molecule and replaces it with another
 delete_molecule!(2, molecules)
 push!(molecules, Molecule(1, "C", [24.0, 12.0, 12.0], [0.0]))
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == -6.11087,
+#calculate the energy between the two molecules using lennard_jones
+energy_2 = lennard_jones((molecules[1].x - molecules[2].x) ^ 2,
+    ljforcefield.sigmas_squared[molecules[1].atoms[1]][molecules[2].atoms[1]],
+    ljforcefield.epsilons[molecules[1].atoms[1][molecules[2].atoms[1]]])
+#these molecules are outside of the cut off radius in the unit cell, but
+#   they should be able to interact using nearest image convention
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == energy_2,
     "Did not use nearest image convention")
 push!(molecules, Molecule(1, "C", [11.0, 12.0, 12.0], [0.0]))
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == -6.11087 * 2,
+#inserts the original molecule and tests energy again. should be the sum of
+#   the original two calculations
+@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ==
+    energy_1 + energy2,
     "Did not calculate guest-guest energy correctly for more than two molecules")
