@@ -92,7 +92,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				if r_squared < R_OVERLAP_squared
 					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
 					return Inf
-				elseif r_squared < ljforcefield.cutoffradius_squared
+				else if r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
 				    energy += lennard_jones(r_squared,
 						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
