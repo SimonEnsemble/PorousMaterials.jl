@@ -89,7 +89,6 @@ struct Framework
     n_atoms::Int64
     atoms::Array{String, 1}
     xf::Array{Float64, 2}
-	charges::Array{Float64, 1}
 end
 
 """
@@ -247,7 +246,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     fractional_coords[1, :] = xf[:]; fractional_coords[2, :] = yf[:]; fractional_coords[3, :] = zf[:]
 
     # finally construct the framework
-    framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
+    framework = Framework(filename, box, n_atoms, atoms, fractional_coords)
 
     if run_checks
         check_for_atom_overlap(framework)
