@@ -1,4 +1,5 @@
 const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
+const ϵ0 = 8.854187817620e-22 # Permittivity of free space, Units: C²J⁻¹Å⁻¹
 #TODO Keep consistant with `check_for_atom_overlap` in src/Crystal.jl? `check_for_atom_overlap` uses the threshold 0.1 Angstrom (0.01 Angstrom²). Which one to use?
 
 """
@@ -17,6 +18,62 @@ function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
 	ratio = (σ_squared / r_squared) ^ 3
 	return 4 * ϵ * (ratio^2 - ratio)
 end
+
+"""
+	E = coulomb_energy(framework::Framework, molecule::Molecule, cutoff_squared::Float64, α::Float64=0.3)
+
+MORE TEXT TO COME
+
+# Arguments
+- `framework::Framework`: Crystal structure (includes charge)
+- `molecule::Molecule`: adsorbate (includes posotion/orientation and charge)
+- `cutoffradius_squared::Float64`: cutoff radius squared
+- `α::Float64`: Ewald sum convergence parameter
+- `repfactors::Tuple{Int64, Int64, Int64}`: The replication factors used to form the supercell
+"""
+function coulomb_energy(framework::Framework, molecule::Molecule,
+					cutoffradius_squared::Float64,  repfactors::Tuple{Int64, Int64, Int64}, α::Float64=0.3)
+	denom = 4*π*ϵ0
+	# Real Part
+	energy_r = 0.0
+	# Reciprocal Part
+	energy_f = 0.0
+	# Self-correction Part
+	energy_0 = sum(-π/(2*framework.box.Ω*α*denom) .* sum(molecule.charges' .* framework.charges,1) .- α/(sqrt(π)*denom).*molecule.charges.^2)
+
+	for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
+		l = framework.box.f_to_c * [nA, nB, nC]
+		k = [cross(l[:,2],l[:,3]) cross(l[:,3],l[:,1]) cross(l[:,1],l[:,2])]*2*π/framework.box.Ω
+		# FIX THIS ^^^ Need l and k to be 3x3 matrices
+		for i = 1:molecule.n_atoms
+			xf_molecule_atom = mod.(framework.box.c_to_f * molecule.x[:,i], repfactors)
+
+			for j = 1:framework.n_atoms
+				dxf = xf_molecule_atom - (framework.xf[:,j] + [nA, nB, nC])	
+				nearest_image!(dxf, repfactors)
+
+				dx = framework.box.f_to_c * dxf
+
+				# Lennard Jones parameters (and distance)
+				r_squared = dot(dx, dx)
+
+				if r_squared < R_OVERLAP_squared
+					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
+					return Inf
+				elseif r_squared < cutoffradius_squared
+                    # add pairwise contribution to potential energy
+					Qij = molecule.charges[i] * framework.charges[j]
+					norm_dx = sqrt(r_squared)
+					energy_r += (Qij * erfc(α*norm_dx))/(2*denom*norm_dx)
+					energy_f += 2*π*Qij/(framework.box.Ω*denom) * exp(-norm(k)^2/(4*α^2)) * cos(k*dx)
+				end # if-elseif-end
+			end # framework atoms end
+		end # molecule atoms end
+	end # repfactor end
+	energy = energy_r + energy_f + energy_0
+	return energy
+end
+
 
 """
     V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
@@ -96,10 +153,10 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				    energy += lennard_jones(r_squared,
 						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
 						ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
-				end
-			end
-		end
-	end
+				end # if-elseif-end
+			end # framework atoms end
+		end # molecule atoms end
+	end # repfactor end
 	return energy
 end # end vdw_energy
 
