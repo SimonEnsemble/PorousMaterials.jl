@@ -1,4 +1,4 @@
-using Energetics_Util.jl
+using Energetics_Util
 const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
 const ϵ0 = 8.854187817620e-22 # Permittivity of free space, Units: C²J⁻¹Å⁻¹
 #TODO Keep consistant with `check_for_atom_overlap` in src/Crystal.jl? `check_for_atom_overlap` uses the threshold 0.1 Angstrom (0.01 Angstrom²). Which one to use?
@@ -149,7 +149,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				if r_squared < R_OVERLAP_squared
 					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
 					return Inf
-				else if r_squared < ljforcefield.cutoffradius_squared
+				elseif r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
 				    energy += lennard_jones(r_squared,
 						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],

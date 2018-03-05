@@ -78,6 +78,7 @@ cell, in strict order
 - `xf::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict
 order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first atom's
 fractional coordinates.
+- `charges::Array{Float64,1}`: a vector containing the charges of the atoms in same order as `atoms`
 """
 struct Framework
     #TODO molecular mass
@@ -88,6 +89,7 @@ struct Framework
     n_atoms::Int64
     atoms::Array{String, 1}
     xf::Array{Float64, 2}
+	charges::Array{Float64, 1}
 end
 
 """
@@ -245,7 +247,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     fractional_coords[1, :] = xf[:]; fractional_coords[2, :] = yf[:]; fractional_coords[3, :] = zf[:]
 
     # finally construct the framework
-    framework = Framework(filename, box, n_atoms, atoms, fractional_coords)
+    framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
 
     if run_checks
         check_for_atom_overlap(framework)
@@ -461,6 +463,9 @@ function print(io::IO, framework::Framework)
 	@printf(io, "γ = %.3f radians\n", framework.box.γ)
 	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
 	@printf(io, "Number of atoms = %d", framework.n_atoms)
+	if length(framework.charges) == length(framework.xf[1,:])
+		@printf(io, "All atoms have a charge assigned")
+	end
 end
 
 import Base.show
