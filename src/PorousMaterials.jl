@@ -10,7 +10,7 @@ include("Energetics.jl")
 include("Misc.jl")
 include("Grid.jl")
 #TODO Remove Snapshot.jl from PorousMaterials.jl (This is from Arni's project)
-include("Snapshot.jl")
+#include("Snapshot.jl")
 include("GCMC.jl")
 
 export Framework, read_crystal_structure_file, replicate_to_xyz,
@@ -22,4 +22,5 @@ export Framework, read_crystal_structure_file, replicate_to_xyz,
        read_xyz, read_cpk_colors, read_atomic_masses, read_atomic_radii, # Misc.jl
 	   Grid, write_to_cube, # Grid.jl
 	   Snapshot, snap, write_snapshot_to_vtk, write_to_npy # Snapshot.jl #TODO Remove this line later
+       gcmc_sim # GCMC.jl
 end
