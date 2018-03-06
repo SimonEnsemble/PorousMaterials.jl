@@ -216,7 +216,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         # get unit cell sizes
         line = split(lines[1]) # first line is (a, b, c)
         a = parse(Float64, line[1])
-        println("a = ", a)
         b = parse(Float64, line[2])
         c = parse(Float64, line[3])
 
@@ -243,7 +242,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     end
 
     # construct the unit cell box
-    println("a = ", a)
     box = construct_box(a, b, c, α, β, γ)
 
     fractional_coords = Array{Float64, 2}(3, n_atoms)
