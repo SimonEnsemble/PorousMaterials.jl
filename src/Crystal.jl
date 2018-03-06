@@ -11,10 +11,10 @@ fractional and Cartesian coordinates.
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `f_to_c::Array{Float64,2}`: the 3x3 matrix used to convert fractional coordinates to
-cartesian coordinates
-- `c_to_f::Array{Float64,2}`: the 3x3 matrix used to convert cartesian coordinates to
-fractional coordinates
+- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional 
+coordinates to cartesian coordinates
+- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian 
+coordinates to fractional coordinates
 """
 struct Box
     a::Float64
@@ -38,11 +38,16 @@ end
 """
     box = construct_box(a, b, c, α, β, γ)
 
-constructs a box with dimensions a, b, and c with angles α, β, and γ
-based on these inputs, it calculates the volume, f_to_c, and c_to_f
+Constructs a `Box` with unit cell dimensions a, b, and c and angles α, β, and γ.
+Automatically calculates Ω, f_to_c, and c_to_f for `Box` data structure and returns a `Box`.
+
+# Arguments
+- `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
+- `α,β,γ::Float64`: unit cell angles (units: radians)
 """
-function construct_box(a::Float64, b::Float64, c::Float64, α::Float64, β::Float64, γ::Float64)
-    # unit cell volume (A^3)
+function construct_box(a::Float64, b::Float64, c::Float64, 
+                       α::Float64, β::Float64, γ::Float64)
+    # unit cell volume (A³)
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
     # matrices to map fractional coords <--> Cartesian coords
     f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
@@ -56,17 +61,19 @@ end
 """
     new_box = replicate_box(original_box, repfactors)
 
-Replicates a box to make a supercell using a base box and repfactors
-The new fractional coords are still between 0 and 1
+Replicates a `Box` in positive directions to construct a new `Box` representing a supercell.
+The `original_box` is replicated according to the factors in `repfactors`.
+Note `replicate_box(original_box, repfactors=[1, 1, 1])` returns same `Box`.
+The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
 """
 function replicate_box(box::Box, repfactors::Tuple{Int64, Int64, Int64})
     #because this uses construct_box, its fractional coords still go 0 - 1
-    return construct_box(box.a * repfactors[1], box.b * repfactors[2],
-        box.c * repfactors[3], box.α, box.β, box.γ)
+    return construct_box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
+                         box.α, box.β, box.γ)
 end
 
 """
-    framework = Framework(name, box, n_atoms, atoms, xf)
+    framework = Framework(name, box, n_atoms, atoms, xf, charges)
 
 Data structure for a 3D crystal structure.
 
@@ -75,11 +82,11 @@ Data structure for a 3D crystal structure.
 - `box::Box`: description of unit cell (Bravais Lattice); see `Box` struct.
 - `n_atoms::Int64`: number of atoms in the unit cell
 - `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit
-cell, in strict order
-- `xf::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict
-order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first atom's
-fractional coordinates.
-- `charges::Array{Float64,1}`: a vector containing the charges of the atoms in same order as `atoms`
+cell, in strict order.
+- `xf::Array{Float64,2}`: fractional coordinates of the atoms, in strict order 
+corresponding to `atoms`, stored column-wise so that xf[:, i] possesses the
+fractional coordinates of atom `i`.
+- `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
 """
 struct Framework
     #TODO molecular mass
@@ -112,6 +119,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         error(@sprintf("Could not open crystal structure file %s\n",
                        PATH_TO_DATA * "crystals/" * filename))
     end
+
     f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
@@ -123,7 +131,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     zf = Float64[]
     atoms = String[] # atom names
 
-    # Cif reader from Cory Simon
+    # .cif reader
     if extension == "cif"
         data = Dict()
         loop_starts = -1
@@ -252,7 +260,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 
     if run_checks
         check_for_atom_overlap(framework)
-        check_for_atoms_out_of_unit_cell_box(framework)
     end
 
     return framework
@@ -262,12 +269,12 @@ end # constructframework end
     replicate_to_xyz(framework, xyzfilename=nothing; comment="", repfactors=(0, 0, 0),
                      negative_replications=false)
 
-Write a .xyz file representation of a crystal structure from a Framework type.
+Write a .xyz file representation of a crystal structure from a `Framework` type.
 Write an optional `comment` to the .xyz file if desired.
-Extend the structure in the x-,y- or z-direction by changing the tuple `repfactors`.
+Replicate the structure in the x-,y- and/or z-direction by changing the tuple `repfactors`.
 A value of 1 replicates the structure once in the desired direction, so
-`repfactors=(0, 0, 0)` includes only the "home" unit cell. Ensure `negative_replications`
-is true if home unit cell should be replicated in the negative directions too.
+`repfactors=(0, 0, 0)` includes only the "home" unit cell. Pass `negative_replications=true`
+if home unit cell should be replicated in the negative directions too.
 """
 function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractString, Void}=nothing;
                           comment::String="", repfactors::Tuple{Int, Int, Int}=(1, 1, 1),
@@ -306,9 +313,10 @@ end # replicate_to_xyz end
 """
     check_for_atom_overlap(framework; threshold_distance_for_overlap=0.1, verbose=false)
 
-Check if any two atoms are lying on top of each other by calculating the 2-norm distance
-between every pair of atoms and ensuring distance is greater than a threshold.
-Throw error if atoms overlap and tell which atoms are culprit.
+Check if any two atoms in the crystal overlap by calculating the distance
+between every pair of atoms and ensuring distance is greater than
+`threshold_distance_for_overlap`. Throw an error if atoms overlap and print which atoms are 
+the culprits.
 """
 function check_for_atom_overlap(framework::Framework;
                                 threshold_distance_for_overlap::Float64=0.1,
@@ -329,25 +337,6 @@ function check_for_atom_overlap(framework::Framework;
     end
     return
 end
-
-"""
-    check_for_atoms_out_of_unit_cell_box(framework)
-
-Check if any atoms lie outside of the unit cell box and print a warning if so.
-"""
-function check_for_atoms_out_of_unit_cell_box(framework::Framework)
-    for i = 1:framework.n_atoms
-        if sum(framework.xf[:, i] .< 0.0) != 0
-            @printf("WARNING: Atom %d has fractional coordinate less than 0.0\n", i)
-        end
-        if sum(framework.xf[:, i] .> 1.0) != 0
-            @printf("WARNING: Atom %d has fractional coordinate greater than 1.0\n", i)
-        end
-    end
-    return true
-end
-# TODO thinking we should remove this b/c we already reflect coords to [0, 1] when
-#  loading in crystal structure files, right?
 
 """
     strip_numbers_from_atom_labels(framework::Framework)
@@ -399,6 +388,11 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void,
     return
 end
 
+"""
+    formula = chemical_formula(framework)
+
+Returns a dictionary with the irreducible chemical formula of a crystal structure.
+"""
 function chemical_formula(framework::Framework)
     # use dictionary to count atom types
     atom_counts = Dict(zip(unique(framework.atoms), zeros(Int, length(unique(framework.atoms)))))
@@ -478,9 +472,8 @@ end
 
     atomic_mass_dict = atomic_mass_dict()
 
-reads the `data/atomicmasses.csv` file to construct a dictionary of
-atoms and their atomic weights
-The resulting dictionary will have units of weight in amu
+Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and their atomic
+masses in amu.
 """
 function atomic_mass_dict()
     if ! isfile("data/atomicmasses.csv")
@@ -502,7 +495,7 @@ end
 
     mass_of_framework = molecular_weight(framework)
 
-returns the molecular weight of a unit cell of the framework in amu
+Return the molecular weight of a unit cell of the framework in amu.
 """
 function molecular_weight(framework::Framework)
     mass = 0.0
