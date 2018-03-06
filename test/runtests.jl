@@ -63,7 +63,7 @@ function completely_outside_box(molecule::Molecule, box::Box)
     for coords = 1:3
         if sum(xf[coords, :] .<= 1.0) == 0
             return false
-        else if sum(xf[coords, :] .>= 0.0) == 0
+        elseif sum(xf[coords, :] .>= 0.0) == 0
             return false
         end
     end

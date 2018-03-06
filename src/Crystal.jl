@@ -79,6 +79,7 @@ cell, in strict order
 - `xf::Array{Float64,2}`: a 2D array of fractional coordinates of the atoms, in strict
 order corresponding to `atoms`, stored column-wise so that xf[:, 1] is first atom's
 fractional coordinates.
+- `charges::Array{Float64,1}`: a vector containing the charges of the atoms in same order as `atoms`
 """
 struct Framework
     #TODO molecular mass
@@ -462,6 +463,9 @@ function print(io::IO, framework::Framework)
 	@printf(io, "γ = %.3f radians\n", framework.box.γ)
 	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
 	@printf(io, "Number of atoms = %d", framework.n_atoms)
+	if length(framework.charges) == length(framework.xf[1,:])
+		@printf(io, "All atoms have a charge assigned")
+	end
 end
 
 import Base.show

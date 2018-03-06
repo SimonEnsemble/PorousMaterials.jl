@@ -1,3 +1,4 @@
+using Energetics_Util
 const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
 #TODO Keep consistant with `check_for_atom_overlap` in src/Crystal.jl? `check_for_atom_overlap` uses the threshold 0.1 Angstrom (0.01 Angstrom²). Which one to use?
 
@@ -17,6 +18,7 @@ function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
 	ratio = (σ_squared / r_squared) ^ 3
 	return 4 * ϵ * (ratio^2 - ratio)
 end
+
 
 """
     V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
@@ -96,10 +98,10 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				    energy += lennard_jones(r_squared,
 						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
 						ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
-				end
-			end
-		end
-	end
+				end # if-elseif-end
+			end # framework atoms end
+		end # molecule atoms end
+	end # repfactor end
 	return energy
 end # end vdw_energy
 
