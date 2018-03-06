@@ -41,9 +41,10 @@ end
 constructs a box with dimensions a, b, and c with angles α, β, and γ
 based on these inputs, it calculates the volume, f_to_c, and c_to_f
 """
-function construct_box(a::Float64, b::Float64, c::Float64, α::Float64,
-        β::Float64, γ::Float64)
-    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ)) # unit cell volume
+function construct_box(a::Float64, b::Float64, c::Float64, α::Float64, β::Float64, γ::Float64)
+    # unit cell volume (A^3)
+    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
+    # matrices to map fractional coords <--> Cartesian coords
     f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
     c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
 
@@ -89,6 +90,7 @@ struct Framework
     n_atoms::Int64
     atoms::Array{String, 1}
     xf::Array{Float64, 2}
+    charges::Array{Float64, 1}
 end
 
 """
@@ -214,6 +216,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         # get unit cell sizes
         line = split(lines[1]) # first line is (a, b, c)
         a = parse(Float64, line[1])
+        println("a = ", a)
         b = parse(Float64, line[2])
         c = parse(Float64, line[3])
 
@@ -226,8 +229,8 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
         n_atoms = parse(Int, split(lines[3])[1])
 
         # read in atoms and fractional coordinates
-        for a = 1:n_atoms
-            line = split(lines[4 + a])
+        for i = 1:n_atoms
+            line = split(lines[4 + i])
 
             push!(atoms, line[2])
 
@@ -240,13 +243,14 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     end
 
     # construct the unit cell box
+    println("a = ", a)
     box = construct_box(a, b, c, α, β, γ)
 
     fractional_coords = Array{Float64, 2}(3, n_atoms)
     fractional_coords[1, :] = xf[:]; fractional_coords[2, :] = yf[:]; fractional_coords[3, :] = zf[:]
 
     # finally construct the framework
-    framework = Framework(filename, box, n_atoms, atoms, fractional_coords)
+    framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
 
     if run_checks
         check_for_atom_overlap(framework)
@@ -457,14 +461,14 @@ function print(io::IO, framework::Framework)
 	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
 	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
 	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
+
 	@printf(io, "α = %.3f radians\n", framework.box.α)
 	@printf(io, "β = %.3f radians\n", framework.box.β)
 	@printf(io, "γ = %.3f radians\n", framework.box.γ)
+
 	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
+
 	@printf(io, "Number of atoms = %d", framework.n_atoms)
-	if length(framework.charges) == length(framework.xf[1,:])
-		@printf(io, "All atoms have a charge assigned")
-	end
 end
 
 import Base.show
