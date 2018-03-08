@@ -19,6 +19,7 @@ function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
 	return 4 * ϵ * (ratio^2 - ratio)
 end
 
+
 """
     V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
 
@@ -97,10 +98,10 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				    energy += lennard_jones(r_squared,
 						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
 						ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
-				end
-			end
-		end
-	end
+				end # if-elseif-end
+			end # framework atoms end
+		end # molecule atoms end
+	end # repfactor end
 	return energy
 end # end vdw_energy
 
