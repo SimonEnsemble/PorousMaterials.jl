@@ -69,14 +69,15 @@ function translate_molecule!(molecule_id::Int, molecules::Array{Molecule},
     molecules[molecule_id].x .+= dx
     xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
     for coords = 1:3
-        if sum(xf_molecule[coords, :] .< 1.0) == 0 #if all atoms of the molecule
+        if sum(xf_molecule[coords, :] .<= 1.0) == 0 #if all atoms of the molecule
                     #are past the upper end of the simulation box
             xf_molecule[coords, :] -= 1.0
-        elseif sum(xf_molecules[coords, :] .> 0.0) == 0 #if all atoms of the
+        elseif sum(xf_molecule[coords, :] .>= 0.0) == 0 #if all atoms of the
                     #molecule are past the lower end of the simulation box
             xf_molecule[coords, :] += 1.0
         end #if statement that checks for reflection
     end #for loop to go over x, y, and, z coordinate systems
+    molecules[molecule_id].x = simulation_box.c_to_f * xf_molecule
 
     return old_coords
 end
@@ -114,7 +115,7 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
                 dxf = xf_molecule_atom - xf_other_molecule_atom
 
                 #runs nearest image convention and adjusts accordingly
-                nearest_image!(dxf, 1.0)
+                nearest_image!(dxf, (1, 1, 1))
                 #converts fractional distance to cartesian distance
                 dx = simulation_box.f_to_c * dxf
 
