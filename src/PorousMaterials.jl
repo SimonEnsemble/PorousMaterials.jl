@@ -10,7 +10,7 @@ include("Energetics.jl")
 include("Misc.jl")
 include("Grid.jl")
 #TODO Remove Snapshot.jl from PorousMaterials.jl (This is from Arni's project)
-#include("Snapshot.jl")
+include("Snapshot.jl")
 include("GCMC.jl")
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
