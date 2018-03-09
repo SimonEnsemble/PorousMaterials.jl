@@ -37,7 +37,6 @@ function insert_molecule!(molecules::Array{Molecule}, simulation_box::Box,
         adsorbate::String)
     #TODO create template to handle more complex molecules
     x_new = simulation_box.f_to_c * [rand(), rand(), rand()]
-#    new_molecule = Molecule(1, [adsorbate], x_new, [0.0])
     new_molecule = Molecule(1, [adsorbate], x_new[:, :], [0.0])
     push!(molecules, new_molecule)
 end
