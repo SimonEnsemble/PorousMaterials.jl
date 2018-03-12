@@ -44,6 +44,7 @@ Automatically calculates Ω, f_to_c, and c_to_f for `Box` data structure and ret
 # Arguments
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
+"""
 function construct_box(a::Float64, b::Float64, c::Float64, 
                        α::Float64, β::Float64, γ::Float64)
     # unit cell volume (A³)
