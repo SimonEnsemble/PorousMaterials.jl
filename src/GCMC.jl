@@ -142,10 +142,9 @@ runs a monte carlo simulation using the given framework and adsorbate.
 runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
-function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
-                        adsorbate::String, ljforcefield::LennardJonesForceField,
-                        fugacity::Float64; num_mc_trials::Int=100000,
-                        num_burn_cycles::Int=10000, sample_frequency::Int=25)
+function gcmc_sim(framework::Framework, temperature::Float64, fugacity::Float64,
+                  adsorbate::String, ljforcefield::LennardJonesForceField; num_mc_trials::Int=100000,
+                  num_burn_cycles::Int=10000, sample_frequency::Int=25)
 
     # Boltmann constant (Pa-m3/K --> Pa-A3/K)
      # const KB = 1.38064852e-23 * 1e30
@@ -156,7 +155,7 @@ function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
     current_energy_gg = 0.0
     current_energy_gh = 0.0
     gcmc_stats = GCMCstats(0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
-    markov_counts = MarkovCounts([0 for i = 0:7]...)
+    markov_counts = MarkovCounts([0 for i = 1:7]...)
 
     molecules = Molecule[]
 """
@@ -168,19 +167,32 @@ function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
             ljforcefield, repfactors)
     end
 """
+    # move encodings (i.e. if `proposal_id` is this, tells us which move to attempt)
+    const INSERTION = 1
+    const DELETION = 2
+    const TRANSLATION = 3
 
     for t = 1:num_mc_trials
         markov_counts.num_moves += 1
+        
+        # choose move randomly; keep track of proposals
         proposal_id = rand(1:3)
-        if proposal_id == 1 #insert
+        if proposal_id == INSERTION
             markov_counts.insert_proposal += 1
-            insert_molecule!(molecules, framework.box)
+        elseif proposal_id == DELETION
+            markov_counts.delete_proposal += 1
+        elseif proposal_id == TRANSLATION
+            markov_counts.translate_proposal += 1
+        end 
+        
+        if proposal_id == INSERTION
+            insert_molecule!(molecules, framework.box, adsorbate)
             U_gg = guest_guest_vdw_energy(length(molecules), molecules,
                 ljforcefield, simulation_box)
             U_gh = vdw_energy(framework, molecules[end],
                 ljforcefield, repfactors)
             #Metropolis Hastings Acceptance for Insertion
-            if rand() < fugacity * sim_box.Ω / (length(molecules) * KB *
+            if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
                     temperature) * exp(-(U_gh + U_gg) / temperature)
                 #accept the move, adjust current_energy
                 markov_counts.insert_acceptance += 1
@@ -190,15 +202,15 @@ function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
                 #reject the move, remove the added molecule
                 pop!(molecules)
             end
-        elseif proposal_id == 2 #delete
-            markov_counts.delete_proposal += 1
+        elseif (proposal_id == DELETION) && (length(molecules) != 0)
+            # propose which molecule to delete
             molecule_id = rand(1:length(molecules))
             U_gg = guest_guest_vdw_energy(molecule_id, molecules, ljforcefield,
                 simulation_box)
             U_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield,
                 repfactors)
             #Metropolis Hastings Acceptance for Deletion
-            if rand() < fugacity * sim_box.Ω / (length(molecules) * KB *
+            if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
                     temperature) * exp((U_gh + U_gg) / temperature)
                 #accept the deletion, delete molecule, adjust current_energy
                 markov_counts.delete_acceptance += 1
@@ -207,8 +219,8 @@ function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
                 current_energy_gh += U_gh
             end
 
-        else #translate
-            markov_counts.translate_proposal += 1
+        elseif (proposal_id == TRANSLATION) && (length(molecules) != 0)
+            # propose which molecule whose coords we should perturb
             molecule_id = rand(1:length(molecules))
             #energy of the molecule before it was translated
             U_gg_old = guest_guest_vdw_energy(molecule_id, molecules,
@@ -223,7 +235,7 @@ function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
             U_gg_new = guest_guest_vdw_energy(molecule_id, molecules,
                 ljforcefield, simulation_box)
             U_gh_new = vdw_energy(framework, molecules[molecule_id],
-                ljforcefield, rep_factors)
+                ljforcefield, repfactors)
 
             #Metropolis Hastings Acceptance for translation
             if rand() < exp(-((U_gg_new + U_gh_new) - (U_gg_old + U_gh_old))
@@ -238,8 +250,9 @@ function gcmc_sim(framework::Framework, temperature::Float64, pressure::Float64,
             end
 
         end #which move the code executes
+
         #sample the current state space
-        if(t > num_burn_cycles && t % sample_frequency == 0)
+        if (t > num_burn_cycles && t % sample_frequency == 0)
             gcmc_stats.n += length(molecules)
             gcmc_stats.n² += length(molecules) ^ 2
             gcmc_stats.U_gh += current_energy_gh
