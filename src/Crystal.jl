@@ -31,9 +31,6 @@ struct Box
     c_to_f::Array{Float64, 2}
 end
 # TODO write a nice show & print function for Box :)
-# TODO can we write a constructor for this? because once a, b, c, α, β, γ are given,
-#   Ω, f_to_c, and c_to_f follow. so could construct as Box(a, b, c, α, β, γ).
-# TODO for Cory, add reciprocal lattice after constructor put in https://en.wikipedia.org/wiki/Reciprocal_lattice
 
 """
     box = construct_box(a, b, c, α, β, γ)
@@ -499,10 +496,10 @@ Return the molecular weight of a unit cell of the framework in amu.
 """
 function molecular_weight(framework::Framework)
     mass = 0.0
-    atomic_mass_dict = atomic_mass_dict()
+    atomic_masses = atomic_mass_dict()
 
     for atom in framework.atoms
-        mass += atomic_mass_dict[atom]
+        mass += atomic_masses[atom]
     end
 
     return mass #amu

@@ -11,14 +11,17 @@ using Base.Test
 frame = read_crystal_structure_file("test_structure.cif")
 strip_numbers_from_atom_labels!(frame)
 @testset "Crystal Tests" begin
+    @test frame.name == "test_structure.cif"
 	@test frame.box.f_to_c * frame.box.c_to_f ≈ eye(3)
 	@test frame.box.a == frame.box.b == frame.box.c == 1.0
 	@test frame.box.α == frame.box.β == frame.box.γ == 90 * (pi / 180)
 	@test frame.box.Ω ≈ 1
-	@test frame.xf == [0.0, 0.0, 0.0][:, :]
+    @test frame.n_atoms == 1
 	@test frame.atoms == ["Zn"]
+	@test frame.xf == [0.0, 0.0, 0.0][:, :]
     @test frame.charges[1] ≈ 1.082578
     @test chemical_formula(frame) == Dict("Zn" => 1)
+    @test molecular_weight(frame) ≈ 65.38
 end;
 
 @printf("------------------------------\nTesting Forcefield.jl\n\n")
@@ -39,12 +42,12 @@ molecule2 = Molecule(1, ["He"], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5
 frame2 = read_crystal_structure_file("SBMOF-1.cif")
 rep_factors2 = replication_factors(frame2.box, ljforcefield)
 molecule3 = Molecule(1,["Xe"], zeros(3,1), [0.0])
-energy1 = vdw_energy(frame2, molecule3, ljforcefield, rep_factors2)
 molecule3.x[1] = 0.494265; molecule3.x[2] = 2.22668; molecule3.x[3] = 0.450354;
 energy2 = vdw_energy(frame2, molecule3, ljforcefield, rep_factors2)
 @testset "Energetics Tests" begin
 	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
 	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.epsilons["He"]["Zn"] * ((ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 3 )
+    energy1 = vdw_energy(frame2, molecule3, ljforcefield, rep_factors2)
 	@test isapprox(energy1, -5041.58, atol = 0.005) # comparing to RASPA
 	@test isapprox(energy2, 12945.838, atol = 0.005)
 end;
