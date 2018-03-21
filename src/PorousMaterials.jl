@@ -6,6 +6,7 @@ global PATH_TO_DATA = pwd() * "/data/"
 include("Crystal.jl")
 include("Forcefield.jl")
 include("Molecules.jl")
+include("Energetics_Util.jl")
 include("Energetics.jl")
 include("Misc.jl")
 include("Grid.jl")
@@ -14,11 +15,12 @@ include("Snapshot.jl")
 include("GCMC.jl")
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
-       strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula,
+       strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight,
        convert_cif_to_P1_symmetry, construct_box, replicate_box, # Crystal.jl
        LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl
        Molecule, read_molecule_file, readcharge, # Molecules.jl
        lennard_jones, vdw_energy, # Energetics.jl
+       completely_outside_box,
        read_xyz, read_cpk_colors, read_atomic_masses, read_atomic_radii, # Misc.jl
 	Grid, write_to_cube, # Grid.jl
 	Snapshot, snap, write_snapshot_to_vtk, write_to_npy, write_snapshot_to_cube, # Snapshot.jl #TODO Remove this line later
