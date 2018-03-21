@@ -1,7 +1,3 @@
-module Energetics_Util
-
-export nearest_image!
-
 """
     nearest_image!(fractional_distance,repfactors)
 
@@ -11,13 +7,29 @@ function in his Energetics module
 
 See comments in vdw_energy for more description
 """
-#TODO put in Energetics_Utils.jl
 function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64})
     for coords = 1:3
-        if abs(fractional_distance[coords]) > repfactors[coords] / 2
+        if abs(fractional_distance[coords]) > repfactors[coords] / 2.0
             fractional_distance[coords] -= sign(fractional_distance[coords]) * repfactors[coords]
-        end #if statement
-    end #for loop for going over
-end #nearest_image
+        end
+    end
+end
 
-end #module
+"""
+    outside_box = completely_outside_box(molecule, box)
+
+returns true if each atom of a given molecule is completely outside of a given box and false otherwise
+"""
+function completely_outside_box(molecule::Molecule, box::Box)
+    xf = box.c_to_f * molecule.x
+    for coords = 1:3
+        # if none of the coords are less than 1 it must be outside of the box
+        if sum(xf[coords, :] .<= 1.0) == 0
+            return true
+        # if none of the coords are greater than 0 it must be outside of the box
+        elseif sum(xf[coords, :] .>= 0.0) == 0
+            return true
+        end
+    end
+    return false
+end
