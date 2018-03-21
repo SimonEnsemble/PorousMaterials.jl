@@ -25,6 +25,6 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
 	Grid, write_to_cube, # Grid.jl
 	Snapshot, snap, write_snapshot_to_vtk, write_to_npy, write_snapshot_to_cube, # Snapshot.jl #TODO Remove this line later
 	GCMCstats, MarkovCounts, insert_molecule!, delete_molecule!, translate_molecule!,
-	guest_guest_vdw_energy, gcmc_sim # GCMC.jl
+	guest_guest_vdw_energy, gcmc_simulation # GCMC.jl
 
 end

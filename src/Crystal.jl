@@ -390,7 +390,7 @@ end
 
 Returns a dictionary with the irreducible chemical formula of a crystal structure.
 """
-function chemical_formula(framework::Framework)
+function chemical_formula(framework::Framework; verbose::Bool=false)
     # use dictionary to count atom types
     atom_counts = Dict(zip(unique(framework.atoms), zeros(Int, length(unique(framework.atoms)))))
     for i = 1:framework.n_atoms
@@ -406,11 +406,13 @@ function chemical_formula(framework::Framework)
     end
 
     # print result
-    @printf("Chemical formula of %s:\n\t", framework.name)
-    for (atom, formula_unit) in atom_counts
-        @printf("%s_%d", atom, formula_unit)
+    if verbose
+        @printf("CVhemical formula of %s:\n\t", framework.name)
+        for (atom, formula_unit) in atom_counts
+            @printf("%s_%d", atom, formula_unit)
+        end
+        @printf("\n")
     end
-    @printf("\n")
 
     return atom_counts
 end

@@ -8,7 +8,7 @@ using Base.Test
 # Run Tests
 
 @printf("------------------------------\nTesting Crystal.jl\n\n")
-framework = read_crystal_structure_file("test_structure2.cif") # .cif
+framework = read_crystal_structure_file("test_structure2.cif")
 strip_numbers_from_atom_labels!(framework)
 @testset "Crystal Tests" begin
     @test framework.name == "test_structure2.cif"
@@ -27,7 +27,7 @@ strip_numbers_from_atom_labels!(framework)
     @test chemical_formula(framework) == Dict("Ca" => 1, "O" => 1)
     @test molecular_weight(framework) ≈ 15.9994 + 40.078
 
-    # test .cssr reader too.
+    # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = read_crystal_structure_file("test_structure2.cif")
     strip_numbers_from_atom_labels!(framework_from_cssr)
     @test all(framework_from_cssr.xf .== framework.xf)
@@ -39,7 +39,7 @@ strip_numbers_from_atom_labels!(framework)
 end;
 
 @printf("------------------------------\nTesting Forcefield.jl\n\n")
-const ljforcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot")
+const ljforcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 frame = read_crystal_structure_file("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
 rep_factors = replication_factors(frame.box, ljforcefield)
@@ -53,28 +53,53 @@ rep_factors = replication_factors(frame.box, ljforcefield)
 end;
 
 @printf("------------------------------\nTesting Energetics.jl\n\n")
-molecule1 = Molecule(1, ["He"], [0.5, 0.5, 0.5][:,:], [0.0])
-molecule2 = Molecule(1, ["He"], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
-frame2 = read_crystal_structure_file("SBMOF-1.cif")
-rep_factors2 = replication_factors(frame2.box, ljforcefield)
-molecule3 = Molecule(1,["Xe"], zeros(3,1), [0.0])
-energy1 = vdw_energy(frame2, molecule3, ljforcefield, rep_factors2)
-molecule3.x[1] = 0.494265; molecule3.x[2] = 2.22668; molecule3.x[3] = 0.450354;
-energy2 = vdw_energy(frame2, molecule3, ljforcefield, rep_factors2)
 @testset "Energetics Tests" begin
-	@test frame.box.Ω ≈ 1
+    # test Periodic boundary conditions
+    molecule1 = Molecule(1, ["He"], [0.5, 0.5, 0.5][:,:], [0.0])
+    molecule2 = Molecule(1, ["He"], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
 	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
-	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.epsilons["He"]["Zn"] * ((ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 3 )
-	@test isapprox(energy1, -5041.58, atol = 0.005) # comparing to RASPA
-	@test isapprox(energy2, 12945.838, atol = 0.005)
+	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.epsilons["He"]["Zn"] * ((ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 3)
+    # Xe in SBMOF-1 tests, comparing to RASPA
+    sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+    rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
+    xenon = Molecule(1, ["Xe"], zeros(3, 1), [0.0])
+    energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy, -5041.58, atol = 0.005)
+    xenon.x[1] = 0.494265; xenon.x[2] = 2.22668; xenon.x[3] = 0.450354;
+    energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy, 12945.838, atol = 0.005)
+
+    # test PBC, rep factors are (3, 5, 2)
+    xf = [0.05, 0.4, 0.02][:, :]
+    xenon.x = sbmof1.box.f_to_c * xf
+    energy1 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    xf = [1.05, 0.4, 0.02][:, :]
+    xenon.x = sbmof1.box.f_to_c * xf
+    energy2 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy1, energy2, atol = 0.00001)
+    xf = [1.05, 4.4, 1.02][:, :]
+    xenon.x = sbmof1.box.f_to_c * xf
+    energy3 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy1, energy3, atol = 0.00001)
+    # outside box
+    xf = [4.05, 5.4, 2.02][:, :]
+    xenon.x = sbmof1.box.f_to_c * xf
+    energy4 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy1, energy4, atol = 0.00001)
+    xf = [-0.95, 5.4, 2.02][:, :]
+    xenon.x = sbmof1.box.f_to_c * xf
+    energy5 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy1, energy5, atol = 0.00001)
+    xf = [-0.95, -0.6, -0.98][:, :]
+    xenon.x = sbmof1.box.f_to_c * xf
+    energy6 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+	@test isapprox(energy1, energy6, atol = 0.00001)
 end;
 
 @printf("------------------------------\n")
 
-#
-#GCMC Tests
-#
-
+@printf("------------------------------\nTesting GCMC.jl\n\n")
+ # @testset "Monte Carlo Functions Tests" begin
 #
 #INSERTION TESTS
 #
@@ -90,6 +115,7 @@ for i = 1:100
         @assert(sum(molecules[i - 1].x .≈ molecules[i].x) == 0, "Molecules not being inserted at random coordinates")
     end
 end
+ # end
 
 #
 #DELETION TESTS
@@ -102,14 +128,17 @@ end
 #
 #TRANSLATION TESTS
 #
-molecules = [Molecule(1, ["C"], reshape(sim_box.f_to_c * [0.99, 0.99, 0.01], 3, :), [0.0])]
+molecules = [Molecule(1, ["C"], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]), Molecule(1, ["F"], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
+x_old = translate_molecule!(1, molecules, sim_box)
+@assert(all(x_old .== sim_box.f_to_c * [0.99, 0.99, 0.01][:, :]))
+@assert(all(molecules[1].x .!= x_old)) # i.e. assert it was moved.
 for i = 1:10000
-    old_coords = molecules[1].x
-    translate_molecule!(1, molecules, sim_box)
-    translate_molecule!(1, molecules, sim_box)
-    @assert(sum(molecules[1].x .== old_coords) == 0, "Molecule not moved")
-    @assert(!completely_outside_box(molecules[1], sim_box),
-        "Molecule completely outside of simulation box")
+    which_molecule = rand(1:2) # choose molecule to move
+    xf_old_should_be = deepcopy(molecules[which_molecule].x)
+    xf_old = translate_molecule!(which_molecule, molecules, sim_box)
+    @assert(all(molecules[which_molecule].x .!= x_old),  "Molecule not moved")
+    @assert(!completely_outside_box(molecules[which_molecule], sim_box),
+            "Molecule completely outside of simulation box")
 end
 
 #
@@ -117,8 +146,8 @@ end
 #
 sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
 #TODO add CH4 to UFF file to have sigmas and epsilons ready
-molecules = [Molecule(1, ["C"], reshape([5.0, 12.0, 12.0], 3, :), [0.0]),
-    Molecule(1, ["C"], reshape([11.0, 12.0, 12.0], 3, :), [0.0])]
+molecules = [Molecule(1, ["C"], [5.0, 12.0, 12.0][:, :], [0.0]),
+             Molecule(1, ["C"], [11.0, 12.0, 12.0][:, :], [0.0])]
 
 #calculate the energy between the two molecules using lennard_jones
 dx1 = molecules[1].x .- molecules[2].x
@@ -169,3 +198,4 @@ println(molecules)
 @assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈
     2 * energy_1,
     "Did not calculate guest-guest energy correctly for more than two molecules")
+@printf("------------------------------\n")

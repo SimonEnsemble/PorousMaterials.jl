@@ -22,12 +22,12 @@ returns true if each atom of a given molecule is completely outside of a given b
 """
 function completely_outside_box(molecule::Molecule, box::Box)
     xf = box.c_to_f * molecule.x
-    for coords = 1:3
+    for xyz = 1:3 # loop over x, y, z coordinate
         # if none of the coords are less than 1 it must be outside of the box
-        if sum(xf[coords, :] .<= 1.0) == 0
+        if sum(xf[xyz, :] .<= 1.0) == 0
             return true
         # if none of the coords are greater than 0 it must be outside of the box
-        elseif sum(xf[coords, :] .>= 0.0) == 0
+        elseif sum(xf[xyz, :] .>= 0.0) == 0
             return true
         end
     end
