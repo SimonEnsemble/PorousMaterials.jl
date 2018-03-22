@@ -1,16 +1,15 @@
 """
-    nearest_image!(fractional_distance,repfactors)
+    nearest_image!(fractional_distance, repfactors)
 
-runs the nearest image convention given an array of fractional coordinates and
-the repfactors of the supercell. This code was pulled from Arni's vdw_energy
-function in his Energetics module
+applies the nearest image convention on a vector `fractional_distance` between two atoms
+in fractional space; modifies `fractional_distance` for nearest image convention.
 
 See comments in vdw_energy for more description
 """
 function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64})
-    for coords = 1:3
-        if abs(fractional_distance[coords]) > repfactors[coords] / 2.0
-            fractional_distance[coords] -= sign(fractional_distance[coords]) * repfactors[coords]
+    for xyz = 1:3 # xf, yf, or zf coordinate
+        if abs(fractional_distance[xyz]) > repfactors[xyz] / 2.0
+            fractional_distance[xyz] -= sign(fractional_distance[xyz]) * repfactors[xyz]
         end
     end
 end
