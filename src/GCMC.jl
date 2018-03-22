@@ -156,8 +156,19 @@ runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         adsorbate::String, ljforcefield::LennardJonesForceField; n_mc_proposals::Int=100000,
+                         adsorbate::String, ljforcefield::LennardJonesForceField; n_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
+    if verbose
+        print("Simulating adsorption of ")
+        print_with_color(:green, adsorbate)
+        print(" in ")
+        print_with_color(:green, framework.name)
+        print(" at ")
+        print_with_color(:green, @sprintf("%f K", temperature))
+        print(" and ")
+        print_with_color(:green, @sprintf("%f Pa", fugacity))
+        print(" (fugacity).")
+    end
 
     const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
     const repfactors = replication_factors(framework.box, ljforcefield)
@@ -176,8 +187,13 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const TRANSLATION = 3
 
     markov_counts = MarkovCounts([0 for i = 1:length(PROPOSAL_ENCODINGS)], [0 for i = 1:length(PROPOSAL_ENCODINGS)])
-
-    for t = 1:n_mc_proposals
+    
+    # n_cycles is # of outer cycles; for each inner cycle, peform max(20, # molecules in the system) 
+    #  Markov chain proposals.
+    markov_chain_time = 0
+    for outer_cycle = 1:n_cycles, inner_cycle = 1:max(20, length(molecules))
+        markov_chain_time += 1
+        
         # choose move randomly; keep track of proposals
         which_move = rand(1:3)
         markov_counts.n_proposed[which_move] += 1
@@ -253,7 +269,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         end # which move the code executes
 
         # sample the current configuration
-        if (t > n_burn_cycles && t % sample_frequency == 0)
+        if (outer_cycle > n_burn_cycles && markov_chain_time % sample_frequency == 0)
             gcmc_stats.n_samples += 1
 
             gcmc_stats.n += length(molecules)
