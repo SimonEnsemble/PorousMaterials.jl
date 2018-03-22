@@ -137,7 +137,7 @@ end
 
 import Base.print
 function print(io::IO, ljforcefield::LennardJonesForceField)
-	println(io, "Amount of atoms included: ",length(ljforcefield.pure_sigmas))
+	println(io, "Amount of atoms included: ",length(ljforcefield.pure_σ))
 	print(io, "Cut-off radius = ",sqrt(ljforcefield.cutoffradius_squared))
 end
 
