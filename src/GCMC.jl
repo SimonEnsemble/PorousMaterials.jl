@@ -78,7 +78,7 @@ function translate_molecule!(molecule_id::Int, molecules::Array{Molecule}, simul
     # store old coordinates and return at the end for possible restoration of old coords
     x_old = deepcopy(molecules[molecule_id].x)
     # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3, 1) - 0.5)
+    dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
     # change coordinates of molecule
     molecules[molecule_id].x .+= dx
     
@@ -100,7 +100,7 @@ function translate_molecule!(molecule_id::Int, molecules::Array{Molecule}, simul
     end
     # update the cartesian coordinate if had to apply PBCs
     if outside_box
-        molecules[molecule_id].x = simulation_box.c_to_f * xf_molecule
+        molecules[molecule_id].x = simulation_box.f_to_c * xf_molecule
     end
 
     return x_old # in case we need to restore
