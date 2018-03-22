@@ -15,7 +15,7 @@ include("Snapshot.jl")
 include("GCMC.jl")
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
-       strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight,
+       strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
        convert_cif_to_P1_symmetry, construct_box, replicate_box, # Crystal.jl
        LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl
        Molecule, read_molecule_file, readcharge, # Molecules.jl

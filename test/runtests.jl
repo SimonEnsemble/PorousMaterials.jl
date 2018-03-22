@@ -63,6 +63,7 @@ end;
 	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ["He"]["Zn"] * ((ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 3)
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+    @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
     xenon = Molecule(1, ["Xe"], zeros(3, 1), [0.0])
     energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)

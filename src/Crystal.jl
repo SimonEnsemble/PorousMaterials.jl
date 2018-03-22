@@ -506,3 +506,13 @@ function molecular_weight(framework::Framework)
 
     return mass #amu
 end
+
+"""
+    ρ = crystal_density(framework::Framework) # kg / m3
+
+Compute the crystal density of a framework in units kg/m3.
+"""
+function crystal_density(framework::Framework)
+    mw = molecular_weight(framework)
+    return mw / framework.box.Ω * 1660.53892  # --> kg/m3
+end
