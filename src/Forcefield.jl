@@ -7,6 +7,7 @@ using CSV
 Data structure for a Lennard Jones forcefield.
 
 # Arguments
+- `name::String`: name of forcefield; correponds to filename
 - `pure_σ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)
 - `pure_ϵ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)
 - `ϵ::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
@@ -14,6 +15,8 @@ Data structure for a Lennard Jones forcefield.
 - `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 """
 struct LennardJonesForceField
+    name::String
+
 	pure_σ::Dict{AbstractString, Float64}
 	pure_ϵ::Dict{AbstractString, Float64}
 
@@ -39,7 +42,7 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
     @assert(length(unique(df[:atom])) == size(df, 1), 
         @sprintf("Duplicate atoms found in force field file %s\n", filename))
     
-    ljff = LennardJonesForceField(Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
+    ljff = LennardJonesForceField(filename, Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
     
     # pure X-X interactions (X = (pseudo)atom)
     for row in eachrow(df)
