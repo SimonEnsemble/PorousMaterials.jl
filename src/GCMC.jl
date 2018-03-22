@@ -3,6 +3,13 @@
 const δ = 0.1
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
+# Markov chain proposals. encodings (i.e. if `which_move` is this, tells us which move to attempt)
+const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
+const INSERTION = 1
+const DELETION = 2
+const TRANSLATION = 3
+
+
 """
 Keep track of statistics during a grand-canonical Monte Carlo simultion
 
@@ -170,7 +177,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         print_with_color(:green, @sprintf("%f K", temperature))
         print(" and ")
         print_with_color(:green, @sprintf("%f Pa", fugacity))
-        print(" (fugacity).")
+        println(" (fugacity).")
     end
 
     const repfactors = replication_factors(framework.box, ljforcefield)
@@ -182,12 +189,6 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     molecules = Molecule[]
     
-    # move encodings (i.e. if `which_move` is this, tells us which move to attempt)
-    const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
-    const INSERTION = 1
-    const DELETION = 2
-    const TRANSLATION = 3
-
     markov_counts = MarkovCounts([0 for i = 1:length(PROPOSAL_ENCODINGS)], [0 for i = 1:length(PROPOSAL_ENCODINGS)])
     
     # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system) 
@@ -288,7 +289,18 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     end #finished markov chain proposal moves
 
-    results = Dict{String, Union{Int, Float64}}()
+    results = Dict{String, Union{Int, Float64, String}}()
+    results["crystal"] = framework.name
+    results["adsorbate"] = adsorbate
+    results["forcefield"] = ljforcefield.name
+    results["fugacity (Pa)"] = fugacity
+    results["temperature (K)"] = temperature
+    
+    results["# sample cycles"] = n_sample_cycles
+    results["# burn cycles"] = n_burn_cycles
+
+    results["# samples"] = gcmc_stats.n_samples
+
     results["# samples"] = gcmc_stats.n_samples
     results["⟨N⟩ (molecules)"] = gcmc_stats.n / gcmc_stats.n_samples
     results["⟨N⟩ (molecules/unit cell)"] = results["⟨N⟩ (molecules)"] /
@@ -318,10 +330,34 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end
 
     if verbose
-        for (key, value) in results
-            println(key * ": ", value)
-        end
+        print_results(results)
     end
     
     return results
 end # gcmc_simulation
+
+function print_results(results::Dict)
+    @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n",
+            results["adsorbate"], results["crystal"], results["temperature (K)"],
+            results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
+
+    # Markov stats
+    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
+        for key in [@sprintf("Total # %s proposals", proposal_description), 
+                    @sprintf("Fraction of %s proposals accepted", proposal_description)]
+            println(key * ": ", results[key])
+        end
+    end
+
+    for key in ["# sample cycles", "# burn cycles", "# samples"]
+        println(key * ": ", results[key])
+    end
+        
+
+    for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)",
+                "⟨N⟩ (mmol/g)", "⟨U_gg⟩ (K)", "⟨U_gh⟩ (K)", "⟨Energy⟩ (K)",
+                "var(N)", "var(U_gg)", "var⟨U_gh⟩", "var(Energy)"]
+        println(key * ": ", results[key])
+    end
+    return 
+end
