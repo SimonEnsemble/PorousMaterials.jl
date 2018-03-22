@@ -44,10 +44,12 @@ frame = read_crystal_structure_file("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
 rep_factors = replication_factors(frame.box, ljforcefield)
 @testset "Forcefield Tests" begin
-	@test ljforcefield.pure_sigmas["He"] == 1.0
-	@test ljforcefield.pure_epsilons["Zn"] == 12.0
-	@test ljforcefield.sigmas_squared["Zn"]["He"] == ((1.0 + 3.0) / 2) ^ 2
-	@test ljforcefield.epsilons["He"]["Zn"] == sqrt(12.0 * 3.0)
+	@test ljforcefield.pure_σ["He"] == 1.0
+	@test ljforcefield.pure_ϵ["Zn"] == 12.0
+	@test ljforcefield.σ²["Zn"]["He"] == ((1.0 + 3.0) / 2) ^ 2
+	@test ljforcefield.ϵ["He"]["Zn"] == sqrt(12.0 * 3.0)
+	@test ljforcefield.ϵ["He"]["Zn"] == ljforcefield.ϵ["Zn"]["He"] # symmetry
+	@test ljforcefield.σ²["He"]["Zn"] == ljforcefield.σ²["Zn"]["He"] # symmetry
 	@test ljforcefield.cutoffradius_squared == 12.5 ^ 2
 	@test rep_factors == (25, 25, 25)
 end;
@@ -58,7 +60,7 @@ end;
     molecule1 = Molecule(1, ["He"], [0.5, 0.5, 0.5][:,:], [0.0])
     molecule2 = Molecule(1, ["He"], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
 	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
-	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.epsilons["He"]["Zn"] * ((ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.sigmas_squared["Zn"]["He"] / 0.75) ^ 3)
+	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ["He"]["Zn"] * ((ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 3)
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
@@ -99,103 +101,110 @@ end;
 @printf("------------------------------\n")
 
 @printf("------------------------------\nTesting GCMC.jl\n\n")
- # @testset "Monte Carlo Functions Tests" begin
-#
-#INSERTION TESTS
-#
-molecules = Array{Molecule}(0)
-repfactors = replication_factors(frame.box, ljforcefield)
-sim_box = replicate_box(frame.box, repfactors)
+@testset "Monte Carlo Functions Tests" begin
+    #
+    #INSERTION TESTS
+    #
+    insertion_inside_box = true
+    insertion_at_random_coords = true
+    insertion_adds_molecule = true
 
-for i = 1:100
-    insert_molecule!(molecules, sim_box, "C")
-    @assert(!completely_outside_box(molecules[i], sim_box), "Molecule outside of simulation box")
-    @assert(length(molecules) == i, "Molecules array not modified")
-    if i > 1
-        @assert(sum(molecules[i - 1].x .≈ molecules[i].x) == 0, "Molecules not being inserted at random coordinates")
+    molecules = Array{Molecule}(0)
+    repfactors = replication_factors(frame.box, ljforcefield)
+    sim_box = replicate_box(frame.box, repfactors)
+
+    for i = 1:100
+        insert_molecule!(molecules, sim_box, "C")
+        if completely_outside_box(molecules[i], sim_box)
+            insertion_inside_box = false
+        end
+        if ! (length(molecules) == i)
+            insertion_adds_molecule = false
+        end
+        if i > 1
+            if sum(molecules[i - 1].x .≈ molecules[i].x) != 0
+                # by chance this could fail but highly unlikely!
+                insertion_at_random_coords = false
+            end
+        end
     end
+    @test insertion_inside_box
+    @test insertion_at_random_coords
+    @test insertion_adds_molecule
+
+    #
+    #DELETION TESTS
+    #
+    deletion_removes_a_molecule = true
+    for i = 1:100
+        delete_molecule!(rand(1:length(molecules)), molecules)
+        if length(molecules) != 100 - i
+            deletion_removes_a_molecule = false
+        end
+    end
+    @test deletion_removes_a_molecule
+
+    #
+    #TRANSLATION TESTS
+    #
+    translation_old_coords_stored_properly = true
+    translation_coords_changed = true
+    translation_inside_box = true
+    molecules = [Molecule(1, ["C"], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]),
+                 Molecule(1, ["F"], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
+    x_old = translate_molecule!(1, molecules, sim_box)
+    if ! all(x_old .== sim_box.f_to_c * [0.99, 0.99, 0.01][:, :])
+        translation_old_coords_stored_properly = false
+    end
+    if ! all(molecules[1].x .!= x_old)
+        translation_coords_changed = false
+    end
+
+    for i = 1:100000
+        which_molecule = rand(1:2) # choose molecule to move
+        xf_old_should_be = deepcopy(molecules[which_molecule].x)
+        xf_old = translate_molecule!(which_molecule, molecules, sim_box)
+        if ! all(molecules[which_molecule].x .!= x_old)
+            translation_coords_changed = false
+        end
+        if completely_outside_box(molecules[which_molecule], sim_box)
+            translation_inside_box = false
+        end
+    end
+    @test translation_old_coords_stored_properly
+    @test translation_coords_changed
+    @test translation_inside_box
 end
- # end
-
-#
-#DELETION TESTS
-#
-for i = 1:100
-    delete_molecule!(rand(1:length(molecules)), molecules)
-    @assert(length(molecules) == 100 - i, "Molecule not deleted")
-end
-
-#
-#TRANSLATION TESTS
-#
-molecules = [Molecule(1, ["C"], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]), Molecule(1, ["F"], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
-x_old = translate_molecule!(1, molecules, sim_box)
-@assert(all(x_old .== sim_box.f_to_c * [0.99, 0.99, 0.01][:, :]))
-@assert(all(molecules[1].x .!= x_old)) # i.e. assert it was moved.
-for i = 1:10000
-    which_molecule = rand(1:2) # choose molecule to move
-    xf_old_should_be = deepcopy(molecules[which_molecule].x)
-    xf_old = translate_molecule!(which_molecule, molecules, sim_box)
-    @assert(all(molecules[which_molecule].x .!= x_old),  "Molecule not moved")
-    @assert(!completely_outside_box(molecules[which_molecule], sim_box),
-            "Molecule completely outside of simulation box")
-end
-
-#
-#VAN DER WAALS GUEST-GUEST ENERGY TESTS
-#
-sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
-#TODO add CH4 to UFF file to have sigmas and epsilons ready
-molecules = [Molecule(1, ["C"], [5.0, 12.0, 12.0][:, :], [0.0]),
-             Molecule(1, ["C"], [11.0, 12.0, 12.0][:, :], [0.0])]
-
-#calculate the energy between the two molecules using lennard_jones
-dx1 = molecules[1].x .- molecules[2].x
-energy_1 = lennard_jones(dot(dx1, dx1),
-    ljforcefield.sigmas_squared[molecules[1].atoms[1]][molecules[2].atoms[1]],
-    ljforcefield.epsilons[molecules[1].atoms[1]][molecules[2].atoms[1]])
-#    get(ljforcefield.sigmas_squared[molecules[1].atoms[1]], molecules[2].atoms[1], -1),
-#    get(ljforcefield.epsilons[molecules[1].atoms[1]], molecules[2].atoms[1], -1))
-
-#making sure the assertion does what it is suppsoed to
-@printf("\nEnergy calculated using lennard jones: %f \nEnergy calculated using gg vdw: %f\n", energy_1,
-    guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box))
-
-#calculate the energy between two molecules to make sure it works correctly
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy_1,
-    "Did not calculate energy correctly between two molecules")
-
-#calculate the energy between the same two molecules with the order reversed
-#   to make sure that the energy between them stays the same
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈
-    guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box),
-    "Energy is not the same between two molecules when reversing ")
-
-#this removes the second molecule and replaces it with another
-delete_molecule!(2, molecules)
-push!(molecules, Molecule(1, ["C"], reshape([24.0, 12.0, 12.0], 3, :), [0.0]))
-#calculate the energy between the two molecules using lennard_jones
-dx2 = molecules[1].x .- molecules[2].x
-energy_2 = lennard_jones(dot(dx2, dx2),
-    ljforcefield.sigmas_squared[molecules[1].atoms[1]][molecules[2].atoms[1]],
-    ljforcefield.epsilons[molecules[1].atoms[1]][molecules[2].atoms[1]])
-
-#these molecules are outside of the cut off radius in the unit cell, but
-#   they should be able to interact using nearest image convention
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy_1,
-    "Did not use nearest image convention")
-push!(molecules, Molecule(1, ["C"], reshape([11.0, 12.0, 12.0], 3, :), [0.0]))
-
-#making sure that the molecules I want are in the array
-println(molecules)
-
-#making sure the assertion does what it is suppsoed to
-@printf("\nEnergy calculated using lennard jones: %f \nEnergy calculated using gg vdw: %f\n", 2 * energy_1,
-    guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box))
-
-#inserts the original molecule and tests energy again. should be the sum of
-#   the original two calculations
-@assert(guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈
-    2 * energy_1,
-    "Did not calculate guest-guest energy correctly for more than two molecules")
 @printf("------------------------------\n")
+@testset "Guest-guest Energetics Tests" begin
+    sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    # distance of 6.0 away
+    molecules = [Molecule(1, ["C"], [5.0, 12.0, 12.0][:, :], [0.0]),
+                 Molecule(1, ["O"], [11.0, 12.0, 12.0][:, :], [0.0])]
+    r² = (11.0 - 5.0) ^ 2 # duh
+    energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["O"]["C"])
+    @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box)
+    # symmetry
+    @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box)
+    
+    # via PBC, a distance (24.0 - 5.0) > (1+5)
+    molecules[2] = Molecule(1, ["O"], [24.0, 12.0, 12.0][:, :], [0.0])
+    r² = (1.0 + 5.0) ^ 2 # PBC
+    energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["C"]["O"])
+    @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box)
+    @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) # symmetry again.
+    
+    # put a molecule on top of first one.
+    push!(molecules, Molecule(1, ["C"], [5.0, 12.0, 12.0][:, :], [0.0]))
+    @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 2 * energy
+    
+    @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
+    @test guest_guest_vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
+    
+    molecules_a = [Molecule(1, ["C"], [11.0, 1.0, 12.0][:, :], [0.0]),
+                   Molecule(1, ["O"], [11.0, 4.0, 12.0][:, :], [0.0])]
+    molecules_b = [Molecule(1, ["C"], [11.0, 1.0, 12.0][:, :], [0.0]),
+                   Molecule(1, ["O"], [11.0, 23.0, 12.0][:, :], [0.0])]
+    @test guest_guest_vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ guest_guest_vdw_energy(1, molecules_b, ljforcefield, sim_box)
+
+end
