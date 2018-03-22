@@ -156,7 +156,7 @@ runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         adsorbate::String, ljforcefield::LennardJonesForceField; n_cycles::Int=100000,
+                         adsorbate::String, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
         print("Simulating adsorption of ")
@@ -188,10 +188,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     markov_counts = MarkovCounts([0 for i = 1:length(PROPOSAL_ENCODINGS)], [0 for i = 1:length(PROPOSAL_ENCODINGS)])
     
-    # n_cycles is # of outer cycles; for each inner cycle, peform max(20, # molecules in the system) 
+    # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system) 
     #  Markov chain proposals.
     markov_chain_time = 0
-    for outer_cycle = 1:n_cycles, inner_cycle = 1:max(20, length(molecules))
+    for outer_cycle = 1:(n_burn_cycles + n_sample_cycles), inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
         
         # choose move randomly; keep track of proposals
@@ -287,6 +287,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end #finished markov chain proposal moves
 
     results = Dict{String, Union{Int, Float64}}()
+    results["# samples"] = gcmc_stats.n_samples
     results["⟨N⟩ (molecules)"] = gcmc_stats.n / gcmc_stats.n_samples
     results["⟨N⟩ (molecules/unit cell)"] = results["⟨N⟩ (molecules)"] /
         (repfactors[1] * repfactors[2] * repfactors[3])
