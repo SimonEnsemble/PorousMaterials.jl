@@ -9,13 +9,13 @@ Calculate the lennard jones potential energy given a radius r between two molecu
 returns potential energy in units Kelvin.
 
 # Arguments
-- `r_squared::Float64`: distance between two (pseudo)atoms in question squared (Angstrom²)
-- `σ_squared::Float64`: sigma parameter in Lennard Jones potential squared (units: Angstrom²)
+- `r²::Float64`: distance between two (pseudo)atoms in question squared (Angstrom²)
+- `σ²::Float64`: sigma parameter in Lennard Jones potential squared (units: Angstrom²)
 - `ϵ::Float64`: epsilon parameter in Lennard Jones potential (units: Kelvin)
 """
-function lennard_jones(r_squared::Float64, σ_squared::Float64, ϵ::Float64)
-	ratio = (σ_squared / r_squared) ^ 3
-	return 4 * ϵ * (ratio^2 - ratio)
+function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
+	ratio = (σ² / r²) ^ 3
+	return 4.0 * ϵ * (ratio ^ 2 - ratio)
 end
 
 
@@ -95,8 +95,8 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				elseif r_squared < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
 				    energy += lennard_jones(r_squared,
-						ljforcefield.sigmas_squared[framework.atoms[k]][molecule.atoms[i]],
-						ljforcefield.epsilons[framework.atoms[k]][molecule.atoms[i]])
+						ljforcefield.σ²[framework.atoms[k]][molecule.atoms[i]],
+						ljforcefield.ϵ[framework.atoms[k]][molecule.atoms[i]])
 				end # if-elseif-end
 			end # framework atoms end
 		end # molecule atoms end
