@@ -4,21 +4,21 @@ using CSV
 """
 	ljforcefield = LennardJonesForceField(cutoffradius_squared, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas_squared)
 
-Data structure for a Lennard Jones forcefield, read from a file containing UFF parameters.
+Data structure for a Lennard Jones forcefield.
 
 # Arguments
-- `pure_sigmas::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to a σ, which is the finite distance where the potential between atoms goes to zero
-- `pure_epsilons::Dict{AbstractString, Float64}`: Dictionary that connects element acronyms to an ϵ, which is the depth of a Lennard Jones potential well
-- `epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
-- `sigmas_squared::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared["He"]["C"]`
-- `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²)
+- `pure_σ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)
+- `pure_ϵ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)
+- `ϵ::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
+- `σ²::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared["He"]["C"]`
+- `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 """
 struct LennardJonesForceField
-	pure_sigmas::Dict{AbstractString, Float64}
-	pure_epsilons::Dict{AbstractString, Float64}
+	pure_σ::Dict{AbstractString, Float64}
+	pure_ϵ::Dict{AbstractString, Float64}
 
-	sigmas_squared::Dict{AbstractString, Dict{AbstractString, Float64}}
-	epsilons::Dict{AbstractString, Dict{AbstractString, Float64}}
+	σ²::Dict{AbstractString, Dict{AbstractString, Float64}}
+	ϵ::Dict{AbstractString, Dict{AbstractString, Float64}}
 
 	cutoffradius_squared::Float64
 end
@@ -39,29 +39,26 @@ function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14
     @assert(length(unique(df[:atom])) == size(df, 1), 
         @sprintf("Duplicate atoms found in force field file %s\n", filename))
     
+    ljff = LennardJonesForceField(Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
+    
     # pure X-X interactions (X = (pseudo)atom)
-    pure_sigmas = Dict{AbstractString, Float64}()
-    pure_epsilons = Dict{AbstractString, Float64}()
     for row in eachrow(df)
-        pure_sigmas[row[:atom]] = row[Symbol("sigma(A)")]
-        pure_epsilons[row[:atom]] = row[Symbol("epsilon(K)")]
+        ljff.pure_σ[row[:atom]] = row[Symbol("sigma(A)")]
+        ljff.pure_ϵ[row[:atom]] = row[Symbol("epsilon(K)")]
     end
     
     # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
-    epsilons = Dict{AbstractString, Dict{AbstractString, Float64}}()
-    sigmas_squared = Dict{AbstractString, Dict{AbstractString, Float64}}()
-	for atom in keys(pure_sigmas)
-        epsilons[atom] = Dict{AbstractString, Float64}()
-        sigmas_squared[atom] = Dict{AbstractString, Float64}()
-        for other_atom in keys(pure_sigmas)
-			epsilons[atom][other_atom] = sqrt(pure_epsilons[atom] * pure_epsilons[other_atom])
-			# Store sigma as sigma squared so we can compare it with r². r² is faster to compute than r
-			sigmas_squared[atom][other_atom] = ((pure_sigmas[atom] + pure_sigmas[other_atom]) / 2.0)^2
+	for atom in keys(ljff.pure_σ)
+        ljff.ϵ[atom] = Dict{AbstractString, Float64}()
+        ljff.σ²[atom] = Dict{AbstractString, Float64}()
+        for other_atom in keys(ljff.pure_σ)
+			ljff.ϵ[atom][other_atom] = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
+			ljff.σ²[atom][other_atom] = ((ljff.pure_σ[atom] + ljff.pure_σ[other_atom]) / 2.0) ^ 2
 		end
 	end
 
-	return LennardJonesForceField(pure_sigmas, pure_epsilons, sigmas_squared, epsilons, cutoffradius^2)
-end # read_forcefield_file end
+	return ljff
+end
 
 """
 	repfactors = replication_factors(unitcell::Box, cutoffradius::Float64)
@@ -125,7 +122,7 @@ returns true or false; prints which atoms are missing by default if `verbose=tru
 """
 function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField, verbose::Bool=true)
     framework_atoms = unique(framework.atoms)
-    forcefield_atoms = keys(ljforcefield.pure_epsilons)
+    forcefield_atoms = keys(ljforcefield.pure_ϵ)
 
     full_coverage = true
 
