@@ -1,6 +1,7 @@
 # δ (units: Angstrom) is the maximal distance a particle is perturbed in a given coordinate during
 #  particle translations
 const δ = 0.1
+const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 """
 Keep track of statistics during a grand-canonical Monte Carlo simultion
@@ -43,7 +44,7 @@ rejected. Function then returns the new list of molecules
 """
 function insert_molecule!(molecules::Array{Molecule}, simulation_box::Box, adsorbate::String)
     #TODO create template to handle more complex molecules
-    x_new = simulation_box.f_to_c * [rand(), rand(), rand()]
+    x_new = simulation_box.f_to_c * rand(3, 1)
     new_molecule = Molecule(1, [adsorbate], x_new[:, :], [0.0])
     push!(molecules, new_molecule)
 end
@@ -70,12 +71,14 @@ function translate_molecule!(molecule_id::Int, molecules::Array{Molecule}, simul
     # store old coordinates and return at the end for possible restoration of old coords
     x_old = deepcopy(molecules[molecule_id].x)
     # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = [δ * (rand() - 0.5) for i = 1:3]
+    dx = δ * (rand(3, 1) - 0.5)
     # change coordinates of molecule
     molecules[molecule_id].x .+= dx
+    
+    # done, unless the molecule has moved completely outside of the box...
+    outside_box = false
     # compute its fractional coords
     xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
-    outside_box = false
     # apply periodic boundary conditions if molecule goes outside of box.
     for xyz = 1:3 # loop over x, y, z coordinates
         # if all atoms of the molecule have x, y, or z > 1.0, shift down
@@ -83,7 +86,7 @@ function translate_molecule!(molecule_id::Int, molecules::Array{Molecule}, simul
             outside_box = true
             xf_molecule[xyz, :] -= 1.0
         # if all atoms of the molecule have x, y, or z < 0.0, shift up
-        elseif sum(xf_molecule[xyz, :] .>= 0.0) == 0
+        elseif sum(xf_molecule[xyz, :] .> 0.0) == 0
             outside_box = true
             xf_molecule[xyz, :] += 1.0
         end
@@ -109,43 +112,43 @@ Code copied from Arni's Energetics.jl with minor adjustments to calculate
 function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
                         ljforcefield::LennardJonesForceField,
                         simulation_box::Box)
-    #start energy at 0 and add to it as comparisons are made
-    energy = 0.0
-    #Loop over all atoms in the given molecule
+    energy = 0.0 # energy is pair-wise additive
+    # Loop over all atoms in the given molecule
     for atom_id = 1:molecules[molecule_id].n_atoms
         xf_molecule_atom = mod.(simulation_box.c_to_f *
             molecules[molecule_id].x[:, atom_id], 1.0)
 
-        #loop over other adsorbate atoms leading up to central atom in array
+        # Look at interaction with all other molecules in the system
         for other_molecule_id = 1:length(molecules)
-            #molecule cannot interact with itself
+            # molecule cannot interact with itself
             if other_molecule_id == molecule_id
                 continue
-            end #if statement prevents molecule from interacting with itself
-            #loop over every atom in second molecules
+            end
+            # loop over every atom in the other molecule
             for other_atom_id = 1:molecules[other_molecule_id].n_atoms
                 xf_other_molecule_atom = mod.(simulation_box.c_to_f *
                     molecules[other_molecule_id].x[:, other_atom_id], 1.0)
+                # compute vector between molecules in fractional coordinates
                 dxf = xf_molecule_atom - xf_other_molecule_atom
 
-                #runs nearest image convention and adjusts accordingly
                 nearest_image!(dxf, (1, 1, 1))
-                #converts fractional distance to cartesian distance
+                # converts fractional distance to cartesian distance
                 dx = simulation_box.f_to_c * dxf
 
-                r_squared = dot(dx, dx)
-                if r_squared < R_OVERLAP_squared
+                r² = dot(dx, dx)
+
+                if r² < R_OVERLAP_squared
                     return Inf
-                elseif r_squared < ljforcefield.cutoffradius_squared
+                elseif r² < ljforcefield.cutoffradius_squared
                     # TODO test whether it is more efficient to store this as a variable up top
-                    energy += lennard_jones(r_squared,
-                        ljforcefield.sigmas_squared[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]],
-                        ljforcefield.epsilons[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
+                    energy += lennard_jones(r²,
+                        ljforcefield.σ²[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]],
+                        ljforcefield.ϵ[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
                 end
-            end #for loop to check all atoms in other molecule
-        end #for loop to go over all other molecules
-    end #for loop for every atom in test molecule
-    return energy #units are the same as in ϵ for forcefield (Kelvin)
+            end # loop over all atoms in other molecule
+        end # loop over all other molecules
+    end # loop over all atoms of molecule_id of interest
+    return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
 """
@@ -170,7 +173,6 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         print(" (fugacity).")
     end
 
-    const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
     const repfactors = replication_factors(framework.box, ljforcefield)
     const simulation_box = replicate_box(framework.box, repfactors)
 
@@ -226,8 +228,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 repfactors)
 
             # Metropolis Hastings Acceptance for Deletion
-            if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
-                    temperature) * exp((U_gh + U_gg) / temperature)
+            if rand() < length(molecules) * KB * temperature / (fugacity * 
+                    simulation_box.Ω) * exp((U_gh + U_gg) / temperature)
                 # accept the deletion, delete molecule, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
 
@@ -309,7 +311,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     results["var(Energy)"] = ((gcmc_stats.U_gg² + gcmc_stats.U_gh² + 2 *
         gcmc_stats.U_ggU_gh) / gcmc_stats.n_samples) -
         (results["⟨Energy⟩ (K)"] ^ 2)
-    # move states
+    # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
         results[@sprintf("Total # %s proposals", proposal_description)] = markov_counts.n_proposed[proposal_id]
         results[@sprintf("Fraction of %s proposals accepted", proposal_description)] = markov_counts.n_accepted[proposal_id] / markov_counts.n_proposed[proposal_id]
