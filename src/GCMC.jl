@@ -120,23 +120,22 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
                         ljforcefield::LennardJonesForceField,
                         simulation_box::Box)
     energy = 0.0 # energy is pair-wise additive
+    # fractional coordinates of molecule
+    xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
     # Loop over all atoms in the given molecule
     for atom_id = 1:molecules[molecule_id].n_atoms
-        xf_molecule_atom = mod.(simulation_box.c_to_f *
-            molecules[molecule_id].x[:, atom_id], 1.0)
-
         # Look at interaction with all other molecules in the system
         for other_molecule_id = 1:length(molecules)
             # molecule cannot interact with itself
             if other_molecule_id == molecule_id
                 continue
             end
+            # fractional coodinates of other molecule
+            xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
             # loop over every atom in the other molecule
             for other_atom_id = 1:molecules[other_molecule_id].n_atoms
-                xf_other_molecule_atom = mod.(simulation_box.c_to_f *
-                    molecules[other_molecule_id].x[:, other_atom_id], 1.0)
                 # compute vector between molecules in fractional coordinates
-                dxf = xf_molecule_atom - xf_other_molecule_atom
+                dxf = xf_molecule[:, atom_id] - xf_other_molecule[:, other_atom_id]
 
                 nearest_image!(dxf, (1, 1, 1))
                 # converts fractional distance to cartesian distance
@@ -207,7 +206,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             U_gg = guest_guest_vdw_energy(length(molecules), molecules, ljforcefield, simulation_box)
             U_gh = vdw_energy(framework, molecules[end], ljforcefield, repfactors)
 
-            #Metropolis Hastings Acceptance for Insertion
+            # Metropolis Hastings Acceptance for Insertion
             if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
                     temperature) * exp(-(U_gh + U_gg) / temperature)
                 # accept the move, adjust current_energy

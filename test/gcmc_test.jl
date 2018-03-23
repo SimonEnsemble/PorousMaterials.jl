@@ -41,3 +41,7 @@ for (i, fugacity) in enumerate(test_fugacities)
  #     isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.005)
  #     isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.005)
 end
+
+# TODO
+# assert molecules never completely outside box inside GCMC
+# assert energy at end is energy as add dE's.
