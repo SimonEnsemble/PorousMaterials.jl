@@ -5,10 +5,9 @@ const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # Markov chain proposals. encodings (i.e. if `which_move` is this, tells us which move to attempt)
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
-const INSERTION = 1
-const DELETION = 2
-const TRANSLATION = 3
-
+const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
+const DELETION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["deletion"]
+const TRANSLATION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["translation"]
 
 """
 Keep track of statistics during a grand-canonical Monte Carlo simultion
@@ -49,7 +48,7 @@ Inserts an additional molecule into the system and then checks the metropolis
 hastings acceptance rules to find whether the proposed insertion is accepted or
 rejected. Function then returns the new list of molecules
 """
-function insert_molecule!(molecules::Array{Molecule}, simulation_box::Box, adsorbate::String)
+function insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, adsorbate::String)
     #TODO create template to handle more complex molecules
     x_new = simulation_box.f_to_c * rand(3, 1)
     new_molecule = Molecule(1, [adsorbate], x_new[:, :], [0.0])
@@ -63,7 +62,7 @@ Removes a random molecule from the current molecules in the framework.
 molecule_id decides which molecule will be deleted, for a simulation, it must
     be a randomly generated value
 """
-function delete_molecule!(molecule_id::Int, molecules::Array{Molecule})
+function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
     deleteat!(molecules, molecule_id)
 end
 
@@ -74,7 +73,7 @@ Translates a random molecule a random amount in the given array and simulation
 box
 reflects if entire molecule goes outside in any cartesian direction
 """
-function translate_molecule!(molecule_id::Int, molecules::Array{Molecule}, simulation_box::Box)
+function translate_molecule!(molecule_id::Int, molecules::Array{Molecule, 1}, simulation_box::Box)
     # store old coordinates and return at the end for possible restoration of old coords
     x_old = deepcopy(molecules[molecule_id].x)
     # peturb in Cartesian coords in a random cube centered at current coords.
@@ -98,6 +97,7 @@ function translate_molecule!(molecule_id::Int, molecules::Array{Molecule}, simul
             xf_molecule[xyz, :] += 1.0
         end
     end
+
     # update the cartesian coordinate if had to apply PBCs
     if outside_box
         molecules[molecule_id].x = simulation_box.f_to_c * xf_molecule
@@ -116,9 +116,8 @@ the change in energy after an accepted proposal
 Code copied from Arni's Energetics.jl with minor adjustments to calculate
     interactions between the adsorbates as well as the framework
 """
-function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
-                        ljforcefield::LennardJonesForceField,
-                        simulation_box::Box)
+function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
+                                ljforcefield::LennardJonesForceField, simulation_box::Box)
     energy = 0.0 # energy is pair-wise additive
     # fractional coordinates of molecule
     xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
@@ -155,6 +154,28 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule},
         end # loop over all other molecules
     end # loop over all atoms of molecule_id of interest
     return energy # units are the same as in ϵ for forcefield (Kelvin)
+end
+
+"""
+Compute total guest-host interaction energy (sum over all adsorbates).
+"""
+function total_guest_host_vdw_energy(framework::Framework, molecules::Array{Molecule, 1}, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
+    total_energy = 0.0
+    for molecule_id = 1:length(molecules)
+        total_energy += vdw_energy(framework, molecules[molecule_id], ljforcefield, repfactors)
+    end
+    return total_energy
+end
+
+"""
+Compute sum of all guest-guest interaction energy from vdW interactions.
+"""
+function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1}, ljforcefield::LennardJonesForceField, simulation_box::Box)
+    total_energy = 0.0
+    for molecule_id = 1:length(molecules)
+        total_energy += guest_guest_vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
+    end
+    return total_energy / 2.0 # avoid double-counting pairs
 end
 
 """
@@ -287,6 +308,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         end
 
     end #finished markov chain proposal moves
+
+    # compute total energy, compare to `current_energy*` variables where were incremented
+    total_U_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
+    total_U_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
+    @assert(isapprox(total_U_gh, current_energy_gh, rtol=0.00001), "guest-host energy incremented improperly")
+    @assert(isapprox(total_U_gg, current_energy_gg, rtol=0.00001), "guest-host energy incremented improperly")
 
     results = Dict{String, Union{Int, Float64, String}}()
     results["crystal"] = framework.name

@@ -16,7 +16,8 @@ Data structure for a Lennard Jones forcefield.
 """
 struct LennardJonesForceField
     name::String
-
+    
+    # TODO symbols for atoms might be faster than strings.
 	pure_σ::Dict{AbstractString, Float64}
 	pure_ϵ::Dict{AbstractString, Float64}
 
