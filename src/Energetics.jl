@@ -36,13 +36,15 @@ applied in this function.
 function vdw_energy(framework::Framework, molecule::Molecule,
                     ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
 	energy = 0.0
+    # compute fractional coordinate of molecule and apply PBC to bring it into the
+    # home unit cell of the crystal
+    xf_molecule = mod.(framework.box.c_to_f * molecule.x, 1.0)
+
     # loop over replications of the home unit cell to build the supercell (simulation box)
 	for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
         # loop over atoms of the molecule/adsorbate
         # TODO: think about whether i or k loop should go first for speed. might not matter.
 		for i = 1:molecule.n_atoms
-			xf_molecule_atom = mod.(framework.box.c_to_f * molecule.x[:, i], repfactors)
-            # loop over framework atoms in the home unit cell
 			for k = 1:framework.n_atoms
 				# Nearest image convention.
                 #  If the interaction between the adsorbate molecule and atom k is being looked
@@ -52,8 +54,7 @@ function vdw_energy(framework::Framework, molecule::Molecule,
                 #  later.
 
                 # distance in fractional coordinate space
-				dxf = xf_molecule_atom - (framework.xf[:, k] + [nA, nB, nC])
-
+				dxf = xf_molecule[:, i] - (framework.xf[:, k] + [nA, nB, nC])
 
 				# NIC condensed into a for-loop
 				#
@@ -80,21 +81,20 @@ function vdw_energy(framework::Framework, molecule::Molecule,
 				# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
 				# When checking the other case (where the adsorbate atom is to the right of the framework atom),
 				# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
-
 				nearest_image!(dxf, repfactors)
 
 				# Distance in cartesian coordinate space
 				dx = framework.box.f_to_c * dxf
 
 				# Lennard Jones parameters (and distance)
-				r_squared = dot(dx, dx)
+				r² = dot(dx, dx)
 
-				if r_squared < R_OVERLAP_squared
+				if r² < R_OVERLAP_squared
 					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
 					return Inf
-				elseif r_squared < ljforcefield.cutoffradius_squared
+				elseif r² < ljforcefield.cutoffradius_squared
                     # add pairwise contribution to potential energy
-				    energy += lennard_jones(r_squared,
+				    energy += lennard_jones(r²,
 						ljforcefield.σ²[framework.atoms[k]][molecule.atoms[i]],
 						ljforcefield.ϵ[framework.atoms[k]][molecule.atoms[i]])
 				end # if-elseif-end
