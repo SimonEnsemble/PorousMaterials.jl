@@ -133,16 +133,16 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
     energy = 0.0 # energy is pair-wise additive
     # fractional coordinates of molecule
     xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
-    # Loop over all atoms in the given molecule
-    for atom_id = 1:molecules[molecule_id].n_atoms
-        # Look at interaction with all other molecules in the system
-        for other_molecule_id = 1:length(molecules)
-            # molecule cannot interact with itself
-            if other_molecule_id == molecule_id
-                continue
-            end
-            # fractional coodinates of other molecule
-            xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
+    # Look at interaction with all other molecules in the system
+    for other_molecule_id = 1:length(molecules)
+        # molecule cannot interact with itself
+        if other_molecule_id == molecule_id
+            continue
+        end
+        # fractional coodinates of other molecule
+        xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
+        # Loop over all atoms in the given molecule
+        for atom_id = 1:molecules[molecule_id].n_atoms
             # loop over every atom in the other molecule
             for other_atom_id = 1:molecules[other_molecule_id].n_atoms
                 # compute vector between molecules in fractional coordinates
@@ -163,8 +163,8 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                         ljforcefield.ϵ[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
                 end
             end # loop over all atoms in other molecule
-        end # loop over all other molecules
-    end # loop over all atoms of molecule_id of interest
+        end # loop over all atoms of molecule_id of interest
+    end # loop over all other molecules
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
@@ -201,7 +201,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          adsorbate::String, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
-        pretty_print(adsorbate, frameworkname, temperature, fugacity)
+        pretty_print(adsorbate, framework.name, temperature, fugacity)
     end
 
     const repfactors = replication_factors(framework.box, ljforcefield)
@@ -226,7 +226,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         markov_counts.n_proposed[which_move] += 1
         
         if which_move == INSERTION
-            insert_molecule!(molecules, framework.box, adsorbate)
+            insert_molecule!(molecules, simulation_box, adsorbate)
 
             U_gg = guest_guest_vdw_energy(length(molecules), molecules, ljforcefield, simulation_box)
             U_gh = vdw_energy(framework, molecules[end], ljforcefield, repfactors)
@@ -322,12 +322,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     # compute total energy, compare to `current_energy*` variables where were incremented
     total_U_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
     total_U_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
-    if ! isapprox(total_U_gh, current_energy_gh, rtol=0.001)
+    if ! isapprox(total_U_gh, current_energy_gh, atol=0.01)
         println("U_gh, incremented = ", current_energy_gh)
         println("U_gh, computed at end of simulation =", total_U_gh)
         error("guest-host energy incremented improperly")
     end
-    if ! isapprox(total_U_gg, current_energy_gg, rtol=0.001)
+    if ! isapprox(total_U_gg, current_energy_gg, atol=0.01)
         println("U_gg, incremented = ", current_energy_gg)
         println("U_gg, computed at end of simulation =", total_U_gg)
         error("guest-guest energy incremented improperly")
