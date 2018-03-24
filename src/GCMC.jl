@@ -1,10 +1,11 @@
 # δ (units: Angstrom) is the maximal distance a particle is perturbed in a given coordinate during
 #  particle translations
-const δ = 0.1
+const δ = 0.35
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # Markov chain proposals. encodings (i.e. if `which_move` is this, tells us which move to attempt)
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
+const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["translation"]
@@ -30,6 +31,7 @@ type GCMCstats
     U_gg²::Float64
 
     U_ggU_gh::Float64
+    Un::Float64 # ⟨U n⟩
 end
 
 """
@@ -63,7 +65,7 @@ molecule_id decides which molecule will be deleted, for a simulation, it must
     be a randomly generated value
 """
 function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
-    deleteat!(molecules, molecule_id)
+    splice!(molecules, molecule_id)
 end
 
 """
@@ -205,7 +207,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     current_energy_gg = 0.0 # only true if starting with 0 molecules
     current_energy_gh = 0.0
-    gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     molecules = Molecule[]
     
@@ -218,7 +220,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         markov_chain_time += 1
         
         # choose move randomly; keep track of proposals
-        which_move = rand(1:3)
+        which_move = rand(1:N_PROPOSAL_TYPES)
         markov_counts.n_proposed[which_move] += 1
         
         if which_move == INSERTION
@@ -291,8 +293,13 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             end
         end # which move the code executes
 
+        # TODO remove after testing.
+        for m = 1:length(molecules)
+            @assert(! completely_outside_box(molecules[m], simulation_box), "molecule outside box!")
+        end
+
         # sample the current configuration
-        if (outer_cycle > n_burn_cycles && markov_chain_time % sample_frequency == 0)
+        if (outer_cycle > n_burn_cycles) && (markov_chain_time % sample_frequency == 0)
             gcmc_stats.n_samples += 1
 
             gcmc_stats.n += length(molecules)
@@ -305,8 +312,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             gcmc_stats.U_gg² += current_energy_gg ^ 2
 
             gcmc_stats.U_ggU_gh += current_energy_gg * current_energy_gh
-        end
 
+            gcmc_stats.Un += (current_energy_gg + current_energy_gh) * length(molecules)
+        end
     end #finished markov chain proposal moves
 
     # compute total energy, compare to `current_energy*` variables where were incremented
@@ -315,12 +323,15 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     @assert(isapprox(total_U_gh, current_energy_gh, rtol=0.00001), "guest-host energy incremented improperly")
     @assert(isapprox(total_U_gg, current_energy_gg, rtol=0.00001), "guest-host energy incremented improperly")
 
-    results = Dict{String, Union{Int, Float64, String}}()
+    @assert(markov_chain_time == sum(markov_counts.n_proposed))
+
+    results = Dict{String, Any}()
     results["crystal"] = framework.name
     results["adsorbate"] = adsorbate
     results["forcefield"] = ljforcefield.name
     results["fugacity (Pa)"] = fugacity
     results["temperature (K)"] = temperature
+    results["repfactors"] = repfactors
     
     results["# sample cycles"] = n_sample_cycles
     results["# burn cycles"] = n_burn_cycles
@@ -342,6 +353,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     #variances
     results["var(N)"] = (gcmc_stats.n² / gcmc_stats.n_samples) -
         (results["⟨N⟩ (molecules)"] ^ 2)
+    results["Q_st (K)"] = temperature - (gcmc_stats.Un / gcmc_stats.n_samples - results["⟨Energy⟩ (K)"] * results["⟨N⟩ (molecules)"]) / results["var(N)"]
     results["var(U_gg)"] = (gcmc_stats.U_gg² / gcmc_stats.n_samples) -
         (results["⟨U_gg⟩ (K)"] ^ 2)
     results["var⟨U_gh⟩"] = (gcmc_stats.U_gh² / gcmc_stats.n_samples) -
@@ -367,6 +379,9 @@ function print_results(results::Dict)
             results["adsorbate"], results["crystal"], results["temperature (K)"],
             results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
 
+    @printf("Unit cell replication factors: %d %d %d\n", results["repfactors"][1], 
+                                                         results["repfactors"][2], 
+                                                         results["repfactors"][3])
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
         for key in [@sprintf("Total # %s proposals", proposal_description), 
@@ -385,5 +400,7 @@ function print_results(results::Dict)
                 "var(N)", "var(U_gg)", "var⟨U_gh⟩", "var(Energy)"]
         println(key * ": ", results[key])
     end
+
+    @printf("Q_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
     return 
 end
