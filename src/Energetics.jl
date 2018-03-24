@@ -34,7 +34,7 @@ the supercell, which is the simulation box, such that the nearest image conventi
 applied in this function.
 """
 function vdw_energy(framework::Framework, molecule::Molecule,
-                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
+                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
 	energy = 0.0
     # compute fractional coordinate of molecule and apply PBC to bring it into the
     # home unit cell of the crystal

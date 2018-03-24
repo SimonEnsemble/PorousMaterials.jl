@@ -32,7 +32,7 @@ strip_numbers_from_atom_labels!(framework)
     strip_numbers_from_atom_labels!(framework_from_cssr)
     @test all(framework_from_cssr.xf .== framework.xf)
     @test all(framework_from_cssr.charges .== framework.charges)
-    @test all(framework_from_cssr.atoms == framework.atoms)
+    @test all(framework_from_cssr.atoms .== framework.atoms)
     @test framework_from_cssr.n_atoms == framework.n_atoms
     @test all(framework_from_cssr.box.f_to_c .== framework.box.f_to_c)
     @test all(framework_from_cssr.box.c_to_f .== framework.box.c_to_f)
@@ -61,6 +61,9 @@ end;
     molecule2 = Molecule(1, ["He"], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
 	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
 	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ["He"]["Zn"] * ((ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 3)
+    # the position of a molecule should not change inside guest_guest_vdw_energy.
+    @assert(all(molecule1.x .≈ [0.5, 0.5, 0.5]))
+
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
@@ -159,12 +162,18 @@ end;
     #
     #TRANSLATION TESTS
     #
+    # first, test function to bring molecule inside a box.
+    box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    molecule = Molecule(1, ["C"], [26.0, -0.2, 12.][:, :], [0.0])
+    bring_molecule_inside_box!(molecule, box)
+    @test all(molecule.x .≈ [1.0, 24.8, 12.0])
+
     translation_old_coords_stored_properly = true
     translation_coords_changed = true
     translation_inside_box = true
     molecules = [Molecule(1, ["C"], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]),
                  Molecule(1, ["F"], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
-    x_old = translate_molecule!(1, molecules, sim_box)
+    x_old = translate_molecule!(molecules[1], sim_box)
     if ! all(x_old .== sim_box.f_to_c * [0.99, 0.99, 0.01][:, :])
         translation_old_coords_stored_properly = false
     end
@@ -175,7 +184,7 @@ end;
     for i = 1:100000
         which_molecule = rand(1:2) # choose molecule to move
         xf_old_should_be = deepcopy(molecules[which_molecule].x)
-        xf_old = translate_molecule!(which_molecule, molecules, sim_box)
+        xf_old = translate_molecule!(molecules[which_molecule], sim_box)
         if ! all(molecules[which_molecule].x .!= x_old)
             translation_coords_changed = false
         end
@@ -232,4 +241,7 @@ end
                  Molecule(1, ["O"], [12.0, 12.0, 12.0][:, :], [0.0])]
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
+    # the position of a molecule should not change inside guest_guest_vdw_energy.
+    @test all(molecules[1].x .== [0.0, 0.0, 0.0])
+    @test all(molecules[2].x .== [12.0, 12.0, 12.0])
 end
