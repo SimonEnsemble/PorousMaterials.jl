@@ -1,9 +1,9 @@
-# δ (units: Angstrom) is the maximal distance a particle is perturbed in a given coordinate during
-#  particle translations
+# δ (units: Angstrom) is the maximal distance a particle is perturbed in a given coordinate
+#  during particle translations
 const δ = 0.35
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
-# Markov chain proposals. encodings (i.e. if `which_move` is this, tells us which move to attempt)
+# Markov chain proposals
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
@@ -46,15 +46,14 @@ end
 """
     insert_molecule!(molecules, simulation_box, adsorbate)
 
-Inserts an additional molecule into the system and then checks the metropolis
-hastings acceptance rules to find whether the proposed insertion is accepted or
-rejected. Function then returns the new list of molecules
+Inserts an additional `adsorbate` molecule into the system at random coordinates inside 
+the `simulation_box`.
 """
-function insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, adsorbate::String)
+function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, adsorbate::String)
     #TODO create template to handle more complex molecules
-    x_new = simulation_box.f_to_c * rand(3, 1)
-    new_molecule = Molecule(1, [adsorbate], x_new[:, :], [0.0])
-    push!(molecules, new_molecule)
+    x = box.f_to_c * rand(3, 1)
+    molecule = Molecule(1, [adsorbate], x[:, :], [0.0])
+    push!(molecules, molecule)
 end
 
 """
@@ -69,41 +68,52 @@ function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
 end
 
 """
-    translate_molecule(molecule_id, molecules, simulation_box)
+    bring_molecule_inside_box!(molecule, simulation_box)
 
-Translates a random molecule a random amount in the given array and simulation
-box
-reflects if entire molecule goes outside in any cartesian direction
+Apply periodic boundary conditions to bring a molecule inside the a box if it is
+completely outside of the box.
 """
-function translate_molecule!(molecule_id::Int, molecules::Array{Molecule, 1}, simulation_box::Box)
-    # store old coordinates and return at the end for possible restoration of old coords
-    x_old = deepcopy(molecules[molecule_id].x)
-    # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
-    # change coordinates of molecule
-    molecules[molecule_id].x .+= dx
-    
-    # done, unless the molecule has moved completely outside of the box...
-    outside_box = false
-    # compute its fractional coords
-    xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
-    # apply periodic boundary conditions if molecule goes outside of box.
+function bring_molecule_inside_box!(molecule::Molecule, box::Box)
+    outside_box = false # do nothing if not outside the box
+
+    # compute its fractional coordinates
+    xf = box.c_to_f * molecule.x
+
+    # apply periodic boundary conditions if any of its x, y, z fractional coords are
+    #  greater than 1.0
     for xyz = 1:3 # loop over x, y, z coordinates
         # if all atoms of the molecule have x, y, or z > 1.0, shift down
-        if sum(xf_molecule[xyz, :] .<= 1.0) == 0
+        if sum(xf[xyz, :] .<= 1.0) == 0
             outside_box = true
-            xf_molecule[xyz, :] -= 1.0
+            xf[xyz, :] -= 1.0
         # if all atoms of the molecule have x, y, or z < 0.0, shift up
-        elseif sum(xf_molecule[xyz, :] .> 0.0) == 0
+        elseif sum(xf[xyz, :] .> 0.0) == 0
             outside_box = true
-            xf_molecule[xyz, :] += 1.0
+            xf[xyz, :] += 1.0
         end
     end
 
-    # update the cartesian coordinate if had to apply PBCs
+    # update its Cartesian coordinates if it was outside of the box.
     if outside_box
-        molecules[molecule_id].x = simulation_box.f_to_c * xf_molecule
+        molecule.x = box.f_to_c * xf
     end
+end
+
+"""
+    translate_molecule!(molecule, simulation_box)
+
+Perturbs the Cartesian coordinates of a molecule by a random vector of max length δ.
+Applies periodic boundary conditions to keep the molecule inside the simulation box.
+"""
+function translate_molecule!(molecule::Molecule, simulation_box::Box)
+    # store old coordinates and return at the end for possible restoration of old coords
+    x_old = deepcopy(molecule.x)
+    # peturb in Cartesian coords in a random cube centered at current coords.
+    dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
+    # change coordinates of molecule
+    molecule.x .+= dx
+    # done, unless the molecule has moved completely outside of the box...
+    bring_molecule_inside_box!(molecule, simulation_box)
 
     return x_old # in case we need to restore
 end
@@ -191,15 +201,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          adsorbate::String, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
-        print("Simulating adsorption of ")
-        print_with_color(:green, adsorbate)
-        print(" in ")
-        print_with_color(:green, framework.name)
-        print(" at ")
-        print_with_color(:green, @sprintf("%f K", temperature))
-        print(" and ")
-        print_with_color(:green, @sprintf("%f Pa", fugacity))
-        println(" (fugacity).")
+        pretty_print(adsorbate, frameworkname, temperature, fugacity)
     end
 
     const repfactors = replication_factors(framework.box, ljforcefield)
@@ -271,7 +273,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             U_gh_old = vdw_energy(framework, molecules[molecule_id],
                 ljforcefield, repfactors)
 
-            x_old = translate_molecule!(molecule_id, molecules, simulation_box)
+            x_old = translate_molecule!(molecules[molecule_id], simulation_box)
 
             # energy of the molecule after it is translated
             U_gg_new = guest_guest_vdw_energy(molecule_id, molecules,
@@ -289,7 +291,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 current_energy_gh += U_gh_new - U_gh_old
             else
                 # reject the move, reset the molecule at molecule_id
-                molecules[molecule_id].x = x_old
+                molecules[molecule_id].x = deepcopy(x_old)
             end
         end # which move the code executes
 
@@ -320,8 +322,16 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     # compute total energy, compare to `current_energy*` variables where were incremented
     total_U_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
     total_U_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
-    @assert(isapprox(total_U_gh, current_energy_gh, rtol=0.00001), "guest-host energy incremented improperly")
-    @assert(isapprox(total_U_gg, current_energy_gg, rtol=0.00001), "guest-host energy incremented improperly")
+    if ! isapprox(total_U_gh, current_energy_gh, rtol=0.001)
+        println("U_gh, incremented = ", current_energy_gh)
+        println("U_gh, computed at end of simulation =", total_U_gh)
+        error("guest-host energy incremented improperly")
+    end
+    if ! isapprox(total_U_gg, current_energy_gg, rtol=0.001)
+        println("U_gg, incremented = ", current_energy_gg)
+        println("U_gg, computed at end of simulation =", total_U_gg)
+        error("guest-guest energy incremented improperly")
+    end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
 
@@ -403,4 +413,16 @@ function print_results(results::Dict)
 
     @printf("Q_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
     return 
+end
+
+function pretty_print(adsorbate::String, frameworkname::String, temperature::Float64, fugacity::Float64)
+    print("Simulating adsorption of ")
+    print_with_color(:green, adsorbate)
+    print(" in ")
+    print_with_color(:green, frameworkname)
+    print(" at ")
+    print_with_color(:green, @sprintf("%f K", temperature))
+    print(" and ")
+    print_with_color(:green, @sprintf("%f Pa", fugacity))
+    println(" (fugacity).")
 end
