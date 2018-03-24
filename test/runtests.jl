@@ -63,6 +63,7 @@ end;
 	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ["He"]["Zn"] * ((ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 3)
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+    @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
     xenon = Molecule(1, ["Xe"], zeros(3, 1), [0.0])
@@ -80,7 +81,7 @@ end;
     xenon.x = sbmof1.box.f_to_c * xf
     energy2 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy2, atol = 0.00001)
-    xf = [1.05, 4.4, 1.02][:, :]
+    xf = [2.05, 4.4, 1.02][:, :]
     xenon.x = sbmof1.box.f_to_c * xf
     energy3 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy3, atol = 0.00001)
@@ -103,6 +104,16 @@ end;
 
 @printf("------------------------------\nTesting GCMC.jl\n\n")
 @testset "Monte Carlo Functions Tests" begin
+    # replicating the unit cell to construct simulation box
+    sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+    sim_box = replicate_box(sbmof1.box, (1, 1, 1))
+    @test sim_box.Ω ≈ sbmof1.box.Ω
+    @test all(sim_box.f_to_c .≈ sbmof1.box.f_to_c)
+    @test all(sim_box.c_to_f .≈ sbmof1.box.c_to_f)
+    sim_box = replicate_box(sbmof1.box, (2, 3, 4))
+    @test sim_box.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
+    @test all(sim_box.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
+
     #
     #INSERTION TESTS
     #
@@ -185,8 +196,7 @@ end
     r² = (11.0 - 5.0) ^ 2 # duh
     energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["O"]["C"])
     @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box)
-    # symmetry
-    @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box)
+    @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) # symmetry
     
     # via PBC, a distance (24.0 - 5.0) > (1+5)
     molecules[2] = Molecule(1, ["O"], [24.0, 12.0, 12.0][:, :], [0.0])
@@ -202,10 +212,24 @@ end
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
     @test guest_guest_vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
     
+    # interaction energy between first and second should be same via PBC
     molecules_a = [Molecule(1, ["C"], [11.0, 1.0, 12.0][:, :], [0.0]),
                    Molecule(1, ["O"], [11.0, 4.0, 12.0][:, :], [0.0])]
     molecules_b = [Molecule(1, ["C"], [11.0, 1.0, 12.0][:, :], [0.0]),
                    Molecule(1, ["O"], [11.0, 23.0, 12.0][:, :], [0.0])]
     @test guest_guest_vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ guest_guest_vdw_energy(1, molecules_b, ljforcefield, sim_box)
+    
+    # another PBC one where three coords are different.
+    molecules = [Molecule(1, ["C"], [24.0, 23.0, 11.0][:, :], [0.0]),
+                 Molecule(1, ["O"], [22.0, 2.0, 12.0][:, :], [0.0])]
+    r² = 4.0^2 + 2.0^2 + 1.0^2
+    energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["O"]["C"])
+    @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy
+    @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ energy
 
+    # test cutoff radius. molecules here are too far to interact
+    molecules = [Molecule(1, ["C"], [0.0, 0.0, 0.0][:, :], [0.0]),
+                 Molecule(1, ["O"], [12.0, 12.0, 12.0][:, :], [0.0])]
+    @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
+    @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
 end
