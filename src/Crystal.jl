@@ -2,12 +2,10 @@ using Base.Test
 using PyCall # see pyimport, requires ASE
 
 """
-    unit_cell_box = Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
-
 Data structure to describe a unit cell box (Bravais lattice) and convert between
 fractional and Cartesian coordinates.
 
-# Arguments
+# Attributes
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
@@ -70,19 +68,14 @@ function replicate_box(box::Box, repfactors::Tuple{Int64, Int64, Int64})
 end
 
 """
-    framework = Framework(name, box, n_atoms, atoms, xf, charges)
-
 Data structure for a 3D crystal structure.
 
-# Arguments
+# Attributes
 - `name::String`: corresponds to crystal structure filename from which it was read.
 - `box::Box`: description of unit cell (Bravais Lattice); see `Box` struct.
 - `n_atoms::Int64`: number of atoms in the unit cell
-- `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit
-cell, in strict order.
-- `xf::Array{Float64,2}`: fractional coordinates of the atoms, in strict order 
-corresponding to `atoms`, stored column-wise so that xf[:, i] possesses the
-fractional coordinates of atom `i`.
+- `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order.
+- `xf::Array{Float64,2}`: fractional coordinates of the atoms, in strict order corresponding to `atoms`, stored column-wise so that `xf[:, i]` possesses the fractional coordinates of atom `i`.
 - `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
 """
 struct Framework

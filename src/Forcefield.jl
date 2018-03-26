@@ -2,11 +2,9 @@ using DataFrames
 using CSV
 
 """
-	ljforcefield = LennardJonesForceField(cutoffradius_squared, epsilon_dict, sigma_dict, atom_to_id, epsilons, sigmas_squared)
-
 Data structure for a Lennard Jones forcefield.
 
-# Arguments
+# Attributes
 - `name::String`: name of forcefield; correponds to filename
 - `pure_σ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)
 - `pure_ϵ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)
@@ -15,6 +13,7 @@ Data structure for a Lennard Jones forcefield.
 - `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 """
 struct LennardJonesForceField
+    "name of forcefield; correponds to filename"
     name::String
     
     # TODO symbols for atoms might be faster than strings.

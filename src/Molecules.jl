@@ -1,12 +1,10 @@
 """
-	molecule = Molecule(n_atoms::Int64, atoms::Array{String}, x::Array{Float64,2}, charges::Array{Float64})
-
 Data structure for a molecule/adsorbate.
 
-# Arguments
+# Attributes
 - `n_atoms::Int64`: Number of atoms in the molecule
 - `atoms::Array{AbstractString}`: List of (pseudo)atoms
-- `x::Array{Float64,2}`: A matrix of cartesian coordinates characterizing the position of the atoms in the molecule, stored column-wise so that x[:, i] is the coordinate for atom `atoms[i]`.
+- `x::Array{Float64,2}`: A matrix of cartesian coordinates characterizing the position of the atoms in the molecule, stored column-wise so that `x[:, i]` is the coordinate for atom `atoms[i]`.
 - `charges::Array{Float64}`: An array of charges for each specific atom.
 """
 mutable struct Molecule
