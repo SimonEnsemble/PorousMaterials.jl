@@ -385,11 +385,11 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 end # gcmc_simulation
 
 function print_results(results::Dict)
-    @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n",
+    @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n\n",
             results["adsorbate"], results["crystal"], results["temperature (K)"],
             results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
 
-    @printf("Unit cell replication factors: %d %d %d\n", results["repfactors"][1], 
+    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1], 
                                                          results["repfactors"][2], 
                                                          results["repfactors"][3])
     # Markov stats
@@ -399,12 +399,14 @@ function print_results(results::Dict)
             println(key * ": ", results[key])
         end
     end
-
+    
+    println("")
     for key in ["# sample cycles", "# burn cycles", "# samples"]
         println(key * ": ", results[key])
     end
         
 
+    println("")
     for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)",
                 "⟨N⟩ (mmol/g)", "⟨U_gg⟩ (K)", "⟨U_gh⟩ (K)", "⟨Energy⟩ (K)",
                 "var(N)", "var(U_gg)", "var⟨U_gh⟩", "var(Energy)"]
