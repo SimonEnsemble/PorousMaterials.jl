@@ -16,16 +16,12 @@ mutable struct Molecule
 	charges::Array{Float64}
 end
 
-import Base.print
-function print(io::IO, molecule::Molecule)
-	println("Number of atoms in molecule: ",molecule.n_atoms)
-	print("Position of atoms: ")
-	for i=1:molecule.n_atoms
-		@printf("\n%s:\t[%.3f, %.3f, %.3f]", molecule.atoms[i], molecule.x[1,i], molecule.x[2,i], molecule.x[3,i])
-	end
-end
 
-import Base.show
-function show(io::IO, molecule::Molecule)
-	print(io, molecule)
+function Base.show(io::IO, molecule::Molecule)
+	println(io, "Number of atoms in molecule: ",molecule.n_atoms)
+	print(io, " Position of atoms: ")
+	print(io, typeof(molecule))
+	for i=1:molecule.n_atoms
+		@printf(io, "\n%s:\t[%.3f, %.3f, %.3f]\n", molecule.atoms[i], molecule.x[1,i], molecule.x[2,i], molecule.x[3,i])
+	end
 end
