@@ -32,6 +32,7 @@ Read a .csv file containing Lennard Jones parameters (with the following columns
 """
 function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
     if ! (mixing_rules in ["Lorentz-Berthelot"])
+        # TODO add other mixing rules with corresponding tests
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
