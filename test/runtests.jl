@@ -21,10 +21,10 @@ strip_numbers_from_atom_labels!(framework)
 	@test framework.box.γ ≈ 120.0 * (pi / 180)
 	@test framework.box.Ω ≈ det(framework.box.f_to_c)
     @test framework.n_atoms == 2
-	@test framework.atoms == ["Ca", "O"]
+	@test framework.atoms == [:Ca, :O]
 	@test framework.xf == [0.2 0.6; 0.5 0.3; 0.7 0.1]
     @test framework.charges == [1.0, -1.0]
-    @test chemical_formula(framework) == Dict("Ca" => 1, "O" => 1)
+    @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
     @test molecular_weight(framework) ≈ 15.9994 + 40.078
 
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
@@ -44,12 +44,12 @@ frame = read_crystal_structure_file("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
 rep_factors = replication_factors(frame.box, ljforcefield)
 @testset "Forcefield Tests" begin
-	@test ljforcefield.pure_σ["He"] == 1.0
-	@test ljforcefield.pure_ϵ["Zn"] == 12.0
-	@test ljforcefield.σ²["Zn"]["He"] == ((1.0 + 3.0) / 2) ^ 2
-	@test ljforcefield.ϵ["He"]["Zn"] == sqrt(12.0 * 3.0)
-	@test ljforcefield.ϵ["He"]["Zn"] == ljforcefield.ϵ["Zn"]["He"] # symmetry
-	@test ljforcefield.σ²["He"]["Zn"] == ljforcefield.σ²["Zn"]["He"] # symmetry
+	@test ljforcefield.pure_σ[:He] == 1.0
+	@test ljforcefield.pure_ϵ[:Zn] == 12.0
+	@test ljforcefield.σ²[:Zn][:He] == ((1.0 + 3.0) / 2) ^ 2
+	@test ljforcefield.ϵ[:He][:Zn] == sqrt(12.0 * 3.0)
+	@test ljforcefield.ϵ[:He][:Zn] == ljforcefield.ϵ[:Zn][:He] # symmetry
+	@test ljforcefield.σ²[:He][:Zn] == ljforcefield.σ²[:Zn][:He] # symmetry
 	@test ljforcefield.cutoffradius_squared == 12.5 ^ 2
 	@test rep_factors == (25, 25, 25)
 end;
@@ -57,10 +57,10 @@ end;
 @printf("------------------------------\nTesting Energetics.jl\n\n")
 @testset "Energetics Tests" begin
     # test Periodic boundary conditions
-    molecule1 = Molecule(1, ["He"], [0.5, 0.5, 0.5][:,:], [0.0])
-    molecule2 = Molecule(1, ["He"], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
+    molecule1 = Molecule(1, [:He], [0.5, 0.5, 0.5][:,:], [0.0])
+    molecule2 = Molecule(1, [:He], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
 	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
-	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ["He"]["Zn"] * ((ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 6 - (ljforcefield.σ²["Zn"]["He"] / 0.75) ^ 3)
+	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ[:He][:Zn] * ((ljforcefield.σ²[:Zn][:He] / 0.75) ^ 6 - (ljforcefield.σ²[:Zn][:He] / 0.75) ^ 3)
     # the position of a molecule should not change inside guest_guest_vdw_energy.
     @assert(all(molecule1.x .≈ [0.5, 0.5, 0.5]))
 
@@ -69,7 +69,7 @@ end;
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
-    xenon = Molecule(1, ["Xe"], zeros(3, 1), [0.0])
+    xenon = Molecule(1, [:Xe], zeros(3, 1), [0.0])
     energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy, -5041.58, atol = 0.005)
     xenon.x[1] = 0.494265; xenon.x[2] = 2.22668; xenon.x[3] = 0.450354;
@@ -129,7 +129,7 @@ end;
     sim_box = replicate_box(frame.box, repfactors)
 
     for i = 1:100
-        insert_molecule!(molecules, sim_box, "C")
+        insert_molecule!(molecules, sim_box, :C)
         if completely_outside_box(molecules[i], sim_box)
             insertion_inside_box = false
         end
@@ -164,15 +164,15 @@ end;
     #
     # first, test function to bring molecule inside a box.
     box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
-    molecule = Molecule(1, ["C"], [26.0, -0.2, 12.][:, :], [0.0])
+    molecule = Molecule(1, [:C], [26.0, -0.2, 12.][:, :], [0.0])
     bring_molecule_inside_box!(molecule, box)
     @test all(molecule.x .≈ [1.0, 24.8, 12.0])
 
     translation_old_coords_stored_properly = true
     translation_coords_changed = true
     translation_inside_box = true
-    molecules = [Molecule(1, ["C"], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]),
-                 Molecule(1, ["F"], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
+    molecules = [Molecule(1, [:C], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]),
+                 Molecule(1, [:F], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
     x_old = translate_molecule!(molecules[1], sim_box)
     if ! all(x_old .== sim_box.f_to_c * [0.99, 0.99, 0.01][:, :])
         translation_old_coords_stored_properly = false
@@ -200,45 +200,45 @@ end
 @testset "Guest-guest Energetics Tests" begin
     sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     # distance of 6.0 away
-    molecules = [Molecule(1, ["C"], [5.0, 12.0, 12.0][:, :], [0.0]),
-                 Molecule(1, ["O"], [11.0, 12.0, 12.0][:, :], [0.0])]
+    molecules = [Molecule(1, [:C], [5.0, 12.0, 12.0][:, :], [0.0]),
+                 Molecule(1, [:O], [11.0, 12.0, 12.0][:, :], [0.0])]
     r² = (11.0 - 5.0) ^ 2 # duh
-    energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["O"]["C"])
+    energy = lennard_jones(r², ljforcefield.σ²[:C][:O], ljforcefield.ϵ[:O][:C])
     @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box)
     @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) # symmetry
     
     # via PBC, a distance (24.0 - 5.0) > (1+5)
-    molecules[2] = Molecule(1, ["O"], [24.0, 12.0, 12.0][:, :], [0.0])
+    molecules[2] = Molecule(1, [:O], [24.0, 12.0, 12.0][:, :], [0.0])
     r² = (1.0 + 5.0) ^ 2 # PBC
-    energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["C"]["O"])
+    energy = lennard_jones(r², ljforcefield.σ²[:C][:O], ljforcefield.ϵ[:C][:O])
     @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box)
     @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) # symmetry again.
     
     # put a molecule on top of first one.
-    push!(molecules, Molecule(1, ["C"], [5.0, 12.0, 12.0][:, :], [0.0]))
+    push!(molecules, Molecule(1, [:C], [5.0, 12.0, 12.0][:, :], [0.0]))
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 2 * energy
     
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
     @test guest_guest_vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
     
     # interaction energy between first and second should be same via PBC
-    molecules_a = [Molecule(1, ["C"], [11.0, 1.0, 12.0][:, :], [0.0]),
-                   Molecule(1, ["O"], [11.0, 4.0, 12.0][:, :], [0.0])]
-    molecules_b = [Molecule(1, ["C"], [11.0, 1.0, 12.0][:, :], [0.0]),
-                   Molecule(1, ["O"], [11.0, 23.0, 12.0][:, :], [0.0])]
+    molecules_a = [Molecule(1, [:C], [11.0, 1.0, 12.0][:, :], [0.0]),
+                   Molecule(1, [:O], [11.0, 4.0, 12.0][:, :], [0.0])]
+    molecules_b = [Molecule(1, [:C], [11.0, 1.0, 12.0][:, :], [0.0]),
+                   Molecule(1, [:O], [11.0, 23.0, 12.0][:, :], [0.0])]
     @test guest_guest_vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ guest_guest_vdw_energy(1, molecules_b, ljforcefield, sim_box)
     
     # another PBC one where three coords are different.
-    molecules = [Molecule(1, ["C"], [24.0, 23.0, 11.0][:, :], [0.0]),
-                 Molecule(1, ["O"], [22.0, 2.0, 12.0][:, :], [0.0])]
+    molecules = [Molecule(1, [:C], [24.0, 23.0, 11.0][:, :], [0.0]),
+                 Molecule(1, [:O], [22.0, 2.0, 12.0][:, :], [0.0])]
     r² = 4.0^2 + 2.0^2 + 1.0^2
-    energy = lennard_jones(r², ljforcefield.σ²["C"]["O"], ljforcefield.ϵ["O"]["C"])
+    energy = lennard_jones(r², ljforcefield.σ²[:C][:O], ljforcefield.ϵ[:O][:C])
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ energy
 
     # test cutoff radius. molecules here are too far to interact
-    molecules = [Molecule(1, ["C"], [0.0, 0.0, 0.0][:, :], [0.0]),
-                 Molecule(1, ["O"], [12.0, 12.0, 12.0][:, :], [0.0])]
+    molecules = [Molecule(1, [:C], [0.0, 0.0, 0.0][:, :], [0.0]),
+                 Molecule(1, [:O], [12.0, 12.0, 12.0][:, :], [0.0])]
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
     # the position of a molecule should not change inside guest_guest_vdw_energy.

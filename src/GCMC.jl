@@ -49,7 +49,7 @@ end
 Inserts an additional `adsorbate` molecule into the system at random coordinates inside 
 the `simulation_box`.
 """
-function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, adsorbate::String)
+function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, adsorbate::Symbol)
     #TODO create template to handle more complex molecules
     x = box.f_to_c * rand(3, 1)
     molecule = Molecule(1, [adsorbate], x[:, :], [0.0])
@@ -198,7 +198,7 @@ runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         adsorbate::String, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
+                         adsorbate::Symbol, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
         pretty_print(adsorbate, framework.name, temperature, fugacity)
@@ -417,7 +417,7 @@ function print_results(results::Dict)
     return 
 end
 
-function pretty_print(adsorbate::String, frameworkname::String, temperature::Float64, fugacity::Float64)
+function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, fugacity::Float64)
     print("Simulating adsorption of ")
     print_with_color(:green, adsorbate)
     print(" in ")

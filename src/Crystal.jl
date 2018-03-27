@@ -85,7 +85,7 @@ struct Framework
     box::Box
 
     n_atoms::Int64
-    atoms::Array{String, 1}
+    atoms::Array{Symbol, 1}
     xf::Array{Float64, 2}
     charges::Array{Float64, 1}
 end
@@ -119,7 +119,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     xf = Float64[] # fractional coords
     yf = Float64[]
     zf = Float64[]
-    atoms = String[] # atom names
+    atoms = Symbol[] # atom names
 
     # .cif reader
     if extension == "cif"
@@ -188,7 +188,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             if length(line) != length(name_to_column)
                 break
             end
-            push!(atoms, line[name_to_column[atom_column_name]])
+			push!(atoms, Symbol(line[name_to_column[atom_column_name]]))
             push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
             push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
             push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
@@ -290,7 +290,7 @@ function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractStrin
         xf = framework.xf .+ [i-1, j-1, k-1]
         c_coords = framework.box.f_to_c * xf
         for ii = 1:size(c_coords, 2)
-            @printf(f, "%s\t%.4f\t%.4f\t%.4f\n", framework.atoms[ii], c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
+			@printf(f, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[ii]), c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
         end
     end
     close(f)
@@ -336,9 +336,11 @@ e.g. C12 --> C
 """
 function strip_numbers_from_atom_labels!(framework::Framework)
     for i = 1:framework.n_atoms
-        while !isalpha(framework.atoms[i][end])
-            framework.atoms[i] = chop(framework.atoms[i])
+		atom_string = string(framework.atoms[i])
+        while !isalpha(atom_string[end])
+            atom_string = chop(atom_string)
         end
+		framework.atoms[i] = Symbol(atom_string)
     end
     return
 end
@@ -402,7 +404,7 @@ function chemical_formula(framework::Framework; verbose::Bool=false)
     if verbose
         @printf("CVhemical formula of %s:\n\t", framework.name)
         for (atom, formula_unit) in atom_counts
-            @printf("%s_%d", atom, formula_unit)
+			@printf("%s_%d", string(atom), formula_unit)
         end
         @printf("\n")
     end
@@ -474,10 +476,10 @@ function atomic_mass_dict()
 
     df_am = CSV.read("data/atomicmasses.csv")
 
-    atomic_mass_dict = Dict{String, Float64}()
+    atomic_mass_dict = Dict{Symbol, Float64}()
 
     for row in eachrow(df_am)
-        atomic_mass_dict[row[:atom]] = row[:mass]
+		atomic_mass_dict[Symbol(row[:atom])] = row[:mass]
     end
 
     return atomic_mass_dict
@@ -493,7 +495,7 @@ function molecular_weight(framework::Framework)
     mass = 0.0
     atomic_masses = atomic_mass_dict()
 
-    for atom in framework.atoms
+	for atom in framework.atoms
         mass += atomic_masses[atom]
     end
 

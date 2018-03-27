@@ -9,7 +9,7 @@ Data structure for a molecule/adsorbate.
 """
 mutable struct Molecule
 	n_atoms::Int64
-	atoms::Array{AbstractString}
+	atoms::Array{Symbol}
 	x::Array{Float64, 2}
 	charges::Array{Float64}
 end
