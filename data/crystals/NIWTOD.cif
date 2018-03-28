@@ -1,0 +1,83 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_NIWTOD
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/c'
+_symmetry_Int_Tables_number      15
+_space_group_name_Hall           '-C 2yn'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2+y,z
+3 -x,y,1/2-z
+4 1/2-x,1/2+y,1/2-z
+5 -x,-y,-z
+6 1/2-x,1/2-y,-z
+7 x,-y,1/2+z
+8 1/2+x,1/2-y,1/2+z
+_cell_length_a                   11.198(3)
+_cell_length_b                   6.3613(14)
+_cell_length_c                   11.648(3)
+_cell_angle_alpha                90
+_cell_angle_beta                 102.061(3)
+_cell_angle_gamma                90
+_cell_volume                     811.416
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ga1 Ga 0.5000 0.22000(4) 0.2500
+Cl1 Cl 0.5000 -0.12203(9) 0.2500
+Cl2 Cl 0.60660(4) 0.37795(7) 0.13870(3)
+N1 N 0.34280(13) 0.2336(2) 0.09951(13)
+C1 C 0.32667(16) 0.0882(3) 0.01523(15)
+H1 H 0.3790 -0.0268 0.0233
+C2 C 0.26571(16) 0.3962(3) 0.08385(15)
+H2 H 0.2743 0.5010 0.1407
+Ga1E Ga 0.0000 0.28000(4) -0.2500
+Cl2B Cl 0.39340(4) 0.37795(7) 0.36130(3)
+N1E N 0.15720(13) 0.2664(2) -0.09951(13)
+N1B N 0.65720(13) 0.2336(2) 0.40049(13)
+C1E C 0.17333(16) 0.4118(3) -0.01523(15)
+H1E H 0.1210 0.5268 -0.0233
+C2E C 0.23429(16) 0.1038(3) -0.08385(15)
+H2E H 0.2257 -0.0010 -0.1407
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ga1 Cl1 1_555 1_555
+Cl2 Ga1 1_555 1_555
+N1 Ga1 1_555 1_555
+C1 N1 1_555 1_555
+H1 C1 1_555 1_555
+C2 N1 1_555 1_555
+H2 C2 1_555 1_555
+Ga1E N1E 1_555 1_555
+Cl2B Ga1 1_555 1_555
+N1E C1E 1_555 1_555
+N1B Ga1 1_555 1_555
+C1E C2 1_555 1_555
+H1E C1E 1_555 1_555
+C2E C1 1_555 1_555
+H2E C2E 1_555 1_555
+N1E C2E 1_555 1_555
+
+#END

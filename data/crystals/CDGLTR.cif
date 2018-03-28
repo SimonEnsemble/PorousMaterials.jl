@@ -1,0 +1,80 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_CDGLTR
+_symmetry_cell_setting           triclinic
+_symmetry_space_group_name_H-M   'P -1'
+_symmetry_Int_Tables_number      2
+_space_group_name_Hall           '-P 1'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,-y,-z
+_cell_length_a                   8.000(4)
+_cell_length_b                   8.149(4)
+_cell_length_c                   10.523(5)
+_cell_angle_alpha                90.20(2)
+_cell_angle_beta                 124.36(3)
+_cell_angle_gamma                98.36(2)
+_cell_volume                     557.211
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Cd1 Cd 0.24520 0.20960 -0.69120
+O1 O 0.23820 0.40800 -0.53990
+O2 O 0.22540 0.16070 -0.46270
+O3 O 0.24140 0.15170 0.05130
+O4 O 0.22510 0.38840 0.14080
+O5 O -0.11160 0.12140 -0.85840
+O6 O 0.60860 0.27200 -0.54470
+O7 O 0.28400 -0.05740 -0.68120
+C1 C 0.22390 0.31180 -0.45050
+C2 C 0.22150 0.38870 -0.32220
+C3 C 0.21970 0.28170 -0.20800
+C4 C 0.19940 0.38280 -0.09670
+C5 C 0.22150 0.29890 0.03470
+O3_2 O 0.24140 0.15170 -0.94870
+O4_2 O 0.22510 0.38840 -0.85920
+Cd1_2 Cd 0.24520 0.20960 0.30880
+O8 O 0.66760 0.08760 -0.72710
+O9 O 0.70860 0.27170 -0.13160
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Cd1 O1 1_555 1_555
+O1 C1 1_555 1_555
+O2 Cd1 1_555 1_555
+O3 C5 1_555 1_555
+O4 C5 1_555 1_555
+O5 Cd1 1_555 1_555
+O6 Cd1 1_555 1_555
+O7 Cd1 1_555 1_555
+C1 O2 1_555 1_555
+C2 C1 1_555 1_555
+C3 C2 1_555 1_555
+C4 C3 1_555 1_555
+C5 C4 1_555 1_555
+O3_2 Cd1 1_555 1_555
+O4_2 Cd1 1_555 1_555
+Cd1_2 O3 1_555 1_555
+O4 Cd1_2 1_555 1_555
+
+#END

@@ -1,0 +1,76 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_NABROY
+_symmetry_cell_setting           triclinic
+_symmetry_space_group_name_H-M   'P -1'
+_symmetry_Int_Tables_number      2
+_space_group_name_Hall           '-P 1'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,-y,-z
+_cell_length_a                   7.883(3)
+_cell_length_b                   9.389(3)
+_cell_length_c                   10.9212(13)
+_cell_angle_alpha                89.26(2)
+_cell_angle_beta                 69.76(2)
+_cell_angle_gamma                76.40(3)
+_cell_volume                     735.061
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Zn1 Zn 0.4797(1) 1.6314(1) 0.6948(1)
+V1 V 0.1547(1) 1.8790(1) 0.6473(1)
+V2 V -0.2092(1) 1.8526(1) 0.5627(1)
+O1 O 0.2873(3) 1.7020(2) 0.6151(2)
+O2 O 0.1432(3) 1.9402(2) 0.7871(2)
+O3 O -0.0785(3) 1.8897(3) 0.6594(2)
+O4 O 0.5989(3) 1.8093(2) 0.6586(2)
+O5 O -0.0850(4) 1.7112(3) 0.4598(2)
+O6 O 0.2585(3) 1.9882(3) 0.5221(2)
+O7 O 0.7077(3) 1.5096(2) 0.5523(2)
+N1 N 0.3986(3) 1.4366(3) 0.7713(2)
+N2 N 0.3832(3) 1.6869(2) 0.8955(2)
+O4_2 O -0.4011(3) 1.8093(2) 0.6586(2)
+O6A O -0.2585(3) 2.0118(3) 0.4779(2)
+V2_2 V 0.7908(1) 1.8526(1) 0.5627(1)
+V2A V 0.2092(1) 2.1474(1) 0.4373(1)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Zn1 O1 1_555 1_555
+V1 O1 1_555 1_555
+V2 O3 1_555 1_555
+O2 V1 1_555 1_555
+O3 V1 1_555 1_555
+O4 Zn1 1_555 1_555
+O5 V2 1_555 1_555
+O6 V1 1_555 1_555
+O7 Zn1 1_555 1_555
+N1 Zn1 1_555 1_555
+N2 Zn1 1_555 1_555
+O4_2 V2 1_555 1_555
+O6A V2 1_555 1_555
+V2_2 O4 1_555 1_555
+V2A O6 1_555 1_555
+
+#END

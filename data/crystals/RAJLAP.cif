@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_RAJLAP
+_symmetry_cell_setting           triclinic
+_symmetry_space_group_name_H-M   'P -1'
+_symmetry_Int_Tables_number      2
+_space_group_name_Hall           '-P 1'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,-y,-z
+_cell_length_a                   4.5671(5)
+_cell_length_b                   8.8825(10)
+_cell_length_c                   9.0711(9)
+_cell_angle_alpha                102.386(9)
+_cell_angle_beta                 97.904(7)
+_cell_angle_gamma                102.403(8)
+_cell_volume                     344.474
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+I1 I 0.37309(5) 0.20964(3) 0.12884(3)
+Li1 Li 0.7858(16) 0.1220(8) -0.0451(8)
+O1 O 0.7954(8) 0.2063(4) -0.2199(3)
+C1 C 0.9240(13) 0.1403(6) -0.3484(5)
+H1 H 0.7973 0.0326 -0.4040
+H2 H 1.1339 0.1328 -0.3125
+C2 C 0.927(2) 0.2503(9) -0.4491(7)
+H3 H 1.1274 0.2731 -0.4811
+H4 H 0.7662 0.2017 -0.5425
+C3 C 0.8720(19) 0.3982(7) -0.3630(6)
+H5 H 0.6828 0.4175 -0.4143
+H6 H 1.0451 0.4902 -0.3551
+C4 C 0.8407(14) 0.3738(5) -0.2061(5)
+H7 H 1.0277 0.4343 -0.1295
+H8 H 0.6643 0.4102 -0.1731
+Li1_2 Li -0.2142(16) 0.1220(8) -0.0451(8)
+Li1A Li 0.2142(16) -0.1220(8) 0.0451(8)
+I1_2 I 1.37309(5) 0.20964(3) 0.12884(3)
+I1A I 0.62691(5) -0.20964(3) -0.12884(3)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+I1 Li1 1_555 1_555
+Li1 O1 1_555 1_555
+O1 C1 1_555 1_555
+C1 H1 1_555 1_555
+H2 C1 1_555 1_555
+C2 C1 1_555 1_555
+H3 C2 1_555 1_555
+H4 C2 1_555 1_555
+C3 C2 1_555 1_555
+H5 C3 1_555 1_555
+H6 C3 1_555 1_555
+C4 O1 1_555 1_555
+H7 C4 1_555 1_555
+H8 C4 1_555 1_555
+Li1_2 I1 1_555 1_555
+Li1A I1 1_555 1_555
+I1_2 Li1 1_555 1_555
+I1A Li1 1_555 1_555
+C3 C4 1_555 1_555
+Li1A I1A 1_555 1_555
+
+#END

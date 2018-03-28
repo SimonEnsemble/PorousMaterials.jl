@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_MNCROH
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'P b c a'
+_symmetry_Int_Tables_number      61
+_space_group_name_Hall           '-P 2ac 2ab'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,1/2+y,z
+3 x,1/2-y,1/2+z
+4 1/2-x,-y,1/2+z
+5 -x,-y,-z
+6 1/2+x,1/2-y,-z
+7 -x,1/2+y,1/2-z
+8 1/2+x,y,1/2-z
+_cell_length_a                   12.070(30)
+_cell_length_b                   8.200(20)
+_cell_length_c                   15.630(40)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     1546.96
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+C1 C 0.12200 0.07040 0.36890
+C2 C 0.13280 0.24430 0.35790
+C3 C 0.13350 0.32260 0.44070
+C4 C 0.13120 0.18900 0.50370
+C5 C 0.12470 0.02910 0.46120
+Mn1 Mn 0.12370 0.11610 0.18600
+O1 O 0.11560 -0.02890 0.30830
+O2 O 0.13280 0.30400 0.28370
+O3 O 0.13170 0.46910 0.45510
+O4 O 0.13800 0.20460 0.58430
+O5 O 0.11940 -0.09940 0.49490
+O6 O 0.10920 -0.10010 0.11410
+O7 O -0.05710 0.15450 0.17610
+O8 O 0.30740 0.09790 0.17730
+O4B O 0.13800 0.29540 0.08430
+Mn1B Mn 0.12370 0.38390 0.68600
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+C1 C2 1_555 1_555
+C2 C3 1_555 1_555
+C3 C4 1_555 1_555
+C4 C5 1_555 1_555
+C5 C1 1_555 1_555
+Mn1 O1 1_555 1_555
+O1 C1 1_555 1_555
+O2 C2 1_555 1_555
+O3 C3 1_555 1_555
+O4 C4 1_555 1_555
+O5 C5 1_555 1_555
+O6 Mn1 1_555 1_555
+O7 Mn1 1_555 1_555
+O8 Mn1 1_555 1_555
+O4B Mn1 1_555 1_555
+Mn1B O4 1_555 1_555
+Mn1 O2 1_555 1_555
+
+#END

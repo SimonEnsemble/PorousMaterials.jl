@@ -1,0 +1,158 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_VIFLOL
+_symmetry_cell_setting           cubic
+_symmetry_space_group_name_H-M   'P a -3'
+_symmetry_Int_Tables_number      205
+_space_group_name_Hall           '-P 2ac 2ab 3'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 z,x,y
+3 y,z,x
+4 1/2+x,y,1/2-z
+5 x,1/2-y,1/2+z
+6 1/2-x,1/2+y,z
+7 1/2-z,1/2+x,y
+8 1/2+z,x,1/2-y
+9 z,1/2-x,1/2+y
+10 y,1/2-z,1/2+x
+11 1/2-y,1/2+z,x
+12 1/2+y,z,1/2-x
+13 -x,-y,-z
+14 -z,-x,-y
+15 -y,-z,-x
+16 1/2-x,-y,1/2+z
+17 -x,1/2+y,1/2-z
+18 1/2+x,1/2-y,-z
+19 1/2+z,1/2-x,-y
+20 1/2-z,-x,1/2+y
+21 -z,1/2+x,1/2-y
+22 -y,1/2+z,1/2-x
+23 1/2+y,1/2-z,-x
+24 1/2-y,-z,1/2+x
+_cell_length_a                   12.4887(14)
+_cell_length_b                   12.4887(14)
+_cell_length_c                   12.4887(14)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     1947.83
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ag1 Ag 0.63109(5) 0.86891(5) 0.13109(5)
+Cl1 Cl 0.55041(7) 1.06253(6) 0.23342(5)
+Cl2 Cl 0.62914(7) 0.80565(6) 0.35015(6)
+B1 B 0.5261(2) 1.0324(2) 0.3705(2)
+B2 B 0.5631(2) 0.9068(2) 0.4261(2)
+Cl1R Cl 0.73342(5) 0.94959(7) -0.06253(6)
+Cl1W Cl 0.43747(6) 0.76658(5) 0.05041(7)
+Cl2R Cl 0.85015(6) 0.87086(7) 0.19435(6)
+Cl2W Cl 0.69435(6) 0.64985(6) 0.12914(7)
+B1T B 0.6295(2) 1.0261(2) 0.4676(2)
+B1V B 0.5324(2) 1.1295(2) 0.4739(2)
+B2H B 0.4261(2) 0.9369(2) 0.4068(2)
+B2V B 0.4068(2) 1.0739(2) 0.4369(2)
+B2J B 0.5932(2) 0.9261(2) 0.5631(2)
+B1J B 0.4676(2) 0.8705(2) 0.5261(2)
+Cl2V Cl 0.30565(6) 1.14985(6) 0.37086(7)
+B1H B 0.3705(2) 0.9739(2) 0.5324(2)
+B2L B 0.4369(2) 1.0932(2) 0.5739(2)
+Cl1V Cl 0.56253(6) 1.26658(5) 0.44959(7)
+B2T B 0.5739(2) 1.0631(2) 0.5932(2)
+Cl1T Cl 0.76658(5) 1.05041(7) 0.43747(6)
+Cl2H Cl 0.35015(6) 0.87086(7) 0.30565(6)
+Cl1J Cl 0.43747(6) 0.73342(5) 0.55041(7)
+B1L B 0.4739(2) 0.9676(2) 0.6295(2)
+Cl2J Cl 0.69435(6) 0.85015(6) 0.62914(7)
+Cl2L Cl 0.37086(7) 1.19435(6) 0.64985(6)
+Cl2T Cl 0.64985(6) 1.12914(7) 0.69435(6)
+Cl1L Cl 0.44959(7) 0.93747(6) 0.76658(5)
+Cl1H Cl 0.23342(5) 0.94959(7) 0.56253(6)
+Ag1B Ag 0.86891(5) 1.13109(5) 0.63109(5)
+Ag1C Ag 0.13109(5) 0.86891(5) 0.36891(5)
+Ag1P Ag 0.36891(5) 1.36891(5) 0.36891(5)
+Ag1F Ag 0.36891(5) 1.13109(5) 0.86891(5)
+Ag1D Ag 0.63109(5) 0.63109(5) 0.63109(5)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ag1 Cl1 1_555 1_555
+Cl1 B1 1_555 1_555
+Cl2 Ag1 1_555 1_555
+B1 B2 1_555 1_555
+B2 Cl2 1_555 1_555
+Cl1R Ag1 1_555 1_555
+Cl1W Ag1 1_555 1_555
+Cl2R Ag1 1_555 1_555
+Cl2W Ag1 1_555 1_555
+B1T B1 1_555 1_555
+B1V B1 1_555 1_555
+B2H B1 1_555 1_555
+B2V B1 1_555 1_555
+B2J B2 1_555 1_555
+B1J B2 1_555 1_555
+Cl2V B2V 1_555 1_555
+B1H B2H 1_555 1_555
+B2L B1V 1_555 1_555
+Cl1V B1V 1_555 1_555
+B2T B1T 1_555 1_555
+Cl1T B1T 1_555 1_555
+Cl2H B2H 1_555 1_555
+Cl1J B1J 1_555 1_555
+B1L B2J 1_555 1_555
+Cl2J B2J 1_555 1_555
+Cl2L B2L 1_555 1_555
+Cl2T B2T 1_555 1_555
+Cl1L B1L 1_555 1_555
+Cl1H B1H 1_555 1_555
+Ag1B Cl1T 1_555 1_555
+Ag1C Cl1H 1_555 1_555
+Ag1P Cl2V 1_555 1_555
+Ag1F Cl2L 1_555 1_555
+Ag1D Cl1J 1_555 1_555
+B2 B1T 1_555 1_555
+B2 B2H 1_555 1_555
+B1T B1V 1_555 1_555
+B1T B2J 1_555 1_555
+B1V B2T 1_555 1_555
+B1V B2V 1_555 1_555
+B2H B2V 1_555 1_555
+B2H B1J 1_555 1_555
+B2V B1H 1_555 1_555
+B2V B2L 1_555 1_555
+B2J B1J 1_555 1_555
+B2J B2T 1_555 1_555
+B1J B1L 1_555 1_555
+B1J B1H 1_555 1_555
+B1H B2L 1_555 1_555
+B1H B1L 1_555 1_555
+B2L B1L 1_555 1_555
+B2L B2T 1_555 1_555
+Cl1V Ag1P 1_555 1_555
+B2T B1L 1_555 1_555
+Cl2J Ag1D 1_555 1_555
+Cl2T Ag1B 1_555 1_555
+Cl1L Ag1F 1_555 1_555
+
+#END

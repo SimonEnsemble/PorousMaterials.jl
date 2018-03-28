@@ -1,0 +1,85 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_REVFII
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/a'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2yab'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,1/2+y,-z
+3 -x,-y,-z
+4 1/2+x,1/2-y,z
+_cell_length_a                   7.685(3)
+_cell_length_b                   13.964(4)
+_cell_length_c                   8.690(3)
+_cell_angle_alpha                90
+_cell_angle_beta                 103.69(3)
+_cell_angle_gamma                90
+_cell_volume                     906.06
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Cd1 Cd 0.3584(3) 0.1536(2) 0.8006(3)
+Br1 Br 0.5267(3) 0.2731(2) 0.6427(3)
+Br2 Br 0.3450(4) -0.0144(2) 0.6644(3)
+O1 O 0.215(3) 0.087(1) 0.995(2)
+O2 O 0.338(2) 0.231(1) 1.033(2)
+O3 O 0.649(2) 0.110(1) 0.968(2)
+N1 N 0.182(3) -0.015(2) 1.264(3)
+C1 C 0.259(3) 0.163(2) 1.075(3)
+C2 C 0.209(3) 0.163(2) 1.236(3)
+C3 C 0.094(3) 0.085(3) 1.265(3)
+H1 H 0.3212 0.1571 1.3163
+H2 H 0.1546 0.2204 1.2491
+H3 H -0.0142 0.0870 1.1908
+H4 H 0.0730 0.0942 1.3707
+H5 H 0.1027 -0.0600 1.2842
+H6 H 0.2036 -0.0214 1.1621
+H7 H 0.2907 -0.0142 1.3420
+Cd1C Cd 0.8584(3) 0.3464(2) 0.8006(3)
+Br1C Br 0.0267(3) 0.2269(2) 0.6427(3)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Cd1 Br1 1_555 1_555
+Br1 Cd1C 1_555 1_555
+Br2 Cd1 1_555 1_555
+O1 Cd1 1_555 1_555
+O2 Cd1 1_555 1_555
+O3 Cd1 1_555 1_555
+N1 C3 1_555 1_555
+C1 O1 1_555 1_555
+C2 C1 1_555 1_555
+C3 C2 1_555 1_555
+H1 C2 1_555 1_555
+H2 C2 1_555 1_555
+H3 C3 1_555 1_555
+H4 C3 1_555 1_555
+H5 N1 1_555 1_555
+H6 N1 1_555 1_555
+H7 N1 1_555 1_555
+Br1C Cd1 1_555 1_555
+O2 C1 1_555 1_555
+
+#END

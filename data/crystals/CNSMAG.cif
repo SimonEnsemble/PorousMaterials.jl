@@ -1,0 +1,78 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_CNSMAG
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'P b c a'
+_symmetry_Int_Tables_number      61
+_space_group_name_Hall           '-P 2ac 2ab'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,1/2+y,z
+3 x,1/2-y,1/2+z
+4 1/2-x,-y,1/2+z
+5 -x,-y,-z
+6 1/2+x,1/2-y,-z
+7 -x,1/2+y,1/2-z
+8 1/2+x,y,1/2-z
+_cell_length_a                   11.729(14)
+_cell_length_b                   10.299(4)
+_cell_length_c                   7.868(5)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     950.431
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ag1 Ag -0.50990 0.07960 0.28610
+C1 C -0.30070 -0.13040 0.23610
+C2 C -0.19920 -0.19900 0.26510
+C3 C -0.34480 -0.10250 0.06270
+N1 N -0.37510 -0.07920 0.36480
+N2 N -0.11810 -0.25140 0.28420
+N3 N -0.38250 -0.08360 -0.06320
+O1 O -0.34040 -0.10140 0.50300
+N2A N -0.38190 0.24860 0.28420
+Ag1A Ag 0.00990 -0.42040 0.28610
+Ag1D Ag -0.49010 -0.07960 -0.28610
+N3D N -0.61750 0.08360 0.06320
+O1D O -0.65960 0.10140 0.49700
+Ag1D_2 Ag -0.49010 -0.07960 0.71390
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ag1 N1 1_555 1_555
+C1 C2 1_555 1_555
+C2 N2 1_555 1_555
+C3 C1 1_555 1_555
+N1 C1 1_555 1_555
+N2 Ag1A 1_555 1_555
+N3 C3 1_555 1_555
+O1 N1 1_555 1_555
+N2A Ag1 1_555 1_555
+Ag1D N3 1_555 1_555
+N3D Ag1 1_555 1_555
+O1D Ag1 1_555 1_555
+Ag1D_2 O1 1_555 1_555
+
+#END

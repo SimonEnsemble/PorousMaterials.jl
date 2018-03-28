@@ -1,0 +1,147 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_HICGIK
+_symmetry_cell_setting           trigonal
+_symmetry_space_group_name_H-M   'P 3 1 m'
+_symmetry_Int_Tables_number      157
+_space_group_name_Hall           "P 3 -2'"
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -y,x-y,z
+3 -x+y,-x,z
+4 y,x,z
+5 x-y,-y,z
+6 -x,-x+y,z
+_cell_length_a                   9.548(5)
+_cell_length_b                   9.548(5)
+_cell_length_c                   6.077(5)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                120
+_cell_volume                     479.783
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Co1 Co 0.6667 0.3333 0.4000
+N1 N 0.8651(3) 0.3576(3) 0.5847(4)
+O1 O 0.8592(3) 0.5049(3) 0.2146(4)
+C1 C 1.0000 0.4450(5) 0.5243(8)
+C2 C 0.8518(6) 0.2636(6) 0.7912(8)
+H1 H 0.7494 0.1864 0.8492
+C3 C 1.0000 0.2948(8) 0.8976(15)
+H2 H 1.0000 0.2416 1.0297
+C4 C 1.0000 0.5350(4) 0.3072(7)
+Co1E Co 1.3333 0.6666 0.4000
+Co1C Co 0.3333 0.6667 0.4000
+Co1C_2 Co 0.3333 -0.3333 0.4000
+N1E N 1.1349(3) 0.4925(4) 0.5847(4)
+N1A N 0.6424(3) 0.5075(4) 0.5847(4)
+N1D N 0.5075(4) 0.6424(3) 0.5847(4)
+N1B N 0.4925(4) 0.1349(3) 0.5847(4)
+N1C N 0.3576(3) -0.1349(3) 0.5847(4)
+N1C_2 N 1.3576(3) 0.8651(3) 0.5847(4)
+N1D_2 N 1.5075(4) 0.6424(3) 0.5847(4)
+O1E O 1.1408(3) 0.6457(4) 0.2146(4)
+O1A O 0.4951(3) 0.3543(4) 0.2146(4)
+O1D O 0.3543(4) 0.4951(3) 0.2146(4)
+O1B O 0.6457(4) 0.1408(3) 0.2146(4)
+O1C O 0.5049(3) -0.1408(3) 0.2146(4)
+O1C_2 O 1.5049(3) 0.8592(3) 0.2146(4)
+O1D_2 O 1.3543(4) 0.4951(3) 0.2146(4)
+C1A C 0.5550(5) 0.5550(5) 0.5243(8)
+C1B C 0.4450(5) 0.0000 0.5243(8)
+C2E C 1.1482(6) 0.4118(8) 0.7912(8)
+C2A C 0.7364(6) 0.5882(8) 0.7912(8)
+C2D C 0.5882(8) 0.7364(6) 0.7912(8)
+C2B C 0.4118(8) 0.1482(6) 0.7912(8)
+C2C C 0.2636(6) -0.1482(6) 0.7912(8)
+H1E H 1.2506 0.4370 0.8492
+H1A H 0.8136 0.5630 0.8492
+H1D H 0.5630 0.8136 0.8492
+H1B H 0.4370 0.2506 0.8492
+H1C H 0.1864 -0.2506 0.8492
+C3A C 0.7052(8) 0.7052(8) 0.8976(15)
+C3B C 0.2948(8) 0.0000 0.8976(15)
+H2A H 0.7584 0.7584 1.0297
+H2B H 0.2416 0.0000 1.0297
+C4A C 0.4650(4) 0.4650(4) 0.3072(7)
+C4B C 0.5350(4) 0.0000 0.3072(7)
+O2 O 1.0000 0.0000 1.045(2)
+O3 O 1.0000 0.0000 1.469(2)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Co1 N1 1_555 1_555
+N1 C1 1_555 1_555
+O1 Co1 1_555 1_555
+C1 C4 1_555 1_555
+C2 N1 1_555 1_555
+H1 C2 1_555 1_555
+C3 C2 1_555 1_555
+H2 C3 1_555 1_555
+C4 O1 1_555 1_555
+Co1E N1E 1_555 1_555
+Co1C N1D 1_555 1_555
+Co1C_2 N1C 1_555 1_555
+N1E C1 1_555 1_555
+N1A Co1 1_555 1_555
+N1D C1A 1_555 1_555
+N1B Co1 1_555 1_555
+N1C C1B 1_555 1_555
+N1C_2 Co1E 1_555 1_555
+N1D_2 Co1E 1_555 1_555
+O1E C4 1_555 1_555
+O1A Co1 1_555 1_555
+O1D Co1C 1_555 1_555
+O1B Co1 1_555 1_555
+O1C Co1C_2 1_555 1_555
+O1C_2 Co1E 1_555 1_555
+O1D_2 Co1E 1_555 1_555
+C1A N1A 1_555 1_555
+C1B N1B 1_555 1_555
+C2E C3 1_555 1_555
+C2A N1A 1_555 1_555
+C2D N1D 1_555 1_555
+C2B N1B 1_555 1_555
+C2C N1C 1_555 1_555
+H1E C2E 1_555 1_555
+H1A C2A 1_555 1_555
+H1D C2D 1_555 1_555
+H1B C2B 1_555 1_555
+H1C C2C 1_555 1_555
+C3A C2A 1_555 1_555
+C3B C2B 1_555 1_555
+H2A C3A 1_555 1_555
+H2B C3B 1_555 1_555
+C4A O1A 1_555 1_555
+C4B O1B 1_555 1_555
+Co1E O1E 1_555 1_555
+N1E C2E 1_555 1_555
+O1D C4A 1_555 1_555
+O1C C4B 1_555 1_555
+C1A C4A 1_555 1_555
+C1B C4B 1_555 1_555
+C2D C3A 1_555 1_555
+C2C C3B 1_555 1_555
+
+#END

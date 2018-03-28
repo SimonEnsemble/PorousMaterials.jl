@@ -1,0 +1,75 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_ISOPOV
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21'
+_symmetry_Int_Tables_number      4
+_space_group_name_Hall           'P 2yb'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,-z
+_cell_length_a                   6.3570(13)
+_cell_length_b                   9.969(2)
+_cell_length_c                   7.5049(15)
+_cell_angle_alpha                90
+_cell_angle_beta                 110.08(3)
+_cell_angle_gamma                90
+_cell_volume                     446.697
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Zn1 Zn -0.3570(2) -0.0181(5) 0.0511(2)
+I1 I -0.71791(13) -0.0190(2) -0.22871(14)
+I2 I -0.3608(2) -0.0183(4) 0.38638(15)
+N1 N -0.1533(43) -0.1745(16) 0.0223(37)
+N2 N 0.1420(40) -0.3664(28) -0.0264(52)
+C1 C -0.1979(50) -0.2380(26) -0.1509(45)
+H1 H -0.3222(50) -0.2217(26) -0.2585(45)
+C2 C -0.0279(68) -0.3306(38) -0.1402(52)
+H2 H -0.0573(68) -0.3764(38) -0.2541(52)
+C3 C 0.0489(47) -0.2033(24) 0.1804(46)
+H3 H 0.0869(47) -0.1617(24) 0.2981(46)
+C4 C 0.1807(43) -0.3011(27) 0.1355(53)
+H4 H 0.3131(43) -0.3232(27) 0.2323(53)
+N2A N -0.1420(40) 0.1336(28) 0.0264(52)
+Zn1A Zn 0.3570(2) -0.5181(5) -0.0511(2)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Zn1 I1 1_555 1_555
+I2 Zn1 1_555 1_555
+N1 Zn1 1_555 1_555
+N2 C2 1_555 1_555
+C1 N1 1_555 1_555
+H1 C1 1_555 1_555
+C2 C1 1_555 1_555
+H2 C2 1_555 1_555
+C3 N1 1_555 1_555
+H3 C3 1_555 1_555
+C4 N2 1_555 1_555
+H4 C4 1_555 1_555
+N2A Zn1 1_555 1_555
+Zn1A N2 1_555 1_555
+C3 C4 1_555 1_555
+
+#END

@@ -1,0 +1,96 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_BEFJEB10
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   11.575(2)
+_cell_length_b                   20.654(6)
+_cell_length_c                   7.323(1)
+_cell_angle_alpha                90
+_cell_angle_beta                 103.73(1)
+_cell_angle_gamma                90
+_cell_volume                     1700.68
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ni1 Ni 0.28599(22) 0.25137(13) 0.2066(4)
+Mn1 Mn -0.21341(28) 0.14879(11) -0.0467(4)
+S1 S 0.1113(4) 0.29615(23) 0.1397(7)
+S2 S 0.2106(4) 0.15485(23) 0.1701(7)
+S3 S 0.4607(4) 0.20595(23) 0.2772(7)
+S4 S 0.3619(4) 0.34839(23) 0.2354(7)
+O1 O -0.0972(10) 0.2400(5) 0.0323(1)
+O2 O -0.0135(10) 0.1215(6) 0.0560(15)
+O3 O 0.6707(11) 0.2615(5) 0.3723(17)
+O4 O 0.5849(10) 0.3809(6) 0.3262(16)
+C1 C 0.0168(16) 0.2347(8) 0.0861(22)
+C2 C 0.0619(16) 0.1682(8) 0.0977(24)
+C3 C 0.5595(18) 0.2678(8) 0.3210(25)
+C4 C 0.5098(17) 0.3370(8) 0.3005(25)
+O5 O -0.2428(10) 0.1526(6) 0.2274(16)
+O6 O -0.1833(10) 0.1485(6) -0.3237(16)
+O7 O -0.2137(11) 0.0431(5) -0.0357(18)
+O3C O -0.3293(11) 0.2385(5) -0.1277(17)
+O4C O -0.4151(10) 0.1191(6) -0.1738(16)
+Mn1C Mn 0.78659(28) 0.35121(11) 0.4533(4)
+O8 O 0.0426(11) 0.4725(6) 0.2880(16)
+O9 O 0.4213(12) 0.4676(7) 0.5914(19)
+O10 O 0.1310(13) 0.4569(7) 0.9664(20)
+O11 O 0.7078(13) 0.4508(7) 0.9342(20)
+O12 O 0.475(3) 0.4740(15) 0.965(5)
+O12B O 0.525(3) 0.5260(15) 1.035(5)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ni1 S1 1_555 1_555
+Mn1 O1 1_555 1_555
+S1 C1 1_555 1_555
+S2 Ni1 1_555 1_555
+S3 Ni1 1_555 1_555
+S4 Ni1 1_555 1_555
+O1 C1 1_555 1_555
+O2 Mn1 1_555 1_555
+O3 C3 1_555 1_555
+O4 C4 1_555 1_555
+C1 C2 1_555 1_555
+C2 S2 1_555 1_555
+C3 S3 1_555 1_555
+C4 S4 1_555 1_555
+O5 Mn1 1_555 1_555
+O6 Mn1 1_555 1_555
+O7 Mn1 1_555 1_555
+O3C Mn1 1_555 1_555
+O4C Mn1 1_555 1_555
+Mn1C O3 1_555 1_555
+O2 C2 1_555 1_555
+O4 Mn1C 1_555 1_555
+C3 C4 1_555 1_555
+
+#END

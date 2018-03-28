@@ -1,0 +1,79 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_TUZYOD
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   5.69261(7)
+_cell_length_b                   15.61430(18)
+_cell_length_c                   7.82600(10)
+_cell_angle_alpha                90
+_cell_angle_beta                 110.1581(8)
+_cell_angle_gamma                90
+_cell_volume                     653.013
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Mg1 Mg 0.2360(8) 0.63475(17) 0.9806(5)
+P1 P -0.5245(5) 0.67853(19) 0.6602(4)
+C1 C -0.2133(11) 0.6699(4) 0.6313(9)
+C2 C -0.1482(14) 0.5751(4) 0.6357(10)
+O1 O -0.7181(10) 0.63073(28) 0.4927(6)
+O2 O -0.4969(10) 0.63644(29) 0.8431(7)
+O3 O -0.5865(9) 0.77309(28) 0.6529(7)
+O4 O -0.0359(10) 0.71708(31) 0.7834(7)
+O5 O 0.0232(10) 0.54639(34) 0.7825(7)
+O6 O -0.2605(11) 0.52821(29) 0.5033(8)
+O7 O -0.0449(9) 0.62641(28) 1.1122(6)
+O8 O 0.4569(10) 0.54466(32) 1.1624(8)
+Mg1_2 Mg -0.7640(8) 0.63475(17) 0.9806(5)
+Mg1C Mg -0.7640(8) 0.86525(17) 0.4806(5)
+O2_2 O 0.5031(10) 0.63644(29) 0.8431(7)
+O3C O 0.4135(9) 0.72691(28) 1.1529(7)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Mg1 O4 1_555 1_555
+P1 C1 1_555 1_555
+C1 C2 1_555 1_555
+C2 O5 1_555 1_555
+O1 P1 1_555 1_555
+O2 P1 1_555 1_555
+O3 P1 1_555 1_555
+O4 C1 1_555 1_555
+O5 Mg1 1_555 1_555
+O6 C2 1_555 1_555
+O7 Mg1 1_555 1_555
+O8 Mg1 1_555 1_555
+Mg1_2 O2 1_555 1_555
+Mg1C O3 1_555 1_555
+O2_2 Mg1 1_555 1_555
+O3C Mg1 1_555 1_555
+
+#END

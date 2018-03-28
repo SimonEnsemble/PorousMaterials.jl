@@ -1,0 +1,98 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_VIHWIS
+_symmetry_cell_setting           tetragonal
+_symmetry_space_group_name_H-M   'I -4 2 d'
+_symmetry_Int_Tables_number      122
+_space_group_name_Hall           'I -4 2bw'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 y,-x,-z
+3 x,1/2-y,1/4-z
+4 -x,-y,z
+5 1/2-y,-x,3/4+z
+6 -y,x,-z
+7 -x,1/2+y,1/4-z
+8 1/2+y,x,3/4+z
+9 1/2+x,1/2+y,1/2+z
+10 1/2+y,1/2-x,1/2-z
+11 1/2+x,-y,3/4-z
+12 1/2-x,1/2-y,1/2+z
+13 -y,1/2-x,1/4+z
+14 1/2-y,1/2+x,1/2-z
+15 1/2-x,y,3/4-z
+16 y,1/2+x,1/4+z
+_cell_length_a                   7.39188(21)
+_cell_length_b                   7.39188(21)
+_cell_length_c                   17.3389(6)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     947.396
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Zn1 Zn 0.000000 0.000000 0.000000
+C1 C 0.0753(9) 0.250000 0.125000
+O1 O -0.0938(9) 0.250000 0.125000
+N1 N 0.1686(9) 0.1631(6) 0.06688(17)
+C2 C 0.3553(9) 0.1642(4) 0.06659(12)
+C3 C 0.4486(9) 0.250000 0.125000
+C2B C 0.3553(9) 0.3358(4) 0.18341(12)
+N1B N 0.1686(9) 0.3369(6) 0.18312(17)
+C1A C 0.250000 -0.0753(9) -0.125000
+O1A O 0.250000 0.0938(9) -0.125000
+N1A N 0.1631(6) -0.1686(9) -0.06688(17)
+C2A C 0.1642(4) -0.3553(9) -0.06659(12)
+C3A C 0.250000 -0.4486(9) -0.125000
+C2D C 0.3358(4) -0.3553(9) -0.18341(12)
+N1D N 0.3369(6) -0.1686(9) -0.18312(17)
+N1C N -0.1686(9) -0.1631(6) 0.06688(17)
+N1E N -0.1631(6) 0.1686(9) -0.06688(17)
+Zn1B Zn 0.000000 0.500000 0.250000
+Zn1D Zn 0.500000 0.000000 -0.250000
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Zn1 N1 1_555 1_555
+C1 O1 1_555 1_555
+N1 C1 1_555 1_555
+C2 N1 1_555 1_555
+C3 C2 1_555 1_555
+C2B C3 1_555 1_555
+N1B C1 1_555 1_555
+C1A O1A 1_555 1_555
+N1A Zn1 1_555 1_555
+C2A N1A 1_555 1_555
+C3A C2A 1_555 1_555
+C2D C3A 1_555 1_555
+N1D C1A 1_555 1_555
+N1C Zn1 1_555 1_555
+N1E Zn1 1_555 1_555
+Zn1B N1B 1_555 1_555
+Zn1D N1D 1_555 1_555
+C2B N1B 1_555 1_555
+C1A N1A 1_555 1_555
+C2D N1D 1_555 1_555
+
+#END

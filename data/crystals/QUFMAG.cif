@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_QUFMAG
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   7.9975(4)
+_cell_length_b                   8.7876(5)
+_cell_length_c                   10.0775(5)
+_cell_angle_alpha                90
+_cell_angle_beta                 102.8480(10)
+_cell_angle_gamma                90
+_cell_volume                     690.503
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ag1 Ag 0.51205(5) 0.41400(4) 0.16204(4)
+Br1 Br 0.75309(6) 0.41907(5) 0.00328(5)
+S1 S 0.57712(16) 0.64024(14) 0.32305(11)
+N1 N 0.7726(6) 0.4612(5) 0.5133(4)
+H1 H 0.7482 0.3809 0.4639
+C1 C 0.7164(6) 0.5992(5) 0.4737(4)
+N2 N 0.7883(6) 0.7003(5) 0.5652(4)
+H2 H 0.7669 0.7963 0.5583
+C2 C 0.9089(7) 0.6308(6) 0.6801(5)
+H3 H 0.8816 0.6580 0.7662
+H4 H 1.0262 0.6603 0.6815
+C3 C 0.8803(6) 0.4611(6) 0.6499(5)
+H5 H 0.9880 0.4091 0.6526
+H6 H 0.8226 0.4133 0.7141
+Ag1B Ag 0.48795(5) 0.58600(4) -0.16204(4)
+Ag1A Ag 0.48795(5) 0.91400(4) 0.33796(4)
+Br1B Br 0.24691(6) 0.58093(5) -0.00328(5)
+S1A S 0.42288(16) 0.14024(14) 0.17695(11)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ag1 Br1 1_555 1_555
+Br1 Ag1B 1_555 1_555
+S1 Ag1 1_555 1_555
+N1 H1 1_555 1_555
+C1 S1 1_555 1_555
+N2 C1 1_555 1_555
+H2 N2 1_555 1_555
+C2 N2 1_555 1_555
+H3 C2 1_555 1_555
+H4 C2 1_555 1_555
+C3 N1 1_555 1_555
+H5 C3 1_555 1_555
+H6 C3 1_555 1_555
+Ag1B Br1B 1_555 1_555
+Ag1A S1 1_555 1_555
+Br1B Ag1 1_555 1_555
+S1A Ag1 1_555 1_555
+N1 C1 1_555 1_555
+C2 C3 1_555 1_555
+
+#END

@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_FOZHUX11
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/c'
+_symmetry_Int_Tables_number      15
+_space_group_name_Hall           '-C 2yn'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2+y,z
+3 -x,y,1/2-z
+4 1/2-x,1/2+y,1/2-z
+5 -x,-y,-z
+6 1/2-x,1/2-y,-z
+7 x,-y,1/2+z
+8 1/2+x,1/2-y,1/2+z
+_cell_length_a                   11.7648(14)
+_cell_length_b                   5.6550(6)
+_cell_length_c                   9.6367(11)
+_cell_angle_alpha                90
+_cell_angle_beta                 125.843(6)
+_cell_angle_gamma                90
+_cell_volume                     519.715
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Mn1 Mn 0.5000 0.56903(4) 0.7500
+C1 C 0.55073(12) 1.07019(17) 0.85025(14)
+O1 O 0.58713(8) 0.87221(15) 0.92326(10)
+O2 O 0.58807(8) 1.26771(14) 0.92238(10)
+O3 O 0.31804(9) 0.56581(13) 0.75879(11)
+H1 H 0.2346 0.6137 0.6532
+H2 H 0.3304 0.6569 0.8495
+Mn1_2 Mn 0.5000 1.56903(4) 0.7500
+C1B C 0.44927(12) 1.07019(17) 0.64975(14)
+O1B O 0.41287(8) 0.87221(15) 0.57674(10)
+O2B O 0.41193(8) 1.26771(14) 0.57762(10)
+O2_2 O 0.58807(8) 0.26771(14) 0.92238(10)
+O2B_2 O 0.41193(8) 0.26771(14) 0.57762(10)
+O3B O 0.68196(9) 0.56581(13) 0.74121(11)
+H1B H 0.7654 0.6137 0.8468
+H2B H 0.6696 0.6569 0.6505
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Mn1 O1 1_555 1_555
+C1 O1 1_555 1_555
+O2 C1 1_555 1_555
+O3 Mn1 1_555 1_555
+H1 O3 1_555 1_555
+H2 O3 1_555 1_555
+Mn1_2 O2 1_555 1_555
+C1B C1 1_555 1_555
+O1B Mn1 1_555 1_555
+O2B Mn1_2 1_555 1_555
+O2_2 Mn1 1_555 1_555
+O2B_2 Mn1 1_555 1_555
+O3B Mn1 1_555 1_555
+H1B O3B 1_555 1_555
+H2B O3B 1_555 1_555
+C1B O1B 1_555 1_555
+C1B O2B 1_555 1_555
+
+#END
