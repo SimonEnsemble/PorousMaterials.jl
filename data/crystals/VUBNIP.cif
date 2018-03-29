@@ -1,0 +1,77 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_VUBNIP
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   6.676(2)
+_cell_length_b                   7.946(4)
+_cell_length_c                   7.668(2)
+_cell_angle_alpha                90
+_cell_angle_beta                 110.39(2)
+_cell_angle_gamma                90
+_cell_volume                     381.281
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+C1 C 0.4495(5) 0.0031(5) 0.3578(4)
+Cu1 Cu 0.0000 0.0000 0.0000
+O1 O 0.3862(4) 0.0065(3) 0.1820(3)
+O2 O 0.5535(4) 0.2849(3) 0.5102(4)
+C2 C 0.5240(6) 0.1284(4) 0.5042(6)
+O3 O -0.0060(4) 0.2467(3) -0.0074(4)
+O4 O -0.0772(4) 0.0074(3) 0.2226(3)
+C2B C 0.4760(6) -0.1284(4) 0.4958(6)
+O1B O -0.3862(4) -0.0065(3) -0.1820(3)
+O3B O 0.0060(4) -0.2467(3) 0.0074(4)
+O4B O 0.0772(4) -0.0074(3) -0.2226(3)
+C1B C 0.5505(5) -0.0031(5) 0.6422(4)
+O2B O 0.4465(4) -0.2849(3) 0.4898(4)
+O1B_2 O 0.6138(4) -0.0065(3) 0.8180(3)
+Cu1_2 Cu 1.0000 0.0000 1.0000
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+C1 O1 1_555 1_555
+Cu1 O1 1_555 1_555
+O2 C2 1_555 1_555
+C2 C1 1_555 1_555
+O3 Cu1 1_555 1_555
+O4 Cu1 1_555 1_555
+C2B C1 1_555 1_555
+O1B Cu1 1_555 1_555
+O3B Cu1 1_555 1_555
+O4B Cu1 1_555 1_555
+C1B C2 1_555 1_555
+O2B C2B 1_555 1_555
+O1B_2 C1B 1_555 1_555
+Cu1_2 O1B_2 1_555 1_555
+C2B C1B 1_555 1_555
+
+#END

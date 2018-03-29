@@ -1,0 +1,110 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_XAPBAR
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/n'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2yn'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2-y,1/2+z
+3 -x,-y,-z
+4 1/2-x,1/2+y,1/2-z
+_cell_length_a                   9.7889(5)
+_cell_length_b                   11.7071(6)
+_cell_length_c                   10.5283(4)
+_cell_angle_alpha                90
+_cell_angle_beta                 94.610(3)
+_cell_angle_gamma                90
+_cell_volume                     1202.64
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ni1 Ni 0.01299(5) 0.02761(4) 0.34385(5)
+O1 O -0.0569(3) 0.0930(2) 0.5134(3)
+N1 N -0.0880(4) 0.2028(3) 0.5364(3)
+N2 N -0.3096(5) 0.1607(4) 0.4928(6)
+H1 H -0.3987 0.1796 0.4853
+H2 H -0.2842 0.0895 0.4766
+N3 N -0.0389(4) 0.1718(3) 0.2418(4)
+N4 N -0.0912(4) 0.3749(3) 0.2153(5)
+N5 N -0.3182(4) 0.4602(3) 0.1974(4)
+N6 N 0.4159(4) 0.4228(3) 0.2933(4)
+N7 N 0.3908(5) 0.2432(4) 0.4099(4)
+N8 N 0.2052(4) 0.1037(3) 0.3857(4)
+C1 C -0.2169(5) 0.2360(4) 0.5266(5)
+C2 C -0.2446(7) 0.3544(5) 0.5559(5)
+H3 H -0.3362 0.3835 0.5481
+C3 C -0.1398(8) 0.4203(5) 0.5954(6)
+H4 H -0.1572 0.4974 0.6170
+C4 C -0.0055(7) 0.3837(5) 0.6045(6)
+H5 H 0.0682 0.4341 0.6304
+C5 C 0.0213(6) 0.2764(4) 0.5751(5)
+H6 H 0.1134 0.2485 0.5811
+C6 C -0.0695(5) 0.2657(4) 0.2302(4)
+C7 C -0.2144(5) 0.4154(4) 0.2075(4)
+C8 C 0.3954(5) 0.3393(4) 0.3447(4)
+C9 C 0.2866(5) 0.1735(4) 0.3917(4)
+Ni1B Ni -0.01299(5) -0.02761(4) 0.65615(5)
+O1B O 0.0569(3) -0.0930(2) 0.4866(3)
+N5C N -0.1818(4) -0.0398(3) 0.3026(4)
+Ni1C Ni -0.51299(5) 0.52761(4) 0.15615(5)
+Ni1C_2 Ni 0.48701(5) 0.52761(4) 0.15615(5)
+N6C N 0.0841(4) -0.0772(3) 0.2067(4)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ni1 O1 1_555 1_555
+O1 N1 1_555 1_555
+N1 C1 1_555 1_555
+N2 H1 1_555 1_555
+H2 N2 1_555 1_555
+N3 Ni1 1_555 1_555
+N4 C6 1_555 1_555
+N5 C7 1_555 1_555
+N6 C8 1_555 1_555
+N7 C8 1_555 1_555
+N8 Ni1 1_555 1_555
+C1 N2 1_555 1_555
+C2 C1 1_555 1_555
+H3 C2 1_555 1_555
+C3 C2 1_555 1_555
+H4 C3 1_555 1_555
+C4 C3 1_555 1_555
+H5 C4 1_555 1_555
+C5 N1 1_555 1_555
+H6 C5 1_555 1_555
+C6 N3 1_555 1_555
+C7 N4 1_555 1_555
+C9 N7 1_555 1_555
+Ni1B O1 1_555 1_555
+O1B Ni1 1_555 1_555
+N5C Ni1 1_555 1_555
+Ni1C N5 1_555 1_555
+Ni1C_2 N6 1_555 1_555
+N6C Ni1 1_555 1_555
+N8 C9 1_555 1_555
+C4 C5 1_555 1_555
+Ni1B O1B 1_555 1_555
+
+#END

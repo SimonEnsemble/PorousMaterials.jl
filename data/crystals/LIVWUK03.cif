@@ -1,0 +1,80 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_LIVWUK03
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 2/c'
+_symmetry_Int_Tables_number      13
+_space_group_name_Hall           '-P 2yc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,y,1/2-z
+3 -x,-y,-z
+4 x,-y,1/2+z
+_cell_length_a                   5.42900(44)
+_cell_length_b                   5.40499(76)
+_cell_length_c                   11.9282(10)
+_cell_angle_alpha                90
+_cell_angle_beta                 107.2844(65)
+_cell_angle_gamma                90
+_cell_volume                     334.211
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+N1 N -0.23633(69) -0.42841(61) -0.14348(26)
+N2 N 0.34094(86) 0.13782(51) -0.14321(45)
+C1 C -0.11863(50) -0.26901(17) -0.11138(14)
+C2 C 0.19868(58) 0.03464(59) -0.11676(36)
+C3 C 0.02151(29) -0.04855(33) -0.05078(13)
+Li1 Li -0.5 -0.7017(39) -0.25
+N1B N 0.23633(69) 0.42841(61) 0.14348(26)
+N2B N -0.34094(86) -0.13782(51) 0.14321(45)
+C1B C 0.11863(50) 0.26901(17) 0.11138(14)
+C2B C -0.19868(58) -0.03464(59) 0.11676(36)
+C3B C -0.02151(29) 0.04855(33) 0.05078(13)
+N1A N -0.76367(69) -0.42841(61) -0.35652(26)
+N2_2 N -0.65906(86) -0.86218(51) -0.14321(45)
+N2A N -0.34094(86) -0.86218(51) -0.35679(45)
+Li1_2 Li 0.5 0.2983(39) -0.25
+Li1B Li -0.5 -0.2983(39) 0.25
+Li1B_2 Li 0.5 0.7017(39) 0.25
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+N1 C1 1_555 1_555
+N2 C2 1_555 1_555
+C1 C3 1_555 1_555
+C2 C3 1_555 1_555
+C3 C3B 1_555 1_555
+Li1 N1 1_555 1_555
+N1B C1B 1_555 1_555
+N2B C2B 1_555 1_555
+C1B C3B 1_555 1_555
+C2B C3B 1_555 1_555
+N1A Li1 1_555 1_555
+N2_2 Li1 1_555 1_555
+N2A Li1 1_555 1_555
+Li1_2 N2 1_555 1_555
+Li1B N2B 1_555 1_555
+Li1B_2 N1B 1_555 1_555
+
+#END

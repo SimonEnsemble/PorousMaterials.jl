@@ -1,0 +1,103 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_NIPMAA01
+_symmetry_cell_setting           trigonal
+_symmetry_space_group_name_H-M   'P 32 1 2'
+_symmetry_Int_Tables_number      153
+_space_group_name_Hall           "P 32 2' (0,0,2)"
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -y,x-y,2/3+z
+3 -y,-x,1/3-z
+4 -x+y,-x,1/3+z
+5 x,x-y,-z
+6 -x+y,y,2/3-z
+_cell_length_a                   10.147
+_cell_length_b                   10.147
+_cell_length_c                   7.765
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                120
+_cell_volume                     692.385
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+N4 N 0.7963 0.5411 0.3595
+O1 O 0.7363 0.6022 0.4300
+O2 O 0.9194 0.6182 0.2796
+O3 O 0.7370 0.4024 0.3770
+N4E N 0.7448 0.5411 0.3072
+O1E O 0.8659 0.6022 0.2367
+O2E O 0.6988 0.6182 0.3871
+O3E O 0.6654 0.4024 0.2897
+Ag1 Ag 0.9500 0.9000 0.3333
+N1 N 0.7759 0.9377 0.2236
+C1 C 0.7917 1.0708 0.1742
+C2 C 0.6190 0.8022 0.2278
+C3 C 0.5292 0.8599 0.1722
+N2 N 0.6276 1.0124 0.1474
+C1B C 0.9292 1.2083 0.1591
+N1B N 1.0623 1.2241 0.1097
+C2B C 1.1978 1.3810 0.1055
+C3B C 1.1401 1.4708 0.1611
+N2B N 0.9876 1.3724 0.1859
+N1E N 1.1618 0.9377 0.4431
+Ag1A Ag 1.1000 1.0500 -0.0000
+C4? C 1.1328 1.3704 0.1144
+C5? C 1.0565 1.4345 0.1588
+N3? N 0.9088 1.3244 0.1937
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ag1 N1 1_555 1_555
+N1 C1 1_555 1_555
+C1 N2 1_555 1_555
+C2 N1 1_555 1_555
+C3 C2 1_555 1_555
+N2 C3 1_555 1_555
+N4 O1 1_555 1_555
+O1 N4E 1_555 1_555
+O2 N4 1_555 1_555
+O3 N4 1_555 1_555
+C1B C1 1_555 1_555
+N1B C1B 1_555 1_555
+C2B N1B 1_555 1_555
+C3B C2B 1_555 1_555
+N2B C1B 1_555 1_555
+N4E N4 1_555 1_555
+O1E N4 1_555 1_555
+O2E N4 1_555 1_555
+O3E N4 1_555 1_555
+N1E Ag1 1_555 1_555
+Ag1A N1B 1_555 1_555
+O1 O2E 1_555 1_555
+O2 N4E 1_555 1_555
+O2 O1E 1_555 1_555
+O3 N4E 1_555 1_555
+O3 O3E 1_555 1_555
+C3B N2B 1_555 1_555
+N4E O1E 1_555 1_555
+N4E O2E 1_555 1_555
+N4E O3E 1_555 1_555
+
+#END

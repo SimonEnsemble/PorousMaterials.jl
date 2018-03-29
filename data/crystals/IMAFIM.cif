@@ -1,0 +1,105 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_IMAFIM
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'P n m a'
+_symmetry_Int_Tables_number      62
+_space_group_name_Hall           '-P 2ac 2n'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,-y,1/2+z
+3 -x,1/2+y,-z
+4 1/2+x,1/2-y,1/2-z
+5 -x,-y,-z
+6 1/2+x,y,1/2-z
+7 x,1/2-y,z
+8 1/2-x,1/2+y,1/2+z
+_cell_length_a                   23.235(2)
+_cell_length_b                   7.4044(7)
+_cell_length_c                   6.3484(4)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     1092.19
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Fe1 Fe 0.329353(19) 0.7500 0.78544(8)
+N1 N 0.41186(12) 0.7500 0.9528(5)
+N2 N 0.46031(14) 0.7500 0.8359(6)
+C1 C 0.51022(18) 0.7500 0.9372(8)
+H1 H 0.5439 0.7500 0.8577
+C2 C 0.5151(2) 0.7500 1.1536(9)
+H2 H 0.5510 0.7500 1.2181
+C3 C 0.4660(2) 0.7500 1.2705(8)
+H3 H 0.4669 0.7500 1.4170
+C4 C 0.41440(17) 0.7500 1.1597(7)
+H4 H 0.3801 0.7500 1.2354
+N3 N 0.24456(13) 0.7500 0.6059(5)
+N4 N 0.20355(9) 0.4592(3) 0.4892(4)
+C5 C 0.22153(10) 0.5977(3) 0.5395(4)
+N5 N 0.35666(9) 0.5411(3) 0.5783(4)
+N6 N 0.37491(17) 0.2500 0.4068(6)
+C6 C 0.36372(10) 0.4014(3) 0.5036(4)
+Fe1_2 Fe 0.329353(19) -0.2500 0.78544(8)
+Fe1A Fe 0.170647(19) 0.2500 0.28544(8)
+Fe1A_2 Fe 0.170647(19) 1.2500 0.28544(8)
+N4F N 0.20355(9) 1.0408(3) 0.4892(4)
+N4A N 0.29645(9) 0.5408(3) 0.9892(4)
+N4G N 0.29645(9) 0.9592(3) 0.9892(4)
+C5F C 0.22153(10) 0.9023(3) 0.5395(4)
+N5F N 0.35666(9) -0.0411(3) 0.5783(4)
+N5F_2 N 0.35666(9) 0.9589(3) 0.5783(4)
+C6F C 0.36372(10) 0.0986(3) 0.5036(4)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Fe1 N1 1_555 1_555
+N1 N2 1_555 1_555
+N2 C1 1_555 1_555
+C1 H1 1_555 1_555
+C2 C1 1_555 1_555
+H2 C2 1_555 1_555
+C3 C2 1_555 1_555
+H3 C3 1_555 1_555
+C4 N1 1_555 1_555
+H4 C4 1_555 1_555
+N3 Fe1 1_555 1_555
+N4 C5 1_555 1_555
+C5 N3 1_555 1_555
+N5 Fe1 1_555 1_555
+N6 C6 1_555 1_555
+C6 N5 1_555 1_555
+Fe1_2 N5F 1_555 1_555
+Fe1A N4 1_555 1_555
+Fe1A_2 N4F 1_555 1_555
+N4F C5F 1_555 1_555
+N4A Fe1 1_555 1_555
+N4G Fe1 1_555 1_555
+C5F N3 1_555 1_555
+N5F C6F 1_555 1_555
+N5F_2 Fe1 1_555 1_555
+C6F N6 1_555 1_555
+C3 C4 1_555 1_555
+
+#END

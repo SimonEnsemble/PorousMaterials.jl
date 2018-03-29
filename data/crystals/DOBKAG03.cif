@@ -1,0 +1,81 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_DOBKAG03
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/c'
+_symmetry_Int_Tables_number      15
+_space_group_name_Hall           '-C 2yc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2+y,z
+3 1/2-x,1/2+y,1/2-z
+4 -x,y,1/2-z
+5 -x,-y,-z
+6 1/2-x,1/2-y,-z
+7 1/2+x,1/2-y,1/2+z
+8 x,-y,1/2+z
+_cell_length_a                   8.965(1)
+_cell_length_b                   13.376(3)
+_cell_length_c                   6.680(1)
+_cell_angle_alpha                90
+_cell_angle_beta                 99.67(1)
+_cell_angle_gamma                90
+_cell_volume                     789.656
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Co1 Co 0.75000 0.25000 0.00000
+O1 O 0.94684(4) 0.16711(3) 0.00858(7)
+O2 O 1.24897(4) 0.04179(3) 0.00549(7)
+O3 O 0.62555(5) 0.13005(3) 0.09708(8)
+O4 O 0.81848(5) 0.28743(4) 0.30083(4)
+C1 C 0.97360(5) 0.07522(5) 0.00381(3)
+C2 C 1.11308(5) 0.01834(3) 0.00309(8)
+O1D O 1.05316(4) -0.16711(3) -0.00858(7)
+C1D C 1.02640(5) -0.07522(5) -0.00381(3)
+O2D O 0.75103(4) -0.04179(3) -0.00549(7)
+C2D C 0.88692(5) -0.01834(3) -0.00309(8)
+O3E O 0.87445(5) 0.36995(3) -0.09708(8)
+O4E O 0.68152(5) 0.21257(4) -0.30083(4)
+Co1A Co 1.25000 -0.25000 0.00000
+O1E O 0.55316(4) 0.33289(3) -0.00858(7)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Co1 O1 1_555 1_555
+O1 C1 1_555 1_555
+O2 C2 1_555 1_555
+O3 Co1 1_555 1_555
+O4 Co1 1_555 1_555
+C1 C2 1_555 1_555
+C2 C1D 1_555 1_555
+O1D C1D 1_555 1_555
+C1D C2D 1_555 1_555
+O2D C2D 1_555 1_555
+C2D C1 1_555 1_555
+O3E Co1 1_555 1_555
+O4E Co1 1_555 1_555
+Co1A O1D 1_555 1_555
+O1E Co1 1_555 1_555
+
+#END

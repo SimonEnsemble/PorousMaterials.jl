@@ -1,0 +1,87 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_POPCOM
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'I m m a'
+_symmetry_Int_Tables_number      74
+_space_group_name_Hall           '-I 2b 2'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2-y,z
+3 x,-y,-z
+4 -x,1/2+y,-z
+5 1/2+x,1/2+y,1/2+z
+6 1/2-x,-y,1/2+z
+7 1/2+x,1/2-y,1/2-z
+8 1/2-x,y,1/2-z
+9 -x,-y,-z
+10 x,1/2+y,-z
+11 -x,y,z
+12 x,1/2-y,z
+13 1/2-x,1/2-y,1/2-z
+14 1/2+x,y,1/2-z
+15 1/2-x,1/2+y,1/2+z
+16 1/2+x,-y,1/2+z
+_cell_length_a                   7.5598
+_cell_length_b                   6.8029
+_cell_length_c                   12.905
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     663.686
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ni1 Ni 0.0000 0.0000 0.0000
+Br1 Br 0.2308(3) 0.2500 -0.0608(2)
+N1 N 0.0000 0.1498(4) 0.1436(9)
+C1 C 0.0000 0.0484(4) 0.2351(10)
+C2 C 0.0000 0.1492(4) 0.3279(10)
+Br1C Br -0.2308(3) -0.2500 0.0608(2)
+Br1B Br 0.2308(3) -0.2500 0.0608(2)
+Ni1C Ni 0.0000 0.5000 0.0000
+Br1A Br -0.2308(3) 0.2500 -0.0608(2)
+N1A N 0.0000 0.3502(4) 0.1436(9)
+C1A C 0.0000 0.4516(4) 0.2351(10)
+C2A C 0.0000 0.3508(4) 0.3279(10)
+N1B N 0.0000 -0.1498(4) -0.1436(9)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ni1 Br1 1_555 1_555
+Br1 Ni1C 1_555 1_555
+N1 Ni1 1_555 1_555
+C1 N1 1_555 1_555
+C2 C1 1_555 1_555
+Br1C Ni1 1_555 1_555
+Br1B Ni1 1_555 1_555
+Ni1C Br1A 1_555 1_555
+Br1A Ni1 1_555 1_555
+N1A N1 1_555 1_555
+C1A N1A 1_555 1_555
+C2A C2 1_555 1_555
+N1B Ni1 1_555 1_555
+Ni1C N1A 1_555 1_555
+C1A C2A 1_555 1_555
+
+#END

@@ -1,0 +1,79 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_QEYMIR
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   11.678(7)
+_cell_length_b                   7.692(4)
+_cell_length_c                   7.081(4)
+_cell_angle_alpha                90
+_cell_angle_beta                 90.683(9)
+_cell_angle_gamma                90
+_cell_volume                     636.021
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ag1 Ag -0.42813(2) -0.33412(4) -0.63288(4)
+N1 N -0.2853(2) -0.1883(3) -0.5157(4)
+N2 N -0.1293(2) -0.0956(4) -0.3706(4)
+O1 O -0.4489(2) 0.0070(3) -0.7096(4)
+O2 O -0.3789(2) 0.2529(3) -0.5928(4)
+O3 O -0.2041(2) 0.3557(3) -0.4319(4)
+H1 H -0.2652 0.3209 -0.4756
+O4 O -0.0485(2) 0.2374(4) -0.3038(4)
+C1 C -0.1900(3) -0.2350(5) -0.4280(5)
+H2 H -0.1676 -0.3496 -0.4083
+C2 C -0.2853(3) -0.0093(4) -0.5162(4)
+C3 C -0.1880(3) 0.0492(4) -0.4258(5)
+C4 C -0.3775(3) 0.0905(4) -0.6126(5)
+C5 C -0.1414(3) 0.2239(4) -0.3822(5)
+Ag1A Ag -0.57187(2) 0.16588(4) -0.86712(4)
+O1A O -0.5511(2) -0.4930(3) -0.7904(4)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ag1 N1 1_555 1_555
+N1 C1 1_555 1_555
+N2 C1 1_555 1_555
+O1 C4 1_555 1_555
+O2 C4 1_555 1_555
+O3 H1 1_555 1_555
+O4 C5 1_555 1_555
+C1 H2 1_555 1_555
+C2 N1 1_555 1_555
+C3 N2 1_555 1_555
+C4 C2 1_555 1_555
+C5 O3 1_555 1_555
+Ag1A O1 1_555 1_555
+O1A Ag1 1_555 1_555
+C2 C3 1_555 1_555
+C3 C5 1_555 1_555
+
+#END

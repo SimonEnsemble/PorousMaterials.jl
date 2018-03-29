@@ -134,9 +134,9 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             if line[1] == "_symmetry_space_group_name_H-M"
                 # TODO long-term write our own replicator?
                 if length(line) == 3
-                    @assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1"), ".cif must have P1 symmetry.\n")
+					@assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1") || contains(line[2] * line[3], "P-1") || contains(line[2] * line[3], "-P1"), ".cif must have P1 symmetry.\n")
                 elseif length(line) == 2
-                    @assert(contains(line[2], "P1") || contains(line[2], "P 1"), ".cif must have P1 symmetry\n")
+					@assert(contains(line[2], "P1") || contains(line[2], "P 1") || contains(line[2], "P -1") || contains(line[2], "-P 1"), ".cif must have P1 symmetry\n")
                 else
                     println(line)
                     error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
@@ -145,13 +145,13 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 
             for axis in ["a", "b", "c"]
                 if line[1] == @sprintf("_cell_length_%s", axis)
-                    data[axis] = parse(Float64, line[2])
+					data[axis] = parse(Float64, split(line[2],'(')[1])
                 end
             end
 
             for angle in ["alpha", "beta", "gamma"]
                 if line[1] == @sprintf("_cell_angle_%s", angle)
-                    data[angle] = parse(Float64, line[2]) * pi / 180.0
+					data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
                 end
             end
 
@@ -182,22 +182,33 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             i += 1
         end
 
+		#TODO clean up exclude_multiple_labels function? Right now it checks to see if two labels represent the same atom (poorly), but it's far from optimized and there has to be a better way to do it. -Arni
+		exclude_boolean = exclude_multiple_labels(lines, loop_starts+length(name_to_column), name_to_column)
         # now extract fractional coords of atoms and their charges
+		atom_labels = Array{AbstractString,1}()
         for i = loop_starts+length(name_to_column):length(lines)
             line = split(lines[i])
             if length(line) != length(name_to_column)
                 break
             end
-			push!(atoms, Symbol(line[name_to_column[atom_column_name]]))
-            push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
-            push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
-            push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
-            # if charges present, import them
-            if haskey(name_to_column, "_atom_site_charge")
-                push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
-            else
-                push!(charges, 0.0)
-            end
+
+			# Check to see if label already exists
+			label = split(line[name_to_column["_atom_site_label"]],'_')[1]
+			if !in(label,atom_labels)
+				push!(atoms, Symbol(line[name_to_column[atom_column_name]]))
+				push!(xf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]],'(')[1]), 1.0))
+				push!(yf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]],'(')[1]), 1.0))
+				push!(zf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]],'(')[1]), 1.0))
+				# if charges present, import them
+				if haskey(name_to_column, "_atom_site_charge")
+					push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+				else
+					push!(charges, 0.0)
+				end
+				if exclude_boolean
+					push!(atom_labels, label)
+				end
+			end
         end
         n_atoms = length(xf)
         # TODO remove this data dictionary and just fill in a, b, c etc. it is more code
@@ -333,16 +344,20 @@ end
 
 Strip numbers from labels for `framework.atoms`.
 e.g. C12 --> C
+	 Ba12A_3 --> Ba
 """
 function strip_numbers_from_atom_labels!(framework::Framework)
-    for i = 1:framework.n_atoms
+	for i = 1:framework.n_atoms
 		atom_string = string(framework.atoms[i])
-        while !isalpha(atom_string[end])
-            atom_string = chop(atom_string)
-        end
+		for j = 1:length(atom_string)
+			if !isalpha(atom_string[j])
+				atom_string = atom_string[1:j-1]
+				break
+			end
+		end
 		framework.atoms[i] = Symbol(atom_string)
-    end
-    return
+	end
+	return
 end
 
 """
@@ -510,4 +525,31 @@ Compute the crystal density of a framework in units kg/m3.
 function crystal_density(framework::Framework)
     mw = molecular_weight(framework)
     return mw / framework.box.Ω * 1660.53892  # --> kg/m3
+end
+
+"""
+	exclude_boolean = exclude_multiple_labels(lines, start, name_to_column)
+
+Checks to see if atom labels 0 and 1 (according to cif standards) are the same. If so, it will throw a `true` and the crystal structure reader will (hopefully) deal with it accordingly.
+
+"""
+function exclude_multiple_labels(lines, start, name_to_column)
+	for (i,line) in enumerate(lines[start:length(lines)])
+		line = split(line)
+		if length(line) != length(name_to_column)
+			break
+		end
+		label = line[name_to_column["_atom_site_label"]]
+		if contains(label,"_")
+			println(label)
+			println(split(label,"_")[1])
+			for line2 in lines[start:start+i]
+				line2 = split(line2)
+				if split(label,"_")[1] == line2[name_to_column["_atom_site_label"]]
+					return true
+				end
+			end
+		end
+	end
+	return false
 end

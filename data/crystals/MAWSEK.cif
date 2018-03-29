@@ -1,0 +1,83 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_MAWSEK
+_symmetry_cell_setting           triclinic
+_symmetry_space_group_name_H-M   'P -1'
+_symmetry_Int_Tables_number      2
+_space_group_name_Hall           '-P 1'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,-y,-z
+_cell_length_a                   6.64837(32)
+_cell_length_b                   7.13962(34)
+_cell_length_c                   12.2320(6)
+_cell_angle_alpha                77.932(4)
+_cell_angle_beta                 87.031(6)
+_cell_angle_gamma                78.953(5)
+_cell_volume                     557.22
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Zr1 Zr 0.2550(7) 0.8822(7) 0.66129(33)
+F1 F 0.3162(25) 0.6961(20) 0.5742(12)
+F2 F 0.3188(26) 0.6490(24) 0.7946(13)
+F3 F 0.1912(23) 1.0674(21) 0.7558(12)
+O1 O -0.0533(23) 0.8684(25) 0.6726(14)
+O2 O -0.2136(31) 0.8772(23) 0.4888(10)
+O3 O -0.4333(22) 0.8841(25) 0.6652(15)
+P1 P -0.2246(17) 0.7970(15) 0.6200(8)
+C1 C -0.175(4) 0.5194(20) 0.6497(15)
+N1 N -0.2572(27) 0.4395(23) 0.7548(13)
+C2 C -0.309(4) 0.2516(34) 0.7497(17)
+C3 C -0.4043(33) 0.181(4) 0.8614(23)
+C4 C -0.247(4) 0.1561(29) 0.9536(19)
+C5 C -0.195(4) 0.342(4) 0.9522(18)
+C6 C -0.1052(30) 0.4099(34) 0.8390(20)
+Zr1A Zr -0.2550(7) 1.1178(7) 0.33871(33)
+Zr1_2 Zr -0.7450(7) 0.8822(7) 0.66129(33)
+O2A O 0.2136(31) 1.1228(23) 0.5112(10)
+O3_2 O 0.5667(22) 0.8841(25) 0.6652(15)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Zr1 F1 1_555 1_555
+F2 Zr1 1_555 1_555
+F3 Zr1 1_555 1_555
+O1 Zr1 1_555 1_555
+O2 P1 1_555 1_555
+O3 P1 1_555 1_555
+P1 O1 1_555 1_555
+C1 P1 1_555 1_555
+N1 C1 1_555 1_555
+C2 N1 1_555 1_555
+C3 C2 1_555 1_555
+C4 C3 1_555 1_555
+C5 C4 1_555 1_555
+C6 N1 1_555 1_555
+Zr1A O2 1_555 1_555
+Zr1_2 O3 1_555 1_555
+O2A Zr1 1_555 1_555
+O3_2 Zr1 1_555 1_555
+C5 C6 1_555 1_555
+
+#END

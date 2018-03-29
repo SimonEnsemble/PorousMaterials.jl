@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_TAKSAZ
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P n'
+_symmetry_Int_Tables_number      7
+_space_group_name_Hall           'P -2yac'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,-y,1/2+z
+_cell_length_a                   4.5263(8)
+_cell_length_b                   7.744(2)
+_cell_length_c                   9.388(2)
+_cell_angle_alpha                90
+_cell_angle_beta                 102.73(1)
+_cell_angle_gamma                90
+_cell_volume                     320.976
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Tl1 Tl 0.00000 0.83822(8) 0.00000
+O1 O 0.403(3) 0.753(2) 0.231(2)
+O2 O 0.359(4) 0.560(2) -0.016(2)
+O3 O 0.321(4) 0.127(3) 0.109(2)
+O4 O 0.334(3) 0.038(2) -0.171(2)
+H1 H 0.164 0.114 -0.207
+N1 N 0.545(3) 0.595(2) 0.227(2)
+H2 H 0.670 0.549 0.315
+N2 N 0.524(3) 0.168(2) -0.088(2)
+H3 H 0.672 0.227 -0.128
+C1 C 0.517(4) 0.510(2) 0.106(2)
+C2 C 0.708(3) 0.343(2) 0.115(2)
+H4 H 0.791 0.312 0.214
+H5 H 0.870 0.360 0.065
+C3 C 0.494(4) 0.202(2) 0.038(2)
+O3_2 O 0.321(4) 1.127(3) 0.109(2)
+O4_2 O 0.334(3) 1.038(2) -0.171(2)
+Tl1_2 Tl 0.00000 -0.16178(8) 0.00000
+H1_2 H 0.164 1.114 -0.207
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Tl1 O1 1_555 1_555
+O1 N1 1_555 1_555
+O2 Tl1 1_555 1_555
+O3 C3 1_555 1_555
+O4 H1 1_555 1_555
+N1 H2 1_555 1_555
+N2 O4 1_555 1_555
+H3 N2 1_555 1_555
+C1 O2 1_555 1_555
+C2 C1 1_555 1_555
+H4 C2 1_555 1_555
+H5 C2 1_555 1_555
+C3 N2 1_555 1_555
+O3_2 Tl1 1_555 1_555
+O4_2 Tl1 1_555 1_555
+Tl1_2 O3 1_555 1_555
+H1_2 O4_2 1_555 1_555
+O4 Tl1_2 1_555 1_555
+N1 C1 1_555 1_555
+C2 C3 1_555 1_555
+
+#END

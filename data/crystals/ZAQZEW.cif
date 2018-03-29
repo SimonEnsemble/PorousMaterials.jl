@@ -1,0 +1,83 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_ZAQZEW
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'P 2 2 2'
+_symmetry_Int_Tables_number      16
+_space_group_name_Hall           'P 2 2'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,-y,z
+3 x,-y,-z
+4 -x,y,-z
+_cell_length_a                   6.3610(3)
+_cell_length_b                   16.0889(9)
+_cell_length_c                   9.3573(6)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     957.64
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Mo1 Mo 0.270(1) 0.1404(3) 0.260(1)
+P1 P 0.748(3) 0.1739(7) 0.351(1)
+O1 O 0.560(3) 0.132(1) 0.274(3)
+O2 O 0.274(6) 0.173(1) 0.487(1)
+O3 O -0.044(3) 0.132(1) 0.299(3)
+O4 O 0.246(6) 0.096(1) 0.108(2)
+O5 O 0.256(6) 0.246(1) 0.259
+O6 O 0.268(6) 0.025(1) 0.383(2)
+C1 C 0.758(6) 0.282(1) 0.294(2)
+C2 C 0.788(16) 0.344(1) 0.394(3)
+C3 C 0.744(16) 0.425(1) 0.352(4)
+C4 C 0.762(11) 0.444(1) 0.205(4)
+C5 C 0.753(20) 0.380(1) 0.106(3)
+C6 C 0.726(16) 0.301(1) 0.151(2)
+O2C O 0.726(6) 0.173(1) 0.513(1)
+Mo1C Mo 0.730(1) 0.1404(3) 0.740(1)
+O3_2 O 0.956(3) 0.132(1) 0.299(3)
+Mo1_2 Mo 1.270(1) 0.1404(3) 0.260(1)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Mo1 O1 1_555 1_555
+P1 O1 1_555 1_555
+O2 Mo1 1_555 1_555
+O3 Mo1 1_555 1_555
+O4 Mo1 1_555 1_555
+O5 Mo1 1_555 1_555
+O6 Mo1 1_555 1_555
+C1 P1 1_555 1_555
+C2 C1 1_555 1_555
+C3 C2 1_555 1_555
+C4 C3 1_555 1_555
+C5 C4 1_555 1_555
+C6 C1 1_555 1_555
+O2C P1 1_555 1_555
+Mo1C O2C 1_555 1_555
+O3_2 P1 1_555 1_555
+Mo1_2 O3_2 1_555 1_555
+C5 C6 1_555 1_555
+
+#END

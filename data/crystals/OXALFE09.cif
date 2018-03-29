@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_OXALFE09
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/c'
+_symmetry_Int_Tables_number      15
+_space_group_name_Hall           '-C 2yn'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,y,1/2-z
+3 1/2+x,1/2+y,z
+4 1/2-x,1/2+y,1/2-z
+5 -x,-y,-z
+6 x,-y,1/2+z
+7 1/2-x,1/2-y,-z
+8 1/2+x,1/2-y,1/2+z
+_cell_length_a                   12.065(12)
+_cell_length_b                   5.559(2)
+_cell_length_c                   9.817(9)
+_cell_angle_alpha                90
+_cell_angle_beta                 128.03(15)
+_cell_angle_gamma                90
+_cell_volume                     518.629
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+C1 C 0.0499(9) 0.6669(19) 0.8510(12)
+O1 O 0.0863(7) 0.8712(15) 0.9238(9)
+O2 O 0.0857(7) 0.4673(17) 0.9237(9)
+O3 O 0.1791(7) 0.1721(17) 0.7566(10)
+H1 H 0.2542 0.2258 0.8563
+H2 H 0.1655 0.2659 0.6751
+Fe1 Fe 0.0000 0.1707(4) 0.7500
+C1A C -0.0499(9) 0.6669(19) 0.6490(12)
+O2A O -0.0857(7) 0.4673(17) 0.5763(9)
+O1A O -0.0863(7) 0.8712(15) 0.5762(9)
+O3A O -0.1791(7) 0.1721(17) 0.7434(10)
+H1A H -0.2542 0.2258 0.6437
+H2A H -0.1655 0.2659 0.8249
+O1_2 O 0.0863(7) -0.1288(15) 0.9238(9)
+O1A_2 O -0.0863(7) -0.1288(15) 0.5762(9)
+Fe1_2 Fe 0.0000 1.1707(4) 0.7500
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+C1 O1 1_555 1_555
+O1 Fe1_2 1_555 1_555
+O2 C1 1_555 1_555
+O3 H1 1_555 1_555
+H2 O3 1_555 1_555
+Fe1 O2 1_555 1_555
+C1A C1 1_555 1_555
+O2A Fe1 1_555 1_555
+O1A C1A 1_555 1_555
+O3A Fe1 1_555 1_555
+H1A O3A 1_555 1_555
+H2A O3A 1_555 1_555
+O1_2 Fe1 1_555 1_555
+O1A_2 Fe1 1_555 1_555
+Fe1_2 O1A 1_555 1_555
+O3 Fe1 1_555 1_555
+C1A O2A 1_555 1_555
+
+#END

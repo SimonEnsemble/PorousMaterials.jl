@@ -1,0 +1,86 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_YEYMAQ
+_symmetry_cell_setting           triclinic
+_symmetry_space_group_name_H-M   'P -1'
+_symmetry_Int_Tables_number      2
+_space_group_name_Hall           '-P 1'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,-y,-z
+_cell_length_a                   5.092(1)
+_cell_length_b                   6.859(1)
+_cell_length_c                   5.033(1)
+_cell_angle_alpha                95.860(1)
+_cell_angle_beta                 118.217(1)
+_cell_angle_gamma                90.745(1)
+_cell_volume                     153.707
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ti1 Ti 0.000 0.000 0.000
+P1 P 0.367 0.229(1) 0.687(1)
+O1 O 0.180(2) 0.208(1) 0.344(2)
+O2 O 0.690(2) 0.169(1) 0.778(2)
+O3 O 0.238(2) 0.110(1) 0.839(2)
+C1 C 0.379(5) 0.491(2) 0.832(12)
+C1A C 0.621(5) 0.509(2) 1.168(12)
+P1A P 0.633 0.771(1) 1.313(1)
+O1A O 0.820(2) 0.792(1) 1.656(2)
+O2A O 0.310(2) 0.831(1) 1.222(2)
+O3A O 0.762(2) 0.890(1) 1.161(2)
+O1A_2 O -0.180(2) -0.208(1) -0.344(2)
+O2_2 O -0.310(2) 0.169(1) -0.222(2)
+O2A_2 O 0.310(2) -0.169(1) 0.222(2)
+O3_2 O 0.238(2) 0.110(1) -0.161(2)
+O3A_2 O -0.238(2) -0.110(1) 0.161(2)
+Ti1_2 Ti 1.000 0.000 1.000
+Ti1_3 Ti 0.000 0.000 1.000
+Ti1_4 Ti 1.000 1.000 2.000
+Ti1_5 Ti 0.000 1.000 1.000
+Ti1_6 Ti 1.000 1.000 1.000
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ti1 O1 1_555 1_555
+P1 O1 1_555 1_555
+O2 P1 1_555 1_555
+O3 P1 1_555 1_555
+C1 P1 1_555 1_555
+C1A C1 1_555 1_555
+P1A C1A 1_555 1_555
+O1A P1A 1_555 1_555
+O2A P1A 1_555 1_555
+O3A P1A 1_555 1_555
+O1A_2 Ti1 1_555 1_555
+O2_2 Ti1 1_555 1_555
+O2A_2 Ti1 1_555 1_555
+O3_2 Ti1 1_555 1_555
+O3A_2 Ti1 1_555 1_555
+Ti1_2 O2 1_555 1_555
+Ti1_3 O3 1_555 1_555
+Ti1_4 O1A 1_555 1_555
+Ti1_5 O2A 1_555 1_555
+Ti1_6 O3A 1_555 1_555
+
+#END

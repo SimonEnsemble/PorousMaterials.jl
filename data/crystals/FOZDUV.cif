@@ -1,0 +1,108 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_FOZDUV
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/c'
+_symmetry_Int_Tables_number      15
+_space_group_name_Hall           '-C 2yc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,y,1/2-z
+3 1/2-x,1/2+y,1/2-z
+4 1/2+x,1/2+y,z
+5 -x,-y,-z
+6 x,-y,1/2+z
+7 1/2+x,1/2-y,1/2+z
+8 1/2-x,1/2-y,-z
+_cell_length_a                   27.50091(71)
+_cell_length_b                   4.53269(12)
+_cell_length_c                   20.80317(47)
+_cell_angle_alpha                90
+_cell_angle_beta                 104.9345(17)
+_cell_angle_gamma                90
+_cell_volume                     2505.58
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Au1 Au 0.559814(70) -0.33606(59) 0.743550(75)
+Au2 Au 0.464915(57) 0.16523(49) 0.652152(92)
+C1 C 0.634254 0.264137 0.527923
+C2 C 0.583843 0.359267 0.514811
+C3 C 0.550771 0.225574 0.547806
+C4 C 0.568109 -0.003249 0.593914
+C5 C 0.618521 -0.098379 0.607026
+C6 C 0.651593 0.035314 0.574030
+H1 H 0.656541 0.354230 0.505688
+S1 S 0.524789 -0.178367 0.637132
+H2 H 0.572159 0.513466 0.483740
+H3 H 0.516800 0.289680 0.538971
+H4 H 0.630205 -0.252578 0.638096
+H5 H 0.685564 -0.028792 0.582866
+C7 C 0.737956 -1.085999 0.836731
+C8 C 0.729540 -1.018294 0.899126
+C9 C 0.687813 -0.844554 0.902758
+C10 C 0.654502 -0.738519 0.843995
+C11 C 0.662917 -0.806223 0.781600
+C12 C 0.704644 -0.979963 0.777969
+H6 H 0.766075 -1.203078 0.834284
+S2 S 0.600738 -0.514659 0.848675
+H7 H 0.751988 -1.089749 0.938725
+H8 H 0.682142 -0.798930 0.944804
+H9 H 0.640470 -0.734768 0.742002
+H10 H 0.710315 -1.025588 0.735922
+Au2A Au 0.535085(57) -0.83477(49) 0.847848(92)
+S2A S 0.399262 0.485341 0.651325
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Au1 S1 1_555 1_555
+Au2 S1 1_555 1_555
+C1 C2 1_555 1_555
+C2 C3 1_555 1_555
+C3 C4 1_555 1_555
+C4 C5 1_555 1_555
+C5 C6 1_555 1_555
+C6 C1 1_555 1_555
+H1 C1 1_555 1_555
+S1 C4 1_555 1_555
+H2 C2 1_555 1_555
+H3 C3 1_555 1_555
+H4 C5 1_555 1_555
+H5 C6 1_555 1_555
+C7 C8 1_555 1_555
+C8 C9 1_555 1_555
+C9 C10 1_555 1_555
+C10 C11 1_555 1_555
+C11 C12 1_555 1_555
+C12 C7 1_555 1_555
+H6 C7 1_555 1_555
+S2 Au1 1_555 1_555
+H7 C8 1_555 1_555
+H8 C9 1_555 1_555
+H9 C11 1_555 1_555
+H10 C12 1_555 1_555
+Au2A S2 1_555 1_555
+S2A Au2 1_555 1_555
+C10 S2 1_555 1_555
+
+#END

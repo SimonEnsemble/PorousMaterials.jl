@@ -1,0 +1,68 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_FUGBOY
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/m'
+_symmetry_Int_Tables_number      12
+_space_group_name_Hall           '-C 2y'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2+y,z
+3 -x,y,-z
+4 1/2-x,1/2+y,-z
+5 -x,-y,-z
+6 1/2-x,1/2-y,-z
+7 x,-y,z
+8 1/2+x,1/2-y,z
+_cell_length_a                   21.129(7)
+_cell_length_b                   4.216(1)
+_cell_length_c                   9.205(3)
+_cell_angle_alpha                90
+_cell_angle_beta                 114.20(2)
+_cell_angle_gamma                90
+_cell_volume                     747.92
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Pb1 Pb 0.0000 0.00000 0.0000
+Cl1 Cl 0.0837(3) 0.50000 -0.0438(6)
+N1 N 0.0820(8) 0.00000 0.311(2)
+Cl1_2 Cl 0.0837(3) -0.50000 -0.0438(6)
+Cl1D Cl -0.0837(3) -0.50000 0.0438(6)
+Cl1D_2 Cl -0.0837(3) 0.50000 0.0438(6)
+N1D N -0.0820(8) 0.00000 -0.311(2)
+Pb1_2 Pb 0.0000 1.00000 0.0000
+Pb1_3 Pb 0.0000 -1.00000 0.0000
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Pb1 Cl1 1_555 1_555
+Cl1 Pb1_2 1_555 1_555
+N1 Pb1 1_555 1_555
+Cl1_2 Pb1 1_555 1_555
+Cl1D Pb1 1_555 1_555
+Cl1D_2 Pb1 1_555 1_555
+N1D Pb1 1_555 1_555
+Pb1_3 Cl1D 1_555 1_555
+
+#END

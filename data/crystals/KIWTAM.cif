@@ -1,0 +1,85 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_KIWTAM
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'P c a 21'
+_symmetry_Int_Tables_number      29
+_space_group_name_Hall           'P 2c -2ac'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,y,1/2+z
+3 1/2+x,-y,z
+4 -x,-y,1/2+z
+_cell_length_a                   11.5360(10)
+_cell_length_b                   6.7868(7)
+_cell_length_c                   8.3073(9)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     650.399
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Cu1 Cu 0.5088(9) 0.2041(6) 0.939(6)
+N1 N 0.660(2) 0.381(3) 0.956(7)
+C1 C 0.7600(10) 0.312(2) 0.897(7)
+C2 C 0.862(2) 0.427(3) 0.907(7)
+N2 N 0.864(3) 0.603(3) 0.973(7)
+C3 C 0.763(3) 0.670(2) 1.031(7)
+C4 C 0.664(3) 0.560(3) 1.023(7)
+N3 N 0.7620(10) 0.131(3) 0.831(7)
+H1 H 0.9309 0.3757 0.8657
+H2 H 0.7603 0.7943 1.0786
+H3 H 0.5961 0.6116 1.0655
+H4 H 0.6981 0.0626 0.8269
+H5 H 0.8242 0.0843 0.7921
+C5 C 0.498(9) 0.010(10) 1.10621
+N4 N 0.496(5) -0.075(6) 1.227(5)
+Cu1B Cu 1.0088(9) 0.7959(6) 0.939(6)
+Cu1C Cu 0.4912(9) -0.2041(6) 1.439(6)
+N2B N 0.364(3) 0.397(3) 0.973(7)
+N4C N 0.504(5) 0.075(6) 0.727(5)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Cu1 N1 1_555 1_555
+N1 C1 1_555 1_555
+C1 C2 1_555 1_555
+C2 N2 1_555 1_555
+N2 C3 1_555 1_555
+C3 C4 1_555 1_555
+C4 N1 1_555 1_555
+N3 C1 1_555 1_555
+H1 C2 1_555 1_555
+H2 C3 1_555 1_555
+H3 C4 1_555 1_555
+H4 N3 1_555 1_555
+H5 N3 1_555 1_555
+C5 Cu1 1_555 1_555
+N4 C5 1_555 1_555
+Cu1B N2 1_555 1_555
+Cu1C N4 1_555 1_555
+N2B Cu1 1_555 1_555
+N4C Cu1 1_555 1_555
+
+#END

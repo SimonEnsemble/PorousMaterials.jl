@@ -1,0 +1,81 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_DOBJIN02
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/c'
+_symmetry_Int_Tables_number      15
+_space_group_name_Hall           '-C 2yc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2+y,z
+3 1/2-x,1/2+y,1/2-z
+4 -x,y,1/2-z
+5 -x,-y,-z
+6 1/2-x,1/2-y,-z
+7 1/2+x,1/2-y,1/2+z
+8 x,-y,1/2+z
+_cell_length_a                   8.986(2)
+_cell_length_b                   13.333(2)
+_cell_length_c                   6.694(3)
+_cell_angle_alpha                90
+_cell_angle_beta                 99.67(2)
+_cell_angle_gamma                90
+_cell_volume                     790.615
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Zn1 Zn 0.75000 0.25000 0.00000
+O1 O 0.94649(6) 0.16751(4) 0.01044(9)
+O2 O 1.24862(6) 0.04224(4) 0.00876(9)
+O3 O 0.62414(6) 0.12993(4) 0.09568(9)
+O4 O 0.81800(7) 0.28735(5) 0.30149(9)
+C1 C 0.97350(7) 0.07533(5) 0.0045(1)
+C2 C 1.11282(7) 0.01859(5) 0.0045(1)
+O1D O 1.05351(6) -0.16751(4) -0.01044(9)
+C1D C 1.02650(7) -0.07533(5) -0.0045(1)
+O2D O 0.75138(6) -0.04224(4) -0.00876(9)
+C2D C 0.88718(7) -0.01859(5) -0.0045(1)
+O3E O 0.87586(6) 0.37007(4) -0.09568(9)
+O4E O 0.68200(7) 0.21265(5) -0.30149(9)
+Zn1A Zn 1.25000 -0.25000 0.00000
+O1E O 0.55351(6) 0.33249(4) -0.01044(9)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Zn1 O1 1_555 1_555
+O1 C1 1_555 1_555
+O2 C2 1_555 1_555
+O3 Zn1 1_555 1_555
+O4 Zn1 1_555 1_555
+C1 C2 1_555 1_555
+C2 C1D 1_555 1_555
+O1D C1D 1_555 1_555
+C1D C2D 1_555 1_555
+O2D C2D 1_555 1_555
+C2D C1 1_555 1_555
+O3E Zn1 1_555 1_555
+O4E Zn1 1_555 1_555
+Zn1A O1D 1_555 1_555
+O1E Zn1 1_555 1_555
+
+#END

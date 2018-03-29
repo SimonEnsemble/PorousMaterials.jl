@@ -1,0 +1,113 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_YOXKEC
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   10.8620(17)
+_cell_length_b                   9.0426(15)
+_cell_length_c                   10.1774(16)
+_cell_angle_alpha                90
+_cell_angle_beta                 107.119(3)
+_cell_angle_gamma                90
+_cell_volume                     955.343
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Zn1 Zn -0.15281(7) 0.10480(9) 0.34741(7)
+P1 P -0.01316(15) 0.3127(2) 0.16697(16)
+O1 O -0.0635(4) 0.2658(5) 0.2836(4)
+O2 O -0.1192(4) 0.3570(5) 0.0409(4)
+O3 O 0.0908(4) 0.4276(5) 0.2176(4)
+O4 O 0.6590(4) 0.1213(5) 0.2635(4)
+O5 O 0.6680(4) -0.0871(5) 0.3791(4)
+N1 N 0.2071(4) 0.1511(6) 0.1559(5)
+H1 H 0.2348 0.2408 0.1356
+C1 C 0.0638(5) 0.1541(7) 0.1120(6)
+H2 H 0.0338 0.0651 0.1461
+H3 H 0.0342 0.1498 0.0124
+C2 C 0.2648(5) 0.1260(8) 0.3070(6)
+H4 H 0.2368 0.0311 0.3322
+H5 H 0.2359 0.2024 0.3579
+C3 C 0.4107(5) 0.1288(7) 0.3434(6)
+H6 H 0.4475 0.1124 0.4413
+H7 H 0.4386 0.2253 0.3217
+C4 C 0.4601(6) 0.0092(7) 0.2637(6)
+H8 H 0.4326 -0.0877 0.2879
+C5 C 0.3988(6) 0.0341(8) 0.1124(6)
+H9 H 0.4288 0.1273 0.0860
+H10 H 0.4250 -0.0441 0.0611
+C6 C 0.2543(6) 0.0368(7) 0.0760(6)
+H11 H 0.2187 0.0569 -0.0214
+H12 H 0.2239 -0.0598 0.0941
+C7 C 0.6060(7) 0.0119(8) 0.3049(7)
+Zn1_2 Zn 0.84719(7) 0.10480(9) 0.34741(7)
+Zn1A Zn 0.15281(7) 0.60480(9) 0.15259(7)
+Zn1C Zn -0.15281(7) 0.39520(9) -0.15259(7)
+O2C O -0.1192(4) 0.1430(5) 0.5409(4)
+O3A O -0.0908(4) -0.0724(5) 0.2824(4)
+O4_2 O -0.3410(4) 0.1213(5) 0.2635(4)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Zn1 O1 1_555 1_555
+P1 O1 1_555 1_555
+O2 P1 1_555 1_555
+O3 P1 1_555 1_555
+O4 C7 1_555 1_555
+O5 C7 1_555 1_555
+N1 H1 1_555 1_555
+C1 P1 1_555 1_555
+H2 C1 1_555 1_555
+H3 C1 1_555 1_555
+C2 N1 1_555 1_555
+H4 C2 1_555 1_555
+H5 C2 1_555 1_555
+C3 C2 1_555 1_555
+H6 C3 1_555 1_555
+H7 C3 1_555 1_555
+C4 C3 1_555 1_555
+H8 C4 1_555 1_555
+C5 C4 1_555 1_555
+H9 C5 1_555 1_555
+H10 C5 1_555 1_555
+C6 N1 1_555 1_555
+H11 C6 1_555 1_555
+H12 C6 1_555 1_555
+C7 C4 1_555 1_555
+Zn1_2 O4 1_555 1_555
+Zn1A O3 1_555 1_555
+Zn1C O2 1_555 1_555
+O2C Zn1 1_555 1_555
+O3A Zn1 1_555 1_555
+O4_2 Zn1 1_555 1_555
+N1 C1 1_555 1_555
+C5 C6 1_555 1_555
+
+#END

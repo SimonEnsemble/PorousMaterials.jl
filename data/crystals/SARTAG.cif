@@ -1,0 +1,83 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_SARTAG
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2/m'
+_symmetry_Int_Tables_number      12
+_space_group_name_Hall           '-C 2y'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2+x,1/2+y,z
+3 -x,y,-z
+4 1/2-x,1/2+y,-z
+5 -x,-y,-z
+6 1/2-x,1/2-y,-z
+7 x,-y,z
+8 1/2+x,1/2-y,z
+_cell_length_a                   12.392(3)
+_cell_length_b                   6.859(2)
+_cell_length_c                   3.907(3)
+_cell_angle_alpha                90
+_cell_angle_beta                 96.23(5)
+_cell_angle_gamma                90
+_cell_volume                     330.121
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Br1 Br 0.1530(1) 0.0000 0.4441(4)
+Cu1 Cu 0.0000 0.0000 0.0000
+N1 N 0.0000 -0.2960(21) 0.0000
+C1 C -0.0898(9) -0.3980(18) 0.0556(29)
+Cu1_2 Cu 0.0000 0.0000 1.0000
+Br1_2 Br 0.1530(1) 0.0000 -0.5559(4)
+Br1B Br -0.1530(1) 0.0000 -0.4441(4)
+Br1B_2 Br -0.1530(1) 0.0000 0.5559(4)
+N1D N 0.0000 0.2960(21) 0.0000
+C1B C 0.0898(9) -0.3980(18) -0.0556(29)
+C1F C -0.0898(9) -0.6020(18) 0.0556(29)
+Cu1_3 Cu 0.0000 0.0000 -1.0000
+C1D C 0.0898(9) -0.6020(18) -0.0556(29)
+N1D_2 N 0.0000 -0.7040(21) 0.0000
+Cu1_4 Cu 0.0000 -1.0000 0.0000
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Br1 Cu1 1_555 1_555
+Cu1 N1 1_555 1_555
+N1 C1 1_555 1_555
+C1 C1F 1_555 1_555
+Cu1_2 Br1 1_555 1_555
+Br1_2 Cu1 1_555 1_555
+Br1B Cu1 1_555 1_555
+Br1B_2 Cu1 1_555 1_555
+N1D Cu1 1_555 1_555
+C1B N1 1_555 1_555
+C1F N1D_2 1_555 1_555
+Cu1_3 Br1_2 1_555 1_555
+C1D C1B 1_555 1_555
+N1D_2 C1D 1_555 1_555
+Cu1_4 N1D_2 1_555 1_555
+Cu1_2 Br1B_2 1_555 1_555
+Br1B Cu1_3 1_555 1_555
+
+#END

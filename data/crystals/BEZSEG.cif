@@ -1,0 +1,84 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_BEZSEG
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'C 2'
+_symmetry_Int_Tables_number      5
+_space_group_name_Hall           'C 2y'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,y,-z
+3 1/2+x,1/2+y,z
+4 1/2-x,1/2+y,-z
+_cell_length_a                   7.600(5)
+_cell_length_b                   5.959(5)
+_cell_length_c                   6.238(5)
+_cell_angle_alpha                90
+_cell_angle_beta                 108.551(5)
+_cell_angle_gamma                90
+_cell_volume                     267.83
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Co1 Co 1.0000 0.0454 1.0000
+O1 O 1.5069(18) 0.351(2) 1.2558(19)
+O2 O 1.2108(19) 0.250(2) 1.094(2)
+C1 C 1.404(2) 0.034(6) 1.419(2)
+H1 H 1.3172 0.0496 1.5033
+H2 H 1.3806 -0.1097 1.3423
+C2 C 1.367(2) 0.216(4) 1.245(3)
+O1A O 1.4931(18) 0.351(2) 1.7442(19)
+O2A O 1.7892(19) 0.250(2) 1.906(2)
+C1A C 1.596(2) 0.034(6) 1.581(2)
+H1A H 1.6828 0.0496 1.4967
+H2A H 1.6194 -0.1097 1.6577
+C2A C 1.633(2) 0.216(4) 1.755(3)
+Co1_2 Co 2.0000 0.0454 2.0000
+Co1B Co 1.5000 0.5454 1.0000
+Co1B_2 Co 1.5000 0.5454 2.0000
+O1B O 1.0069(18) -0.149(2) 1.2558(19)
+O1C O 0.9931(18) -0.149(2) 0.7442(19)
+O2A_2 O 0.7892(19) 0.250(2) 0.906(2)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Co1 O2 1_555 1_555
+O1 C2 1_555 1_555
+O2 C2 1_555 1_555
+C1 H1 1_555 1_555
+H2 C1 1_555 1_555
+C2 C1 1_555 1_555
+O1A C2A 1_555 1_555
+O2A C2A 1_555 1_555
+C1A C1 1_555 1_555
+H1A C1A 1_555 1_555
+H2A C1A 1_555 1_555
+C2A C1A 1_555 1_555
+Co1_2 O2A 1_555 1_555
+Co1B O1 1_555 1_555
+Co1B_2 O1A 1_555 1_555
+O1B Co1 1_555 1_555
+O1C Co1 1_555 1_555
+O2A_2 Co1 1_555 1_555
+
+#END

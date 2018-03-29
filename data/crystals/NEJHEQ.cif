@@ -1,0 +1,93 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_NEJHEQ
+_symmetry_cell_setting           orthorhombic
+_symmetry_space_group_name_H-M   'P b c m'
+_symmetry_Int_Tables_number      57
+_space_group_name_Hall           '-P 2c 2b'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 x,1/2-y,-z
+3 -x,1/2+y,1/2-z
+4 -x,-y,1/2+z
+5 -x,-y,-z
+6 -x,1/2+y,z
+7 x,1/2-y,1/2+z
+8 x,y,1/2-z
+_cell_length_a                   4.7938(3)
+_cell_length_b                   9.5339(6)
+_cell_length_c                   7.9101(5)
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_volume                     361.52
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Cs1 Cs 0.04647(10) 0.2500 0.0000
+C1 C -0.4002(15) 0.0446(6) -0.2500
+H1 H -0.5475 -0.0220 -0.2500
+O1 O -0.4687(10) 0.1724(4) -0.2500
+O2 O -0.1558(10) -0.0029(4) -0.2500
+Cs1F Cs 0.04647(10) 0.2500 -0.5000
+Cs1F_2 Cs 0.04647(10) 0.2500 0.5000
+Cs1_2 Cs -0.95353(10) 0.2500 0.0000
+Cs1F_3 Cs -0.95353(10) 0.2500 -0.5000
+Cs1E Cs -0.04647(10) -0.2500 0.0000
+Cs1B Cs -0.04647(10) -0.2500 -0.5000
+O1_2 O 0.5313(10) 0.1724(4) -0.2500
+O1F O -0.4687(10) 0.3276(4) 0.2500
+O1F_2 O 0.5313(10) 0.3276(4) 0.2500
+O2E O 0.1558(10) 0.4971(4) -0.2500
+O2F O -0.1558(10) 0.5029(4) 0.2500
+O2D O 0.1558(10) 0.0029(4) 0.2500
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Cs1 O1 1_555 1_555
+C1 H1 1_555 1_555
+O1 C1 1_555 1_555
+O2 Cs1 1_555 1_555
+Cs1F O1 1_555 1_555
+Cs1F_2 O1F 1_555 1_555
+Cs1_2 O1 1_555 1_555
+Cs1F_3 O1 1_555 1_555
+Cs1E O2 1_555 1_555
+Cs1B O2 1_555 1_555
+O1_2 Cs1 1_555 1_555
+O1F Cs1 1_555 1_555
+O1F_2 Cs1 1_555 1_555
+O2E Cs1 1_555 1_555
+O2F Cs1 1_555 1_555
+O2D Cs1 1_555 1_555
+C1 O2 1_555 1_555
+O2 Cs1F 1_555 1_555
+Cs1F O1_2 1_555 1_555
+Cs1F O2E 1_555 1_555
+Cs1F_2 O1F_2 1_555 1_555
+Cs1F_2 O2F 1_555 1_555
+Cs1F_2 O2D 1_555 1_555
+Cs1_2 O1F 1_555 1_555
+Cs1E O2D 1_555 1_555
+
+#END

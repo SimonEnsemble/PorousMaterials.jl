@@ -1,0 +1,80 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_FAXFEP
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21'
+_symmetry_Int_Tables_number      4
+_space_group_name_Hall           'P 2yb'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,-z
+_cell_length_a                   3.762(1)
+_cell_length_b                   16.757(2)
+_cell_length_c                   8.356(1)
+_cell_angle_alpha                90
+_cell_angle_beta                 94.34(1)
+_cell_angle_gamma                90
+_cell_volume                     525.25
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Cu1 Cu 0.7544(1) 0.0000 0.1847(1)
+Cl1 Cl 0.2997(2) 0.0100(1) -0.0119(1)
+Cl2 Cl 1.1247(3) -0.0193(1) 0.4111(1)
+O1 O 0.3460(10) 0.2680(2) 0.6244(3)
+N1 N 0.2932(9) 0.3490(2) 0.4054(4)
+N2 N 0.4535(9) 0.3167(2) 0.1467(3)
+N3 N 0.7207(9) 0.1179(2) 0.2378(3)
+N4 N 0.6600(9) 0.1820(2) 0.1324(3)
+C1 C 0.3308(11) 0.3663(2) 0.2498(5)
+C2 C 0.5370(10) 0.2443(2) 0.2129(4)
+C3 C 0.5176(10) 0.2215(2) 0.3726(4)
+C4 C 0.3829(11) 0.2778(2) 0.4840(4)
+C5 C 0.6362(11) 0.1428(2) 0.3790(4)
+C6 C 0.7506(11) 0.1818(2) -0.0333(4)
+O2 O 0.7588(8) -0.1162(1) 0.1530(3)
+Cl1_2 Cl 1.2997(2) 0.0100(1) -0.0119(1)
+Cu1_2 Cu -0.2456(1) 0.0000 0.1847(1)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Cu1 Cl1 1_555 1_555
+Cl1 Cu1_2 1_555 1_555
+Cl2 Cu1 1_555 1_555
+O1 C4 1_555 1_555
+N1 C1 1_555 1_555
+N2 C1 1_555 1_555
+N3 Cu1 1_555 1_555
+N4 N3 1_555 1_555
+C2 N2 1_555 1_555
+C3 C2 1_555 1_555
+C4 N1 1_555 1_555
+C5 N3 1_555 1_555
+C6 N4 1_555 1_555
+O2 Cu1 1_555 1_555
+Cl1_2 Cu1 1_555 1_555
+N4 C2 1_555 1_555
+C3 C4 1_555 1_555
+C3 C5 1_555 1_555
+
+#END

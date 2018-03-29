@@ -1,0 +1,85 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_POGQAE
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/n'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2yn'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,1/2+y,1/2-z
+3 -x,-y,-z
+4 1/2+x,1/2-y,1/2+z
+_cell_length_a                   6.9974(17)
+_cell_length_b                   10.581(3)
+_cell_length_c                   9.533(2)
+_cell_angle_alpha                90
+_cell_angle_beta                 90.332(4)
+_cell_angle_gamma                90
+_cell_volume                     705.807
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Ag1 Ag 0.19864(4) 0.37149(3) 0.60812(3)
+O1 O 0.1118(5) 0.6074(3) 0.5823(3)
+O2 O 0.1405(5) 0.5543(3) 0.7977(3)
+O3 O 0.0333(5) 0.7378(3) 0.7446(3)
+N1 N 0.3710(5) 0.3800(3) 0.4066(3)
+N2 N 0.5061(5) 0.1836(3) 0.4322(3)
+H1 H 0.5599 0.1176 0.3976
+H2 H 0.4852 0.1881 0.5209
+N3 N 0.4912(4) 0.2666(3) 0.2101(3)
+N4 N 0.0953(5) 0.6345(2) 0.7068(3)
+C1 C 0.3284(6) 0.4757(3) 0.3211(4)
+H3 H 0.2774 0.5491 0.3593
+C2 C 0.3572(6) 0.4701(4) 0.1784(4)
+H4 H 0.3250 0.5370 0.1195
+C3 C 0.4353(6) 0.3612(4) 0.1280(4)
+H5 H 0.4501 0.3528 0.0315
+C4 C 0.4552(5) 0.2785(3) 0.3486(3)
+Ag1C Ag 0.69864(4) 0.12851(3) 0.10812(3)
+N3C N -0.0088(4) 0.2334(3) 0.7101(3)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Ag1 O1 1_555 1_555
+O1 N4 1_555 1_555
+O2 N4 1_555 1_555
+O3 N4 1_555 1_555
+N1 Ag1 1_555 1_555
+N2 H1 1_555 1_555
+H2 N2 1_555 1_555
+N3 C3 1_555 1_555
+C1 N1 1_555 1_555
+H3 C1 1_555 1_555
+C2 C1 1_555 1_555
+H4 C2 1_555 1_555
+C3 C2 1_555 1_555
+H5 C3 1_555 1_555
+C4 N1 1_555 1_555
+Ag1C N3 1_555 1_555
+N3C Ag1 1_555 1_555
+N2 C4 1_555 1_555
+N3 C4 1_555 1_555
+
+#END

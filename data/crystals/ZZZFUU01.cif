@@ -1,0 +1,82 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_ZZZFUU01
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/c'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2ybc'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 -x,1/2+y,1/2-z
+3 -x,-y,-z
+4 x,1/2-y,1/2+z
+_cell_length_a                   4.2995(4)
+_cell_length_b                   13.649(1)
+_cell_length_c                   7.679(1)
+_cell_angle_alpha                90
+_cell_angle_beta                 101.48(1)
+_cell_angle_gamma                90
+_cell_volume                     441.618
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Rb1 Rb 0.7892(2) 0.06686(6) 0.2379(1)
+O1 O 0.340(2) 0.2322(5) 0.0948(9)
+O2 O 0.862(2) 0.2662(6) 0.345(1)
+O3 O 0.293(2) 0.3942(6) 0.043(1)
+O4 O 0.736(2) 0.4249(6) 0.348(1)
+C1 C 0.422(2) 0.3238(7) 0.130(1)
+C2 C 0.697(2) 0.3402(6) 0.290(1)
+H1 H 0.14(3) 0.23(1) -0.01(2)
+O3A O 0.707(2) -0.1058(6) 0.457(1)
+O3C O 1.293(2) 0.1058(6) 0.543(1)
+O4A O 0.264(2) -0.0751(6) 0.152(1)
+O4A_2 O 1.264(2) -0.0751(6) 0.152(1)
+O4C O 0.736(2) 0.0751(6) -0.152(1)
+Rb1A Rb 0.2108(2) 0.56686(6) 0.2621(1)
+Rb1C Rb -0.2108(2) 0.43314(6) -0.2621(1)
+Rb1A_2 Rb 1.2108(2) 0.56686(6) 0.2621(1)
+Rb1C_2 Rb 0.7892(2) 0.43314(6) 0.7379(1)
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_site_symmetry_1
+_geom_bond_site_symmetry_2
+Rb1 O1 1_555 1_555
+O1 C1 1_555 1_555
+O2 Rb1 1_555 1_555
+O3 C1 1_555 1_555
+O4 C2 1_555 1_555
+C1 C2 1_555 1_555
+C2 O2 1_555 1_555
+H1 O1 1_555 1_555
+O3A Rb1 1_555 1_555
+O3C Rb1 1_555 1_555
+O4A Rb1 1_555 1_555
+O4A_2 Rb1 1_555 1_555
+O4C Rb1 1_555 1_555
+Rb1A O3 1_555 1_555
+Rb1C O3 1_555 1_555
+Rb1A_2 O4 1_555 1_555
+Rb1C_2 O4 1_555 1_555
+O4 Rb1A 1_555 1_555
+
+#END
