@@ -52,6 +52,11 @@ rep_factors = replication_factors(frame.box, ljforcefield)
 	@test ljforcefield.σ²[:He][:Zn] == ljforcefield.σ²[:Zn][:He] # symmetry
 	@test ljforcefield.cutoffradius_squared == 12.5 ^ 2
 	@test rep_factors == (25, 25, 25)
+    # force field coverage function
+    framework10 = read_crystal_structure_file("SBMOF-1.cif")
+    @test check_forcefield_coverage(framework10, ljforcefield)
+    push!(framework10.atoms, :bogus_atom)
+    @test !check_forcefield_coverage(framework10, ljforcefield)
 end;
 
 @printf("------------------------------\nTesting Energetics.jl\n\n")

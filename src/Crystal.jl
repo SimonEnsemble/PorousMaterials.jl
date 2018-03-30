@@ -74,7 +74,7 @@ Data structure for a 3D crystal structure.
 - `name::String`: corresponds to crystal structure filename from which it was read.
 - `box::Box`: description of unit cell (Bravais Lattice); see `Box` struct.
 - `n_atoms::Int64`: number of atoms in the unit cell
-- `atoms::Array{String,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order.
+- `atoms::Array{Symbol,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order.
 - `xf::Array{Float64,2}`: fractional coordinates of the atoms, in strict order corresponding to `atoms`, stored column-wise so that `xf[:, i]` possesses the fractional coordinates of atom `i`.
 - `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
 """

@@ -6,17 +6,15 @@ Data structure for a Lennard Jones forcefield.
 
 # Attributes
 - `name::String`: name of forcefield; correponds to filename
-- `pure_σ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)
-- `pure_ϵ::Dict{AbstractString, Float64}`: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)
-- `ϵ::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons["He"]["C"]`
-- `σ²::Dict{AbstractString, Dict{AbstractString, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared["He"]["C"]`
+- `pure_σ::Dict{Symbol, Float64}`: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)
+- `pure_ϵ::Dict{Symbol, Float64}`: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)
+- `ϵ::Dict{Symbol, Dict{Symbol, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons[:He][:C]`
+- `σ²::Dict{Symbol, Dict{Symbol, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared[:He][:C]`
 - `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 """
 struct LennardJonesForceField
-    "name of forcefield; correponds to filename"
     name::String
     
-    # TODO symbols for atoms might be faster than strings.
 	pure_σ::Dict{Symbol, Float64}
 	pure_ϵ::Dict{Symbol, Float64}
 
@@ -34,6 +32,7 @@ Read a .csv file containing Lennard Jones parameters (with the following columns
 """
 function read_forcefield_file(filename::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
     if ! (mixing_rules in ["Lorentz-Berthelot"])
+        # TODO add other mixing rules with corresponding tests
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
@@ -123,7 +122,7 @@ end # end rep_factors
 Check that the force field contains parameters for every atom present in the framework.
 returns true or false; prints which atoms are missing by default if `verbose=true`.
 """
-function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField, verbose::Bool=true)
+function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField; verbose::Bool=true)
     framework_atoms = unique(framework.atoms)
     forcefield_atoms = keys(ljforcefield.pure_ϵ)
 
@@ -131,7 +130,9 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
 
     for atom in framework_atoms
         if !(atom in forcefield_atoms)
-            @printf("[Pseudo]atom type \"%s\" in framework is not covered by the forcefield.\n", atom)
+            if verbose
+                @printf("%s framework atom \"%s\" is not covered by the forcefield %s.\n", framework.name, atom, ljforcefield.name)
+            end
             full_coverage = false
         end
     end
