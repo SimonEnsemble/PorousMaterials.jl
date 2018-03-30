@@ -534,22 +534,20 @@ Checks to see if atom labels 0 and 1 (according to cif standards) are the same. 
 
 """
 function exclude_multiple_labels(lines, start, name_to_column)
-	for (i,line) in enumerate(lines[start:length(lines)])
-		line = split(line)
-		if length(line) != length(name_to_column)
-			break
-		end
-		label = line[name_to_column["_atom_site_label"]]
-		if contains(label,"_")
-			println(label)
-			println(split(label,"_")[1])
-			for line2 in lines[start:start+i]
-				line2 = split(line2)
-				if split(label,"_")[1] == line2[name_to_column["_atom_site_label"]]
-					return true
-				end
-			end
-		end
-	end
-	return false
+    for (i,line) in enumerate(lines[start:length(lines)])
+        line = split(line)
+        if length(line) != length(name_to_column)
+            break
+        end
+        label = line[name_to_column["_atom_site_label"]]
+        if contains(label,"_")
+            for line2 in lines[start:start+i]
+                line2 = split(line2)
+                if split(label,"_")[1] == line2[name_to_column["_atom_site_label"]]
+                    return true
+                end
+            end
+        end
+    end
+    return false
 end
