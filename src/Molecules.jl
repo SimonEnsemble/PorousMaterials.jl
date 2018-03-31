@@ -1,25 +1,48 @@
+# Molecules are composed of Lennard-Jones spheres and point charges.
+"A Lennard-Jones sphere"
+struct LJsphere
+    "atom name corresponding to force field"
+    atom::Symbol
+    "Cartesian coordinates (units: A)"
+    x::Array{Float64, 1}
+end
+
+"A point charge"
+struct Charge
+    "charge magnitude (electrons)"
+    q::Float64
+    "Cartesian coordinates (units: A)"
+    x::Array{Float64, 1}
+end
+
 """
 Data structure for a molecule/adsorbate.
 
 # Attributes
-- `n_atoms::Int64`: Number of atoms in the molecule
-- `atoms::Array{AbstractString}`: List of (pseudo)atoms
-- `x::Array{Float64,2}`: A matrix of cartesian coordinates characterizing the position of the atoms in the molecule, stored column-wise so that `x[:, i]` is the coordinate for atom `atoms[i]`.
-- `charges::Array{Float64}`: An array of charges for each specific atom.
+- `species::Symbol`: Species of molecule, e.g. `CO2` or `ethane`
+- `ljspheres::Array{LJspheres, 1}`: array of Lennard-Jones spheres comprising the molecule
+- `charges::Array{Charges, 1}`: array of point charges comprising the molecule
 """
-mutable struct Molecule
-	n_atoms::Int64
-	atoms::Array{Symbol}
-	x::Array{Float64, 2}
-	charges::Array{Float64}
+struct Molecule
+    species::Symbol
+    ljspheres::Array{LJsphere, 1}
+    charges::Array{Charge, 1}
 end
 
-
 function Base.show(io::IO, molecule::Molecule)
-	println(io, "Number of atoms in molecule: ",molecule.n_atoms)
-	print(io, " Position of atoms: ")
-	print(io, typeof(molecule))
-	for i=1:molecule.n_atoms
-		@printf(io, "\n%s:\t[%.3f, %.3f, %.3f]\n", molecule.atoms[i], molecule.x[1,i], molecule.x[2,i], molecule.x[3,i])
-	end
+    println(io, "Molecule species: ", molecule.species)
+    if length(molecule.ljspheres) > 0
+        println(io, "Lennard-Jones spheres: ")
+        for ljsphere in molecule.ljspheres
+            @printf(io, "\tatom = %s, x = [%.3f, %.3f, %.3f]\n", ljsphere.atom,
+                    ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
+        end
+    end
+    if length(molecule.charges) > 0
+        println(io, "Point charges: ")
+        for charge in molecule.charges
+            @printf(io, "\tq = %f, x = [%.3f, %.3f, %.3f]\n", charge.q, 
+                    charge.x[1], charge.x[2], charge.x[3])
+        end
+    end
 end
