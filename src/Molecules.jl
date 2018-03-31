@@ -82,7 +82,7 @@ function read_molecule_file(species::String)
     charges = PointCharge[]
     for row in eachrow(df_c)
         x = [row[:x], row[:y], row[:z]]
-        push!(ljspheres, Charge(row[:q], x))
+        push!(charges, PointCharge(row[:q], x))
     end
     
     return Molecule(Symbol(species), ljspheres, charges)
