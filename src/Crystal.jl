@@ -343,6 +343,7 @@ end
     strip_numbers_from_atom_labels(framework::Framework)
 
 Strip numbers from labels for `framework.atoms`.
+Precisely, for `atom` in `framework.atoms`, find the first number that appears in `atom`. Remove this number and all following characters from `atom`.
 e.g. C12 --> C
 	 Ba12A_3 --> Ba
 """
