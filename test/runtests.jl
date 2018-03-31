@@ -62,48 +62,53 @@ end;
 @printf("------------------------------\nTesting Energetics.jl\n\n")
 @testset "Energetics Tests" begin
     # test Periodic boundary conditions
-    molecule1 = Molecule(1, [:He], [0.5, 0.5, 0.5][:,:], [0.0])
-    molecule2 = Molecule(1, [:He], [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]][:,:], [0.0])
+    molecule1 = read_molecule_file("He")
+    molecule1.ljspheres[1].x[:] = [0.5, 0.5, 0.5]
+    molecule2 = read_molecule_file("He")
+    molecule2.ljspheres[1].x[:] = [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]]
+
 	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
 	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ[:He][:Zn] * ((ljforcefield.σ²[:Zn][:He] / 0.75) ^ 6 - (ljforcefield.σ²[:Zn][:He] / 0.75) ^ 3)
     # the position of a molecule should not change inside guest_guest_vdw_energy.
-    @assert(all(molecule1.x .≈ [0.5, 0.5, 0.5]))
+    @assert(all(molecule1.ljspheres[1].x .≈ [0.5, 0.5, 0.5]))
+    @assert(all(molecule2.ljspheres[1].x .≈ [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]]))
 
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
-    xenon = Molecule(1, [:Xe], zeros(3, 1), [0.0])
+    xenon = read_molecule_file("Xe")
+    xenon.ljspheres[1].x[:] = zeros(3)
     energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy, -5041.58, atol = 0.005)
-    xenon.x[1] = 0.494265; xenon.x[2] = 2.22668; xenon.x[3] = 0.450354;
+    xenon.ljspheres[1].x[1] = 0.494265; xenon.ljspheres[1].x[2] = 2.22668; xenon.ljspheres[1].x[3] = 0.450354;
     energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy, 12945.838, atol = 0.005)
 
     # test PBC, rep factors are (3, 5, 2)
     xf = [0.05, 0.4, 0.02][:, :]
-    xenon.x = sbmof1.box.f_to_c * xf
+    xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
     energy1 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
     xf = [1.05, 0.4, 0.02][:, :]
-    xenon.x = sbmof1.box.f_to_c * xf
+    xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
     energy2 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy2, atol = 0.00001)
     xf = [2.05, 4.4, 1.02][:, :]
-    xenon.x = sbmof1.box.f_to_c * xf
+    xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
     energy3 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy3, atol = 0.00001)
     # outside box
     xf = [4.05, 5.4, 2.02][:, :]
-    xenon.x = sbmof1.box.f_to_c * xf
+    xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
     energy4 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy4, atol = 0.00001)
     xf = [-0.95, 5.4, 2.02][:, :]
-    xenon.x = sbmof1.box.f_to_c * xf
+    xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
     energy5 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy5, atol = 0.00001)
     xf = [-0.95, -0.6, -0.98][:, :]
-    xenon.x = sbmof1.box.f_to_c * xf
+    xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
     energy6 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy6, atol = 0.00001)
 end;

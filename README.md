@@ -35,6 +35,8 @@ in .cif format must be in P1 symmetry. If your .cif is not in P1 symmetry, our f
 `convert_cif_to_P1_symmetry()` calls the Atomic Simulation Environment (ASE) in Python to 
 write the .cif in P1 symmetry.
 
+`PorousMaterials.jl` includes a .cif and .cssr reader.
+
 For example:
 
 ```
@@ -56,16 +58,7 @@ The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure
 
 ## Molecule/Adsorbate
 
-Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`.
+Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`. Each molecule is assigned a different directory and contains two files: `point_charges.csv` and `lennard_jones_spheres.csv`. Both are .csv files of the point charges and Lennard Jones spheres, respectively, comprising the molecule. See `test/data` for examples.
 
 ## Energetics
 
-## TODO
-* ~~document nearest image convention code (why the sign)~~
-* ~~in `vdw_energy`, ensure that the fractional coordinates are brought into the super cell through `mod()`. [But do not actually modify the molecule object]~~
-* ~~create `test_structure.cif` and `test_forcefield.csv` and test functions.~~
-* ~~(for Cory) generate test data from RASPA~~
-* ~~change `molecule.pos` to `molecule.x` for parallelism with `framework.xf` (`x` is notation for position in math)~~
-* `translate_to!(molecule::Molecule)`, `perturb_coordinates!(molecule::Molecule)`
-* ~~`print(framework::Framework)`, `print(forcefield::LJForcefield)`, `print(molecule::Molecule)`~~
-* Read in charges, assign to `Framework` in `read_crystal_structure`
