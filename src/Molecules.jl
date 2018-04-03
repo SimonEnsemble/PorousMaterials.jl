@@ -1,5 +1,5 @@
 # Molecules are composed of Lennard-Jones spheres and point charges.
-struct LennardJonesSphere
+mutable struct LennardJonesSphere
     "atom name corresponding to force field"
     atom::Symbol
     "Cartesian coordinates (units: A)"
@@ -7,7 +7,7 @@ struct LennardJonesSphere
 end
 
 "A point charge"
-struct PointCharge
+mutable struct PointCharge
     "charge magnitude (electrons)"
     q::Float64
     "Cartesian coordinates (units: A)"
@@ -22,10 +22,11 @@ Data structure for a molecule/adsorbate.
 - `ljspheres::Array{LennardJonesSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
 - `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
 """
-struct Molecule
+mutable struct Molecule
     species::Symbol
     ljspheres::Array{LennardJonesSphere, 1}
     charges::Array{PointCharge, 1}
+    center_of_mass::Array{Float64, 1}
 end
 
 function Base.show(io::IO, molecule::Molecule)
@@ -56,6 +57,13 @@ function read_molecule_file(species::String)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
+
+    # Read in atomic masses
+    if ! isfile(PATH_TO_DATA * "atomicmasses.csv")
+        error(@sprintf("No file 'atomicmasses.csv' exists. This file is needed to calculate the center of mass"))
+    end
+    atomic_mass_data = CSV.read(PATH_TO_DATA * "atomicmasses.csv")
+    atomic_masses = Dict(atom => atomic_mass_data[:mass][i] for (i,atom) in enumerate(atomic_mass_data[:atom]))
     
     # Read in Lennard Jones spheres
     ljspheresfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
@@ -65,11 +73,16 @@ function read_molecule_file(species::String)
     end
     df_lj = CSV.read(ljspheresfilename)
     
+    COM = [0.0, 0.0, 0.0]
+    total_mass = 0.0
     ljspheres = LennardJonesSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         push!(ljspheres, LennardJonesSphere(Symbol(row[:atom]), x))
+        total_mass += atomic_masses[row[:atom]]
+        COM += atomic_masses[row[:atom]] .* x
     end
+    COM /= total_mass
 
     # Read in point charges
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
@@ -85,5 +98,114 @@ function read_molecule_file(species::String)
         push!(charges, PointCharge(row[:q], x))
     end
     
-    return Molecule(Symbol(species), ljspheres, charges)
+    return Molecule(Symbol(species), ljspheres, charges, COM)
+end
+
+
+"""
+    move!(molecule::Molecule, translation::Array{Float64, 1})
+
+Moves a molecule according to the `translation` array.
+Will recalculate the center of mass of the molecule as well.
+
+# Arguments
+- `molecule::Molecule`: The molecule being moved
+- `translation::Array{Float64, 1}`: A 1-D array with 3 elements, corresponding to the x-, y- and z- directions. This is the movement vector which is used to make the translation.
+"""
+function move!(molecule::Molecule, translation::Array{Float64, 1})
+    T = construct_translational_matrix(translation[1], translation[2], translation[3])
+    for ljsphere in molecule.ljspheres
+        ljsphere.x = matmul(ljsphere.x, T)        
+    end
+
+    for charge in molecule.charges
+        charge.x = matmul(charge.x, T)
+    end
+    molecule.center_of_mass = matmul(molecule.center_of_mass, T)
+end
+
+"""
+Used to adjust to 4x4 translational/rotational matrices
+"""
+function matmul(vector::Array{Float64,1}, matrix::Array{Float64,2})
+    push!(vector, 1)
+    vector = matrix * vector
+    pop!(vector)
+    return vector
+end
+
+
+"""
+    rotate!(molecule::Molecule, θ::Real, ϕ::Real, γ::Real, order_of_rotation::Array{Int64, 1} = [1, 2, 3])
+
+Used to rotate a molecule by the center of mass. Because this is a three dimensional space, the order of rotation matters.
+
+# Arguments
+- `molecule::Molecule`: The molecule being rotated
+- `θ::Real`: The rotation about the x-axis in radians
+- `ϕ::Real`: The rotation about the y-axis in radians
+- `γ::Real`: The rotation about the z-axis in radians
+- `order_of_rotation::Array{Int64, 1}`: The order in which the molecule is rotated. Will default to [1,2,3]. That is, it will rotate about the x-axis first, then the y-axis and finally the z-axis.
+"""
+function rotate!(molecule::Molecule, θ::Real, ϕ::Real, γ::Real, order_of_rotation::Array{Int64, 1} = [1,2,3])
+    R = construct_rot_matrix(molecule.center_of_mass, order_of_rotation, θ, ϕ, γ)
+    for ljsphere in molecule.ljspheres
+        ljsphere.x = matmul(ljsphere.x, R)
+    end
+
+    for charge in molecule.charges
+        charge.x = matmul(charge.x, R)
+    end
+end
+
+
+"""
+    rotate_x!(molecule::Molecule, θ::Real)
+
+Used to rotate molecule about the x-axis (see rotate!)
+"""
+rotate_x!(molecule::Molecule, θ::Real) = rotate!(molecule, θ, 0, 0)
+
+
+"""
+    rotate_y!(molecule::Molecule, θ::Real)
+
+Used to rotate molecule about the y-axis (see rotate!)
+"""
+rotate_y!(molecule::Molecule, θ::Real) = rotate!(molecule, 0, θ, 0)
+
+
+"""
+    rotate_z!(molecule::Molecule, θ::Real)
+
+Used to rotate molecule about the z-axis (see rotate!)
+"""
+rotate_z!(molecule::Molecule, θ::Real) = rotate!(molecule, 0, 0, θ)
+
+"""
+Constructs a 4x4 translational matrix. We use a 4x4 matrix to be able to multiply it with the rotational matrices and combine all translational and rotational operations into a single matrix `R`
+"""
+function construct_translational_matrix(x::Real, y::Real, z::Real)
+    return [1 0 0 x;
+            0 1 0 y;
+            0 0 1 z;
+            0 0 0 1]
+end
+
+
+"""
+Constructs a 4x4 rotational matrix. Because we're in a three dimensional space the order of rotations matters. We use a 4x4 matrix to be able to multiply it with the rotational matrices and combine all translational and rotational operations into a single matrix `R`
+"""
+function construct_rot_matrix(center::Array{Float64, 1}, order_of_rotation::Array{Int64, 1}, θ::Real, ϕ::Real, γ::Real)
+    #TODO optimize
+    # Translate to origin
+    R = construct_translational_matrix(-center[1], -center[2], -center[3])
+    RR = Array{Array{Float64, 2}, 1}(3)
+    RR[1] = [1 0 0 0; 0 cos(θ) -sin(θ) 0; 0 sin(θ) cos(θ) 0; 0 0 0 1]
+    RR[2] = [cos(ϕ) 0 sin(ϕ) 0; 0 1 0 0; -sin(ϕ) 0 cos(ϕ) 0; 0 0 0 1]
+    RR[3] = [cos(γ) -sin(γ) 0 0; sin(γ) cos(γ) 0 0; 0 0 1 0; 0 0 0 1]
+    for i in order_of_rotation
+        R = RR[i] * R
+    end
+    return construct_translational_matrix(center[1], center[2], center[3]) * R
 end

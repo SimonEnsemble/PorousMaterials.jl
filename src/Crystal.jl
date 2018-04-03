@@ -443,6 +443,7 @@ function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; ve
     @pyimport ase.build as asebuild
 
     non_p1_cif_location = PATH_TO_DATA * "crystals/" * filename
+    println(non_p1_cif_location)
     non_p1_cif = aseio.read(non_p1_cif_location, format="cif")
 
     p1_cif = asebuild.make_supercell(non_p1_cif, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
