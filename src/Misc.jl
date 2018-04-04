@@ -41,23 +41,6 @@ function read_cpk_colors()
 end
 
 """
-    atomic_masses = read_atomic_masses() # atomic_masses["C"] gives 12.0107
-
-Return `atomic_masses::Dict{AbstractString, Float64}`, where `atom_masses["C"]` gives 
-atomic mass of carbon in amu.
-"""
-function read_atomic_masses()
-    atom_masses = Dict{AbstractString, Float64}()
-    df_props = CSV.read(PATH_TO_DATA * "atom_properties.csv", nullable=true)
-    for row in eachrow(df_props)
-        if ! ismissing(row[Symbol("atomicmass[amu]")])
-            atom_masses[row[:atom]] = row[Symbol("atomicmass[amu]")]
-        end
-    end
-    return atom_masses
-end
-
-"""
     atomic_radii = read_atomic_radii() # atomic_masses["C"] gives 10.87 
 
 Return `atomic_radii::Dict{AbstractString, Float64}`, where `atom_masses["C"]` gives 

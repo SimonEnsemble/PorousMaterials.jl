@@ -62,8 +62,7 @@ function read_molecule_file(species::String)
     if ! isfile(PATH_TO_DATA * "atomicmasses.csv")
         error(@sprintf("No file 'atomicmasses.csv' exists. This file is needed to calculate the center of mass"))
     end
-    atomic_mass_data = CSV.read(PATH_TO_DATA * "atomicmasses.csv")
-    atomic_masses = Dict(atom => atomic_mass_data[:mass][i] for (i,atom) in enumerate(atomic_mass_data[:atom]))
+    atomic_masses = read_atomic_masses()
     
     # Read in Lennard Jones spheres
     ljspheresfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
@@ -78,9 +77,10 @@ function read_molecule_file(species::String)
     ljspheres = LennardJonesSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
-        push!(ljspheres, LennardJonesSphere(Symbol(row[:atom]), x))
-        total_mass += atomic_masses[row[:atom]]
-        COM += atomic_masses[row[:atom]] .* x
+        atom = Symbol(row[:atom])
+        push!(ljspheres, LennardJonesSphere(atom, x))
+        total_mass += atomic_masses[atom]
+        COM += atomic_masses[atom] .* x
     end
     COM /= total_mass
 

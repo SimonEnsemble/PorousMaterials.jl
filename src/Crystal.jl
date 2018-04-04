@@ -480,26 +480,25 @@ function show(io::IO, framework::Framework)
 end
 
 """
-
-    atomic_mass_dict = atomic_mass_dict()
+    atomic_masses = read_atomic_masses()
 
 Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and their atomic
 masses in amu.
 """
-function atomic_mass_dict()
+function read_atomic_masses()
     if ! isfile("data/atomicmasses.csv")
         error("Cannot find atomicmasses.csv file in your data folder\n")
     end
 
     df_am = CSV.read("data/atomicmasses.csv")
 
-    atomic_mass_dict = Dict{Symbol, Float64}()
+    atomic_masses = Dict{Symbol, Float64}()
 
     for row in eachrow(df_am)
-		atomic_mass_dict[Symbol(row[:atom])] = row[:mass]
+		atomic_masses[Symbol(row[:atom])] = row[:mass]
     end
 
-    return atomic_mass_dict
+    return atomic_masses
 end
 
 """
@@ -510,7 +509,7 @@ Return the molecular weight of a unit cell of the framework in amu.
 """
 function molecular_weight(framework::Framework)
     mass = 0.0
-    atomic_masses = atomic_mass_dict()
+    atomic_masses = read_atomic_masses()
 
 	for atom in framework.atoms
         mass += atomic_masses[atom]
