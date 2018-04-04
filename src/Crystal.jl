@@ -28,7 +28,6 @@ struct Box
     f_to_c::Array{Float64, 2}
     c_to_f::Array{Float64, 2}
 end
-# TODO write a nice show & print function for Box :)
 
 """
     box = construct_box(a, b, c, α, β, γ)
@@ -459,26 +458,6 @@ function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; ve
 end
 
 
-import Base.print
-function print(io::IO, framework::Framework)
-	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
-	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
-	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
-
-	@printf(io, "α = %.3f radians\n", framework.box.α)
-	@printf(io, "β = %.3f radians\n", framework.box.β)
-	@printf(io, "γ = %.3f radians\n", framework.box.γ)
-
-	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
-
-	@printf(io, "Number of atoms = %d", framework.n_atoms)
-end
-
-import Base.show
-function show(io::IO, framework::Framework)
-	print(io, framework)
-end
-
 """
     atomic_masses = read_atomic_masses()
 
@@ -551,4 +530,35 @@ function exclude_multiple_labels(lines, start, name_to_column)
         end
     end
     return false
+end
+
+function Base.print(io::IO, framework::Framework)
+	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
+	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
+	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
+
+	@printf(io, "α = %.3f radians\n", framework.box.α)
+	@printf(io, "β = %.3f radians\n", framework.box.β)
+	@printf(io, "γ = %.3f radians\n", framework.box.γ)
+
+	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
+
+	@printf(io, "Number of atoms = %d", framework.n_atoms)
+end
+
+function Base.show(io::IO, framework::Framework)
+	print(io, framework)
+end
+
+function Base.print(io::IO, box::Box)
+    println(io, "Bravais unit cell of a crystal.")
+    @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
+        box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
+    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n", 
+        box.a, box.b, box.c)
+    @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
+end
+
+function Base.show(io::IO, box::Box)
+	print(io, box)
 end
