@@ -21,6 +21,7 @@ Data structure for a molecule/adsorbate.
 - `species::Symbol`: Species of molecule, e.g. `CO2` or `ethane`
 - `ljspheres::Array{LennardJonesSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
 - `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
+- `center_of_mass::Array{Float64, 1}`: center of mass of the molecule
 """
 struct Molecule
     species::Symbol
@@ -31,6 +32,7 @@ end
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
+    println(io, "Center of mass: ", molecule.center_of_mass)
     if length(molecule.ljspheres) > 0
         println(io, "Lennard-Jones spheres: ")
         for ljsphere in molecule.ljspheres
@@ -51,6 +53,7 @@ end
     molecule = read_molecule_file("Xe")
 
 Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
+Center of mass assigned using atomic masses from `read_atomic_masses()`
 """
 function read_molecule_file(species::String)
     if ! isdir(PATH_TO_DATA * "molecules/" * species)
@@ -79,6 +82,9 @@ function read_molecule_file(species::String)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
         push!(ljspheres, LennardJonesSphere(atom, x))
+        if ! (atom in keys(atomic_masses))
+            error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
+        end
         total_mass += atomic_masses[atom]
         COM += atomic_masses[atom] .* x
     end
