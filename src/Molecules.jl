@@ -1,5 +1,5 @@
 # Molecules are composed of Lennard-Jones spheres and point charges.
-mutable struct LennardJonesSphere
+struct LennardJonesSphere
     "atom name corresponding to force field"
     atom::Symbol
     "Cartesian coordinates (units: A)"
@@ -7,7 +7,7 @@ mutable struct LennardJonesSphere
 end
 
 "A point charge"
-mutable struct PointCharge
+struct PointCharge
     "charge magnitude (electrons)"
     q::Float64
     "Cartesian coordinates (units: A)"
@@ -22,7 +22,7 @@ Data structure for a molecule/adsorbate.
 - `ljspheres::Array{LennardJonesSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
 - `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
 """
-mutable struct Molecule
+struct Molecule
     species::Symbol
     ljspheres::Array{LennardJonesSphere, 1}
     charges::Array{PointCharge, 1}
@@ -115,23 +115,23 @@ Will recalculate the center of mass of the molecule as well.
 function move!(molecule::Molecule, translation::Array{Float64, 1})
     T = construct_translational_matrix(translation[1], translation[2], translation[3])
     for ljsphere in molecule.ljspheres
-        ljsphere.x = matmul(ljsphere.x, T)        
+        ljsphere.x[:] = matmul(ljsphere.x, T)        
     end
 
     for charge in molecule.charges
-        charge.x = matmul(charge.x, T)
+        charge.x[:] = matmul(charge.x, T)
     end
-    molecule.center_of_mass = matmul(molecule.center_of_mass, T)
+    molecule.center_of_mass[:] = matmul(molecule.center_of_mass, T)
 end
 
 """
 Used to adjust to 4x4 translational/rotational matrices
 """
 function matmul(vector::Array{Float64,1}, matrix::Array{Float64,2})
-    push!(vector, 1)
-    vector = matrix * vector
-    pop!(vector)
-    return vector
+    vec = deepcopy(vector)
+    push!(vec, 1)
+    vec = matrix * vec
+    return vec[1:3]
 end
 
 
@@ -148,13 +148,15 @@ Used to rotate a molecule by the center of mass. Because this is a three dimensi
 - `order_of_rotation::Array{Int64, 1}`: The order in which the molecule is rotated. Will default to [1,2,3]. That is, it will rotate about the x-axis first, then the y-axis and finally the z-axis.
 """
 function rotate!(molecule::Molecule, θ::Real, ϕ::Real, γ::Real, order_of_rotation::Array{Int64, 1} = [1,2,3])
+    θ = Float64(θ); ϕ = Float64(ϕ); γ = Float64(γ);
+    #TODO This function is almost identical to the move! function. We could merge them maybe?
     R = construct_rot_matrix(molecule.center_of_mass, order_of_rotation, θ, ϕ, γ)
     for ljsphere in molecule.ljspheres
-        ljsphere.x = matmul(ljsphere.x, R)
+        ljsphere.x[:] = matmul(ljsphere.x, R)
     end
 
     for charge in molecule.charges
-        charge.x = matmul(charge.x, R)
+        charge.x[:] = matmul(charge.x, R)
     end
 end
 
