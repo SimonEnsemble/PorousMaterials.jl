@@ -103,6 +103,13 @@ function read_molecule_file(species::String)
         x = [row[:x], row[:y], row[:z]]
         push!(charges, PointCharge(row[:q], x))
     end
+
+    # check for charge neutrality
+    if length(charges) > 0
+        if ! (sum([charges[i].q for i = 1:length(charges)]) ≈ 0.0)
+            error(@sprintf("Molecule %s is not charge neutral!", species))
+        end
+    end
     
     return Molecule(Symbol(species), ljspheres, charges, COM)
 end

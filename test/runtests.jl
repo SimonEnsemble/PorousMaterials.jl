@@ -59,6 +59,25 @@ rep_factors = replication_factors(frame.box, ljforcefield)
     @test !check_forcefield_coverage(framework10, ljforcefield)
 end;
 
+@printf("------------------------------\nTesting Molecules.jl\n\n")
+@testset "Molecules Tests" begin
+    # test reader
+    molecule = read_molecule_file("test")
+    atomic_masses = read_atomic_masses()
+    @test molecule.species == :test
+    @test length(molecule.ljspheres) == 2
+    @test molecule.ljspheres[1].atom == :Cu
+    @test molecule.ljspheres[2].atom == :Zn
+    @test all(molecule.ljspheres[1].x .≈ [1.0, 20.0, 3.0])
+    @test all(molecule.ljspheres[2].x .≈ [3.0, 0.0, 0.0])
+    @test all(molecule.center_of_mass .≈ (atomic_masses[:Cu] * [1.0, 20.0, 3.0] + atomic_masses[:Zn] * [3.0, 0.0, 0.0]) / (atomic_masses[:Cu] + atomic_masses[:Zn]))
+    @test length(molecule.charges) == 2
+    @test molecule.charges[1].q ≈ 0.2
+    @test molecule.charges[2].q ≈ -0.2
+    @test all(molecule.charges[1].x ≈ [1.0, 2.0, 3.0])
+    @test all(molecule.charges[2].x ≈ [8.0, 9.0, 10.0])
+end
+
 @printf("------------------------------\nTesting Energetics.jl\n\n")
 @testset "Energetics Tests" begin
     # test Periodic boundary conditions
@@ -112,6 +131,7 @@ end;
     energy6 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
 	@test isapprox(energy1, energy6, atol = 0.00001)
 end;
+
 
 @printf("------------------------------\n")
 
