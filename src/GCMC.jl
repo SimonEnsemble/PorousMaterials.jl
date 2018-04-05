@@ -44,15 +44,23 @@ type MarkovCounts
 end
 
 """
-    insert_molecule!(molecules, simulation_box, adsorbate)
+    insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
 
 Inserts an additional `adsorbate` molecule into the system at random coordinates inside 
 the `simulation_box`.
 """
-function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, adsorbate::Symbol)
-    #TODO create template to handle more complex molecules
-    x = box.f_to_c * rand(3, 1)
-    molecule = Molecule(1, [adsorbate], x[:, :], [0.0])
+function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
+    # choose center of mass
+    x = box.f_to_c * rand(3)
+    # copy the template
+    molecule = deepcopy(template)
+    # conduct a rotation
+    if (length(molecule.ljspheres) + length(molecule.charges) > 1)
+        rotate!(molecule)
+    end
+    # translate molecule to its new center of mass
+    translate_to!(molecule, x)
+    # push molecule to array.
     push!(molecules, molecule)
 end
 
@@ -109,7 +117,7 @@ function translate_molecule!(molecule::Molecule, simulation_box::Box)
     # peturb in Cartesian coords in a random cube centered at current coords.
     dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx)
-    # done, unless the molecule has moved completely outside of the box...
+    # done, unless the molecule has moved outside of the box
     bring_molecule_inside_box!(molecule, simulation_box)
 
     return old_molecule # in case we need to restore
@@ -195,7 +203,7 @@ runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         adsorbate_template::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
+                         molecule::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
         pretty_print(adsorbate, framework.name, temperature, fugacity)
@@ -203,6 +211,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     const repfactors = replication_factors(framework.box, ljforcefield)
     const simulation_box = replicate_box(framework.box, repfactors)
+    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin.
+    const molecule_template = deepcopy(molecule)
 
     current_energy_gg = 0.0 # only true if starting with 0 molecules
     current_energy_gh = 0.0
@@ -223,7 +233,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         markov_counts.n_proposed[which_move] += 1
         
         if which_move == INSERTION
-            insert_molecule!(molecules, simulation_box, adsorbate)
+            insert_molecule!(molecules, simulation_box, molecule_template)
 
             U_gg = guest_guest_vdw_energy(length(molecules), molecules, ljforcefield, simulation_box)
             U_gh = vdw_energy(framework, molecules[end], ljforcefield, repfactors)
@@ -294,7 +304,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
         # TODO remove after testing.
         for m = 1:length(molecules)
-            @assert(! completely_outside_box(molecules[m], simulation_box), "molecule outside box!")
+            @assert(! outside_box(molecules[m], simulation_box), "molecule outside box!")
         end
 
         # sample the current configuration
