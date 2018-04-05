@@ -76,6 +76,37 @@ end;
     @test molecule.charges[2].q ≈ -0.2
     @test all(molecule.charges[1].x ≈ [1.0, 2.0, 3.0])
     @test all(molecule.charges[2].x ≈ [8.0, 9.0, 10.0])
+
+    # test translate
+    m1 = read_molecule_file("test")
+    m2 = read_molecule_file("test")
+    @test isapprox(m1, m2) # overloaded this function for molecules
+    translate_by!(m2, [0.0, 0.0, 0.0])
+    @test isapprox(m1, m2)
+    translate_by!(m2, [0.0, 10.0, 0.0])
+    @test ! isapprox(m1, m2)
+    translate_to!(m2, m1.center_of_mass)
+    @test isapprox(m1, m2)
+    translate_to!(m2, [50.0, 100.0, 150.0])
+    @test isapprox(m2.center_of_mass, [50.0, 100.0, 150.0])
+    for i = 1:200
+        translate_by!(m2, [randn(), randn(), randn()])
+    end
+    @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
+    @test norm(m2.ljspheres[1].x - m2.ljspheres[2].x) ≈ norm(m1.ljspheres[1].x - m1.ljspheres[2].x)
+
+    # test rotate function
+    translate_to!(m2, [50.0, 100.0, 150.0])
+    for i = 1:2000
+        rotate!(m2)
+    end
+    @test isapprox(m2.center_of_mass, [50.0, 100.0, 150.0])
+    @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
+    @test norm(m2.ljspheres[1].x - m2.ljspheres[2].x) ≈ norm(m1.ljspheres[1].x - m1.ljspheres[2].x)
+    m2_old = deepcopy(m2)
+    rotate!(m2)
+    @test ! isapprox(m2_old, m2)
+
 end
 
 @printf("------------------------------\nTesting Energetics.jl\n\n")
