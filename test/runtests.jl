@@ -94,7 +94,18 @@ end;
     end
     @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
     @test norm(m2.ljspheres[1].x - m2.ljspheres[2].x) ≈ norm(m1.ljspheres[1].x - m1.ljspheres[2].x)
-
+    
+    # rotation matrix shld be orthogonal
+    r_orthogonal = true
+    for i = 1:300
+        u = rand_point_on_unit_sphere()
+        r = rotation_matrix(u, 2 * π * rand())
+        if ! isapprox(r * transpose(r), eye(3))
+            r_orthogonal = false
+        end
+    end
+    @test r_orthogonal
+    
     # test rotate function
     translate_to!(m2, [50.0, 100.0, 150.0])
     for i = 1:2000
@@ -188,17 +199,18 @@ end;
     molecules = Array{Molecule}(0)
     repfactors = replication_factors(frame.box, ljforcefield)
     sim_box = replicate_box(frame.box, repfactors)
-
+    
+    m = read_molecule_file("He")
     for i = 1:100
-        insert_molecule!(molecules, sim_box, :C)
-        if completely_outside_box(molecules[i], sim_box)
+        insert_molecule!(molecules, sim_box, m)
+        if outside_box(molecules[i], sim_box)
             insertion_inside_box = false
         end
         if ! (length(molecules) == i)
             insertion_adds_molecule = false
         end
         if i > 1
-            if sum(molecules[i - 1].x .≈ molecules[i].x) != 0
+            if isapprox(molecules[i - 1], molecules[i])
                 # by chance this could fail but highly unlikely!
                 insertion_at_random_coords = false
             end
@@ -225,35 +237,38 @@ end;
     #
     # first, test function to bring molecule inside a box.
     box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
-    molecule = Molecule(1, [:C], [26.0, -0.2, 12.][:, :], [0.0])
+    molecule = read_molecule_file("He")
+    translate_to!(molecule, [26.0, -0.2, 12.])
     bring_molecule_inside_box!(molecule, box)
-    @test all(molecule.x .≈ [1.0, 24.8, 12.0])
+    @test isapprox(molecule.center_of_mass, [1.0, 24.8, 12.0])
+    @test isapprox(molecule.ljspheres[1].x, [1.0, 24.8, 12.0])
 
-    translation_old_coords_stored_properly = true
+    translation_old_molecule_stored_properly = true
     translation_coords_changed = true
     translation_inside_box = true
-    molecules = [Molecule(1, [:C], sim_box.f_to_c * [0.99, 0.99, 0.01][:, :], [0.0]),
-                 Molecule(1, [:F], sim_box.f_to_c * [0.01, 0.01, 0.99][:, :], [0.0])]
-    x_old = translate_molecule!(molecules[1], sim_box)
-    if ! all(x_old .== sim_box.f_to_c * [0.99, 0.99, 0.01][:, :])
-        translation_old_coords_stored_properly = false
+    molecules = [read_molecule_file("He"), read_molecule_file("He")]
+    translate_to!(molecules[1], sim_box.f_to_c * [0.99, 0.99, 0.01])
+    translate_to!(molecules[2], sim_box.f_to_c * [0.99, 0.99, 0.01])
+    old_molecule = translate_molecule!(molecules[1], sim_box)
+    if ! isapprox(old_molecule, molecules[2]) # constructed to be identitical!
+        translation_old_molecule_stored_properly = false
     end
-    if ! all(molecules[1].x .!= x_old)
+    if isapprox(molecules[1], molecules[2])
         translation_coords_changed = false
     end
 
     for i = 1:100000
         which_molecule = rand(1:2) # choose molecule to move
-        xf_old_should_be = deepcopy(molecules[which_molecule].x)
-        xf_old = translate_molecule!(molecules[which_molecule], sim_box)
-        if ! all(molecules[which_molecule].x .!= x_old)
+        old_molecule_should_be = deepcopy(molecules[which_molecule])
+        old_molecule = translate_molecule!(molecules[which_molecule], sim_box)
+        if ! isapprox(old_molecule, old_molecule_should_be)
             translation_coords_changed = false
         end
-        if completely_outside_box(molecules[which_molecule], sim_box)
+        if outside_box(molecules[which_molecule], sim_box)
             translation_inside_box = false
         end
     end
-    @test translation_old_coords_stored_properly
+    @test translation_old_molecule_stored_properly
     @test translation_coords_changed
     @test translation_inside_box
 end

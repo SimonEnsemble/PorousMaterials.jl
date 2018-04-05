@@ -115,7 +115,7 @@ function translate_molecule!(molecule::Molecule, simulation_box::Box)
     # store old molecule and return at the end for possible restoration
     old_molecule = deepcopy(molecule)
     # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
+    dx = δ * (rand(3) - 0.5) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx)
     # done, unless the molecule has moved outside of the box
     bring_molecule_inside_box!(molecule, simulation_box)
@@ -196,7 +196,7 @@ function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1}, ljforcefiel
 end
 
 """
-    results = gcmc_simulation(framework, temperature, pressure, adsorbate, ljforcefield)
+    results = gcmc_simulation(framework, temperature, pressure, molecule, ljforcefield)
 
 runs a monte carlo simulation using the given framework and adsorbate.
 runs at the given temperature and pressure
