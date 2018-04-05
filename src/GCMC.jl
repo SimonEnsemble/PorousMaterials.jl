@@ -68,54 +68,51 @@ function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
 end
 
 """
-    bring_molecule_inside_box!(molecule, simulation_box)
+    bring_molecule_inside_box!(molecule::Molecule, simulation_box::Box)
 
-Apply periodic boundary conditions to bring a molecule inside the a box if it is
-completely outside of the box.
+Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic boundary conditions and translate the center of mass of the `Molecule` (and its atoms/point charges) so that it is inside of the `Box`.
 """
 function bring_molecule_inside_box!(molecule::Molecule, box::Box)
     outside_box = false # do nothing if not outside the box
 
-    # compute its fractional coordinates
-    xf = box.c_to_f * molecule.x
+    # compute its center of mass in fractional coordinates
+    xf = box.c_to_f * molecule.center_of_mass
 
-    # apply periodic boundary conditions if any of its x, y, z fractional coords are
-    #  greater than 1.0
-    for xyz = 1:3 # loop over x, y, z coordinates
-        # if all atoms of the molecule have x, y, or z > 1.0, shift down
-        if sum(xf[xyz, :] .<= 1.0) == 0
+    # apply periodic boundary conditions
+    for k = 1:3 # loop over xf, yf, zf components
+        # if > 1.0, shift down
+        if xf[k] >= 1.0
             outside_box = true
-            xf[xyz, :] -= 1.0
-        # if all atoms of the molecule have x, y, or z < 0.0, shift up
-        elseif sum(xf[xyz, :] .> 0.0) == 0
+            xf[k] -= 1.0
+        elseif xf[k] < 0.0
             outside_box = true
-            xf[xyz, :] += 1.0
+            xf[k] += 1.0
         end
     end
 
-    # update its Cartesian coordinates if it was outside of the box.
+    # translate molecule to new center of mass if it was found to be outside of the box
     if outside_box
-        molecule.x = box.f_to_c * xf
+        new_center_of_mass = box.f_to_c * xf
+        translate_to!(molecule, new_center_of_mass)
     end
 end
 
 """
     translate_molecule!(molecule, simulation_box)
 
-Perturbs the Cartesian coordinates of a molecule by a random vector of max length δ.
+Perturbs the Cartesian coordinates of a molecule abou its center of mass by a random vector of max length δ.
 Applies periodic boundary conditions to keep the molecule inside the simulation box.
 """
 function translate_molecule!(molecule::Molecule, simulation_box::Box)
-    # store old coordinates and return at the end for possible restoration of old coords
-    x_old = deepcopy(molecule.x)
+    # store old molecule and return at the end for possible restoration
+    old_molecule = deepcopy(molecule)
     # peturb in Cartesian coords in a random cube centered at current coords.
     dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
-    # change coordinates of molecule
-    molecule.x .+= dx
+    translate_by!(molecule, dx)
     # done, unless the molecule has moved completely outside of the box...
     bring_molecule_inside_box!(molecule, simulation_box)
 
-    return x_old # in case we need to restore
+    return old_molecule # in case we need to restore
 end
 
 """
@@ -198,7 +195,7 @@ runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         adsorbate::Symbol, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
+                         adsorbate_template::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
         pretty_print(adsorbate, framework.name, temperature, fugacity)
@@ -273,7 +270,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             U_gh_old = vdw_energy(framework, molecules[molecule_id],
                 ljforcefield, repfactors)
 
-            x_old = translate_molecule!(molecules[molecule_id], simulation_box)
+            old_molecule = translate_molecule!(molecules[molecule_id], simulation_box)
 
             # energy of the molecule after it is translated
             U_gg_new = guest_guest_vdw_energy(molecule_id, molecules,
@@ -291,7 +288,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 current_energy_gh += U_gh_new - U_gh_old
             else
                 # reject the move, reset the molecule at molecule_id
-                molecules[molecule_id].x = deepcopy(x_old)
+                molecules[molecule_id] = deepcopy(old_molecule)
             end
         end # which move the code executes
 

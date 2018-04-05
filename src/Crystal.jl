@@ -78,7 +78,6 @@ Data structure for a 3D crystal structure.
 - `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
 """
 struct Framework
-    #TODO molecular mass
     name::String
 
     box::Box
@@ -96,7 +95,6 @@ Read a crystal structure file (.cif or .cssr) and construct a Framework object.
 If `run_checks=True`, ensures no atom overlap or atoms outside of the unit cell box.
 """
 function read_crystal_structure_file(filename::String; run_checks::Bool=true)
-    # TODO add charges
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -210,9 +208,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 			end
         end
         n_atoms = length(xf)
-        # TODO remove this data dictionary and just fill in a, b, c etc. it is more code
-        #  and more place for error by copying data into the data dictionary then
-        #  assigning a, b, c etc.
         a = data["a"]
         b = data["b"]
         c = data["c"]
