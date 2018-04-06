@@ -139,13 +139,15 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
     return full_coverage
 end
 
-import Base.print
-function print(io::IO, ljforcefield::LennardJonesForceField)
-	println(io, "Amount of atoms included: ",length(ljforcefield.pure_σ))
-	print(io, "Cut-off radius = ",sqrt(ljforcefield.cutoffradius_squared))
+function Base.print(io::IO, ff::LennardJonesForceField)
+    println(io, "Force field: ", ff.name)
+	println(io, "Number of atoms included: ", length(ff.pure_σ))
+	println(io, "Cut-off radius (Å) = ", sqrt(ff.cutoffradius_squared))
+    for atom in keys(ff.pure_σ)
+        @printf(io, "%5s-%5s ϵ = %10.5f K, σ = %10.5f Å\n", atom, atom, ff.pure_ϵ[atom], ff.pure_σ[atom])
+    end
 end
 
-import Base.show
-function show(io::IO, ljforcefield::LennardJonesForceField) 
+function Base.show(io::IO, ljforcefield::LennardJonesForceField) 
 	print(io, ljforcefield)
 end
