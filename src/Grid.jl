@@ -1,21 +1,23 @@
 """
-    Grid(box, nb_grid_pts, data, end_included)
-
-Data structure for a regular [equal spacing between points] grid and associated data
-with each grid point/voxel.
-# TODO: define if data is value at center of voxel or at corner...
+Data structure for a regular [equal spacing between points in each coordinate] grid of voxels and associated data with each voxel.
+A unit cell (`Box`) is partitioned into voxels.
 
 # Arguments
-- `box::Box`: describes Bravais lattice onto which the grid is superimposed.
-- `nb_grid_pts::Tuple{Int, Int, Int}`: number of grid points in x, y, z directions.
+- `box::Box`: describes Bravais lattice which is partitioned into voxels in fractional coordinates
+- `nb_voxels::Tuple{Int, Int, Int}`: number of grid points in x, y, z directions.
 - `data::Array{T, 3}`: three dimensional array conaining data associated with each grid point.
-- `units::AbstractString`: the units associated with each data point.
+- `units::Symbol`: the units associated with each data point.
 """
 struct Grid{T}
     box::Box
-    nb_grid_pts::Tuple{Int64, Int64, Int64}
+    nb_voxels::Tuple{Int64, Int64, Int64}
     data::Array{T, 3}
-    units::AbstractString
+    units::Symbol
+end
+
+function Base.show(io::IO, grid::Grid)
+    @printf(io, "Grid of %d by %d by %d voxels comprising a unit cell and associated data.\n", grid.nb_voxels...)
+    @printf(io, "\tunits of data attribute: %s\n", grid.units)
 end
 
 """
@@ -70,3 +72,70 @@ end
  #     grid = Grid(box, nb_grid_pts, data_matrix, units)
  #     return grid
  # end
+
+"""
+	grid = energy_grid(framework::Framework, moleclule::Molecule, ljforcefield::LennardJonesForcefield; n_gridpts::Tuple{Int, Int, Int}=(50,50,50))
+
+Partitions the unit cell of a crystal into a grid of voxels (in fractional coordinates), with `n_gridpts` dictating the number of voxels in the a, b, c directions.
+Then, for each grid point, calculate the ensemble average potential energy of the molecule when its mass is centered at that point. The average is taken over Boltzmann-weighted rotations.
+
+The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻ᵇᵁ⟩
+"""
+function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField;
+                     n_voxels::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
+    if ! (units in [:kJ_mol, :K])
+        error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
+    end
+
+    # TODO electrostatics
+    if length(molecule.charges) != 0
+        error("Electrostatics not implemented yet.")
+    end
+
+    const rotations_required = ((length(molecule.ljspheres) > 1) | (length(molecule.charges) > 1))
+    if rotations_required & isnan(temperature)
+        error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
+    end
+
+    const repfactors = replication_factors(framework.box, ljforcefield)
+    
+    # grid of voxel centers (each axis at least).
+    voxel_centers = [collect(linspace(0.0, 1.0, n_voxels[i] + 1)) for i = 1:3]
+    for i = 1:3
+        dxf = voxel_centers[i][2] - voxel_centers[i][1]
+        pop!(voxel_centers[i])
+        voxel_centers[i] += dxf / 2.0
+    end
+
+    grid = Grid(framework.box, n_voxels, zeros(Float64, n_voxels...), units)
+
+    if verbose
+        @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
+        @printf("\tUnit cell partitioned into %d by %d by %d voxels.\n", n_voxels...)
+        if rotations_required
+            @printf("\t%d rotations per voxel.\n", n_rotations)
+        end
+    end
+
+	for (i, xf) in enumerate(voxel_centers[1]), (j, yf) in enumerate(voxel_centers[2]), (k, zf) in enumerate(voxel_centers[3])
+        translate_to!(molecule, framework.box.f_to_c * [xf, yf, zf])
+        if ! rotations_required
+            ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield, repfactors)
+        else
+            boltzmann_factor_sum = 0.0
+            for r = 1:n_rotations
+                rotate!(molecule)
+                energy = vdw_energy(framework, molecule, ljforcefield, repfactors)
+                boltzmann_factor_sum += exp(-energy / temperature)
+            end
+            ensemble_average_energy = -temperature * log(boltzmann_factor_sum / n_rotations)
+        end
+		grid.data[i, j, k] = ensemble_average_energy # K
+	end
+    
+    if units == :kJ_mol # K - kJ/mol
+        grid.data[:] = grid.data[:] * 8.314 / 1000.0
+    end
+
+	return grid
+end

@@ -155,16 +155,16 @@ function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
     println(io, "Center of mass: ", molecule.center_of_mass)
     if length(molecule.ljspheres) > 0
-        println(io, "Lennard-Jones spheres: ")
+        print(io, "Lennard-Jones spheres: ")
         for ljsphere in molecule.ljspheres
-            @printf(io, "\tatom = %s, x = [%.3f, %.3f, %.3f]\n", ljsphere.atom,
+            @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", ljsphere.atom,
                     ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
         end
     end
     if length(molecule.charges) > 0
-        println(io, "Point charges: ")
+        print(io, "\nPoint charges: ")
         for charge in molecule.charges
-            @printf(io, "\tq = %f, x = [%.3f, %.3f, %.3f]\n", charge.q, 
+            @printf(io, "\n\tq = %f, x = [%.3f, %.3f, %.3f]", charge.q, 
                     charge.x[1], charge.x[2], charge.x[3])
         end
     end
