@@ -51,7 +51,7 @@ rep_factors = replication_factors(frame.box, ljforcefield)
     framework10 = read_crystal_structure_file("SBMOF-1.cif")
     @test check_forcefield_coverage(framework10, ljforcefield)
     push!(framework10.atoms, :bogus_atom)
-    @test !check_forcefield_coverage(framework10, ljforcefield)
+    @test !check_forcefield_coverage(framework10, ljforcefield, verbose=false)
 end;
 
 @printf("------------------------------\nTesting Molecules.jl\n\n")

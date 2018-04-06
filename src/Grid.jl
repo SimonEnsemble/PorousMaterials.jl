@@ -4,19 +4,19 @@ A unit cell (`Box`) is partitioned into voxels.
 
 # Arguments
 - `box::Box`: describes Bravais lattice which is partitioned into voxels in fractional coordinates
-- `nb_voxels::Tuple{Int, Int, Int}`: number of grid points in x, y, z directions.
+- `n_voxels::Tuple{Int, Int, Int}`: number of grid points in x, y, z directions.
 - `data::Array{T, 3}`: three dimensional array conaining data associated with each grid point.
 - `units::Symbol`: the units associated with each data point.
 """
 struct Grid{T}
     box::Box
-    nb_voxels::Tuple{Int64, Int64, Int64}
+    n_voxels::Tuple{Int64, Int64, Int64}
     data::Array{T, 3}
     units::Symbol
 end
 
 function Base.show(io::IO, grid::Grid)
-    @printf(io, "Grid of %d by %d by %d voxels comprising a unit cell and associated data.\n", grid.nb_voxels...)
+    @printf(io, "Grid of %d by %d by %d voxels comprising a unit cell and associated data.\n", grid.n_voxels...)
     @printf(io, "\tunits of data attribute: %s\n", grid.units)
 end
 
@@ -33,6 +33,14 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
 """
 function write_to_cube(grid::Grid, filename::AbstractString)
+    if ! isdir(PATH_TO_DATA * "grids/")
+        mkdir(PATH_TO_DATA * "grids/")
+    end
+
+    if ! contains(filename, ".cube")
+        filename = filename * ".cube"
+    end
+
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
     
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
@@ -44,14 +52,14 @@ function write_to_cube(grid::Grid, filename::AbstractString)
     for k = 1:3
         # TODO re-evaluate this. depending on how you define grid, may be
         #   / (grid.nb_grid_pts[k] - 1) e.g. if you 
-        voxel_vector = grid.box.f_to_c[:, k] / grid.nb_grid_pts[k]
-        @printf(cubefile, "%d %f %f %f\n" , grid.nb_grid_pts[k],
+        voxel_vector = grid.box.f_to_c[:, k] / grid.n_voxels[k]
+        @printf(cubefile, "%d %f %f %f\n" , grid.n_voxels[k],
             voxel_vector[1], voxel_vector[2], voxel_vector[3])
     end
 
-    for i = 1:grid.nb_grid_pts[1]
-        for j = 1:grid.nb_grid_pts[2]
-            for k = 1:grid.nb_grid_pts[3]
+    for i = 1:grid.n_voxels[1]
+        for j = 1:grid.n_voxels[2]
+            for k = 1:grid.n_voxels[3]
                 @printf(cubefile, "%e ", grid.data[i, j, k])
                 if (k % 6) == 0
                     @printf(cubefile, "\n")
@@ -74,7 +82,7 @@ end
  # end
 
 """
-	grid = energy_grid(framework::Framework, moleclule::Molecule, ljforcefield::LennardJonesForcefield; n_gridpts::Tuple{Int, Int, Int}=(50,50,50))
+	grid = energy_grid(framework, moleclule, ljforcefield, n_voxels=(50, 50, 50), temperature=298.0, n_rotations=750)
 
 Partitions the unit cell of a crystal into a grid of voxels (in fractional coordinates), with `n_gridpts` dictating the number of voxels in the a, b, c directions.
 Then, for each grid point, calculate the ensemble average potential energy of the molecule when its mass is centered at that point. The average is taken over Boltzmann-weighted rotations.
