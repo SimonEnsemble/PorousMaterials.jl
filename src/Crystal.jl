@@ -356,11 +356,11 @@ function strip_numbers_from_atom_labels!(framework::Framework)
 end
 
 """
-    write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void, AbstractString})
+    write_unitcell_boundary_vtk(box::Box, filename::String)
 
 Write unit cell boundary as a .vtk file for visualizing the unit cell boundary.
 """
-function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void, AbstractString}=nothing)
+function write_unitcell_boundary_vtk(box::Box, filename::String)
     # if no filename given, use framework's name
     if filename == nothing
         filename = split(framework.name, ".")[1] * ".vtk"
@@ -376,7 +376,7 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void,
         for j = 0:1
             for k = 0:1
                 xf = [i, j, k] # fractional coordinates of corner
-                cornerpoint = framework.box.f_to_c * xf
+                cornerpoint = box.f_to_c * xf
                 @printf(vtk_file, "%.3f %.3f %.3f\n",
                         cornerpoint[1], cornerpoint[2], cornerpoint[3])
             end
@@ -389,6 +389,8 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void,
     println("See ", filename)
     return
 end
+
+write_unitcell_boundary_vtk(framework::Framework) = write_unitcell_boundary_vtk(framework.box, split(framework.name, ".")[1] * ".vtk")
 
 """
     formula = chemical_formula(framework)
@@ -506,7 +508,6 @@ end
 	exclude_boolean = exclude_multiple_labels(lines, start, name_to_column)
 
 Checks to see if atom labels 0 and 1 (according to cif standards) are the same. If so, it will throw a `true` and the crystal structure reader will (hopefully) deal with it accordingly.
-
 """
 function exclude_multiple_labels(lines, start, name_to_column)
     for (i,line) in enumerate(lines[start:length(lines)])
