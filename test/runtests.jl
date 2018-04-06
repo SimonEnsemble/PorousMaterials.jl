@@ -30,12 +30,7 @@ strip_numbers_from_atom_labels!(framework)
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = read_crystal_structure_file("test_structure2.cif")
     strip_numbers_from_atom_labels!(framework_from_cssr)
-    @test all(framework_from_cssr.xf .== framework.xf)
-    @test all(framework_from_cssr.charges .== framework.charges)
-    @test all(framework_from_cssr.atoms .== framework.atoms)
-    @test framework_from_cssr.n_atoms == framework.n_atoms
-    @test all(framework_from_cssr.box.f_to_c .== framework.box.f_to_c)
-    @test all(framework_from_cssr.box.c_to_f .== framework.box.c_to_f)
+    @test isapprox(framework_from_cssr, framework, checknames=false)
 end;
 
 @printf("------------------------------\nTesting Forcefield.jl\n\n")
@@ -182,9 +177,7 @@ end;
     # replicating the unit cell to construct simulation box
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
     sim_box = replicate_box(sbmof1.box, (1, 1, 1))
-    @test sim_box.Ω ≈ sbmof1.box.Ω
-    @test all(sim_box.f_to_c .≈ sbmof1.box.f_to_c)
-    @test all(sim_box.c_to_f .≈ sbmof1.box.c_to_f)
+    @test isapprox(sim_box, sbmof1.box)
     sim_box = replicate_box(sbmof1.box, (2, 3, 4))
     @test sim_box.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
     @test all(sim_box.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])

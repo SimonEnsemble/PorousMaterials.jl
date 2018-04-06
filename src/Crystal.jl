@@ -557,3 +557,26 @@ end
 function Base.show(io::IO, box::Box)
 	print(io, box)
 end
+
+function Base.isapprox(box1::Box, box2::Box)
+    return (isapprox(box1.a, box2.a) &&
+            isapprox(box1.b, box2.b) &&
+            isapprox(box1.c, box2.c) &&
+            isapprox(box1.α, box2.α) &&
+            isapprox(box1.β, box2.β) &&
+            isapprox(box1.γ, box2.γ) &&
+            isapprox(box1.Ω, box2.Ω) &&
+            isapprox(box1.f_to_c, box2.f_to_c) &&
+            isapprox(box1.c_to_f, box2.c_to_f))
+end
+
+function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
+    names = f1.name == f2.name
+    box = isapprox(f1.box, f2.box)
+    n_atoms = f1.n_atoms == f2.n_atoms
+    if checknames && n_atoms
+        return names && box && n_atoms && (f1.atoms == f2.atoms) && isapprox(f1.xf, f2.xf) && isapprox(f1.charges, f2.charges)
+    else
+        return box && n_atoms && (f1.atoms == f2.atoms) && isapprox(f1.xf, f2.xf) && isapprox(f1.charges, f2.charges)
+    end
+end
