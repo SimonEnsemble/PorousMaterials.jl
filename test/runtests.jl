@@ -13,6 +13,7 @@ strip_numbers_from_atom_labels!(framework)
 @testset "Crystal Tests" begin
     @test framework.name == "test_structure2.cif"
 	@test framework.box.f_to_c * framework.box.c_to_f ≈ eye(3)
+    @test isapprox(framework.box, construct_box(framework.box.f_to_c))
 	@test framework.box.a ≈ 10.0
 	@test framework.box.b ≈ 20.0
 	@test framework.box.c ≈ 30.0
@@ -49,6 +50,7 @@ rep_factors = replication_factors(frame.box, ljforcefield)
 	@test rep_factors == (25, 25, 25)
     # force field coverage function
     framework10 = read_crystal_structure_file("SBMOF-1.cif")
+    @test isapprox(framework10.box, construct_box(framework10.box.f_to_c))
     @test check_forcefield_coverage(framework10, ljforcefield)
     push!(framework10.atoms, :bogus_atom)
     @test !check_forcefield_coverage(framework10, ljforcefield, verbose=false)
