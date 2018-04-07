@@ -1,38 +1,34 @@
 """
-Data structure for a regular [equal spacing between points in each coordinate] grid of points superimposed on a unit cell (`Box`).
-Each grid point has a `data` associated with it, of type `T`.
+Data structure for a regular [equal spacing between points in each coordinate] grid of points superimposed on a unit cell box (`Box`).
+Each grid point has data, `data`, associated with it, of type `T`, stored in a 3D array.
 
 # Arguments
-- `box::Box`: describes Bravais lattice over which a grid of points is super-imposed. endpoints are included.
+- `box::Box`: describes Bravais lattice over which a grid of points is super-imposed. grid points on all faces are included.
 - `n_pts::Tuple{Int, Int, Int}`: number of grid points in x, y, z directions. 0 and 1 fractional coordinates are included.
 - `data::Array{T, 3}`: three dimensional array conaining data associated with each grid point.
 - `units::Symbol`: the units associated with each data point.
+- `origin::Array{Float64, 1}`: the origin of the grid.
 """
 struct Grid{T}
     box::Box
     n_pts::Tuple{Int64, Int64, Int64}
     data::Array{T, 3}
     units::Symbol
-end
-
-function Base.show(io::IO, grid::Grid)
-    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts...)
-    @printf(io, "\tunits of data attribute: %s\n", grid.units)
+    origin::Array{Float64, 1}
 end
 
 """
-    write_to_cube(grid::Grid, filename::AbstractString)
+    write_cube(grid::Grid, filename::String)
 
 Write grid to a .cube file format. This format is described here:
 http://paulbourke.net/dataformats/cube/
-The origin is assumed to be (0, 0, 0).
 The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files to also visualize atoms.
 
 # Arguments
 - `grid::Grid`: grid with associated data at each grid point.
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
 """
-function write_to_cube(grid::Grid, filename::AbstractString)
+function write_cube(grid::Grid, filename::String)
     if ! isdir(PATH_TO_DATA * "grids/")
         mkdir(PATH_TO_DATA * "grids/")
     end
@@ -45,8 +41,8 @@ function write_to_cube(grid::Grid, filename::AbstractString)
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
-    # the next three floats correspond to the origin, assumed to be (0,0,0)
-    @printf(cubefile, "%d %f %f %f\n" , 0, 0.0, 0.0, 0.0)
+    # the next three floats correspond to the origin
+    @printf(cubefile, "%d %f %f %f\n" , 0, grid.origin...)
     for k = 1:3
         # these are the vectors that form the parallelogram comprising the voxels
         # 0 and 1 fractional coords were included. so voxel vector is unit cell axis divided by # grid pts - 1
@@ -71,13 +67,69 @@ function write_to_cube(grid::Grid, filename::AbstractString)
     return 
 end
 
-# TODO: function to read .cube and return grid.
- # function read_cube(filename::AbstractString)
- #     cubefile = open(filename)
- #     
- #     grid = Grid(box, nb_grid_pts, data_matrix, units)
- #     return grid
- # end
+"""
+    grid = read_cube(filename::String)
+
+Read a .cube file and return a populated `Grid` data structure.
+http://paulbourke.net/dataformats/cube/
+
+# Arguments
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`grids/.
+"""
+function read_cube(filename::AbstractString)
+    if ! contains(filename, ".cube")
+        filename *= ".cube"
+    end
+
+    cubefile = open(PATH_TO_DATA * "grids/" * filename)
+
+    # waste two lines
+    line = readline(cubefile)
+    units = Symbol(split(line)[4])
+    readline(cubefile)
+    
+    # read origin
+    line = readline(cubefile)
+    origin = [parse(Float64, split(line)[1 + i]) for i = 1:3]
+    
+    # read box info
+    box_lines = [readline(cubefile) for i = 1:3]
+    
+    # number of grid pts
+    n_pts = Tuple([parse(Int, split(box_lines[i])[1]) for i = 1:3])
+    
+    # f_to_c matrix (given by voxel vectors)
+    f_to_c = zeros(Float64, 3, 3)
+    for i = 1:3, j=1:3
+        f_to_c[j, i] = parse(Float64, split(box_lines[i])[j + 1])
+    end
+    for k = 1:3
+        f_to_c[:, k] = f_to_c[:, k] * (n_pts[k] - 1.0)
+    end
+    
+    # reconstruct box from f_to_c matrix
+    box = construct_box(f_to_c)
+
+    # read in data
+    data = zeros(Float64, n_pts...)
+    line = readline(cubefile)
+    for i = 1:n_pts[1]
+        for j = 1:n_pts[2]
+            read_count = 0
+            for k = 1:n_pts[3]
+                data[i, j, k] = parse(Float64, split(line)[read_count+1])
+                read_count += 1
+                if (k % 6 == 0)
+                    line = readline(cubefile)
+                    read_count = 0
+                end
+            end # loop over z points
+            line = readline(cubefile)
+        end # loop over y points
+    end # loop over x points
+
+    return Grid(box, n_pts, data, units, origin)
+end
 
 """
 	grid = energy_grid(framework, moleclule, ljforcefield, n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
@@ -111,7 +163,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
 
-    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units)
+    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, [0.0, 0.0, 0.0])
 
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
@@ -142,4 +194,20 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
     end
 
 	return grid
+end
+
+function Base.show(io::IO, grid::Grid)
+    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts...)
+    @printf(io, "\tunits of data attribute: %s\n", grid.units)
+    @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin...)
+end
+
+# comparing very large numbers in grid.data, so increase rtol... to account
+#  for less precision in cube file.
+function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
+    return (isapprox(g1.box, g2.box, rtol=rtol) &&
+            (g1.n_pts == g2.n_pts) &&
+            isapprox(g1.data, g2.data, rtol=rtol) &&
+            (g1.units == g2.units) &&
+            isapprox(g1.origin, g2.origin))
 end

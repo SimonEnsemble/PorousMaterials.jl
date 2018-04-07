@@ -10,7 +10,8 @@ fractional and Cartesian coordinates.
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional 
-coordinates to cartesian coordinates
+coordinates to cartesian coordinates. The columns of this matrix define the unit cell
+axes.
 - `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian 
 coordinates to fractional coordinates
 """
@@ -48,6 +49,35 @@ function construct_box(a::Float64, b::Float64, c::Float64,
     c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
 
     @test f_to_c * c_to_f ≈ eye(3)
+
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+end
+
+"""
+    box = construct_box(f_to_c)
+
+Reconstructs a `Box` from the fractional to Cartesian coordinate transformation matrix.
+The columns of this matrix are the unit cell axes. Units must be in Å.
+
+# Arguments
+- `f_to_c::Array{Float64, 2}`: fractional to Cartesian coordinate transformation matrix.
+"""
+function construct_box(f_to_c::Array{Float64, 2})
+    # unit cell volume (A³) is the determinant of the matrix
+    Ω = det(f_to_c)
+    
+    # unit cell dimensions are lengths of the unit cell axes (Å)
+    a = norm(f_to_c[:, 1])
+    b = norm(f_to_c[:, 2])
+    c = norm(f_to_c[:, 3])
+    
+    # c_to_f is the inverse
+    c_to_f = inv(f_to_c)
+    
+    # angles (radians)
+    α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
+    β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
+    γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
 
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
 end
@@ -563,16 +593,16 @@ function Base.show(io::IO, box::Box)
 	print(io, box)
 end
 
-function Base.isapprox(box1::Box, box2::Box)
-    return (isapprox(box1.a, box2.a) &&
-            isapprox(box1.b, box2.b) &&
-            isapprox(box1.c, box2.c) &&
-            isapprox(box1.α, box2.α) &&
-            isapprox(box1.β, box2.β) &&
-            isapprox(box1.γ, box2.γ) &&
-            isapprox(box1.Ω, box2.Ω) &&
-            isapprox(box1.f_to_c, box2.f_to_c) &&
-            isapprox(box1.c_to_f, box2.c_to_f))
+function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
+    return (isapprox(box1.a, box2.a, rtol=rtol) &&
+            isapprox(box1.b, box2.b, rtol=rtol) &&
+            isapprox(box1.c, box2.c, rtol=rtol) &&
+            isapprox(box1.α, box2.α, rtol=rtol) &&
+            isapprox(box1.β, box2.β, rtol=rtol) &&
+            isapprox(box1.γ, box2.γ, rtol=rtol) &&
+            isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
+            isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
+            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol))
 end
 
 function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)

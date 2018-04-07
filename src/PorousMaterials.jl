@@ -22,7 +22,7 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
        lennard_jones, vdw_energy, # Energetics.jl
        outside_box,
        read_xyz, read_cpk_colors, read_atomic_radii, # Misc.jl
-       Grid, write_to_cube, energy_grid, # Grid.jl
+       Grid, write_cube, read_cube, energy_grid, # Grid.jl
        Snapshot, snap, write_snapshot_to_vtk, write_to_npy, write_snapshot_to_cube, # Snapshot.jl #TODO Remove this line later
        insert_molecule!, delete_molecule!, translate_molecule!,
        guest_guest_vdw_energy, gcmc_simulation, bring_molecule_inside_box! # GCMC.jl
