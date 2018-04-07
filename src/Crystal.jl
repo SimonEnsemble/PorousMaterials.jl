@@ -288,17 +288,21 @@ function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractStrin
         xyzfilename = split(framework.name, ".")[1] * ".xyz"
     end
 
-    f = open(xyzfilename, "w")
-    @printf(f, "%d\n%s\n", n_atoms, comment)
+    if ! contains(xyzfilename, ".xyz")
+        xyzfilename *= ".xyz"
+    end
+
+    xyzfile = open(xyzfilename, "w")
+    @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
 
     for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
-        xf = framework.xf .+ [i-1, j-1, k-1]
-        c_coords = framework.box.f_to_c * xf
-        for ii = 1:size(c_coords, 2)
-			@printf(f, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[ii]), c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
+        for a = 1:framework.n_atoms
+            xf = framework.xf[:, a] + [i - 1.0, j - 1.0, k - 1.0]
+            x = framework.box.f_to_c * xf
+			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[a]), x[1], x[2], x[3])
         end
     end
-    close(f)
+    close(xyzfile)
 
     println("See ", xyzfilename)
     return

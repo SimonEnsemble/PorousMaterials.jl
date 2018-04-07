@@ -26,7 +26,7 @@ end
 Write volume data to a .cube file format. This format is described here:
 http://paulbourke.net/dataformats/cube/
 The origin is assumed to be (0, 0, 0).
-The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files.
+The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files to also visualize atoms.
 
 # Arguments
 - `grid::Grid`: grid with associated volume data (see Grid struct)
@@ -40,23 +40,25 @@ function write_to_cube(grid::Grid, filename::AbstractString)
     if ! contains(filename, ".cube")
         filename = filename * ".cube"
     end
-
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
     
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
     # the next three floats correspond to the origin, assumed to be (0,0,0)
-    @printf(cubefile, "%d %f %f %f\n" , 0, 0.0, 0.0, 0.0)
 
-    # these are the vectors that form the voxels of each grid parallelogram.
+    # these are the vectors that form the parallelogram comprising the voxels
+    # 0 and 1 fractional coords were included. so voxel vector is # grid pts - 1
+    voxel_vectors = deepcopy(grid.box.f_to_c)
     for k = 1:3
-        # TODO re-evaluate this. depending on how you define grid, may be
-        #   / (grid.nb_grid_pts[k] - 1) e.g. if you 
-        voxel_vector = grid.box.f_to_c[:, k] / grid.n_voxels[k]
-        @printf(cubefile, "%d %f %f %f\n" , grid.n_voxels[k],
-            voxel_vector[1], voxel_vector[2], voxel_vector[3])
+        voxel_vectors[:, k] = voxel_vectors[:, k] / (grid.n_voxels[k] - 1)
     end
 
+    @printf(cubefile, "%d %f %f %f\n" , 0, 0.0, 0.0, 0.0) # origin is last three
+    for k = 1:3
+        @printf(cubefile, "%d %f %f %f\n" , grid.n_voxels[k],
+            voxel_vectors[1, k], voxel_vectors[2, k], voxel_vectors[3, k])
+    end
+    
     for i = 1:grid.n_voxels[1]
         for j = 1:grid.n_voxels[2]
             for k = 1:grid.n_voxels[3]
@@ -108,12 +110,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
     const repfactors = replication_factors(framework.box, ljforcefield)
     
     # grid of voxel centers (each axis at least).
-    voxel_centers = [collect(linspace(0.0, 1.0, n_voxels[i] + 1)) for i = 1:3]
-    for i = 1:3
-        dxf = voxel_centers[i][2] - voxel_centers[i][1]
-        pop!(voxel_centers[i])
-        voxel_centers[i] += dxf / 2.0
-    end
+    voxel_corners = [collect(linspace(0.0, 1.0, n_voxels[i])) for i = 1:3]
 
     grid = Grid(framework.box, n_voxels, zeros(Float64, n_voxels...), units)
 
@@ -125,7 +122,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
         end
     end
 
-	for (i, xf) in enumerate(voxel_centers[1]), (j, yf) in enumerate(voxel_centers[2]), (k, zf) in enumerate(voxel_centers[3])
+	for (i, xf) in enumerate(voxel_corners[1]), (j, yf) in enumerate(voxel_corners[2]), (k, zf) in enumerate(voxel_corners[3])
         translate_to!(molecule, framework.box.f_to_c * [xf, yf, zf])
         if ! rotations_required
             ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield, repfactors)
