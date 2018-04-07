@@ -71,7 +71,6 @@ end
     grid = read_cube(filename::String)
 
 Read a .cube file and return a populated `Grid` data structure.
-http://paulbourke.net/dataformats/cube/
 
 # Arguments
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`grids/.
@@ -140,7 +139,16 @@ Then, at each grid point, calculate the ensemble average potential energy of the
 
 The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻ᵇᵁ⟩
 
-#TODO add arguments
+# Arguments
+- `framework::Framework`: crystal in which we seek to compute an energy grid for a molecule. `grid.box` will be `framework.box`.
+- `molecule::Molecule`: molecule for which we seek an energy grid
+- `ljforcefield::LennardJonesForceField`: molecular model for computing molecule-framework interactions
+- `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
+- `n_rotations::Int`: number of random rotations to conduct in a Monte Carlo simulation for finding the free energy of a molecule centered at a given grid point.
+This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
+- `temperature::Float64`: the temperature at which to compute the free energy for molecules where rotations are required. Lower temperatures overemphasize the minimum potential energy rotational conformation at that point.
+- `units::Symbol`: either `:K` or `:kJ_mol`, the units in which the energy should be stored in the returned `Grid`.
+- `verbose::Bool=true`: print some information.
 """
 function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField;
                      n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
@@ -167,9 +175,9 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
 
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
-        @printf("\tRegular grid of %d by %d by %d points superimposed over the unit cell.\n", n_pts...)
+        @printf("\tRegular grid (in fractional space) of %d by %d by %d points superimposed over the unit cell.\n", n_pts...)
         if rotations_required
-            @printf("\t%d rotations per grid point.\n", n_rotations)
+            @printf("\t%d molecule rotations per grid point with temperature %f K.\n", n_rotations, temperature)
         end
     end
 
@@ -202,8 +210,8 @@ function Base.show(io::IO, grid::Grid)
     @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin...)
 end
 
-# comparing very large numbers in grid.data, so increase rtol... to account
-#  for less precision in cube file.
+# comparing very large numbers in grid.data, so increase rtol to account
+#  for loss of precision when writing grid.data to a cube file.
 function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
     return (isapprox(g1.box, g2.box, rtol=rtol) &&
             (g1.n_pts == g2.n_pts) &&
