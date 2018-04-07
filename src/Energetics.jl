@@ -108,27 +108,3 @@ function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
 	end # repfactor end
 	return energy
 end
-
-
-"""
-	energy = unitcell_energy(frame::Frame, mol::Molecule, ljforcefield::LennardJonesForcefield, repfactors::Tuple(Int64, Int64, Int64); mesh::Array{Int64,1} = [50,50,50])
-
-Calculates the energy in the unitcell with respect to fractional coordinates. Forms an energy matrix with dimensions according to `mesh`.
-Can be used in conjucture with `write_to_cube` to make a .cube file for visualization.
-# TODO put this in Grid
-# TODO much more expnaded docs for this
-# TODO update for new molecule object
-"""
-function unitcell_energy(framework::Framework, molecule::Molecule, 
-                         ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int}; mesh::Array{Int64,1}=[50,50,50])
-	range_xf = linspace(0, 1, mesh[1])
-	range_yf = linspace(0, 1, mesh[2])
-	range_zf = linspace(0, 1, mesh[3])
-	energy = zeros(mesh[1], mesh[2], mesh[3])
-
-	for (i, xf) in enumerate(range_xf), (j, yf) in enumerate(range_yf), (k, zf) in enumerate(range_zf)
-		molecule.x = (framework.box.f_to_c * [xf, yf, zf])[:,:]
-		energy[i, j, k] = vdw_energy(framework, molecule, ljforcefield, repfactors)
-	end
-	return energy
-end

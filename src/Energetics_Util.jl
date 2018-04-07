@@ -15,18 +15,14 @@ function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{I
 end
 
 """
-    outside_box = completely_outside_box(molecule, box)
+    outside_box = completely_outside_box(molecule::Molecule, box::Box)
 
-returns true if each atom of a given molecule is completely outside of a given box and false otherwise
+returns true if the center of mass of a molecule is outside of the box.
 """
-function completely_outside_box(molecule::Molecule, box::Box)
-    xf = box.c_to_f * molecule.x
-    for xyz = 1:3 # loop over x, y, z coordinate
-        # if none of the coords are less than 1 it must be outside of the box
-        if sum(xf[xyz, :] .<= 1.0) == 0
-            return true
-        # if none of the coords are greater than 0 it must be outside of the box
-        elseif sum(xf[xyz, :] .>= 0.0) == 0
+function outside_box(molecule::Molecule, box::Box)
+    xf = box.c_to_f * molecule.center_of_mass
+    for k = 1:3
+        if (xf[k] > 1.0) | (xf[k] < 0.0)
             return true
         end
     end
