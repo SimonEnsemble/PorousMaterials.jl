@@ -14,6 +14,7 @@ coordinates to cartesian coordinates. The columns of this matrix define the unit
 axes.
 - `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian 
 coordinates to fractional coordinates
+- `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
 """
 struct Box
     a::Float64
@@ -28,6 +29,19 @@ struct Box
 
     f_to_c::Array{Float64, 2}
     c_to_f::Array{Float64, 2}
+
+    reciprocal_lattice::Array{Float64, 2}
+end
+
+"""
+Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the reciprocal lattice vectors. Return in a matrix format, where the columns are the reciprocal lattice vectors.
+"""
+function reciprocal_lattice(a₁::Array{Float64, 1}, a₂::Array{Float64, 1}, a₃::Array{Float64, 1})
+    r = zeros(Float64, 3, 3)
+    r[:, 1] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
+    r[:, 2] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
+    r[:, 3] = 2 * π * cross(a₁, a₂) / dot(a₃, cross(a₁, a₂))
+    return r
 end
 
 """
@@ -47,10 +61,13 @@ function construct_box(a::Float64, b::Float64, c::Float64,
     # matrices to map fractional coords <--> Cartesian coords
     f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
     c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
+    # the columns of f_to_c are the unit cell axes
+    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
     @test f_to_c * c_to_f ≈ eye(3)
+    @test isapprox(transpose(r), 2.0 * π * inv(f_to_c))
 
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
 
 """
@@ -78,8 +95,11 @@ function construct_box(f_to_c::Array{Float64, 2})
     α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
     β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
     γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
+   
+    # the columns of f_to_c are the unit cell axes
+    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
 
 """
@@ -602,7 +622,8 @@ function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
             isapprox(box1.γ, box2.γ, rtol=rtol) &&
             isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
             isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
-            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol))
+            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol) &&
+            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, rtol=rtol))
 end
 
 function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)

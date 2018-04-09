@@ -27,6 +27,7 @@ strip_numbers_from_atom_labels!(framework)
     @test framework.charges == [1.0, -1.0]
     @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
     @test molecular_weight(framework) ≈ 15.9994 + 40.078
+    @test isapprox(transpose(framework.box.reciprocal_lattice), 2 * π * inv(framework.box.f_to_c))
 
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = read_crystal_structure_file("test_structure2.cif")
@@ -133,6 +134,7 @@ end
 
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+    @test isapprox(transpose(sbmof1.box.reciprocal_lattice), 2 * π * inv(sbmof1.box.f_to_c))
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
