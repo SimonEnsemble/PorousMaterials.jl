@@ -193,7 +193,12 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
             end
 
 			# Check to see if label already exists
-			label = split(line[name_to_column["_atom_site_label"]],'_')[1]
+            if haskey(name_to_column, "_atom_site_label")
+                label = split(line[name_to_column["_atom_site_label"]],'_')[1]
+            else
+                label = Void
+            end
+
 			if !in(label,atom_labels)
 				push!(atoms, Symbol(line[name_to_column[atom_column_name]]))
 				push!(xf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]],'(')[1]), 1.0))
@@ -205,7 +210,7 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 				else
 					push!(charges, 0.0)
 				end
-				if exclude_boolean
+                if haskey(name_to_column, "_atom_site_label") & exclude_boolean
 					push!(atom_labels, label)
 				end
 			end
@@ -535,17 +540,19 @@ Checks to see if atom labels 0 and 1 (according to cif standards) are the same. 
 
 """
 function exclude_multiple_labels(lines, start, name_to_column)
-    for (i,line) in enumerate(lines[start:length(lines)])
-        line = split(line)
-        if length(line) != length(name_to_column)
-            break
-        end
-        label = line[name_to_column["_atom_site_label"]]
-        if contains(label,"_")
-            for line2 in lines[start:start+i]
-                line2 = split(line2)
-                if split(label,"_")[1] == line2[name_to_column["_atom_site_label"]]
-                    return true
+    if haskey(name_to_column, "_atom_site_label")
+        for (i,line) in enumerate(lines[start:length(lines)])
+            line = split(line)
+            if length(line) != length(name_to_column)
+                break
+            end
+            label = line[name_to_column["_atom_site_label"]]
+            if contains(label,"_")
+                for line2 in lines[start:start+i]
+                    line2 = split(line2)
+                    if split(label,"_")[1] == line2[name_to_column["_atom_site_label"]]
+                        return true
+                    end
                 end
             end
         end
