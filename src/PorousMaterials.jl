@@ -13,6 +13,7 @@ include("Grid.jl")
 #TODO Remove Snapshot.jl from PorousMaterials.jl (This is from Arni's project)
 include("Snapshot.jl")
 include("GCMC.jl") # TODO incorporate molecule changes
+include("Ewald.jl") # TODO incorporate molecule changes
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
@@ -25,5 +26,6 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        Snapshot, snap, write_snapshot_to_vtk, write_to_npy, write_snapshot_to_cube, # Snapshot.jl #TODO Remove this line later
        insert_molecule!, delete_molecule!, translate_molecule!,
-       guest_guest_vdw_energy, gcmc_simulation, bring_molecule_inside_box! # GCMC.jl
+       guest_guest_vdw_energy, gcmc_simulation, bring_molecule_inside_box!, # GCMC.jl
+       electrostatic_potential # Ewald.jl
 end
