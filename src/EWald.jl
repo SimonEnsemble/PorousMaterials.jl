@@ -2,6 +2,10 @@
 # 1 m = 1e10 A, 1 e = 1.602176e-19 C, kb = 1.3806488e-23 J/K
 # 8.854187817e-12 C^2/(J-m) [1 m / 1e10 A] [1 e / 1.602176e-19 C]^2 [kb = 1.3806488e-23 J/K]
 const ϵ₀ = 4.7622424954949676e-7  # \epsilon_0 vacuum permittivity units: electron charge^2 /(A - K)
+using SpecialFunctions # for erfc
+
+# TODO use NIST test data https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
+#   to untar: tar zxvf spce_sample_configurations-tar.gz
 
 struct EWaldParams
     α::Float64
@@ -31,7 +35,9 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1}, ewa
         for a = 1:framework.n_atoms
             # distance in fractional coords
             dx = xf - (framework.xf[:, a] + [ra, rb, rc])
+            # apply nearest image convention for periodic BCs
             nearest_image!(dx, ewald_params.sr_repfactors)
+            # convert distance vector to Cartesian coordinates
             dx = framework.box.f_to_c * dx
             r = norm(dx)
             if r < ewald_params.sr_cutoff_radius
@@ -45,26 +51,25 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1}, ewa
     # Long-range contribution
     #
 	lr_potential = 0.0
-    for ka = 0:ewald_params.k_repfactors[1], kb = -ewald_params.k_repfactors[2]:ewald_params.k_repfactors[2], kc=-ewald_params.k_repfactors[3]:ewald_params.k_repfactors[3]
+    for ka = 0:ewald_params.k_repfactors[1], kb = 0:ewald_params.k_repfactors[2], kc=0:ewald_params.k_repfactors[3]
 		if (ka == 0) && (kb == 0) && (kc == 0)
 			continue
 		end
+        # reciprocal vector, k
         k = framework.reciprocal_lattice * [ka, kb, kc]
+        # |k|²
         mag_k² = dot(k, k)
 
         lr_potential_this_k = 0.0
         for a = 1:framework.n_atoms
-            dx = framework.f_to_c * (xf - framework.xf[:, a])
+            dx = framework.f_to_c * (xf - framework.xf[:, a]) # TODO can precompute this...
+            # k ⋅ (x - x_a)
             k_dot_dx = dot(k, dx)
             lr_potential_this_k += framework.charges[a] * cos(k_dot_dx)
         end
-        # took advantage of symmetry for ka, note it goes from 0 to k_repfactors[1].
-        if ka == 0
-            lr_potential += 2.0 * lr_potential_this_k / mag_k² * exp(- mag_k² / (4.0 * ewald_params.α ^ 2))
-        else
-            lr_potential += lr_potential_this_k / mag_k² * exp(- mag_k² / (4.0 * ewald_params.α ^ 2))
-        end
+        lr_potential += 2.0 * lr_potential_this_k / mag_k² * exp(- mag_k² / (4.0 * ewald_params.α ^ 2)) # TODO precompute 4.0 α^2
     end
+    # TODO this Ω must be consistent with whatehver reciprocal vectors we use.
     lr_potential /= ϵ₀ * framework.Ω
     return lr_potential + sr_potential
 end		
