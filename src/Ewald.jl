@@ -42,7 +42,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
             ###
             #  Long-range contribution
             ###
-            for ka = 0:k_rep_factors[1], kb = 0:k_rep_factors[2], kc=0:k_rep_factors[3]
+            for ka = -k_rep_factors[1]:k_rep_factors[1], kb = -k_rep_factors[2]:k_rep_factors[2], kc=-k_rep_factors[1]:k_rep_factors[3]
                 if (ka == 0) && (kb == 0) && (kc == 0)
                     continue
                 end
@@ -55,7 +55,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
                 dx = framework.box.f_to_c * dxf
                 # k ⋅ (x - x_a)
                 k_dot_dx = dot(k, dx)
-                lr_potential += 2.0 * framework.charges[i] * cos(k_dot_dx) / mag_k² * exp(- mag_k² / (4.0 * α ^ 2)) # TODO precompute some of this.
+                lr_potential += framework.charges[i] * cos(k_dot_dx) / mag_k² * exp(- mag_k² / (4.0 * α ^ 2)) # TODO precompute some of this. WRONG TODO
             end
 
             ###
