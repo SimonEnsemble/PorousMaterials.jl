@@ -271,6 +271,15 @@ end;
 end
 @printf("------------------------------\n")
 @testset "Guest-guest Energetics Tests" begin
+    repfactors = (1, 2, 3)
+    dxf = [1.2, -0.2, 2.4]
+    nearest_image!(dxf, repfactors)
+    @test isapprox(dxf, [0.2, 1.8, 2.4])
+    
+    dxf = [1.2 -0.2 2.4; -0.3 -0.1, 3.4]
+    nearest_image!(dxf, repfactors)
+    @test isapprox(dxf, [0.2 1.8 2.4; 0.7 1.9 0.4])
+
     sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     # distance of 6.0 away
     molecules = [Molecule(1, [:C], [5.0, 12.0, 12.0][:, :], [0.0]),
