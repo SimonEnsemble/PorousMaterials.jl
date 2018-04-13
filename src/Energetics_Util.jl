@@ -18,7 +18,7 @@ function nearest_image!(dxf::Array{Float64, 2}, repfactors::Tuple{Int, Int, Int}
     for a = 1:size(dxf)[2] # loop over atoms
         for k = 1:3 # loop over components
             if abs(dxf[k, a]) > repfactors[k] / 2.0
-                dxf[k, a] -= sign(dxf[k]) * repfactors[k]
+                dxf[k, a] -= sign(dxf[k, a]) * repfactors[k]
             end
         end
     end
