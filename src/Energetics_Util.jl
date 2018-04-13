@@ -1,30 +1,25 @@
 """
-    nearest_image!(fractional_distance, repfactors)
+    nearest_image!(dxf, repfactors)
 
-applies the nearest image convention on a vector `fractional_distance` between two atoms
-in fractional space; modifies `fractional_distance` for nearest image convention.
+Applies the nearest image convention on a vector `dxf` between two atoms
+in fractional space; modifies `dxf` for nearest image convention.
 
-See comments in vdw_energy for more description
+See comments in vdw_energy for more description.
 """
-function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64})
-    for xyz = 1:3 # xf, yf, or zf coordinate
-        if abs(fractional_distance[xyz]) > repfactors[xyz] / 2.0
-            fractional_distance[xyz] -= sign(fractional_distance[xyz]) * repfactors[xyz]
+function nearest_image!(dxf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
+    for k = 1:3 # loop over components
+        if abs(dxf[k]) > repfactors[k] / 2.0
+            dxf[k] -= sign(dxf[k]) * repfactors[k]
         end
     end
 end
 
-"""
-    outside_box = completely_outside_box(molecule::Molecule, box::Box)
-
-returns true if the center of mass of a molecule is outside of the box.
-"""
-function outside_box(molecule::Molecule, box::Box)
-    xf = box.c_to_f * molecule.center_of_mass
-    for k = 1:3
-        if (xf[k] > 1.0) | (xf[k] < 0.0)
-            return true
+function nearest_image!(dxf::Array{Float64, 2}, repfactors::Tuple{Int, Int, Int})
+    for a = 1:size(dxf)[2] # loop over atoms
+        for k = 1:3 # loop over components
+            if abs(dxf[k, a]) > repfactors[k] / 2.0
+                dxf[k, a] -= sign(dxf[k]) * repfactors[k]
+            end
         end
     end
-    return false
 end

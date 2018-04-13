@@ -226,6 +226,21 @@ function rotate!(molecule::Molecule; assume_center_of_mass_at_origin::Bool=false
     translate_by!(molecule, center_of_mass)
 end
 
+"""
+    outside_box = completely_outside_box(molecule::Molecule, box::Box)
+
+returns true if the center of mass of a molecule is outside of the box.
+"""
+function outside_box(molecule::Molecule, box::Box)
+    xf = box.c_to_f * molecule.center_of_mass
+    for k = 1:3
+        if (xf[k] > 1.0) | (xf[k] < 0.0)
+            return true
+        end
+    end
+    return false
+end
+
  # function move_arni!(molecule::Molecule, translation::Array{Float64, 1})
  #     T = construct_translational_matrix(translation[1], translation[2], translation[3])
  #     for ljsphere in molecule.ljspheres
