@@ -42,7 +42,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
             ###
             #  Long-range contribution
             ###
-            for ka = -k_rep_factors[1]:k_rep_factors[1], kb = -k_rep_factors[2]:k_rep_factors[2], kc=-k_rep_factors[1]:k_rep_factors[3]
+            for ka = -k_rep_factors[1]:k_rep_factors[1], kb = -k_rep_factors[2]:k_rep_factors[2], kc=-k_rep_factors[3]:k_rep_factors[3]
                 if (ka == 0) && (kb == 0) && (kc == 0)
                     continue
                 end
