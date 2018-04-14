@@ -1,5 +1,7 @@
 #!/usr/bin/env julia
 
+#TODO split these into different files for different tests so e.g. framework in one suite is not used in another suite so it's clear what's goign on.
+
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
 # Start Test Script
 using PorousMaterials
