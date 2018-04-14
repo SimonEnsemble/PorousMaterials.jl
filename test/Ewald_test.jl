@@ -1,5 +1,6 @@
 using PorousMaterials
 using Base.Test
+using BenchmarkTools, Compat
 
 @printf("------------------------------\nTesting Ewald.jl\n\n")
 const framework = read_crystal_structure_file("NU-1000_Greg.cif")
@@ -30,9 +31,9 @@ end
 
 # timing
 x = [-0.047382031804, 7.209555961450, 5.158180463556]
-@time ϕ = electrostatic_potential(framework, x, sim_box, rep_factors, sr_cutoff, kvectors, α)
-ϕ = ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
-@time ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
-
-ϕ = ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
-@time ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
+@btime ϕ = electrostatic_potential(framework, x, sim_box, rep_factors, sr_cutoff, kvectors, α)
+ # ϕ = ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
+ # @btime ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
+ # 
+ # ϕ = ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
+ # @btime ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)

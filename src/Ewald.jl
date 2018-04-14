@@ -71,7 +71,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
     xf = mod.(framework.box.c_to_f * x, 1.0)
 
-	sr_potential = 0.0 # short-range contribution
+	sr_potential::Float64 = 0.0 # short-range contribution
 	lr_potential = 0.0 # long-range contribution
     # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
@@ -85,10 +85,10 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         #  Long-range contribution
         ###
         for i = 1:framework.n_atoms
-            for kvector in kvectors
+            @simd for kvector in kvectors
                 # k ⋅ (x - x_a)
-                k_dot_dx = kvector.k[1] * dx[1, i] + kvector.k[2] * dx[2, i] + kvector.k[3] * dx[3, i]
-                lr_potential += framework.charges[i] * cos(k_dot_dx) * kvector.weight
+                @inbounds k_dot_dx = kvector.k[1] * dx[1, i] + kvector.k[2] * dx[2, i] + kvector.k[3] * dx[3, i]
+                @fastmath lr_potential += framework.charges[i] * cos(k_dot_dx) * kvector.weight
             end
         end
 
@@ -101,68 +101,67 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         # convert distance vector to Cartesian coordinates
         dx = framework.box.f_to_c * dxf
 
-        r = mapslices(norm, dx, 1)
-        
         for i = 1:framework.n_atoms
-            if r[i] < sr_cutoff_radius
-                sr_potential += framework.charges[i] / r[i] * erfc(r[i] * α)
+            @inbounds r = sqrt(dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i])
+            if r < sr_cutoff_radius
+                @inbounds sr_potential += framework.charges[i] / r* erfc(r * α)
             end
         end
     end
     sr_potential /= 4.0 * π * ϵ₀
     lr_potential /= sim_box.Ω
 
-    return lr_potential + sr_potential
+    return (lr_potential + sr_potential)::Float64
 end		
-
-function ϕ_sr(framework::Framework, x::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64, α::Float64)
-    # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
-    xf = mod.(framework.box.c_to_f * x, 1.0)
-
-	sr_potential = 0.0 # short-range contribution
-    # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
-    for ra = 0:1.0:(repfactors[1] - 1), rb = 0:1.0:(repfactors[2] - 1), rc = 0:1.0:(repfactors[3] - 1)
-        # x - x_i vector in fractional coords; i corresponds to atom of framework.
-        #  same as: dxf = xf - (framework.xf[:, i] + [ra, rb, rc]) = (xf - [ra, rb, rc]) - framework.xf[:, i]
-        dx = broadcast(-, xf - [ra, rb, rc], framework.xf)
-        nearest_image!(dx, repfactors)
-        # convert distance vector to Cartesian coordinates
-        dx = framework.box.f_to_c * dx
-        
-        r = mapslices(norm, dx, 1)
-        sr_potential += sum(framework.charges ./ r .* erfc.(r * α))
-    end
-    sr_potential /= 4.0 * π * ϵ₀
-
-    return sr_potential
-end
-
-function ϕ_lr(framework::Framework, x::Array{Float64, 1}, sim_box::Box, repfactors::Tuple{Int, Int, Int}, kvectors::Array{Kvector, 1}, α::Float64)
-    # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
-    xf = mod.(framework.box.c_to_f * x, 1.0)
-
-	lr_potential = 0.0 # long-range contribution
-    # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
-    for ra = 0:1.0:(repfactors[1] - 1), rb = 0:1.0:(repfactors[2] - 1), rc = 0:1.0:(repfactors[3] - 1)
-        # x - x_i vector in fractional coords; i corresponds to atom of framework.
-        #  same as: dxf = xf - (framework.xf[:, i] + [ra, rb, rc]) = (xf - [ra, rb, rc]) - framework.xf[:, i]
-        dxf = broadcast(-, xf - [ra, rb, rc], framework.xf)
-        # convert distance vector to Cartesian coordinates
-        dx = framework.box.f_to_c * dxf
-        
-        ###
-        #  Long-range contribution
-        ###
-        lr_potential = 0.0
-        for i = 1:framework.n_atoms
-            for kvector in kvectors
-                # k ⋅ (x - x_a)
-                k_dot_dx = kvector.k[1] * dx[1, i] + kvector.k[2] * dx[2, i] + kvector.k[3] * dx[3, i]
-                lr_potential += framework.charges[i] * cos(k_dot_dx) * kvector.weight
-            end
-        end
-    end
-    lr_potential /= sim_box.Ω
-
-    return lr_potential
-end		
+ # 
+ # function ϕ_sr(framework::Framework, x::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64, α::Float64)
+ #     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
+ #     xf = mod.(framework.box.c_to_f * x, 1.0)
+ # 
+ # 	sr_potential = 0.0 # short-range contribution
+ #     # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
+ #     for ra = 0:1.0:(repfactors[1] - 1), rb = 0:1.0:(repfactors[2] - 1), rc = 0:1.0:(repfactors[3] - 1)
+ #         # x - x_i vector in fractional coords; i corresponds to atom of framework.
+ #         #  same as: dxf = xf - (framework.xf[:, i] + [ra, rb, rc]) = (xf - [ra, rb, rc]) - framework.xf[:, i]
+ #         dx = broadcast(-, xf - [ra, rb, rc], framework.xf)
+ #         nearest_image!(dx, repfactors)
+ #         # convert distance vector to Cartesian coordinates
+ #         dx = framework.box.f_to_c * dx
+ #         
+ #         r = mapslices(norm, dx, 1)
+ #         sr_potential += sum(framework.charges ./ r .* erfc.(r * α))
+ #     end
+ #     sr_potential /= 4.0 * π * ϵ₀
+ # 
+ #     return sr_potential
+ # end
+ # 
+ # function ϕ_lr(framework::Framework, x::Array{Float64, 1}, sim_box::Box, repfactors::Tuple{Int, Int, Int}, kvectors::Array{Kvector, 1}, α::Float64)
+ #     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
+ #     xf = mod.(framework.box.c_to_f * x, 1.0)
+ # 
+ # 	lr_potential = 0.0 # long-range contribution
+ #     # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
+ #     for ra = 0:1.0:(repfactors[1] - 1), rb = 0:1.0:(repfactors[2] - 1), rc = 0:1.0:(repfactors[3] - 1)
+ #         # x - x_i vector in fractional coords; i corresponds to atom of framework.
+ #         #  same as: dxf = xf - (framework.xf[:, i] + [ra, rb, rc]) = (xf - [ra, rb, rc]) - framework.xf[:, i]
+ #         dxf = broadcast(-, xf - [ra, rb, rc], framework.xf)
+ #         # convert distance vector to Cartesian coordinates
+ #         dx = framework.box.f_to_c * dxf
+ #         
+ #         ###
+ #         #  Long-range contribution
+ #         ###
+ #         lr_potential = 0.0
+ #         for i = 1:framework.n_atoms
+ #             for kvector in kvectors
+ #                 # k ⋅ (x - x_a)
+ #                 k_dot_dx = kvector.k[1] * dx[1, i] + kvector.k[2] * dx[2, i] + kvector.k[3] * dx[3, i]
+ #                 lr_potential += framework.charges[i] * cos(k_dot_dx) * kvector.weight
+ #             end
+ #         end
+ #     end
+ #     lr_potential /= sim_box.Ω
+ # 
+ #     return lr_potential
+ # end		
