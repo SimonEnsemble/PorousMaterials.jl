@@ -49,7 +49,7 @@ function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
     xf_molecule = mod.(framework.box.c_to_f * ljsphere.x, 1.0)
 
     # loop over replications of the home unit cell to build the supercell
-	for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
+	for ra = 0:repfactors[1]-1, rb = 0:repfactors[2]-1, rc = 0:repfactors[3]-1
         # loop over atoms of the framework
         for k = 1:framework.n_atoms
             # Nearest image convention.
@@ -60,7 +60,7 @@ function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
             #  later.
 
             # distance in fractional coordinate space
-            dxf = xf_molecule - (framework.xf[:, k] + [nA, nB, nC])
+            dxf = xf_molecule - (framework.xf[:, k] + [ra, rb, rc])
 
             # NIC condensed into a for-loop
             #
@@ -93,7 +93,7 @@ function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
             dx = framework.box.f_to_c * dxf
 
             # Lennard Jones parameters (and distance)
-            r² = dot(dx, dx)
+            r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
 
             if r² < R_OVERLAP_squared
                 # if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
