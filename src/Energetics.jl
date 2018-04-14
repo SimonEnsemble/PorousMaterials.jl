@@ -60,14 +60,14 @@ function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
 
         # loop over atoms of the framework and compute its contribution to the vdW energy.
         for i = 1:framework.n_atoms
-            r² = dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i]
+            @inbounds r² = dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i]
 
             if r² < R_OVERLAP_squared
                 # if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
                 return Inf
             elseif r² < ljforcefield.cutoffradius_squared
                 # add pairwise contribution to potential energy
-                energy += lennard_jones(r²,
+                @inbounds energy += lennard_jones(r²,
                     ljforcefield.σ²[framework.atoms[i]][ljsphere.atom],
                     ljforcefield.ϵ[framework.atoms[i]][ljsphere.atom])
             end # if-elseif-end
