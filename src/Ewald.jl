@@ -17,11 +17,24 @@ end
     kvectors = compute_kvectors(sim_box, k_rep_factors, α)
 
 For speed, pre-compute k-vectors.
+
 """
 function compute_kvectors(sim_box::Box, k_rep_factors::Tuple{Int, Int, Int}, α::Float64)
     kvectors = Kvector[]
-    for ka = -k_rep_factors[1]:1.0:k_rep_factors[1], kb = -k_rep_factors[2]:1.0:k_rep_factors[2], kc=-k_rep_factors[3]:1.0:k_rep_factors[3]
+    # ka goes from 0:k_rep_factors[3] to take advantage of:
+    #   cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
+    for ka = 0:1.0:k_rep_factors[1], kb = -k_rep_factors[2]:1.0:k_rep_factors[2], kc=-k_rep_factors[3]:1.0:k_rep_factors[3]
+        # don't include home unit cell
         if (ka == 0) && (kb == 0) && (kc == 0)
+            continue
+        end
+        # don't include both [0 1 x] and [0 -1 -x]
+        #  but need [0 1 x] [0 1 -x]
+        if (ka == 0) && (kb < 0)
+            continue
+        end
+        # don't include both [0 0 1] and [0 0 -1]
+        if (ka == 0) && (kb == 0) && (kc < 0)
             continue
         end
 
@@ -29,7 +42,10 @@ function compute_kvectors(sim_box::Box, k_rep_factors::Tuple{Int, Int, Int}, α:
         k = sim_box.reciprocal_lattice * [ka, kb, kc]
         # |k|²
         norm_squared = dot(k, k)
-        weight = exp(- norm_squared / (4.0 * α ^ 2)) / norm_squared / ϵ₀
+        
+        # factor of 2 from cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
+        #  and how we include ka>=0 only
+        weight = 2 * exp(- norm_squared / (4.0 * α ^ 2)) / norm_squared / ϵ₀
 
         push!(kvectors, Kvector(k, weight))
     end
