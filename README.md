@@ -62,3 +62,5 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 
 ## Energetics
 
+# TODO
+* random rotation matrix needs testing and is currently wrong.

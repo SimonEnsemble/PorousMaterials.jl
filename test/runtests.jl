@@ -94,17 +94,31 @@ end;
     end
     @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
     @test norm(m2.ljspheres[1].x - m2.ljspheres[2].x) ≈ norm(m1.ljspheres[1].x - m1.ljspheres[2].x)
+
+    # test unit vector on sphere generator
+    ms = [read_molecule_file("He") for i = 1:10000]
+    for m in ms
+        translate_to!(m, rand_point_on_unit_sphere())
+    end
+    @test all(isapprox.([norm(m.ljspheres[1].x) for m in ms], 1.0))
+    write_to_xyz(ms, "random_vectors_on_sphere")
+    println("See random_vectors_on_sphere")
     
     # rotation matrix shld be orthogonal
     r_orthogonal = true
+    r_det_1 = true
     for i = 1:300
         u = rand_point_on_unit_sphere()
         r = rotation_matrix(u, 2 * π * rand())
         if ! isapprox(r * transpose(r), eye(3))
             r_orthogonal = false
         end
+        if ! isapprox(det(r), 1.0)
+            r_det_1 = false
+        end
     end
     @test r_orthogonal
+    @test r_det_1
     
     # test rotate function
     translate_to!(m2, [50.0, 100.0, 150.0])
@@ -117,6 +131,14 @@ end;
     m2_old = deepcopy(m2)
     rotate!(m2)
     @test ! isapprox(m2_old, m2)
+    # visually inspect
+    ms = [read_molecule_file("CO2") for i = 1:100]
+    for m in ms
+       rotate!(m)
+    end
+    write_to_xyz(ms, "co2s")
+    println("see co2s.xyz for dist'n of rotations")
+
 
 end
 

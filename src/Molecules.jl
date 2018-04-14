@@ -176,7 +176,7 @@ end
 Generate a unit vector with a random orientation.
 """
 function rand_point_on_unit_sphere()
-    u = [randn(), randn(), randn()]
+    u = randn(3)
     u_norm = norm(u)
     if u_norm < 1e-6 # avoid numerical error in division
         return rand_point_on_unit_sphere()
@@ -193,16 +193,16 @@ function rotation_matrix(u::Array{Float64, 1}, θ::Float64)
     @assert(norm(u) ≈ 1.0, "pass a unit vector!")
     c = cos(θ)
     s = sin(θ)
-    r = [c + (1.0 - c) * u[1] ^ 2            (1.0 - c) * u[2] * u[1] - s * u[3]   (1.0 - c) * u[3] * u[1] + s * u[2];
-         (1.0 - c) * u[1] * u[2] + s * u[3]  c + (1.0 - c) * u[2] ^ 2             (1.0 - c) * u[3] * u[2] - s * u[1];
-         (1.0 - c) * u[1] * u[3] - s * u[2]  (1.0 - c) * u[2] * u[3] + s * u[1]   c + (1.0 - c) * u[3] ^ 2           ]
-   return r 
+    return [c + (1.0 - c) * u[1] ^ 2            (1.0 - c) * u[2] * u[1] - s * u[3]   (1.0 - c) * u[3] * u[1] + s * u[2];
+            (1.0 - c) * u[1] * u[2] + s * u[3]  c + (1.0 - c) * u[2] ^ 2             (1.0 - c) * u[3] * u[2] - s * u[1];
+            (1.0 - c) * u[1] * u[3] - s * u[2]  (1.0 - c) * u[2] * u[3] + s * u[1]   c + (1.0 - c) * u[3] ^ 2           ]
 end
 
 """
     rotate!(molecule::Molecule; assume_center_of_mass_at_origin::Bool=false) # molecule has rotated about its center of mass
 
 Conduct a random rotation of a molecule about its center of mass.
+#TODO this is WRONG! does not generate uniform random rotations! need to change `rotation_matrix`
 """
 function rotate!(molecule::Molecule; assume_center_of_mass_at_origin::Bool=false)
     # generate a randomly oriented vector. this is the axis about which we rotate
@@ -229,7 +229,7 @@ end
 """
     outside_box = completely_outside_box(molecule::Molecule, box::Box)
 
-returns true if the center of mass of a molecule is outside of the box.
+returns true if the center of mass of a molecule is outside of the box and false otherwise.
 """
 function outside_box(molecule::Molecule, box::Box)
     xf = box.c_to_f * molecule.center_of_mass
@@ -241,102 +241,24 @@ function outside_box(molecule::Molecule, box::Box)
     return false
 end
 
- # function move_arni!(molecule::Molecule, translation::Array{Float64, 1})
- #     T = construct_translational_matrix(translation[1], translation[2], translation[3])
- #     for ljsphere in molecule.ljspheres
- #         ljsphere.x[:] = matmul(ljsphere.x, T)        
- #     end
- # 
- #     for charge in molecule.charges
- #         charge.x[:] = matmul(charge.x, T)
- #     end
- #     molecule.center_of_mass[:] = matmul(molecule.center_of_mass, T)
- # end
- # 
- # 
- # """
- # Used to adjust to 4x4 translational/rotational matrices
- # """
- # function matmul(vector::Array{Float64,1}, matrix::Array{Float64,2})
- #     vec = deepcopy(vector)
- #     push!(vec, 1)
- #     vec = matrix * vec
- #     return vec[1:3]
- # end
- # 
- # 
- # """
- #     rotate!(molecule::Molecule, θ::Real, ϕ::Real, γ::Real, order_of_rotation::Array{Int64, 1} = [1, 2, 3])
- # 
- # Used to rotate a molecule by the center of mass. Because this is a three dimensional space, the order of rotation matters.
- # 
- # # Arguments
- # - `molecule::Molecule`: The molecule being rotated
- # - `θ::Real`: The rotation about the x-axis in radians
- # - `ϕ::Real`: The rotation about the y-axis in radians
- # - `γ::Real`: The rotation about the z-axis in radians
- # - `order_of_rotation::Array{Int64, 1}`: The order in which the molecule is rotated. Will default to [1,2,3]. That is, it will rotate about the x-axis first, then the y-axis and finally the z-axis.
- # """
- # function rotate!(molecule::Molecule, θ::Real, ϕ::Real, γ::Real, order_of_rotation::Array{Int64, 1} = [1,2,3])
- #     θ = Float64(θ); ϕ = Float64(ϕ); γ = Float64(γ);
- #     #TODO This function is almost identical to the move! function. We could merge them maybe?
- #     R = construct_rot_matrix(molecule.center_of_mass, order_of_rotation, θ, ϕ, γ)
- #     for ljsphere in molecule.ljspheres
- #         ljsphere.x[:] = matmul(ljsphere.x, R)
- #     end
- # 
- #     for charge in molecule.charges
- #         charge.x[:] = matmul(charge.x, R)
- #     end
- # end
- # 
- # 
- # """
- #     rotate_x!(molecule::Molecule, θ::Real)
- # 
- # Used to rotate molecule about the x-axis (see rotate!)
- # """
- # rotate_x!(molecule::Molecule, θ::Real) = rotate!(molecule, θ, 0, 0)
- # 
- # 
- # """
- #     rotate_y!(molecule::Molecule, θ::Real)
- # 
- # Used to rotate molecule about the y-axis (see rotate!)
- # """
- # rotate_y!(molecule::Molecule, θ::Real) = rotate!(molecule, 0, θ, 0)
- # 
- # 
- # """
- #     rotate_z!(molecule::Molecule, θ::Real)
- # 
- # Used to rotate molecule about the z-axis (see rotate!)
- # """
- # rotate_z!(molecule::Molecule, θ::Real) = rotate!(molecule, 0, 0, θ)
- # 
- # """
- # Constructs a 4x4 translational matrix. We use a 4x4 matrix to be able to multiply it with the rotational matrices and combine all translational and rotational operations into a single matrix `R`
- # """
- # function construct_translational_matrix(x::Real, y::Real, z::Real)
- #     return [1 0 0 x;
- #             0 1 0 y;
- #             0 0 1 z;
- #             0 0 0 1]
- # end
- # 
- # """
- # Constructs a 4x4 rotational matrix. Because we're in a three dimensional space the order of rotations matters. We use a 4x4 matrix to be able to multiply it with the rotational matrices and combine all translational and rotational operations into a single matrix `R`
- # """
- # function construct_rot_matrix(center::Array{Float64, 1}, order_of_rotation::Array{Int64, 1}, θ::Real, ϕ::Real, γ::Real)
- #     #TODO optimize
- #     # Translate to origin
- #     R = construct_translational_matrix(-center[1], -center[2], -center[3])
- #     RR = Array{Array{Float64, 2}, 1}(3)
- #     RR[1] = [1 0 0 0; 0 cos(θ) -sin(θ) 0; 0 sin(θ) cos(θ) 0; 0 0 0 1]
- #     RR[2] = [cos(ϕ) 0 sin(ϕ) 0; 0 1 0 0; -sin(ϕ) 0 cos(ϕ) 0; 0 0 0 1]
- #     RR[3] = [cos(γ) -sin(γ) 0 0; sin(γ) cos(γ) 0 0; 0 0 1 0; 0 0 0 1]
- #     for i in order_of_rotation
- #         R = RR[i] * R
- #     end
- #     return construct_translational_matrix(center[1], center[2], center[3]) * R
- # end
+"""
+    write_to_xyz(molecules, filename)
+
+Write an array of molecules to an .xyz file. Write only the Lennard-Jones spheres to file (not charges).
+"""
+function write_to_xyz(molecules::Array{Molecule, 1}, filename::String; comment::String="")
+    if ! contains(filename, ".xyz")
+        filename *= ".xyz"
+    end
+
+    n_atoms = sum([length(molecules[i].ljspheres) for i = 1:length(molecules)])
+
+    xyzfile = open(filename, "w")
+    @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
+    for molecule in molecules
+        for ljsphere in molecule.ljspheres
+			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(ljsphere.atom), ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
+        end
+    end
+    close(xyzfile)
+end
