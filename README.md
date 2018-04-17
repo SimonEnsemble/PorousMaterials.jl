@@ -100,6 +100,7 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 * henry coeff (Melanie)
 * fix GCMC to allow complex molecules (Arthur)
 * Ewald for molecules in GCMC (Arthur)
+* make sure no 100000000000 - 10000000000.01 is going on with electrostatics adding to vdw...
 
 # Help wanted
 * geometric based pore size calculations (largest free and included spheres), surface area, and porosity calculations
