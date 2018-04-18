@@ -114,3 +114,13 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
 
     return (lr_potential + sr_potential)::Float64
 end		
+
+function electrostatic_potential(framework::Framework, molecule::Molecule, 
+                                 sim_box::Box, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
+                                 kvectors::Array{Kvector, 1}, α::Float64)
+    ϕ = 0.0
+    for charge in molecule
+        ϕ += charge.q * electrostatic_potential(framework, charge.x, sim_box, repfactors, sr_cutoff_radius, kvectors, α)
+    end
+    return ϕ
+end
