@@ -4,8 +4,9 @@ const δ = 0.35
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # Markov chain proposals
+const N_PROPOSAL_TYPES = 3
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
-const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
+const PES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["translation"]
@@ -46,7 +47,7 @@ end
 """
     insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
 
-Inserts an additional `adsorbate` molecule into the system at random coordinates inside 
+Inserts an additional `adsorbate` molecule into the system at random coordinates inside
 the `simulation_box`.
 """
 function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
@@ -137,21 +138,23 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                                 ljforcefield::LennardJonesForceField, simulation_box::Box)
     energy = 0.0 # energy is pair-wise additive
     # fractional coordinates of molecule
-    xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
+    #xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
     # Look at interaction with all other molecules in the system
-    for other_molecule_id = 1:length(molecules)
-        # molecule cannot interact with itself
-        if other_molecule_id == molecule_id
-            continue
-        end
-        # fractional coodinates of other molecule
-        xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
+    for this_ljsphere in molecules[molecule_id].ljspheres
+        # fractional coodinates of current ljsphere (atom)
+        xf_molecule = this_ljsphere.x
+        #xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
         # Loop over all atoms in the given molecule
-        for atom_id = 1:molecules[molecule_id].n_atoms
-            # loop over every atom in the other molecule
-            for other_atom_id = 1:molecules[other_molecule_id].n_atoms
+        for other_molecule_id = 1:length(molecules)
+            # molecule cannot interact with itself
+            if other_molecule_id == molecule_id
+                continue
+            end
+            # loop over every ljsphere (atom) in the other molecule
+            for other_ljsphere in molecules[molecule_id].ljspheres
                 # compute vector between molecules in fractional coordinates
-                dxf = xf_molecule[:, atom_id] - xf_other_molecule[:, other_atom_id]
+                dxf = xf_molecule .- other_ljsphere.x
+                #dxf = xf_molecule[:, atom_id] - xf_other_molecule[:, other_atom_id]
 
                 nearest_image!(dxf, (1, 1, 1))
                 # converts fractional distance to cartesian distance
@@ -206,7 +209,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          molecule::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
-        pretty_print(adsorbate, framework.name, temperature, fugacity)
+        pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
 
     const repfactors = replication_factors(framework.box, ljforcefield)
@@ -219,19 +222,19 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     molecules = Molecule[]
-    
+
     markov_counts = MarkovCounts([0 for i = 1:length(PROPOSAL_ENCODINGS)], [0 for i = 1:length(PROPOSAL_ENCODINGS)])
-    
-    # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system) 
+
+    # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system)
     #  Markov chain proposals.
     markov_chain_time = 0
     for outer_cycle = 1:(n_burn_cycles + n_sample_cycles), inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
-        
+
         # choose move randomly; keep track of proposals
         which_move = rand(1:N_PROPOSAL_TYPES)
         markov_counts.n_proposed[which_move] += 1
-        
+
         if which_move == INSERTION
             insert_molecule!(molecules, simulation_box, molecule_template)
 
@@ -260,7 +263,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 repfactors)
 
             # Metropolis Hastings Acceptance for Deletion
-            if rand() < length(molecules) * KB * temperature / (fugacity * 
+            if rand() < length(molecules) * KB * temperature / (fugacity *
                     simulation_box.Ω) * exp((U_gh + U_gg) / temperature)
                 # accept the deletion, delete molecule, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
@@ -344,12 +347,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     results = Dict{String, Any}()
     results["crystal"] = framework.name
-    results["adsorbate"] = adsorbate
+    results["adsorbate"] = molecule.species
     results["forcefield"] = ljforcefield.name
     results["fugacity (Pa)"] = fugacity
     results["temperature (K)"] = temperature
     results["repfactors"] = repfactors
-    
+
     results["# sample cycles"] = n_sample_cycles
     results["# burn cycles"] = n_burn_cycles
 
@@ -387,7 +390,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     if verbose
         print_results(results)
     end
-    
+
     return results
 end # gcmc_simulation
 
@@ -396,22 +399,22 @@ function print_results(results::Dict)
             results["adsorbate"], results["crystal"], results["temperature (K)"],
             results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
 
-    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1], 
-                                                         results["repfactors"][2], 
+    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
+                                                         results["repfactors"][2],
                                                          results["repfactors"][3])
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
-        for key in [@sprintf("Total # %s proposals", proposal_description), 
+        for key in [@sprintf("Total # %s proposals", proposal_description),
                     @sprintf("Fraction of %s proposals accepted", proposal_description)]
             println(key * ": ", results[key])
         end
     end
-    
+
     println("")
     for key in ["# sample cycles", "# burn cycles", "# samples"]
         println(key * ": ", results[key])
     end
-        
+
 
     println("")
     for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)",
@@ -421,7 +424,7 @@ function print_results(results::Dict)
     end
 
     @printf("Q_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
-    return 
+    return
 end
 
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, fugacity::Float64)
