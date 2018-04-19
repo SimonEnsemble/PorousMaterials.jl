@@ -4,9 +4,8 @@ const δ = 0.35
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # Markov chain proposals
-const N_PROPOSAL_TYPES = 3
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
-const PES = length(keys(PROPOSAL_ENCODINGS))
+const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["translation"]
@@ -137,13 +136,8 @@ Code copied from Arni's Energetics.jl with minor adjustments to calculate
 function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                                 ljforcefield::LennardJonesForceField, simulation_box::Box)
     energy = 0.0 # energy is pair-wise additive
-    # fractional coordinates of molecule
-    #xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
     # Look at interaction with all other molecules in the system
     for this_ljsphere in molecules[molecule_id].ljspheres
-        # fractional coodinates of current ljsphere (atom)
-        xf_molecule = this_ljsphere.x
-        #xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
         # Loop over all atoms in the given molecule
         for other_molecule_id = 1:length(molecules)
             # molecule cannot interact with itself
@@ -151,27 +145,26 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                 continue
             end
             # loop over every ljsphere (atom) in the other molecule
-            for other_ljsphere in molecules[molecule_id].ljspheres
+            for other_ljsphere in molecules[other_molecule_id].ljspheres
                 # compute vector between molecules in fractional coordinates
-                dxf = xf_molecule .- other_ljsphere.x
-                #dxf = xf_molecule[:, atom_id] - xf_other_molecule[:, other_atom_id]
+                dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
 
                 nearest_image!(dxf, (1, 1, 1))
+
                 # converts fractional distance to cartesian distance
                 dx = simulation_box.f_to_c * dxf
 
-                r² = dot(dx, dx)
+                r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
 
                 if r² < R_OVERLAP_squared
                     return Inf
                 elseif r² < ljforcefield.cutoffradius_squared
-                    # TODO test whether it is more efficient to store this as a variable up top
                     energy += lennard_jones(r²,
-                        ljforcefield.σ²[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]],
-                        ljforcefield.ϵ[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
+                        ljforcefield.σ²[this_ljsphere.atom][other_ljsphere.atom],
+                        ljforcefield.ϵ[this_ljsphere.atom][other_ljsphere.atom])
                 end
-            end # loop over all atoms in other molecule
-        end # loop over all atoms of molecule_id of interest
+            end # loop over all ljspheres in other molecule
+        end # loop over all ljspheres of molecule_id of interest
     end # loop over all other molecules
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
