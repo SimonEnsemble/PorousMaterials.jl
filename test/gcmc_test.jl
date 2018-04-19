@@ -33,7 +33,6 @@ dreiding_forcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=1
 molecule = read_molecule_file("Xe")
 
 # very quick test
-#results = gcmc_simulation(sbmof1, 298.0, 2300.0, :Xe, dreiding_forcefield, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
 results = gcmc_simulation(sbmof1, 298.0, 2300.0, molecule, dreiding_forcefield, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
 
 
@@ -43,8 +42,8 @@ test_molec_unit_cell = [0.266, 1.388, 1.929]
 
 for (i, fugacity) in enumerate(test_fugacities)
     @time results = gcmc_simulation(sbmof1, 298.0, fugacity, molecule, dreiding_forcefield, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true)
-      @printf("molecule/unit cell: %f\n", isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.005))
-      @printf("mmol/g: %f\n", isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.005))
+      @test isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.005)
+      @test isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.005)
 end
 
 # TODO
