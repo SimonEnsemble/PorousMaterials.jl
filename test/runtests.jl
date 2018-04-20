@@ -38,7 +38,7 @@ strip_numbers_from_atom_labels!(framework)
 end;
 
 @printf("------------------------------\nTesting Forcefield.jl\n\n")
-const ljforcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
+const ljforcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 frame = read_crystal_structure_file("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
 rep_factors = replication_factors(frame.box, ljforcefield)
