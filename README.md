@@ -150,6 +150,9 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 * geometric based pore size calculations (largest free and included spheres), surface area, and porosity calculations
 
 # Contribution guidelines
+
+To avoid breaking PorousMaterials.jl upon pushing changes, please copy the `pre-commit` script to the `.git/hooks/` directory inside `PorousMaterials.jl`. Then `chmod +x .git/hooks/pre-commit` to make it executable. Now, when you `git commit`, `tests/runtests.jl` will automatically run to make sure the tests run before you commit a change that could break PorousMaterials.jl.
+
 * keep with spacing and naming conventions used throughout the code. only lower case for variables, upper case for types etc.
 * include many comments. include doc strings for your functions
 * modularize the code as much as possible by breaking it into small functions
