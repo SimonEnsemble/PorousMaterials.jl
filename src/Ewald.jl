@@ -1,4 +1,4 @@
-using ParallelAccelerator
+using SpecialFunctions
 # Vacuum permittivity eps0 = 8.854187817e-12 # C^2/(J-m)
 # 1 m = 1e10 A, 1 e = 1.602176e-19 C, kb = 1.3806488e-23 J/K
 # 8.854187817e-12 C^2/(J-m) [1 m / 1e10 A] [1 e / 1.602176e-19 C]^2 [kb = 1.3806488e-23 J/K]
