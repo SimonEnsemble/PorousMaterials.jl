@@ -62,24 +62,28 @@ end;
 @printf("------------------------------\nTesting Molecules.jl\n\n")
 @testset "Molecules Tests" begin
     # test reader
-    molecule = read_molecule_file("test")
+    molecule = read_molecule_file("CO2")
     atomic_masses = read_atomic_masses()
-    @test molecule.species == :test
-    @test length(molecule.ljspheres) == 2
-    @test molecule.ljspheres[1].atom == :Cu
-    @test molecule.ljspheres[2].atom == :Zn
-    @test all(molecule.ljspheres[1].x .≈ [1.0, 20.0, 3.0])
-    @test all(molecule.ljspheres[2].x .≈ [3.0, 0.0, 0.0])
-    @test all(molecule.center_of_mass .≈ (atomic_masses[:Cu] * [1.0, 20.0, 3.0] + atomic_masses[:Zn] * [3.0, 0.0, 0.0]) / (atomic_masses[:Cu] + atomic_masses[:Zn]))
-    @test length(molecule.charges) == 2
-    @test molecule.charges[1].q ≈ 0.2
-    @test molecule.charges[2].q ≈ -0.2
-    @test all(molecule.charges[1].x ≈ [1.0, 2.0, 3.0])
-    @test all(molecule.charges[2].x ≈ [8.0, 9.0, 10.0])
+    @test molecule.species == :CO2
+    @test length(molecule.ljspheres) == 3
+    @test molecule.ljspheres[1].atom == :C_CO2
+    @test molecule.ljspheres[2].atom == :O_CO2
+    @test molecule.ljspheres[3].atom == :O_CO2
+    @test all(molecule.ljspheres[1].x .≈ [0.0, 0.0, 0.0])
+    @test all(molecule.ljspheres[2].x .≈ [-1.16, 0.0, 0.0])
+    @test all(molecule.ljspheres[3].x .≈ [1.16, 0.0, 0.0])
+    @test all(molecule.center_of_mass .≈ [0.0, 0.0, 0.0])
+    @test length(molecule.charges) == 3
+    @test molecule.charges[1].q ≈ 0.7
+    @test molecule.charges[2].q ≈ -0.35
+    @test molecule.charges[3].q ≈ -0.35
+    for i = 1:3
+        @test all(molecule.charges[i].x ≈ molecule.ljspheres[i].x)
+    end
 
     # test translate
-    m1 = read_molecule_file("test")
-    m2 = read_molecule_file("test")
+    m1 = read_molecule_file("CO2")
+    m2 = read_molecule_file("CO2")
     @test isapprox(m1, m2) # overloaded this function for molecules
     translate_by!(m2, [0.0, 0.0, 0.0])
     @test isapprox(m1, m2)
