@@ -32,29 +32,71 @@ If you change your working directory to `PorousMaterials.jl/test`, `PorousMateri
 ```julia
 using PorousMaterials
 
-# load abstract data structure containg crystal structure info
-framework = read_crystal_structure_file("JAVTAC_clean.cif")
+framework = read_crystal_structure_file("SBMOF-1.cif")
 
-# replicate framework to .xyz for visualization
 replicate_to_xyz(framework, "replicated_framework.xyz", repfactors=(2,3,1))
 
-# load abstract data structure Lennard Jones force field (UFF)
-forcefield = read_forcefield_file("UFF.csv") 
+ρ = crystal_density(framework) # kg/m3
 
+cf = chemical_formula(framework)
 ```
 
 #### molecules
 
+```julia
+co2 = read_molecule_file("CO2")
+
+translate_to!(co2, [1.0, 3.0, 4.0])
+translate_by!(co2, [1.0, 1.0, 1.0])
+rotate!(co2)
+```
+
 #### forcefields
 
+```julia
+ljforcefield = read_forcefield_file("UFF.csv")
+ljforcefield.ϵ[:Xe][:C] # K
+ljforcefield.σ²[:Xe][:C] # Å
+```
+
 #### computing potential energies of molecules in crystals
+
+Van der Waals interactions:
+```julia
+# Unit cell replication factors for application of periodic boundary conditions
+repfactors = replication_factors(framework.box, ljforcefield)
+energy = vdw_energy(framework, co2, ljforcefield, repfactors) # K
+```
+Electrostatic potential energy:
+```
+nu1000 = read_crystal_structure_file("NU-1000_Greg.cif")
+
+k_rep_factors = (11, 11, 9)
+α = 0.25
+sr_cutoff = 12.0
+rep_factors = replication_factors(nu1000, sr_cutoff)
+sim_box = replicate_box(nu1000.box, rep_factors)
+kvectors = compute_kvectors(sim_box, k_rep_factors, α)
+
+x = [4.2, 23.1, 28.4]
+ϕ = electrostatic_potential_energy(nu1000, co2, sim_box, rep_factors, sr_cutoff, kvectors, α) # [K]
+```
 
 #### writing energy grids
 
 #### calculating the Henry coefficient of a molecule in a crystal
 
 #### grand-canonical Monte Carlo simulation of a molecule in a crystal
-
+```julia
+xe = read_molecule_file("Xe")
+sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+ljforcefield = read_forcefield_file("Dreiding.csv")
+temperature = 298.0 # K
+pressure = 1.0 * 100000 # 1 bar = 100,000 Pa
+results = gcmc_simulation(sbmof1, temperature, pressure, xe, ljforcefield,
+                          n_burn_cycles=100, n_sample_cycles=100,
+                          verbose=true)
+```
 
 ## From where does PorousMaterials.jl read crystal structure, molecule, and force field files?
 All input files are stored in `PorousMaterials.PATH_TO_DATA`, which by default is 
@@ -101,11 +143,16 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 * fix GCMC to allow complex molecules (Arthur)
 * Ewald for molecules in GCMC (Arthur)
 * make sure no 100000000000 - 10000000000.01 is going on with electrostatics adding to vdw...
+* add guest-guest tests for CO2, other moleucles that are multiple beads
+* get test data from Greg on ENTIRE molecule's energies
 
 # Help wanted
 * geometric based pore size calculations (largest free and included spheres), surface area, and porosity calculations
 
 # Contribution guidelines
+
+To avoid breaking PorousMaterials.jl upon pushing changes, please copy the `pre-commit` script to the `.git/hooks/` directory inside `PorousMaterials.jl`. Then `chmod +x .git/hooks/pre-commit` to make it executable. Now, when you `git commit`, `tests/runtests.jl` will automatically run to make sure the tests run before you commit a change that could break PorousMaterials.jl.
+
 * keep with spacing and naming conventions used throughout the code. only lower case for variables, upper case for types etc.
 * include many comments. include doc strings for your functions
 * modularize the code as much as possible by breaking it into small functions

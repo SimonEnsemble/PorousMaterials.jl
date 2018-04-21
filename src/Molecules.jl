@@ -106,14 +106,16 @@ function read_molecule_file(species::String)
         push!(charges, PointCharge(row[:q], x))
     end
 
+    molecule = Molecule(Symbol(species), ljspheres, charges, COM)
+
     # check for charge neutrality
     if length(charges) > 0
-        if ! (sum([charges[i].q for i = 1:length(charges)]) ≈ 0.0)
+        if ! (total_charge(molecule) ≈ 0.0)
             error(@sprintf("Molecule %s is not charge neutral!", species))
         end
     end
-    
-    return Molecule(Symbol(species), ljspheres, charges, COM)
+
+    return molecule
 end
 
 """
@@ -261,4 +263,17 @@ function write_to_xyz(molecules::Array{Molecule, 1}, filename::String; comment::
         end
     end
     close(xyzfile)
+end
+
+"""
+    total_charge = total_charge(molecule::Molecule)
+
+Sum up point charges on a molecule.
+"""
+function total_charge(molecule::Molecule)
+    total_charge = 0.0
+    for charge in molecule.charges
+        total_charge += charge.q
+    end
+    return total_charge
 end

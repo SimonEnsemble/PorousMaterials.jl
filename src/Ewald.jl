@@ -1,4 +1,4 @@
-using ParallelAccelerator
+using SpecialFunctions
 # Vacuum permittivity eps0 = 8.854187817e-12 # C^2/(J-m)
 # 1 m = 1e10 A, 1 e = 1.602176e-19 C, kb = 1.3806488e-23 J/K
 # 8.854187817e-12 C^2/(J-m) [1 m / 1e10 A] [1 e / 1.602176e-19 C]^2 [kb = 1.3806488e-23 J/K]
@@ -115,11 +115,11 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
     return (lr_potential + sr_potential)::Float64
 end		
 
-function electrostatic_potential(framework::Framework, molecule::Molecule, 
-                                 sim_box::Box, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
-                                 kvectors::Array{Kvector, 1}, α::Float64)
+function electrostatic_potential_energy(framework::Framework, molecule::Molecule, 
+                                       sim_box::Box, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
+                                       kvectors::Array{Kvector, 1}, α::Float64)
     ϕ = 0.0
-    for charge in molecule
+    for charge in molecule.charges
         ϕ += charge.q * electrostatic_potential(framework, charge.x, sim_box, repfactors, sr_cutoff_radius, kvectors, α)
     end
     return ϕ

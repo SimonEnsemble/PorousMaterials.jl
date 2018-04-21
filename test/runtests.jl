@@ -38,7 +38,7 @@ strip_numbers_from_atom_labels!(framework)
 end;
 
 @printf("------------------------------\nTesting Forcefield.jl\n\n")
-const ljforcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
+const ljforcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 frame = read_crystal_structure_file("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
 rep_factors = replication_factors(frame.box, ljforcefield)
@@ -62,24 +62,28 @@ end;
 @printf("------------------------------\nTesting Molecules.jl\n\n")
 @testset "Molecules Tests" begin
     # test reader
-    molecule = read_molecule_file("test")
+    molecule = read_molecule_file("CO2")
     atomic_masses = read_atomic_masses()
-    @test molecule.species == :test
-    @test length(molecule.ljspheres) == 2
-    @test molecule.ljspheres[1].atom == :Cu
-    @test molecule.ljspheres[2].atom == :Zn
-    @test all(molecule.ljspheres[1].x .≈ [1.0, 20.0, 3.0])
-    @test all(molecule.ljspheres[2].x .≈ [3.0, 0.0, 0.0])
-    @test all(molecule.center_of_mass .≈ (atomic_masses[:Cu] * [1.0, 20.0, 3.0] + atomic_masses[:Zn] * [3.0, 0.0, 0.0]) / (atomic_masses[:Cu] + atomic_masses[:Zn]))
-    @test length(molecule.charges) == 2
-    @test molecule.charges[1].q ≈ 0.2
-    @test molecule.charges[2].q ≈ -0.2
-    @test all(molecule.charges[1].x ≈ [1.0, 2.0, 3.0])
-    @test all(molecule.charges[2].x ≈ [8.0, 9.0, 10.0])
+    @test molecule.species == :CO2
+    @test length(molecule.ljspheres) == 3
+    @test molecule.ljspheres[1].atom == :C_CO2
+    @test molecule.ljspheres[2].atom == :O_CO2
+    @test molecule.ljspheres[3].atom == :O_CO2
+    @test all(molecule.ljspheres[1].x .≈ [0.0, 0.0, 0.0])
+    @test all(molecule.ljspheres[2].x .≈ [-1.16, 0.0, 0.0])
+    @test all(molecule.ljspheres[3].x .≈ [1.16, 0.0, 0.0])
+    @test all(molecule.center_of_mass .≈ [0.0, 0.0, 0.0])
+    @test length(molecule.charges) == 3
+    @test molecule.charges[1].q ≈ 0.7
+    @test molecule.charges[2].q ≈ -0.35
+    @test molecule.charges[3].q ≈ -0.35
+    for i = 1:3
+        @test all(molecule.charges[i].x ≈ molecule.ljspheres[i].x)
+    end
 
     # test translate
-    m1 = read_molecule_file("test")
-    m2 = read_molecule_file("test")
+    m1 = read_molecule_file("CO2")
+    m2 = read_molecule_file("CO2")
     @test isapprox(m1, m2) # overloaded this function for molecules
     translate_by!(m2, [0.0, 0.0, 0.0])
     @test isapprox(m1, m2)
@@ -324,56 +328,63 @@ end
     repfactors = (1, 2, 3)
     dxf = [1.2, -0.2, 2.4]
     nearest_image!(dxf, repfactors)
-    @test isapprox(dxf, [0.2, 1.8, 2.4])
+    @test isapprox(dxf, [0.2, -0.2, -0.6])
     
-    dxf = [1.2 -0.2 2.4; -0.3 -0.1 3.4]
+    dxf = [1.2 -0.3; -0.2 -0.1; 2.4 3.4]
     nearest_image!(dxf, repfactors)
-    @test isapprox(dxf, [0.2 1.8 2.4; 0.7 1.9 0.4])
+    @test isapprox(dxf, [0.2 -0.3; -0.2 -0.1; -0.6 0.4])
 
     sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
-    # distance of 6.0 away
-    molecules = [Molecule(1, [:C], [5.0, 12.0, 12.0][:, :], [0.0]),
-                 Molecule(1, [:O], [11.0, 12.0, 12.0][:, :], [0.0])]
+    # a He and Xe a distance of 6.0 away
+    xe = read_molecule_file("Xe")
+    he = read_molecule_file("He")
+    translate_to!(xe, [5.0, 12.0, 12.0])
+    translate_to!(he, [11.0, 12.0, 12.0])
+    molecules = [xe, he]
     r² = (11.0 - 5.0) ^ 2 # duh
-    energy = lennard_jones(r², ljforcefield.σ²[:C][:O], ljforcefield.ϵ[:O][:C])
+    energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:Xe][:He])
     @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box)
     @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) # symmetry
     
     # via PBC, a distance (24.0 - 5.0) > (1+5)
-    molecules[2] = Molecule(1, [:O], [24.0, 12.0, 12.0][:, :], [0.0])
+    translate_to!(molecules[2], [24.0, 12.0, 12.0])
     r² = (1.0 + 5.0) ^ 2 # PBC
-    energy = lennard_jones(r², ljforcefield.σ²[:C][:O], ljforcefield.ϵ[:C][:O])
+    energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:He][:Xe])
     @test energy ≈ guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box)
     @test energy ≈ guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) # symmetry again.
     
     # put a molecule on top of first one.
-    push!(molecules, Molecule(1, [:C], [5.0, 12.0, 12.0][:, :], [0.0]))
+    push!(molecules, deepcopy(molecules[1]))
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 2 * energy
     
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
     @test guest_guest_vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
     
     # interaction energy between first and second should be same via PBC
-    molecules_a = [Molecule(1, [:C], [11.0, 1.0, 12.0][:, :], [0.0]),
-                   Molecule(1, [:O], [11.0, 4.0, 12.0][:, :], [0.0])]
-    molecules_b = [Molecule(1, [:C], [11.0, 1.0, 12.0][:, :], [0.0]),
-                   Molecule(1, [:O], [11.0, 23.0, 12.0][:, :], [0.0])]
+    molecules_a = [read_molecule_file("Xe"), read_molecule_file("He")]
+    translate_to!(molecules_a[1], [11.0, 1.0, 12.0])
+    translate_to!(molecules_a[2], [11.0, 4.0, 12.0])
+    molecules_b = [read_molecule_file("Xe"), read_molecule_file("He")]
+    translate_to!(molecules_b[1], [11.0, 1.0, 12.0])
+    translate_to!(molecules_b[2], [11.0, 23.0, 12.0])
     @test guest_guest_vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ guest_guest_vdw_energy(1, molecules_b, ljforcefield, sim_box)
     
     # another PBC one where three coords are different.
-    molecules = [Molecule(1, [:C], [24.0, 23.0, 11.0][:, :], [0.0]),
-                 Molecule(1, [:O], [22.0, 2.0, 12.0][:, :], [0.0])]
+    molecules = [read_molecule_file("Xe"), read_molecule_file("He")]
+    translate_to!(molecules[1], [24.0, 23.0, 11.0])
+    translate_to!(molecules[2], [22.0, 2.0, 12.0])
     r² = 4.0^2 + 2.0^2 + 1.0^2
-    energy = lennard_jones(r², ljforcefield.σ²[:C][:O], ljforcefield.ϵ[:O][:C])
+    energy = lennard_jones(r², ljforcefield.σ²[:He][:Xe], ljforcefield.ϵ[:He][:Xe])
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ energy
 
     # test cutoff radius. molecules here are too far to interact
-    molecules = [Molecule(1, [:C], [0.0, 0.0, 0.0][:, :], [0.0]),
-                 Molecule(1, [:O], [12.0, 12.0, 12.0][:, :], [0.0])]
+    translate_to!(molecules[1], [0.0, 0.0, 0.0])
+    translate_to!(molecules[2], [12.0, 12.0, 12.0])
     @test guest_guest_vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
     @test guest_guest_vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
     # the position of a molecule should not change inside guest_guest_vdw_energy.
-    @test all(molecules[1].x .== [0.0, 0.0, 0.0])
-    @test all(molecules[2].x .== [12.0, 12.0, 12.0])
+    @test all(molecules[1].ljspheres[1].x .== [0.0, 0.0, 0.0])
+    @test all(molecules[2].ljspheres[1].x .== [12.0, 12.0, 12.0])
+    # TODO write tests for CO2 where there are more than one beads
 end

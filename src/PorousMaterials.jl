@@ -25,5 +25,5 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        insert_molecule!, delete_molecule!, translate_molecule!,
        guest_guest_vdw_energy, gcmc_simulation, bring_molecule_inside_box!, # GCMC.jl
-       electrostatic_potential, compute_kvectors # Ewald.jl
+       electrostatic_potential, electrostatic_potential_energy, compute_kvectors # Ewald.jl
 end
