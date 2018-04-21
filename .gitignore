@@ -1,6 +1,7 @@
 .extrastuff
 *.cube
-*.cif
 *.cssr
 Tester.jl
 VisualizeTester.jl
+*.swp
+*.cif

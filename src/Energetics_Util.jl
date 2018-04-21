@@ -1,34 +1,59 @@
 """
-    nearest_image!(fractional_distance, repfactors)
+    nearest_image!(dxf, repfactors)
 
-applies the nearest image convention on a vector `fractional_distance` between two atoms
-in fractional space; modifies `fractional_distance` for nearest image convention.
+Applies the nearest image convention on a vector `dxf` between two atoms
+in fractional space; modifies `dxf` for nearest image convention.
 
-See comments in vdw_energy for more description
+See comments in vdw_energy for more description.
 """
-function nearest_image!(fractional_distance::Array{Float64}, repfactors::Tuple{Int64, Int64, Int64})
-    for xyz = 1:3 # xf, yf, or zf coordinate
-        if abs(fractional_distance[xyz]) > repfactors[xyz] / 2.0
-            fractional_distance[xyz] -= sign(fractional_distance[xyz]) * repfactors[xyz]
+function nearest_image!(dxf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
+    for k = 1:3 # loop over components
+        if abs(dxf[k]) > repfactors[k] / 2.0
+            @inbounds dxf[k] -= sign(dxf[k]) * repfactors[k]
         end
     end
 end
 
-"""
-    outside_box = completely_outside_box(molecule, box)
-
-returns true if each atom of a given molecule is completely outside of a given box and false otherwise
-"""
-function completely_outside_box(molecule::Molecule, box::Box)
-    xf = box.c_to_f * molecule.x
-    for xyz = 1:3 # loop over x, y, z coordinate
-        # if none of the coords are less than 1 it must be outside of the box
-        if sum(xf[xyz, :] .<= 1.0) == 0
-            return true
-        # if none of the coords are greater than 0 it must be outside of the box
-        elseif sum(xf[xyz, :] .>= 0.0) == 0
-            return true
+function nearest_image!(dxf::Array{Float64, 2}, repfactors::Tuple{Int, Int, Int})
+    for a = 1:size(dxf)[2] # loop over atoms
+        for k = 1:3 # loop over components
+            if abs(dxf[k, a]) > repfactors[k] / 2.0
+                @inbounds dxf[k, a] -= sign(dxf[k, a]) * repfactors[k]
+            end
         end
     end
-    return false
 end
+
+# Arni's notes on Nearest image convention.
+#  If the interaction between the adsorbate molecule and atom k is being looked
+#  at, we'll only look at the interaction between the adsorbate molecule and
+#  the closest replication of atom k. This is done with fractional
+#  coordinates for simplication and transformation to cartesian is done
+#  later.
+
+
+# NIC condensed into a for-loop
+#
+# If the absolute value of the distance between the adsorbate atom and the
+# framework atom is greater than half the replication factor, we know that
+# there is a closer replication of the framework atom.
+#
+# {Replicat.} ||{Supercell}||{Replicat.}
+# |-----|----o||--x--|----o||-----|----o|
+#				  |--dxf--|
+#
+# x = adsorbate atom, o = framework atom
+#
+# dxf is `x_adsorbate - x_framework` so when the adsorbate atom is to the left of
+# the framework atom, dxf is negative.
+# When correcting for the position of the framework atom with the Nearest Image Convention
+# we use `sign(dxf[j]) * repfactors[j]` to change the distance dxf so it gives the distance
+# between the adsorbate atom and the closest replication of the framework atom.
+#
+# In the above example, the framework atom is to the right of the adsorbate atom, and dxf < 0
+# We see that the left replication of `o` is closer to `x`, and we should be calculating the
+# distance between that atom and the adsorbate. So by subtracting `sign(dxf[j]) * repfactors[j]`
+# (remember that `sign(dxf[j]) = -1` in this case) we're adding `repfactors[j]` to the dxf[j] value
+# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
+# When checking the other case (where the adsorbate atom is to the right of the framework atom),
+# we see that the same equation holds (because now `sign(dxf[j]) = 1`)

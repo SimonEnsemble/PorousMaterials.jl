@@ -22,104 +22,56 @@ end
 """
     V = vdw_energy(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64})
 
-Calculates the van der Waals energy for a molecule locates at a specific position in a MOF
-supercell. Uses the nearest image convention to find the closest replicate of a specific atom
+Calculates the van der Waals interaction energy between a molecule and a framework.
+Applies the nearest image convention to find the closest replicate of a specific atom.
 
 # Arguments
 - `framework::Framework`: Crystal structure
-- `molecule::Molecule`: adsorbate (includes position/orientation)
+- `molecule::Molecule`: adsorbate (includes position/orientation/atoms)
 - `ljforcefield::LennardJonesForceField`: Lennard Jones force field
 - `repfactors::Tuple{Int64, Int64, Int64}`: replication factors of the home unit cell to build
-the supercell, which is the simulation box, such that the nearest image convention can be
-applied in this function.
+the supercell such that the nearest image convention can be applied in this function.
 """
 function vdw_energy(framework::Framework, molecule::Molecule,
                     ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
 	energy = 0.0
-    # compute fractional coordinate of molecule and apply PBC to bring it into the
-    # home unit cell of the crystal
-    xf_molecule = mod.(framework.box.c_to_f * molecule.x, 1.0)
+    for ljsphere in molecule.ljspheres
+        energy += vdw_energy(framework, ljsphere, ljforcefield, repfactors)
+    end
+	return energy
+end
 
-    # loop over replications of the home unit cell to build the supercell (simulation box)
-	for nA = 0:repfactors[1]-1, nB = 0:repfactors[2]-1, nC = 0:repfactors[3]-1
-        # loop over atoms of the molecule/adsorbate
-        # TODO: think about whether i or k loop should go first for speed. might not matter.
-		for i = 1:molecule.n_atoms
-			for k = 1:framework.n_atoms
-				# Nearest image convention.
-                #  If the interaction between the adsorbate molecule and atom k is being looked
-                #  at, we'll only look at the interaction between the adsorbate molecule and
-                #  the closest replication of atom k. This is done with fractional
-                #  coordinates for simplication and transformation to cartesian is done
-                #  later.
+function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
+                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
+	energy = 0.0
+    # compute fractional coordinate of the Lennard-Jones sphere and apply PBC to bring it into the
+    #  home unit cell of the crystal
+    xf_molecule = mod.(framework.box.c_to_f * ljsphere.x, 1.0)
 
-                # distance in fractional coordinate space
-				dxf = xf_molecule[:, i] - (framework.xf[:, k] + [nA, nB, nC])
+    # loop over replications of the home unit cell to build the supercell
+	for ra = 0:1.0:(repfactors[1] - 1), rb = 0:1.0:(repfactors[2] - 1), rc = 0:1.0:(repfactors[3] - 1)
+        # distance in fractional coordinate space. same as xf_molecule - (framework.xf + [ra rb rc])
+        dxf = broadcast(-, xf_molecule - [ra, rb, rc], framework.xf)
 
-				# NIC condensed into a for-loop
-				#
-				# If the absolute value of the distance between the adsorbate atom and the
-				# framework atom is greater than half the replication factor, we know that
-				# there is a closer replication of the framework atom.
-				#
-				# {Replicat.} ||{Supercell}||{Replicat.}
-				# |-----|----o||--x--|----o||-----|----o|
-				#				  |--dxf--|
-				#
-				# x = adsorbate atom, o = framework atom
-				#
-				# dxf is `x_adsorbate - x_framework` so when the adsorbate atom is to the left of
-				# the framework atom, dxf is negative.
-				# When correcting for the position of the framework atom with the Nearest Image Convention
-				# we use `sign(dxf[j]) * repfactors[j]` to change the distance dxf so it gives the distance
-				# between the adsorbate atom and the closest replication of the framework atom.
-				#
-				# In the above example, the framework atom is to the right of the adsorbate atom, and dxf < 0
-				# We see that the left replication of `o` is closer to `x`, and we should be calculating the
-				# distance between that atom and the adsorbate. So by subtracting `sign(dxf[j]) * repfactors[j]`
-				# (remember that `sign(dxf[j]) = -1` in this case) we're adding `repfactors[j]` to the dxf[j] value
-				# and dxf[j] becomes positive (which makes sense because we're calculating `x_ads - x_framework`)
-				# When checking the other case (where the adsorbate atom is to the right of the framework atom),
-				# we see that the same equation holds (because now `sign(dxf[j]) = 1`)
-				nearest_image!(dxf, repfactors)
+        nearest_image!(dxf, repfactors)
+            
+        # Distance in cartesian coordinate space
+        dx = framework.box.f_to_c * dxf
 
-				# Distance in cartesian coordinate space
-				dx = framework.box.f_to_c * dxf
+        # loop over atoms of the framework and compute its contribution to the vdW energy.
+        for i = 1:framework.n_atoms
+            @inbounds r² = dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i]
 
-				# Lennard Jones parameters (and distance)
-				r² = dot(dx, dx)
-
-				if r² < R_OVERLAP_squared
-					# if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
-					return Inf
-				elseif r² < ljforcefield.cutoffradius_squared
-                    # add pairwise contribution to potential energy
-				    energy += lennard_jones(r²,
-						ljforcefield.σ²[framework.atoms[k]][molecule.atoms[i]],
-						ljforcefield.ϵ[framework.atoms[k]][molecule.atoms[i]])
-				end # if-elseif-end
-			end # framework atoms end
-		end # molecule atoms end
+            if r² < R_OVERLAP_squared
+                # if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
+                return Inf
+            elseif r² < ljforcefield.cutoffradius_squared
+                # add pairwise contribution to potential energy
+                @inbounds energy += lennard_jones(r²,
+                    ljforcefield.σ²[framework.atoms[i]][ljsphere.atom],
+                    ljforcefield.ϵ[framework.atoms[i]][ljsphere.atom])
+            end # if-elseif-end
+        end # framework atoms end
 	end # repfactor end
 	return energy
-end # end vdw_energy
-
-
-"""
-	energy = unitcell_energy(frame::Frame, mol::Molecule, ljforcefield::LennardJonesForcefield, repfactors::Tuple(Int64, Int64, Int64); mesh::Array{Int64,1} = [50,50,50])
-
-Calculates the energy in the unitcell with respect to fractional coordinates. Forms an energy matrix with dimensions according to `mesh`.
-Can be used in conjucture with `write_to_cube` to make a .cube file for visualization.
-"""
-function unitcell_energy(frame::Framework, mol::Molecule, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int64, Int64, Int64}; mesh::Array{Int64,1}=[50,50,50])
-	range_xf = linspace(0,1,mesh[1])
-	range_yf = linspace(0,1,mesh[2])
-	range_zf = linspace(0,1,mesh[3])
-	energy = zeros(mesh[1],mesh[2],mesh[3])
-
-	for (i,xf) in enumerate(range_xf), (j,yf) in enumerate(range_yf), (k,zf) in enumerate(range_zf)
-		mol.x = (frame.box.f_to_c*[xf,yf,zf])[:,:]
-		energy[i,j,k] = vdw_energy(frame, mol, ljforcefield, repfactors)
-	end
-	return energy
-end #end unitcell_energy
+end

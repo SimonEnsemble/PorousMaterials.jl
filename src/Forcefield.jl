@@ -75,7 +75,7 @@ Returns tuple of replication factors in the a, b, c directions.
 A non-replicated supercell has 1 as the replication factor in each dimension (`repfactors = [1, 1, 1]`).
 #TODO comment on whether it starts at 0 or 1.. like, repfactors = [0, 0, 0] is that possible?
 """
-function replication_factors(unitcell::Box, ljforcefield::LennardJonesForceField)
+function replication_factors(unitcell::Box, cutoff_radius::Float64)
 	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be
 	a = unitcell.f_to_c[:, 1]
 	b = unitcell.f_to_c[:, 2]
@@ -89,32 +89,36 @@ function replication_factors(unitcell::Box, ljforcefield::LennardJonesForceField
 	c0 = [a b c] * [.5, .5, .5]
 
 	rep = [1, 1, 1]
-	cutoff = sqrt(ljforcefield.cutoffradius_squared)
 
 	# Repeat for `a`
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
-	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff
+	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff_radius
 		rep[1] += 1
 		a += unitcell.f_to_c[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
-	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff
+	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff_radius
 		rep[2] += 1
 		b += unitcell.f_to_c[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
-	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff
+	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff_radius
 		rep[3] += 1
 		c += unitcell.f_to_c[:,3]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	return (rep[1], rep[2], rep[3])::Tuple{Int64, Int64, Int64}
-end # end rep_factors
+end
+
+replication_factors(unitcell::Box, ljforcefield::LennardJonesForceField) = replication_factors(unitcell, sqrt(ljforcefield.cutoffradius_squared))
+replication_factors(framework::Framework, cutoff_radius::Float64) = replication_factors(framework.box, cutoff_radius)
+replication_factors(framework::Framework, ljforcefield::LennardJonesForceField) = replication_factors(framework.box, sqrt(ljforcefield.cutoffradius_squared))
+
 
 """
     check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField; verbose::Bool=true)
@@ -139,13 +143,15 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
     return full_coverage
 end
 
-import Base.print
-function print(io::IO, ljforcefield::LennardJonesForceField)
-	println(io, "Amount of atoms included: ",length(ljforcefield.pure_σ))
-	print(io, "Cut-off radius = ",sqrt(ljforcefield.cutoffradius_squared))
+function Base.print(io::IO, ff::LennardJonesForceField)
+    println(io, "Force field: ", ff.name)
+	println(io, "Number of atoms included: ", length(ff.pure_σ))
+	println(io, "Cut-off radius (Å) = ", sqrt(ff.cutoffradius_squared))
+    for atom in keys(ff.pure_σ)
+        @printf(io, "%5s-%5s ϵ = %10.5f K, σ = %10.5f Å\n", atom, atom, ff.pure_ϵ[atom], ff.pure_σ[atom])
+    end
 end
 
-import Base.show
-function show(io::IO, ljforcefield::LennardJonesForceField) 
+function Base.show(io::IO, ljforcefield::LennardJonesForceField) 
 	print(io, ljforcefield)
 end

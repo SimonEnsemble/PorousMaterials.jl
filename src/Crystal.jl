@@ -10,9 +10,11 @@ fractional and Cartesian coordinates.
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional 
-coordinates to cartesian coordinates
+coordinates to cartesian coordinates. The columns of this matrix define the unit cell
+axes.
 - `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian 
 coordinates to fractional coordinates
+- `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
 """
 struct Box
     a::Float64
@@ -27,8 +29,20 @@ struct Box
 
     f_to_c::Array{Float64, 2}
     c_to_f::Array{Float64, 2}
+
+    reciprocal_lattice::Array{Float64, 2}
 end
-# TODO write a nice show & print function for Box :)
+
+"""
+Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the reciprocal lattice vectors. Return in a matrix format, where the columns are the reciprocal lattice vectors.
+"""
+function reciprocal_lattice(a₁::Array{Float64, 1}, a₂::Array{Float64, 1}, a₃::Array{Float64, 1})
+    r = zeros(Float64, 3, 3)
+    r[:, 1] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
+    r[:, 2] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
+    r[:, 3] = 2 * π * cross(a₁, a₂) / dot(a₃, cross(a₁, a₂))
+    return r
+end
 
 """
     box = construct_box(a, b, c, α, β, γ)
@@ -47,10 +61,45 @@ function construct_box(a::Float64, b::Float64, c::Float64,
     # matrices to map fractional coords <--> Cartesian coords
     f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
     c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
+    # the columns of f_to_c are the unit cell axes
+    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
     @test f_to_c * c_to_f ≈ eye(3)
+    @test isapprox(transpose(r), 2.0 * π * inv(f_to_c))
 
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f)
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
+end
+
+"""
+    box = construct_box(f_to_c)
+
+Reconstructs a `Box` from the fractional to Cartesian coordinate transformation matrix.
+The columns of this matrix are the unit cell axes. Units must be in Å.
+
+# Arguments
+- `f_to_c::Array{Float64, 2}`: fractional to Cartesian coordinate transformation matrix.
+"""
+function construct_box(f_to_c::Array{Float64, 2})
+    # unit cell volume (A³) is the determinant of the matrix
+    Ω = det(f_to_c)
+    
+    # unit cell dimensions are lengths of the unit cell axes (Å)
+    a = norm(f_to_c[:, 1])
+    b = norm(f_to_c[:, 2])
+    c = norm(f_to_c[:, 3])
+    
+    # c_to_f is the inverse
+    c_to_f = inv(f_to_c)
+    
+    # angles (radians)
+    α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
+    β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
+    γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
+   
+    # the columns of f_to_c are the unit cell axes
+    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
+
+    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
 
 """
@@ -79,7 +128,6 @@ Data structure for a 3D crystal structure.
 - `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
 """
 struct Framework
-    #TODO molecular mass
     name::String
 
     box::Box
@@ -97,7 +145,6 @@ Read a crystal structure file (.cif or .cssr) and construct a Framework object.
 If `run_checks=True`, ensures no atom overlap or atoms outside of the unit cell box.
 """
 function read_crystal_structure_file(filename::String; run_checks::Bool=true)
-    # TODO add charges
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -216,9 +263,6 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
 			end
         end
         n_atoms = length(xf)
-        # TODO remove this data dictionary and just fill in a, b, c etc. it is more code
-        #  and more place for error by copying data into the data dictionary then
-        #  assigning a, b, c etc.
         a = data["a"]
         b = data["b"]
         c = data["c"]
@@ -299,17 +343,21 @@ function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractStrin
         xyzfilename = split(framework.name, ".")[1] * ".xyz"
     end
 
-    f = open(xyzfilename, "w")
-    @printf(f, "%d\n%s\n", n_atoms, comment)
+    if ! contains(xyzfilename, ".xyz")
+        xyzfilename *= ".xyz"
+    end
+
+    xyzfile = open(xyzfilename, "w")
+    @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
 
     for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
-        xf = framework.xf .+ [i-1, j-1, k-1]
-        c_coords = framework.box.f_to_c * xf
-        for ii = 1:size(c_coords, 2)
-			@printf(f, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[ii]), c_coords[1, ii], c_coords[2, ii], c_coords[3, ii])
+        for a = 1:framework.n_atoms
+            xf = framework.xf[:, a] + [i - 1.0, j - 1.0, k - 1.0]
+            x = framework.box.f_to_c * xf
+			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[a]), x[1], x[2], x[3])
         end
     end
-    close(f)
+    close(xyzfile)
 
     println("See ", xyzfilename)
     return
@@ -367,11 +415,11 @@ function strip_numbers_from_atom_labels!(framework::Framework)
 end
 
 """
-    write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void, AbstractString})
+    write_unitcell_boundary_vtk(box::Box, filename::String)
 
 Write unit cell boundary as a .vtk file for visualizing the unit cell boundary.
 """
-function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void, AbstractString}=nothing)
+function write_unitcell_boundary_vtk(box::Box, filename::String)
     # if no filename given, use framework's name
     if filename == nothing
         filename = split(framework.name, ".")[1] * ".vtk"
@@ -387,7 +435,7 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void,
         for j = 0:1
             for k = 0:1
                 xf = [i, j, k] # fractional coordinates of corner
-                cornerpoint = framework.box.f_to_c * xf
+                cornerpoint = box.f_to_c * xf
                 @printf(vtk_file, "%.3f %.3f %.3f\n",
                         cornerpoint[1], cornerpoint[2], cornerpoint[3])
             end
@@ -400,6 +448,8 @@ function write_unitcell_boundary_vtk(framework::Framework, filename::Union{Void,
     println("See ", filename)
     return
 end
+
+write_unitcell_boundary_vtk(framework::Framework) = write_unitcell_boundary_vtk(framework.box, split(framework.name, ".")[1] * ".vtk")
 
 """
     formula = chemical_formula(framework)
@@ -448,6 +498,7 @@ function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; ve
     @pyimport ase.build as asebuild
 
     non_p1_cif_location = PATH_TO_DATA * "crystals/" * filename
+    println(non_p1_cif_location)
     non_p1_cif = aseio.read(non_p1_cif_location, format="cif")
 
     p1_cif = asebuild.make_supercell(non_p1_cif, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -463,47 +514,26 @@ function convert_cif_to_P1_symmetry(filename::String, outputfilename::String; ve
 end
 
 
-import Base.print
-function print(io::IO, framework::Framework)
-	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
-	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
-	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
-
-	@printf(io, "α = %.3f radians\n", framework.box.α)
-	@printf(io, "β = %.3f radians\n", framework.box.β)
-	@printf(io, "γ = %.3f radians\n", framework.box.γ)
-
-	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
-
-	@printf(io, "Number of atoms = %d", framework.n_atoms)
-end
-
-import Base.show
-function show(io::IO, framework::Framework)
-	print(io, framework)
-end
-
 """
-
-    atomic_mass_dict = atomic_mass_dict()
+    atomic_masses = read_atomic_masses()
 
 Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and their atomic
 masses in amu.
 """
-function atomic_mass_dict()
+function read_atomic_masses()
     if ! isfile("data/atomicmasses.csv")
         error("Cannot find atomicmasses.csv file in your data folder\n")
     end
 
     df_am = CSV.read("data/atomicmasses.csv")
 
-    atomic_mass_dict = Dict{Symbol, Float64}()
+    atomic_masses = Dict{Symbol, Float64}()
 
     for row in eachrow(df_am)
-		atomic_mass_dict[Symbol(row[:atom])] = row[:mass]
+		atomic_masses[Symbol(row[:atom])] = row[:mass]
     end
 
-    return atomic_mass_dict
+    return atomic_masses
 end
 
 """
@@ -514,7 +544,7 @@ Return the molecular weight of a unit cell of the framework in amu.
 """
 function molecular_weight(framework::Framework)
     mass = 0.0
-    atomic_masses = atomic_mass_dict()
+    atomic_masses = read_atomic_masses()
 
 	for atom in framework.atoms
         mass += atomic_masses[atom]
@@ -537,7 +567,6 @@ end
 	exclude_boolean = exclude_multiple_labels(lines, start, name_to_column)
 
 Checks to see if atom labels 0 and 1 (according to cif standards) are the same. If so, it will throw a `true` and the crystal structure reader will (hopefully) deal with it accordingly.
-
 """
 function exclude_multiple_labels(lines, start, name_to_column)
     if haskey(name_to_column, "_atom_site_label")
@@ -558,4 +587,59 @@ function exclude_multiple_labels(lines, start, name_to_column)
         end
     end
     return false
+end
+
+function Base.print(io::IO, framework::Framework)
+	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
+	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
+	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
+
+	@printf(io, "α = %.3f radians\n", framework.box.α)
+	@printf(io, "β = %.3f radians\n", framework.box.β)
+	@printf(io, "γ = %.3f radians\n", framework.box.γ)
+
+	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
+
+	@printf(io, "Number of atoms = %d", framework.n_atoms)
+end
+
+function Base.show(io::IO, framework::Framework)
+	print(io, framework)
+end
+
+function Base.print(io::IO, box::Box)
+    println(io, "Bravais unit cell of a crystal.")
+    @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
+        box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
+    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n", 
+        box.a, box.b, box.c)
+    @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
+end
+
+function Base.show(io::IO, box::Box)
+	print(io, box)
+end
+
+function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
+    return (isapprox(box1.a, box2.a, rtol=rtol) &&
+            isapprox(box1.b, box2.b, rtol=rtol) &&
+            isapprox(box1.c, box2.c, rtol=rtol) &&
+            isapprox(box1.α, box2.α, rtol=rtol) &&
+            isapprox(box1.β, box2.β, rtol=rtol) &&
+            isapprox(box1.γ, box2.γ, rtol=rtol) &&
+            isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
+            isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
+            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol) &&
+            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, rtol=rtol))
+end
+
+function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
+    names = f1.name == f2.name
+    box = isapprox(f1.box, f2.box)
+    n_atoms = f1.n_atoms == f2.n_atoms
+    if checknames && n_atoms
+        return names && box && n_atoms && (f1.atoms == f2.atoms) && isapprox(f1.xf, f2.xf) && isapprox(f1.charges, f2.charges)
+    else
+        return box && n_atoms && (f1.atoms == f2.atoms) && isapprox(f1.xf, f2.xf) && isapprox(f1.charges, f2.charges)
+    end
 end

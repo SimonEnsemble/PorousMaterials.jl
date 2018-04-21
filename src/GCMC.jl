@@ -44,15 +44,23 @@ type MarkovCounts
 end
 
 """
-    insert_molecule!(molecules, simulation_box, adsorbate)
+    insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
 
-Inserts an additional `adsorbate` molecule into the system at random coordinates inside 
+Inserts an additional `adsorbate` molecule into the system at random coordinates inside
 the `simulation_box`.
 """
-function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, adsorbate::Symbol)
-    #TODO create template to handle more complex molecules
-    x = box.f_to_c * rand(3, 1)
-    molecule = Molecule(1, [adsorbate], x[:, :], [0.0])
+function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
+    # choose center of mass
+    x = box.f_to_c * rand(3)
+    # copy the template
+    molecule = deepcopy(template)
+    # conduct a rotation
+    if (length(molecule.ljspheres) + length(molecule.charges) > 1)
+        rotate!(molecule)
+    end
+    # translate molecule to its new center of mass
+    translate_to!(molecule, x)
+    # push molecule to array.
     push!(molecules, molecule)
 end
 
@@ -68,54 +76,51 @@ function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
 end
 
 """
-    bring_molecule_inside_box!(molecule, simulation_box)
+    bring_molecule_inside_box!(molecule::Molecule, simulation_box::Box)
 
-Apply periodic boundary conditions to bring a molecule inside the a box if it is
-completely outside of the box.
+Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic boundary conditions and translate the center of mass of the `Molecule` (and its atoms/point charges) so that it is inside of the `Box`.
 """
 function bring_molecule_inside_box!(molecule::Molecule, box::Box)
     outside_box = false # do nothing if not outside the box
 
-    # compute its fractional coordinates
-    xf = box.c_to_f * molecule.x
+    # compute its center of mass in fractional coordinates
+    xf = box.c_to_f * molecule.center_of_mass
 
-    # apply periodic boundary conditions if any of its x, y, z fractional coords are
-    #  greater than 1.0
-    for xyz = 1:3 # loop over x, y, z coordinates
-        # if all atoms of the molecule have x, y, or z > 1.0, shift down
-        if sum(xf[xyz, :] .<= 1.0) == 0
+    # apply periodic boundary conditions
+    for k = 1:3 # loop over xf, yf, zf components
+        # if > 1.0, shift down
+        if xf[k] >= 1.0
             outside_box = true
-            xf[xyz, :] -= 1.0
-        # if all atoms of the molecule have x, y, or z < 0.0, shift up
-        elseif sum(xf[xyz, :] .> 0.0) == 0
+            xf[k] -= 1.0
+        elseif xf[k] < 0.0
             outside_box = true
-            xf[xyz, :] += 1.0
+            xf[k] += 1.0
         end
     end
 
-    # update its Cartesian coordinates if it was outside of the box.
+    # translate molecule to new center of mass if it was found to be outside of the box
     if outside_box
-        molecule.x = box.f_to_c * xf
+        new_center_of_mass = box.f_to_c * xf
+        translate_to!(molecule, new_center_of_mass)
     end
 end
 
 """
     translate_molecule!(molecule, simulation_box)
 
-Perturbs the Cartesian coordinates of a molecule by a random vector of max length δ.
+Perturbs the Cartesian coordinates of a molecule abou its center of mass by a random vector of max length δ.
 Applies periodic boundary conditions to keep the molecule inside the simulation box.
 """
 function translate_molecule!(molecule::Molecule, simulation_box::Box)
-    # store old coordinates and return at the end for possible restoration of old coords
-    x_old = deepcopy(molecule.x)
+    # store old molecule and return at the end for possible restoration
+    old_molecule = deepcopy(molecule)
     # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3, 1) - 0.5) # move every atom of the molecule by the same vector.
-    # change coordinates of molecule
-    molecule.x .+= dx
-    # done, unless the molecule has moved completely outside of the box...
+    dx = δ * (rand(3) - 0.5) # move every atom of the molecule by the same vector.
+    translate_by!(molecule, dx)
+    # done, unless the molecule has moved outside of the box
     bring_molecule_inside_box!(molecule, simulation_box)
 
-    return x_old # in case we need to restore
+    return old_molecule # in case we need to restore
 end
 
 """
@@ -131,39 +136,35 @@ Code copied from Arni's Energetics.jl with minor adjustments to calculate
 function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                                 ljforcefield::LennardJonesForceField, simulation_box::Box)
     energy = 0.0 # energy is pair-wise additive
-    # fractional coordinates of molecule
-    xf_molecule = simulation_box.c_to_f * molecules[molecule_id].x
     # Look at interaction with all other molecules in the system
-    for other_molecule_id = 1:length(molecules)
-        # molecule cannot interact with itself
-        if other_molecule_id == molecule_id
-            continue
-        end
-        # fractional coodinates of other molecule
-        xf_other_molecule = simulation_box.c_to_f * molecules[other_molecule_id].x
+    for this_ljsphere in molecules[molecule_id].ljspheres
         # Loop over all atoms in the given molecule
-        for atom_id = 1:molecules[molecule_id].n_atoms
-            # loop over every atom in the other molecule
-            for other_atom_id = 1:molecules[other_molecule_id].n_atoms
+        for other_molecule_id = 1:length(molecules)
+            # molecule cannot interact with itself
+            if other_molecule_id == molecule_id
+                continue
+            end
+            # loop over every ljsphere (atom) in the other molecule
+            for other_ljsphere in molecules[other_molecule_id].ljspheres
                 # compute vector between molecules in fractional coordinates
-                dxf = xf_molecule[:, atom_id] - xf_other_molecule[:, other_atom_id]
+                dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
 
                 nearest_image!(dxf, (1, 1, 1))
+
                 # converts fractional distance to cartesian distance
                 dx = simulation_box.f_to_c * dxf
 
-                r² = dot(dx, dx)
+                r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
 
                 if r² < R_OVERLAP_squared
                     return Inf
                 elseif r² < ljforcefield.cutoffradius_squared
-                    # TODO test whether it is more efficient to store this as a variable up top
                     energy += lennard_jones(r²,
-                        ljforcefield.σ²[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]],
-                        ljforcefield.ϵ[molecules[other_molecule_id].atoms[other_atom_id]][molecules[molecule_id].atoms[atom_id]])
+                        ljforcefield.σ²[this_ljsphere.atom][other_ljsphere.atom],
+                        ljforcefield.ϵ[this_ljsphere.atom][other_ljsphere.atom])
                 end
-            end # loop over all atoms in other molecule
-        end # loop over all atoms of molecule_id of interest
+            end # loop over all ljspheres in other molecule
+        end # loop over all ljspheres of molecule_id of interest
     end # loop over all other molecules
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
@@ -191,42 +192,44 @@ function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1}, ljforcefiel
 end
 
 """
-    results = gcmc_simulation(framework, temperature, pressure, adsorbate, ljforcefield)
+    results = gcmc_simulation(framework, temperature, pressure, molecule, ljforcefield)
 
 runs a monte carlo simulation using the given framework and adsorbate.
 runs at the given temperature and pressure
 """
 #will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         adsorbate::Symbol, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
+                         molecule::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
     if verbose
-        pretty_print(adsorbate, framework.name, temperature, fugacity)
+        pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
 
     const repfactors = replication_factors(framework.box, ljforcefield)
     const simulation_box = replicate_box(framework.box, repfactors)
+    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin.
+    const molecule_template = deepcopy(molecule)
 
     current_energy_gg = 0.0 # only true if starting with 0 molecules
     current_energy_gh = 0.0
     gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     molecules = Molecule[]
-    
+
     markov_counts = MarkovCounts([0 for i = 1:length(PROPOSAL_ENCODINGS)], [0 for i = 1:length(PROPOSAL_ENCODINGS)])
-    
-    # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system) 
+
+    # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system)
     #  Markov chain proposals.
     markov_chain_time = 0
     for outer_cycle = 1:(n_burn_cycles + n_sample_cycles), inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
-        
+
         # choose move randomly; keep track of proposals
         which_move = rand(1:N_PROPOSAL_TYPES)
         markov_counts.n_proposed[which_move] += 1
-        
+
         if which_move == INSERTION
-            insert_molecule!(molecules, simulation_box, adsorbate)
+            insert_molecule!(molecules, simulation_box, molecule_template)
 
             U_gg = guest_guest_vdw_energy(length(molecules), molecules, ljforcefield, simulation_box)
             U_gh = vdw_energy(framework, molecules[end], ljforcefield, repfactors)
@@ -253,7 +256,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 repfactors)
 
             # Metropolis Hastings Acceptance for Deletion
-            if rand() < length(molecules) * KB * temperature / (fugacity * 
+            if rand() < length(molecules) * KB * temperature / (fugacity *
                     simulation_box.Ω) * exp((U_gh + U_gg) / temperature)
                 # accept the deletion, delete molecule, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
@@ -273,7 +276,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             U_gh_old = vdw_energy(framework, molecules[molecule_id],
                 ljforcefield, repfactors)
 
-            x_old = translate_molecule!(molecules[molecule_id], simulation_box)
+            old_molecule = translate_molecule!(molecules[molecule_id], simulation_box)
 
             # energy of the molecule after it is translated
             U_gg_new = guest_guest_vdw_energy(molecule_id, molecules,
@@ -291,13 +294,13 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 current_energy_gh += U_gh_new - U_gh_old
             else
                 # reject the move, reset the molecule at molecule_id
-                molecules[molecule_id].x = deepcopy(x_old)
+                molecules[molecule_id] = deepcopy(old_molecule)
             end
         end # which move the code executes
 
         # TODO remove after testing.
         for m = 1:length(molecules)
-            @assert(! completely_outside_box(molecules[m], simulation_box), "molecule outside box!")
+            @assert(! outside_box(molecules[m], simulation_box), "molecule outside box!")
         end
 
         # sample the current configuration
@@ -337,12 +340,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     results = Dict{String, Any}()
     results["crystal"] = framework.name
-    results["adsorbate"] = adsorbate
+    results["adsorbate"] = molecule.species
     results["forcefield"] = ljforcefield.name
     results["fugacity (Pa)"] = fugacity
     results["temperature (K)"] = temperature
     results["repfactors"] = repfactors
-    
+
     results["# sample cycles"] = n_sample_cycles
     results["# burn cycles"] = n_burn_cycles
 
@@ -380,7 +383,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     if verbose
         print_results(results)
     end
-    
+
     return results
 end # gcmc_simulation
 
@@ -389,22 +392,22 @@ function print_results(results::Dict)
             results["adsorbate"], results["crystal"], results["temperature (K)"],
             results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
 
-    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1], 
-                                                         results["repfactors"][2], 
+    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
+                                                         results["repfactors"][2],
                                                          results["repfactors"][3])
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
-        for key in [@sprintf("Total # %s proposals", proposal_description), 
+        for key in [@sprintf("Total # %s proposals", proposal_description),
                     @sprintf("Fraction of %s proposals accepted", proposal_description)]
             println(key * ": ", results[key])
         end
     end
-    
+
     println("")
     for key in ["# sample cycles", "# burn cycles", "# samples"]
         println(key * ": ", results[key])
     end
-        
+
 
     println("")
     for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)",
@@ -414,7 +417,7 @@ function print_results(results::Dict)
     end
 
     @printf("Q_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
-    return 
+    return
 end
 
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, fugacity::Float64)
