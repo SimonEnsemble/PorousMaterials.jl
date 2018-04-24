@@ -139,12 +139,12 @@ struct Framework
 end
 
 """
-    framework = read_crystal_structure_file("filename.cssr"; run_checks=true)
+    framework = read_crystal_structure_file("filename.cssr"; run_checks=true, net_charge_tol=0.001)
 
 Read a crystal structure file (.cif or .cssr) and construct a Framework object.
-If `run_checks=True`, ensures no atom overlap or atoms outside of the unit cell box.
+If `run_checks=True`, checks for atom overlap and charge neutrality. `net_charge_tol` is the tolerance for net charge.
 """
-function read_crystal_structure_file(filename::String; run_checks::Bool=true)
+function read_crystal_structure_file(filename::String; run_checks::Bool=true, net_charge_tol::Float64=0.001)
     # read file extension, ensure reader implemented.
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -309,7 +309,12 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true)
     framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
 
     if run_checks
-        check_for_atom_overlap(framework)
+        if atom_overlap(framework)
+            error(@sprintf("At least one pair of atoms overlap in %s\n", framework.name))
+        end
+        if ! charge_neutral(framework, net_charge_tol)
+            error(@sprintf("Framework %s is not charge neutral; sum of charges is : %f e\n", framework.name, sum(framework.charges)))
+        end
     end
 
     return framework
@@ -365,31 +370,54 @@ end # replicate_to_xyz end
 
 
 """
-    check_for_atom_overlap(framework; threshold_distance_for_overlap=0.1, verbose=false)
+    atom_overlap(framework; hard_diameter=0.1, verbose=false)
 
-Check if any two atoms in the crystal overlap by calculating the distance
+Return true iff any two atoms in the crystal overlap by calculating the distance
 between every pair of atoms and ensuring distance is greater than
-`threshold_distance_for_overlap`. Throw an error if atoms overlap and print which atoms are 
-the culprits.
+`hard_diameter`. If verbose, print the pair of atoms which are culprits.
+# TODO include different radii for different atoms?
 """
-function check_for_atom_overlap(framework::Framework;
-                                threshold_distance_for_overlap::Float64=0.1,
-                                verbose::Bool=false)
+function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose::Bool=false)
+    overlap = false
+    # loop over pairs of atoms
     for i = 1:framework.n_atoms
-        xf_i = framework.xf[:, i]
-        for j = i+1:framework.n_atoms
-            xf_j = framework.xf[:, j]
+        for j = (i + 1):framework.n_atoms
+            dxf = framework.xf[:, i] - framework.xf[:, j]
             # vector pointing from atom j to atom i in cartesian coords
-            dx = framework.box.f_to_c * (xf_i - xf_j)
-            if (norm(dx) < threshold_distance_for_overlap)
-                error(@sprintf("Atoms %d and %d are too close, distance %f Å) < %f Å threshold\n", i, j, norm(dx), threshold_distance_for_overlap))
+            dx = framework.box.f_to_c * dxf
+            if norm(dx) < hard_diameter
+                overlap = true
+                if verbose
+                    @sprintf("atoms %d and %d are too close, distance %f Å < %f Å threshold\n", i, j, norm(dx), hard_diameter)
+                end
             end
         end
     end
-    if verbose
-        @printf("No atoms are on top of each other!")
+    return overlap
+end
+
+"""
+    cn = charge_neutral(framework::Framework, net_charge_tol::Float64) # true or false
+
+Return true iff the framework is charge neutral, i.e. if the absolute value of the sum of the point charges assigned to its atoms is less than `net_charge_tol`.
+"""
+function charge_neutral(framework::Framework, net_charge_tol::Float64)
+    sum_of_charges = sum(framework.charges)
+    if abs(sum_of_charges) > net_charge_tol
+        return false
+    else
+        return true
     end
-    return
+end
+
+"""
+    charged_flag = charged(framework)
+
+Return true iff any of the atoms of the framework are assigned nonzero point charges.
+"""
+function charged(framework::Framework)
+    zero_charge_flags = isapprox.(abs.(framework.charges), 0.0)
+    return all(zero_charge_flags)
 end
 
 """

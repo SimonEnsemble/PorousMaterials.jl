@@ -112,8 +112,7 @@ end;
     r_orthogonal = true
     r_det_1 = true
     for i = 1:300
-        u = rand_point_on_unit_sphere()
-        r = rotation_matrix(u, 2 * π * rand())
+        r = rotation_matrix()
         if ! isapprox(r * transpose(r), eye(3))
             r_orthogonal = false
         end
@@ -136,7 +135,7 @@ end;
     rotate!(m2)
     @test ! isapprox(m2_old, m2)
     # visually inspect
-    ms = [read_molecule_file("CO2") for i = 1:100]
+    ms = [read_molecule_file("CO2") for i = 1:1000]
     for m in ms
        rotate!(m)
     end
