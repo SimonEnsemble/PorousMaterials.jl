@@ -187,30 +187,34 @@ function rand_point_on_unit_sphere()
 end
 
 """
-    r = rotation_matrix(u::Array{Float64, 1}, θ::Float64)
+    r = rotation_matrix()
 
-Construct a matrix to perform a rotation of `θ` about the unit vector `u`.
+Generate a 3x3 random rotation matrix `r` such that when a point `x` is rotated using this rotation matrix via `r * x`, this point `x` is placed at a uniform random distributed position on the surface of a sphere of radius `norm(x)`.
+See James Arvo. Fast Random Rotation Matrices.
+
+https://pdfs.semanticscholar.org/04f3/beeee1ce89b9adf17a6fabde1221a328dbad.pdf
 """
-function rotation_matrix(u::Array{Float64, 1}, θ::Float64)
-    @assert(norm(u) ≈ 1.0, "pass a unit vector!")
-    c = cos(θ)
-    s = sin(θ)
-    return [c + (1.0 - c) * u[1] ^ 2            (1.0 - c) * u[2] * u[1] - s * u[3]   (1.0 - c) * u[3] * u[1] + s * u[2];
-            (1.0 - c) * u[1] * u[2] + s * u[3]  c + (1.0 - c) * u[2] ^ 2             (1.0 - c) * u[3] * u[2] - s * u[1];
-            (1.0 - c) * u[1] * u[3] - s * u[2]  (1.0 - c) * u[2] * u[3] + s * u[1]   c + (1.0 - c) * u[3] ^ 2           ]
+function rotation_matrix()
+    # random rotation about the z-axis
+    u₁ = rand() * 2.0 * π
+    r = [cos(u₁) sin(u₁) 0.0; -sin(u₁) cos(u₁) 0.0; 0.0 0.0 1.0]
+    
+    # househoulder matrix
+    u₂ = 2.0 * π * rand()
+    u₃ = rand()
+    v = [cos(u₂) * sqrt(u₃), sin(u₂) * sqrt(u₃), sqrt(1.0 - u₃)]
+    h = eye(3) - 2 * v * transpose(v)
+    return - h * r
 end
 
 """
-    rotate!(molecule::Molecule; assume_center_of_mass_at_origin::Bool=false) # molecule has rotated about its center of mass
+    rotate!(molecule::Molecule)
 
-Conduct a random rotation of a molecule about its center of mass.
-#TODO this is WRONG! does not generate uniform random rotations! need to change `rotation_matrix`
+Conduct a uniform random rotation of a molecule about its center of mass.
 """
-function rotate!(molecule::Molecule; assume_center_of_mass_at_origin::Bool=false)
-    # generate a randomly oriented vector. this is the axis about which we rotate
-    u = rand_point_on_unit_sphere()
-    # generate a rotation matrix for rotating about u for a random θ
-    r = rotation_matrix(u, rand() * 2 * π)
+function rotate!(molecule::Molecule)
+    # generate a random rotation matrix
+    r = rotation_matrix()
     # store the center of mass
     center_of_mass = deepcopy(molecule.center_of_mass)
     # move the molecule to the origin

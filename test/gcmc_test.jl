@@ -1,4 +1,5 @@
 using PorousMaterials
+using Base.Test
 
 run_ig_tests = false
 
@@ -11,7 +12,7 @@ run_ig_tests = false
 if run_ig_tests
     empty_space = read_crystal_structure_file("empty_box.cssr") # zero atoms!
     @assert(empty_space.n_atoms == 0)
-    forcefield = read_forcefield_file("test_forcefield.csv")
+    forcefield = read_forcefield_file("Dreiding.csv")
     temperature = 298.0
     fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
     # according to ideal gas law, number of molecules in box should be:
@@ -27,7 +28,7 @@ end
 
 ## SBMOF-1 tests
 sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
-dreiding_forcefield = read_forcefield_file("test_forcefield.csv", cutoffradius=12.5)
+dreiding_forcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
 
 ##Getting template for use with the sim
 molecule = read_molecule_file("Xe")
