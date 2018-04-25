@@ -76,11 +76,11 @@ function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
 end
 
 """
-    bring_molecule_inside_box!(molecule::Molecule, simulation_box::Box)
+    apply_periodic_boundary_condition!(molecule::Molecule, simulation_box::Box)
 
 Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic boundary conditions and translate the center of mass of the `Molecule` (and its atoms/point charges) so that it is inside of the `Box`.
 """
-function bring_molecule_inside_box!(molecule::Molecule, box::Box)
+function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
     outside_box = false # do nothing if not outside the box
 
     # compute its center of mass in fractional coordinates
@@ -117,8 +117,8 @@ function translate_molecule!(molecule::Molecule, simulation_box::Box)
     # peturb in Cartesian coords in a random cube centered at current coords.
     dx = δ * (rand(3) - 0.5) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx)
-    # done, unless the molecule has moved outside of the box
-    bring_molecule_inside_box!(molecule, simulation_box)
+    # done, unless the molecule has moved outside of the box, then apply PBC
+    apply_periodic_boundary_condition!(molecule, simulation_box)
 
     return old_molecule # in case we need to restore
 end

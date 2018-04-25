@@ -289,7 +289,7 @@ end
     box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     molecule = read_molecule_file("He")
     translate_to!(molecule, [26.0, -0.2, 12.])
-    bring_molecule_inside_box!(molecule, box)
+    apply_periodic_boundary_condition!(molecule, box)
     @test isapprox(molecule.center_of_mass, [1.0, 24.8, 12.0])
     @test isapprox(molecule.ljspheres[1].x, [1.0, 24.8, 12.0])
 
