@@ -1,9 +1,9 @@
-# δ (units: Angstrom) is the maximal distance a particle is perturbed in a given coordinate
+# δ is the maximal distance a particle is perturbed in a given coordinate
 #  during particle translations
-const δ = 0.35
+const δ = 0.35 # Å
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
-# Markov chain proposals
+# define Markov chain proposals here.
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
@@ -11,12 +11,13 @@ const DELETION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["de
 const TRANSLATION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["translation"]
 
 """
-Keep track of statistics during a grand-canonical Monte Carlo simultion
+Data structure to keep track of statistics collected during a grand-canonical Monte Carlo
+simulation.
 
-* `n` is the number of molecules
-* `U` is the potential energy
-* `g` refers to guest (the adsorbate molecule)
-* `h` refers to host (the crystalline framework)
+* `n` is the number of molecules in the simulation box.
+* `U` is the potential energy.
+* `g` refers to guest (the adsorbate molecule).
+* `h` refers to host (the crystalline framework).
 """
 type GCMCstats
     n_samples::Int
@@ -36,7 +37,7 @@ end
 
 """
 Keep track of Markov chain transitions (proposals and acceptances) during a grand-canonical
-Monte Carlo simulation.
+Monte Carlo simulation. Entry `i` of these arrays corresponds to PROPOSAL_ENCODINGS[i].
 """
 type MarkovCounts
     n_proposed::Array{Int, 1}
@@ -46,8 +47,9 @@ end
 """
     insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
 
-Inserts an additional `adsorbate` molecule into the system at random coordinates inside
-the `simulation_box`.
+Inserts an additional adsorbate molecule into the simulation box using the template provided.
+The center of mass of the molecule is chosen at a uniform random position in the simulation box.
+A uniformly random orientation of the molecule is chosen by rotating about the center of mass.
 """
 function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
     # choose center of mass
@@ -65,7 +67,7 @@ function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Mol
 end
 
 """
-    delete_molecule!(molecule_id, molecules)
+    delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
 
 Removes a random molecule from the current molecules in the framework.
 molecule_id decides which molecule will be deleted, for a simulation, it must
@@ -78,7 +80,9 @@ end
 """
     apply_periodic_boundary_condition!(molecule::Molecule, simulation_box::Box)
 
-Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic boundary conditions and translate the center of mass of the `Molecule` (and its atoms/point charges) so that it is inside of the `Box`.
+Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic 
+boundary conditions and translate the center of mass of the `Molecule` (and its atoms 
+and point charges) so that it is inside of the `Box`.
 """
 function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
     outside_box = false # do nothing if not outside the box
@@ -106,10 +110,12 @@ function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
 end
 
 """
-    translate_molecule!(molecule, simulation_box)
+    translate_molecule!(molecule::Molecule, simulation_box::Box)
 
-Perturbs the Cartesian coordinates of a molecule abou its center of mass by a random vector of max length δ.
-Applies periodic boundary conditions to keep the molecule inside the simulation box.
+Perturbs the Cartesian coordinates of a molecule about its center of mass by a random 
+vector of max length δ. Applies periodic boundary conditions to keep the molecule inside 
+the simulation box. Returns a deep copy of the old molecule in case it needs replaced
+if the Monte Carlo proposal is rejected.
 """
 function translate_molecule!(molecule::Molecule, simulation_box::Box)
     # store old molecule and return at the end for possible restoration
@@ -124,14 +130,11 @@ function translate_molecule!(molecule::Molecule, simulation_box::Box)
 end
 
 """
-    proposal_energy = guest_guest_vdw_energy(molecule_id, molecules,
-        ljforcefield, simulation_box)
+    gg_energy = guest_guest_vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
 
-Calculates energy of a single adsorbate in the system. This can be used to find
-the change in energy after an accepted proposal
-
-Code copied from Arni's Energetics.jl with minor adjustments to calculate
-    interactions between the adsorbates as well as the framework
+Calculates van der Waals interaction energy of a single adsorbate `molecules[molecule_id]`
+with all of the other molecules in the system. Periodic boundary conditions are applied,
+using the nearest image convention.
 """
 function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                                 ljforcefield::LennardJonesForceField, simulation_box::Box)
@@ -148,7 +151,8 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
             for other_ljsphere in molecules[other_molecule_id].ljspheres
                 # compute vector between molecules in fractional coordinates
                 dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
-
+                
+                # simulation box has fractional coords [0, 1] by construction
                 nearest_image!(dxf, (1, 1, 1))
 
                 # converts fractional distance to cartesian distance
@@ -164,18 +168,21 @@ function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
                         ljforcefield.ϵ[this_ljsphere.atom][other_ljsphere.atom])
                 end
             end # loop over all ljspheres in other molecule
-        end # loop over all ljspheres of molecule_id of interest
-    end # loop over all other molecules
+        end # loop over all other molecules
+    end # loop over all ljspheres in this molecule
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
 """
 Compute total guest-host interaction energy (sum over all adsorbates).
 """
-function total_guest_host_vdw_energy(framework::Framework, molecules::Array{Molecule, 1}, ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
+function total_guest_host_vdw_energy(framework::Framework,
+                                     molecules::Array{Molecule, 1},
+                                     ljforcefield::LennardJonesForceField,
+                                     repfactors::Tuple{Int, Int, Int})
     total_energy = 0.0
-    for molecule_id = 1:length(molecules)
-        total_energy += vdw_energy(framework, molecules[molecule_id], ljforcefield, repfactors)
+    for molecule in molecules
+        total_energy += vdw_energy(framework, molecule, ljforcefield, repfactors)
     end
     return total_energy
 end
@@ -183,7 +190,9 @@ end
 """
 Compute sum of all guest-guest interaction energy from vdW interactions.
 """
-function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1}, ljforcefield::LennardJonesForceField, simulation_box::Box)
+function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1},
+                                      ljforcefield::LennardJonesForceField,
+                                      simulation_box::Box)
     total_energy = 0.0
     for molecule_id = 1:length(molecules)
         total_energy += guest_guest_vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
@@ -192,12 +201,35 @@ function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1}, ljforcefiel
 end
 
 """
-    results = gcmc_simulation(framework, temperature, pressure, molecule, ljforcefield)
+    results = gcmc_simulation(framework, temperature, fugacity, molecule, ljforcefield;
+                              n_sample_cycles=100000, n_burn_cycles=10000,
+                              sample_frequency=25, verbose=false)
 
-runs a monte carlo simulation using the given framework and adsorbate.
-runs at the given temperature and pressure
+Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a 
+framework at a particular temperature and fugacity (= pressure for an ideal gas) using a
+Lennard Jones force field.
+
+A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
+proposals. Current Markov chain moves implemented are particle insertion/deletion and 
+translation.
+
+# Arguments
+- `framework::Framework`: the porous crystal in which we seek to simulate adsorption
+- `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
+    in the porous material. units: Kelvin (K)
+- `fugacity::Float64`: fugacity of bulk gas phase in equilibrium with adsorbed phase in the
+    porous material. Equal to pressure for an ideal gas. units: Pascal (Pa)
+- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
+    the adsorption
+- `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
+    energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
+- `n_sample_cycles::Int`: number of cycles used for sampling
+- `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before 
+    sampling.
+- `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
+    gas molecules every this number of Markov proposals.
+- `verbose::Bool`: whether or not to print off information during the simulation.
 """
-#will pass in molecules::Array{Molecule} later
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
                          molecule::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
                          n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
@@ -207,24 +239,25 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     const repfactors = replication_factors(framework.box, ljforcefield)
     const simulation_box = replicate_box(framework.box, repfactors)
-    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin.
+    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
     const molecule_template = deepcopy(molecule)
 
-    current_energy_gg = 0.0 # only true if starting with 0 molecules
+    current_energy_gg = 0.0 # only true if starting with 0 molecules TODO in adsorption isotherm dump coords from previous pressure and load them in here.
     current_energy_gh = 0.0
     gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     molecules = Molecule[]
 
-    markov_counts = MarkovCounts([0 for i = 1:length(PROPOSAL_ENCODINGS)], [0 for i = 1:length(PROPOSAL_ENCODINGS)])
+    markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)),
+                                 zeros(Int, length(PROPOSAL_ENCODINGS)))
 
-    # (n_burn_cycles + n_sample_cycles) is # of outer cycles; for each outer cycle, peform max(20, # molecules in the system)
-    #  Markov chain proposals.
+    # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
+    #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
     markov_chain_time = 0
     for outer_cycle = 1:(n_burn_cycles + n_sample_cycles), inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
 
-        # choose move randomly; keep track of proposals
+        # choose proposed move randomly; keep track of proposals
         which_move = rand(1:N_PROPOSAL_TYPES)
         markov_counts.n_proposed[which_move] += 1
 
@@ -299,8 +332,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         end # which move the code executes
 
         # TODO remove after testing.
-        for m = 1:length(molecules)
-            @assert(! outside_box(molecules[m], simulation_box), "molecule outside box!")
+        for molecule in molecules
+            @assert(! outside_box(molecule, simulation_box), "molecule outside box!")
         end
 
         # sample the current configuration
@@ -320,7 +353,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             gcmc_stats.Un += (current_energy_gg + current_energy_gh) * length(molecules)
         end
-    end #finished markov chain proposal moves
+    end # finished markov chain proposal moves
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     total_U_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
