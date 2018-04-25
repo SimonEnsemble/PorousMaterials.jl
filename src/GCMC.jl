@@ -223,16 +223,17 @@ translation.
     the adsorption
 - `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
-- `n_sample_cycles::Int`: number of cycles used for sampling
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before 
     sampling.
+- `n_sample_cycles::Int`: number of cycles used for sampling
 - `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
     gas molecules every this number of Markov proposals.
 - `verbose::Bool`: whether or not to print off information during the simulation.
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         molecule::Molecule, ljforcefield::LennardJonesForceField; n_sample_cycles::Int=100000,
-                         n_burn_cycles::Int=10000, sample_frequency::Int=25, verbose::Bool=false)
+                         molecule::Molecule, ljforcefield::LennardJonesForceField; 
+                         n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
+                         sample_frequency::Int=25, verbose::Bool=false)
     if verbose
         pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
