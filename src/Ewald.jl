@@ -29,14 +29,15 @@ of the `Kvector`. Returns an array of `Kvector`'s.
 """
 function compute_kvectors(sim_box::Box, k_repfactors::Tuple{Int, Int, Int}, α::Float64)
     kvectors = Kvector[]
-    # ka goes from 0:k_repfactors[3] to take advantage of:
-    #   cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
+    # take advantage of symmetry. cos(k ⋅ dx) = cos( (-k) ⋅ dx)
+    #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
+    #   hence ka goes from 0:k_repfactors[3]
     for ka = 0:1.0:k_repfactors[1], kb = -k_repfactors[2]:1.0:k_repfactors[2], kc=-k_repfactors[3]:1.0:k_repfactors[3]
         # don't include home unit cell
         if (ka == 0) && (kb == 0) && (kc == 0)
             continue
         end
-        # don't include both [0 1 x] and [0 -1 -x]
+        # if ka == 0, don't include both [0 1 x] and [0 -1 -x]
         #  but need [0 1 x] [0 1 -x]
         if (ka == 0) && (kb < 0)
             continue
