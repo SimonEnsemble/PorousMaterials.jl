@@ -64,6 +64,7 @@ end;
 @testset "Molecules Tests" begin
     # test reader
     molecule = read_molecule_file("CO2")
+    @test check_forcefield_coverage(molecule, ljforcefield)
     @test charged(molecule)
     atomic_masses = read_atomic_masses()
     @test molecule.species == :CO2

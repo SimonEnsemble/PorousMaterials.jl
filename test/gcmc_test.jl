@@ -1,7 +1,9 @@
 using PorousMaterials
 using Base.Test
 
-run_ig_tests = false
+ig_tests = false
+xe_in_sbmof1_tests = false
+co2_tests =true
 
 #
 # Ideal gas tests.
@@ -9,7 +11,7 @@ run_ig_tests = false
 #  "ig" in test_forcefield.csv has sigma tiny and epsilon 0.0 to match ideal gas.
 #  basically, this tests the acceptance rules when energy is always zero.
 #
-if run_ig_tests
+if ig_tests
     empty_space = read_crystal_structure_file("empty_box.cssr") # zero atoms!
     ideal_gas = read_molecule_file("IG")
     @assert(empty_space.n_atoms == 0)
@@ -27,24 +29,33 @@ if run_ig_tests
     end
 end
 
-## SBMOF-1 tests
-sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
-dreiding_forcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
+if xe_in_sbmof1_tests
+    ## SBMOF-1 tests
+    sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
+    dreiding_forcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
 
-##Getting template for use with the sim
-molecule = read_molecule_file("Xe")
+    ##Getting template for use with the sim
+    molecule = read_molecule_file("Xe")
 
-# very quick test
-results = gcmc_simulation(sbmof1, 298.0, 2300.0, molecule, dreiding_forcefield, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
+    # very quick test
+    results = gcmc_simulation(sbmof1, 298.0, 2300.0, molecule, dreiding_forcefield, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
 
 
-test_fugacities = [20.0, 200.0, 2000.0]
-test_mmol_g = [0.1931, 1.007, 1.4007]
-test_molec_unit_cell = [0.266, 1.388, 1.929]
+    test_fugacities = [20.0, 200.0, 2000.0]
+    test_mmol_g = [0.1931, 1.007, 1.4007]
+    test_molec_unit_cell = [0.266, 1.388, 1.929]
 
-for (i, fugacity) in enumerate(test_fugacities)
-    @time results = gcmc_simulation(sbmof1, 298.0, fugacity, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
-    println("Should be (molec/unit cell: ", test_molec_unit_cell[i])
-    @test isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
-    @test isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
+    for (i, fugacity) in enumerate(test_fugacities)
+        @time results = gcmc_simulation(sbmof1, 298.0, fugacity, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
+        println("Should be (molec/unit cell: ", test_molec_unit_cell[i])
+        @test isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
+        @test isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
+    end
+end
+
+if co2_tests
+    co2 = read_molecule_file("CO2")
+    nu1000 = read_crystal_structure_file("NU-1000_Greg.cif")
+    dreiding = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
+    @time results = gcmc_simulation(nu1000, 298.0, 20000.0, co2, dreiding, n_burn_cycles=1000, n_sample_cycles=1000, verbose=true)
 end
