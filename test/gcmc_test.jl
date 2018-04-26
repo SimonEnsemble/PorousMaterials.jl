@@ -1,7 +1,7 @@
 using PorousMaterials
 using Base.Test
 
-run_ig_tests = true
+run_ig_tests = false
 
 #
 # Ideal gas tests.
