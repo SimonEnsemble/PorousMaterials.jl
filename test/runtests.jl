@@ -108,7 +108,28 @@ end;
     write_to_xyz(ms, "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
     
-    # rotation matrix shld be orthogonal
+    # Test to see if rotation_matrix() is random and uniform on sphere surface
+    N = 1000000
+    points = Array{Float64, 2}(3,N)
+    for i = 1:N
+        points[:,i] = rotation_matrix() * [0., 0., 1.]
+    end
+
+    for i = 1:3
+        r = rand()
+        count = zeros(10)
+        for j = 1:10
+            for k = 1:N
+                if points[1,k] > 0 && points[2,k]^2 + points[3,k]^2 <= r^2
+                    count[j] += 1
+                end
+            end
+            points = rotation_matrix() * points
+        end
+        @test (maximum(count) - minimum(count)) / N < 0.01
+    end
+
+    # rotation matrix should be orthogonal
     r_orthogonal = true
     r_det_1 = true
     for i = 1:300
