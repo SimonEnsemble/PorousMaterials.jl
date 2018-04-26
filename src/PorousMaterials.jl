@@ -4,8 +4,8 @@ module PorousMaterials
 global PATH_TO_DATA = pwd() * "/data/"
 
 include("Crystal.jl")
-include("Forcefield.jl")
 include("Molecules.jl")
+include("Forcefield.jl")
 include("Energetics_Util.jl")
 include("VdWEnergetics.jl")
 include("ElectrostaticEnergetics.jl")

@@ -119,28 +119,57 @@ replication_factors(unitcell::Box, ljforcefield::LennardJonesForceField) = repli
 replication_factors(framework::Framework, cutoff_radius::Float64) = replication_factors(framework.box, cutoff_radius)
 replication_factors(framework::Framework, ljforcefield::LennardJonesForceField) = replication_factors(framework.box, sqrt(ljforcefield.cutoffradius_squared))
 
+"""
+    missing_atoms = atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljff::LennardJonesForceField)
+
+Return an array of atoms, represented by Symbols, that are present in `atoms` but missing 
+from the force field`ljff`.
+"""
+function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljff::LennardJonesForceField)
+    missing_atoms = Symbol[]
+    for atom in atoms
+        if !(atom in keys(ljff.pure_ϵ))
+            push!(missing_atoms, atom)
+        end
+    end
+    return missing_atoms
+end
 
 """
     check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField; verbose::Bool=true)
 
 Check that the force field contains parameters for every atom present in the framework.
+returns true or false; prints which atoms are missing.
+"""
+function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField)
+    atoms = unique(framework.atoms)
+    missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
+    if length(missing_atoms) == 0
+        return true
+    else
+        @printf("Framework %s possesses the following atoms not covered by the forcefield %s:\n", framework.name, ljforcefield.name)
+        println(missing_atoms)
+        return false
+    end
+end
+
+"""
+    check_forcefield_coverage(molecule::Molecule, ljforcefield::LennardJonesForceField; verbose::Bool=true)
+
+Check that the force field contains parameters for every atom present in the molecule's
+lennard jones spheres.
 returns true or false; prints which atoms are missing by default if `verbose=true`.
 """
-function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField; verbose::Bool=true)
-    framework_atoms = unique(framework.atoms)
-    forcefield_atoms = keys(ljforcefield.pure_ϵ)
-
-    full_coverage = true
-
-    for atom in framework_atoms
-        if !(atom in forcefield_atoms)
-            if verbose
-                @printf("%s framework atom \"%s\" is not covered by the forcefield %s.\n", framework.name, atom, ljforcefield.name)
-            end
-            full_coverage = false
-        end
+function check_forcefield_coverage(molecule::Molecule, ljforcefield::LennardJonesForceField)
+    atoms = unique([ljs.atom for ljs in molecule.ljspheres])
+    missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
+    if length(missing_atoms) == 0
+        return true
+    else
+        @printf("Molecule %s possesses the following atoms not covered by the forcefield %s:\n", molecule.species, ljforcefield.name)
+        println(missing_atoms)
+        return false
     end
-    return full_coverage
 end
 
 function Base.print(io::IO, ff::LennardJonesForceField)
