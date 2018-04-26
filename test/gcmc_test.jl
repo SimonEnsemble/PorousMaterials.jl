@@ -1,7 +1,7 @@
 using PorousMaterials
 using Base.Test
 
-run_ig_tests = false
+run_ig_tests = true
 
 #
 # Ideal gas tests.
@@ -11,6 +11,7 @@ run_ig_tests = false
 #
 if run_ig_tests
     empty_space = read_crystal_structure_file("empty_box.cssr") # zero atoms!
+    ideal_gas = read_molecule_file("IG")
     @assert(empty_space.n_atoms == 0)
     forcefield = read_forcefield_file("Dreiding.csv")
     temperature = 298.0
@@ -19,7 +20,7 @@ if run_ig_tests
     n_ig = fugacity * empty_space.box.Ω / (PorousMaterials.KB * temperature)
     n_sim = similar(n_ig)
     for i = 1:length(fugacity)
-        results = gcmc_simulation(empty_space, temperature, fugacity[i], "ig", forcefield,
+        results = gcmc_simulation(empty_space, temperature, fugacity[i], ideal_gas, forcefield,
                     n_burn_cycles=100000, n_sample_cycles=100000)
         n_sim[i] = results["⟨N⟩ (molecules/unit cell)"]
         @printf("fugacity = %f Pa; n_ig = %e; n_sim = %e\n", fugacity[i], n_ig[i], n_sim[i])
@@ -42,11 +43,8 @@ test_mmol_g = [0.1931, 1.007, 1.4007]
 test_molec_unit_cell = [0.266, 1.388, 1.929]
 
 for (i, fugacity) in enumerate(test_fugacities)
-    @time results = gcmc_simulation(sbmof1, 298.0, fugacity, molecule, dreiding_forcefield, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true)
-      @test isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.005)
-      @test isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.005)
+    @time results = gcmc_simulation(sbmof1, 298.0, fugacity, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
+    println("Should be (molec/unit cell: ", test_molec_unit_cell[i])
+    @test isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
+    @test isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
 end
-
-# TODO
-# assert molecules never completely outside box inside GCMC
-# assert energy at end is energy as add dE's.
