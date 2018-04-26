@@ -101,6 +101,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const simulation_box = replicate_box(framework.box, repfactors)
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
     const molecule_template = deepcopy(molecule)
+
+    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
+        error("Missing atoms from forcefield")
+    end
     
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!

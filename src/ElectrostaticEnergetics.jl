@@ -163,7 +163,7 @@ function electrostatic_potential(molecules::Array{Molecule, 1}, exclude_molecule
             continue
         end
         
-        for charge in molecule
+        for charge in molecule.charges
             # vector from pt charge to pt of interest x in Cartesian coordinates
             dx = x - charge.x
             
@@ -202,7 +202,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1}, molecule_
                                         sim_box::Box, sr_cutoff_radius::Float64,
                                         kvectors::Array{Kvector, 1}, α::Float64)
     ϕ = 0.0
-    for charge in molecules[molecule_id]
+    for charge in molecules[molecule_id].charges
         ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, sim_box,
                                                 sr_cutoff_radius, kvectors, α)
     end
