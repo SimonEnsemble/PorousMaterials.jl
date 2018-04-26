@@ -57,7 +57,7 @@ rep_factors = replication_factors(frame.box, ljforcefield)
     @test isapprox(framework10.box, construct_box(framework10.box.f_to_c))
     @test check_forcefield_coverage(framework10, ljforcefield)
     push!(framework10.atoms, :bogus_atom)
-    @test !check_forcefield_coverage(framework10, ljforcefield, verbose=false)
+    @test !check_forcefield_coverage(framework10, ljforcefield)
 end;
 
 @printf("------------------------------\nTesting Molecules.jl\n\n")
