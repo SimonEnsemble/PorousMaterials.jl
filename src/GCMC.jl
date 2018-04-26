@@ -1,21 +1,18 @@
-# δ is the maximal distance a particle is perturbed in a given coordinate
-#  during particle translations
-const δ = 0.35 # Å
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # define Markov chain proposals here.
 const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
-const INSERTION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["insertion"]
-const DELETION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["deletion"]
-const TRANSLATION = Dict([value => key for (key, value) in PROPOSAL_ENCODINGS])["translation"]
+const INSERTION   = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
+const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
+const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
 
 """
 Data structure to keep track of statistics collected during a grand-canonical Monte Carlo
 simulation.
 
 * `n` is the number of molecules in the simulation box.
-* `U` is the potential energy.
+* `V` is the potential energy.
 * `g` refers to guest (the adsorbate molecule).
 * `h` refers to host (the crystalline framework).
 """
@@ -44,161 +41,23 @@ type MarkovCounts
     n_accepted::Array{Int, 1}
 end
 
-"""
-    insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
-
-Inserts an additional adsorbate molecule into the simulation box using the template provided.
-The center of mass of the molecule is chosen at a uniform random position in the simulation box.
-A uniformly random orientation of the molecule is chosen by rotating about the center of mass.
-"""
-function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
-    # choose center of mass
-    x = box.f_to_c * rand(3)
-    # copy the template
-    molecule = deepcopy(template)
-    # conduct a rotation
-    if (length(molecule.ljspheres) + length(molecule.charges) > 1)
-        rotate!(molecule)
-    end
-    # translate molecule to its new center of mass
-    translate_to!(molecule, x)
-    # push molecule to array.
-    push!(molecules, molecule)
-end
-
-"""
-    delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
-
-Removes a random molecule from the current molecules in the framework.
-molecule_id decides which molecule will be deleted, for a simulation, it must
-    be a randomly generated value
-"""
-function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
-    splice!(molecules, molecule_id)
-end
-
-"""
-    apply_periodic_boundary_condition!(molecule::Molecule, simulation_box::Box)
-
-Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic 
-boundary conditions and translate the center of mass of the `Molecule` (and its atoms 
-and point charges) so that it is inside of the `Box`.
-"""
-function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
-    outside_box = false # do nothing if not outside the box
-
-    # compute its center of mass in fractional coordinates
-    xf = box.c_to_f * molecule.center_of_mass
-
-    # apply periodic boundary conditions
-    for k = 1:3 # loop over xf, yf, zf components
-        # if > 1.0, shift down
-        if xf[k] >= 1.0
-            outside_box = true
-            xf[k] -= 1.0
-        elseif xf[k] < 0.0
-            outside_box = true
-            xf[k] += 1.0
+# TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
+@inline function potential_energy(molecule_id::Int, molecules::Array{Molecule, 1}, framework::Framework,
+                                  ljforcefield::LennardJonesForceField, simulation_box::Box,
+                                  repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
+                                  kvectors::Array{Kvector, 1}, α::Float64, charged_molecules::Bool, charged_framework::Bool)
+    energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
+    energy.vdw_gg = vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
+    energy.vdw_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield, repfactors)
+    if charged_molecules
+        energy.electro_gg = electrostatic_potential_energy(molecules, molecule_id, simulation_box, sr_cutoff_radius, kvectors, α)
+        if charged_framework
+            energy.electro_gh = electrostatic_potential_energy(framework, molecules[molecule_id], simulation_box, repfactors, sr_cutoff_radius, kvectors, α)
         end
     end
-
-    # translate molecule to new center of mass if it was found to be outside of the box
-    if outside_box
-        new_center_of_mass = box.f_to_c * xf
-        translate_to!(molecule, new_center_of_mass)
-    end
+    return energy
 end
-
-"""
-    translate_molecule!(molecule::Molecule, simulation_box::Box)
-
-Perturbs the Cartesian coordinates of a molecule about its center of mass by a random 
-vector of max length δ. Applies periodic boundary conditions to keep the molecule inside 
-the simulation box. Returns a deep copy of the old molecule in case it needs replaced
-if the Monte Carlo proposal is rejected.
-"""
-function translate_molecule!(molecule::Molecule, simulation_box::Box)
-    # store old molecule and return at the end for possible restoration
-    old_molecule = deepcopy(molecule)
-    # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3) - 0.5) # move every atom of the molecule by the same vector.
-    translate_by!(molecule, dx)
-    # done, unless the molecule has moved outside of the box, then apply PBC
-    apply_periodic_boundary_condition!(molecule, simulation_box)
-
-    return old_molecule # in case we need to restore
-end
-
-"""
-    gg_energy = guest_guest_vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
-
-Calculates van der Waals interaction energy of a single adsorbate `molecules[molecule_id]`
-with all of the other molecules in the system. Periodic boundary conditions are applied,
-using the nearest image convention.
-"""
-function guest_guest_vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1},
-                                ljforcefield::LennardJonesForceField, simulation_box::Box)
-    energy = 0.0 # energy is pair-wise additive
-    # Look at interaction with all other molecules in the system
-    for this_ljsphere in molecules[molecule_id].ljspheres
-        # Loop over all atoms in the given molecule
-        for other_molecule_id = 1:length(molecules)
-            # molecule cannot interact with itself
-            if other_molecule_id == molecule_id
-                continue
-            end
-            # loop over every ljsphere (atom) in the other molecule
-            for other_ljsphere in molecules[other_molecule_id].ljspheres
-                # compute vector between molecules in fractional coordinates
-                dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
-                
-                # simulation box has fractional coords [0, 1] by construction
-                nearest_image!(dxf, (1, 1, 1))
-
-                # converts fractional distance to cartesian distance
-                dx = simulation_box.f_to_c * dxf
-
-                r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
-
-                if r² < R_OVERLAP_squared
-                    return Inf
-                elseif r² < ljforcefield.cutoffradius_squared
-                    energy += lennard_jones(r²,
-                        ljforcefield.σ²[this_ljsphere.atom][other_ljsphere.atom],
-                        ljforcefield.ϵ[this_ljsphere.atom][other_ljsphere.atom])
-                end
-            end # loop over all ljspheres in other molecule
-        end # loop over all other molecules
-    end # loop over all ljspheres in this molecule
-    return energy # units are the same as in ϵ for forcefield (Kelvin)
-end
-
-"""
-Compute total guest-host interaction energy (sum over all adsorbates).
-"""
-function total_guest_host_vdw_energy(framework::Framework,
-                                     molecules::Array{Molecule, 1},
-                                     ljforcefield::LennardJonesForceField,
-                                     repfactors::Tuple{Int, Int, Int})
-    total_energy = 0.0
-    for molecule in molecules
-        total_energy += vdw_energy(framework, molecule, ljforcefield, repfactors)
-    end
-    return total_energy
-end
-
-"""
-Compute sum of all guest-guest interaction energy from vdW interactions.
-"""
-function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1},
-                                      ljforcefield::LennardJonesForceField,
-                                      simulation_box::Box)
-    total_energy = 0.0
-    for molecule_id = 1:length(molecules)
-        total_energy += guest_guest_vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
-    end
-    return total_energy / 2.0 # avoid double-counting pairs
-end
+                                  
 
 """
     results = gcmc_simulation(framework, temperature, fugacity, molecule, ljforcefield;
@@ -243,8 +102,27 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
     const molecule_template = deepcopy(molecule)
 
-    current_energy_gg = 0.0 # only true if starting with 0 molecules TODO in adsorption isotherm dump coords from previous pressure and load them in here.
-    current_energy_gh = 0.0
+    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
+        error("Missing atoms from forcefield")
+    end
+    
+    # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
+    #   there is no point in going through the computations if all charges are zero!
+    const charged_framework = charged(framework)
+    const charged_molecules = charged(molecule)
+    
+    # define Ewald summation params
+    #  TODO do this automatically with rules!
+    const k_rep_factors = (11, 11, 9)
+    const α = 0.265058
+    const sr_cutoff_radius = sqrt(ljforcefield.cutoffradius_squared)
+
+    # pre-compute k-vectors for Ewald summation for electrostatics
+    const kvectors = compute_kvectors(simulation_box, k_rep_factors, α)
+
+    # TODO in adsorption isotherm dump coords from previous pressure and load them in here.
+    # only true if starting with 0 molecules 
+    system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
     gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     molecules = Molecule[]
@@ -265,17 +143,18 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         if which_move == INSERTION
             insert_molecule!(molecules, simulation_box, molecule_template)
 
-            U_gg = guest_guest_vdw_energy(length(molecules), molecules, ljforcefield, simulation_box)
-            U_gh = vdw_energy(framework, molecules[end], ljforcefield, repfactors)
+            # compute the potential energy of the inserted molecule
+            energy = potential_energy(length(molecules), molecules, framework, ljforcefield, 
+                                      simulation_box, repfactors, sr_cutoff_radius,
+                                      kvectors, α, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Insertion
             if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
-                    temperature) * exp(-(U_gh + U_gg) / temperature)
+                    temperature) * exp(-sum(energy) / temperature)
                 # accept the move, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
 
-                current_energy_gg += U_gg
-                current_energy_gh += U_gh
+                system_energy += energy
             else
                 # reject the move, remove the inserted molecule
                 pop!(molecules)
@@ -284,48 +163,43 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             # propose which molecule to delete
             molecule_id = rand(1:length(molecules))
 
-            U_gg = guest_guest_vdw_energy(molecule_id, molecules, ljforcefield,
-                simulation_box)
-            U_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield,
-                repfactors)
+            # compute the potential energy of the molecule we propose to delete
+            energy = potential_energy(molecule_id, molecules, framework, ljforcefield, 
+                                      simulation_box, repfactors, sr_cutoff_radius,
+                                      kvectors, α, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Deletion
             if rand() < length(molecules) * KB * temperature / (fugacity *
-                    simulation_box.Ω) * exp((U_gh + U_gg) / temperature)
+                    simulation_box.Ω) * exp(sum(energy) / temperature)
                 # accept the deletion, delete molecule, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
 
                 delete_molecule!(molecule_id, molecules)
 
-                current_energy_gg -= U_gg
-                current_energy_gh -= U_gh
+                system_energy -= energy
             end
         elseif (which_move == TRANSLATION) && (length(molecules) != 0)
             # propose which molecule whose coordinates we should perturb
             molecule_id = rand(1:length(molecules))
 
             # energy of the molecule before it was translated
-            U_gg_old = guest_guest_vdw_energy(molecule_id, molecules,
-                ljforcefield, simulation_box)
-            U_gh_old = vdw_energy(framework, molecules[molecule_id],
-                ljforcefield, repfactors)
+            energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield, 
+                                          simulation_box, repfactors, sr_cutoff_radius,
+                                          kvectors, α, charged_molecules, charged_framework)
 
             old_molecule = translate_molecule!(molecules[molecule_id], simulation_box)
 
             # energy of the molecule after it is translated
-            U_gg_new = guest_guest_vdw_energy(molecule_id, molecules,
-                ljforcefield, simulation_box)
-            U_gh_new = vdw_energy(framework, molecules[molecule_id],
-                ljforcefield, repfactors)
+            energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield, 
+                                          simulation_box, repfactors, sr_cutoff_radius,
+                                          kvectors, α, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for translation
-            if rand() < exp(-((U_gg_new + U_gh_new) - (U_gg_old + U_gh_old))
-                / temperature)
+            if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                 # accept the move, adjust current energy
                 markov_counts.n_accepted[which_move] += 1
 
-                current_energy_gg += U_gg_new - U_gg_old
-                current_energy_gh += U_gh_new - U_gh_old
+                system_energy += energy_new - energy_old
             else
                 # reject the move, reset the molecule at molecule_id
                 molecules[molecule_id] = deepcopy(old_molecule)
@@ -339,6 +213,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
         # sample the current configuration
         if (outer_cycle > n_burn_cycles) && (markov_chain_time % sample_frequency == 0)
+            current_energy_gg = system_energy.vdw_gg + system_energy.electro_gg
+            current_energy_gh = system_energy.vdw_gh + system_energy.electro_gh
+
             gcmc_stats.n_samples += 1
 
             gcmc_stats.n += length(molecules)
@@ -357,15 +234,19 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end # finished markov chain proposal moves
 
     # compute total energy, compare to `current_energy*` variables where were incremented
+    # TODO need function for total electrostatic energy...
     total_U_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
     total_U_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
-    if ! isapprox(total_U_gh, current_energy_gh, atol=0.01)
-        println("U_gh, incremented = ", current_energy_gh)
+    incremented_U_gg = system_energy.vdw_gg + system_energy.electro_gg
+    incremented_U_gh = system_energy.vdw_gh + system_energy.electro_gh
+
+    if ! isapprox(total_U_gh, incremented_U_gh, atol=0.01)
+        println("U_gh, incremented = ", incremented_U_gh)
         println("U_gh, computed at end of simulation =", total_U_gh)
         error("guest-host energy incremented improperly")
     end
-    if ! isapprox(total_U_gg, current_energy_gg, atol=0.01)
-        println("U_gg, incremented = ", current_energy_gg)
+    if ! isapprox(total_U_gg, incremented_U_gg, atol=0.01)
+        println("U_gg, incremented = ", incremented_U_gg)
         println("U_gg, computed at end of simulation =", total_U_gg)
         error("guest-guest energy incremented improperly")
     end

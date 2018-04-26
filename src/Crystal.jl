@@ -417,7 +417,7 @@ Return true iff any of the atoms of the framework are assigned nonzero point cha
 """
 function charged(framework::Framework)
     zero_charge_flags = isapprox.(abs.(framework.charges), 0.0)
-    return all(zero_charge_flags)
+    return ! all(zero_charge_flags)
 end
 
 """

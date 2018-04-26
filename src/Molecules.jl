@@ -281,3 +281,7 @@ function total_charge(molecule::Molecule)
     end
     return total_charge
 end
+
+function charged(molecule::Molecule)
+    return length(molecule.charges) > 0 ? true : false
+end
