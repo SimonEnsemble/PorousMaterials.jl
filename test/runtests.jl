@@ -9,8 +9,9 @@ using Base.Test
 
 # Run Tests
 
-@printf("------------------------------\nTesting Crystal.jl\n\n")
+@printf("\n------------------------------\nTesting Crystal.jl\n\n")
 framework = read_crystal_structure_file("test_structure2.cif")
+framework2 = read_crystal_structure_file("test_structure2B.cif", remove_overlap = true)
 strip_numbers_from_atom_labels!(framework)
 @testset "Crystal Tests" begin
     @test framework.name == "test_structure2.cif"
@@ -31,6 +32,7 @@ strip_numbers_from_atom_labels!(framework)
     @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
     @test molecular_weight(framework) ≈ 15.9994 + 40.078
     @test isapprox(transpose(framework.box.reciprocal_lattice), 2 * π * inv(framework.box.f_to_c))
+    @test framework.atoms == framework2.atoms && framework.xf == framework2.xf && framework.charges == framework2.charges
 
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = read_crystal_structure_file("test_structure2.cif")
@@ -38,7 +40,7 @@ strip_numbers_from_atom_labels!(framework)
     @test isapprox(framework_from_cssr, framework, checknames=false)
 end;
 
-@printf("------------------------------\nTesting Forcefield.jl\n\n")
+@printf("\n------------------------------\nTesting Forcefield.jl\n\n")
 const ljforcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 frame = read_crystal_structure_file("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
@@ -60,7 +62,7 @@ rep_factors = replication_factors(frame.box, ljforcefield)
     @test !check_forcefield_coverage(framework10, ljforcefield)
 end;
 
-@printf("------------------------------\nTesting Molecules.jl\n\n")
+@printf("\n------------------------------\nTesting Molecules.jl\n\n")
 @testset "Molecules Tests" begin
     # test reader
     molecule = read_molecule_file("CO2")
@@ -169,7 +171,7 @@ end;
 
 end
 
-@printf("------------------------------\nTesting Energetics.jl\n\n")
+@printf("\n------------------------------\nTesting Energetics.jl\n\n")
 @testset "Energetics Tests" begin
     # test Periodic boundary conditions
     molecule1 = read_molecule_file("He")
@@ -233,10 +235,10 @@ end
     @test isapprox(v + PotentialEnergy(2.0, 3.0, 4.0, 5.0), PotentialEnergy(5.0, 7.0, 9.0, 11.0))
     @test isapprox(v - PotentialEnergy(2.0, 3.0, 4.0, 5.0), PotentialEnergy(1.0, 1.0, 1.0, 1.0))
 end;
-@printf("------------------------------\n")
+#@printf("------------------------------\n")
 
 
-@printf("------------------------------\nTesting Ewald.jl\n\n")
+@printf("\n------------------------------\nTesting Ewald.jl\n\n")
 framework = read_crystal_structure_file("NU-1000_Greg.cif")
 
 k_rep_factors = (11, 11, 9)
@@ -262,9 +264,9 @@ q_test = 0.8096
     ϕ = electrostatic_potential(framework, x, sim_box, rep_factors, sr_cutoff, kvectors, α)
     @test isapprox(ϕ * q_test, -2676.8230141, atol=0.5)
 end
-@printf("------------------------------\n")
+#@printf("------------------------------\n")
 
-@printf("------------------------------\nTesting GCMC.jl\n\n")
+@printf("\n------------------------------\nTesting GCMC.jl\n\n")
 @testset "Monte Carlo Functions Tests" begin
     # replicating the unit cell to construct simulation box
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
