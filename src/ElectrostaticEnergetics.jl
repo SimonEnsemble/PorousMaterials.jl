@@ -27,8 +27,7 @@ accounted for in the `weight` attribute of the `Kvector`. Returns an array of `K
 - `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
 """
 function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Float64)
-    kvec_wts = OffsetArray(zeros(Float64, kreps[1] + 1, 2 * kreps[2] + 1, 2 * kreps[3] + 1),
-                           0:kreps[1], -kreps[2]:kreps[2], -kreps[3]:kreps[3])
+    kvec_wts = OffsetArray(Float64, 0:kreps[1], -kreps[2]:kreps[2], -kreps[3]:kreps[3])
     # take advantage of symmetry. cos(k ⋅ dx) = cos( (-k) ⋅ dx)
     #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
     #   hence ka goes from 0:k_repfactors[3]
