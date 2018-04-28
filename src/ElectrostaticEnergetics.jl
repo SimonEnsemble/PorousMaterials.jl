@@ -72,7 +72,7 @@ end
 @unsafe function fill_eikx!(eikx::OffsetArray{Complex{Float64}},
                     kx_dot_dx::Float64,
                     krep::Int, include_neg_reps::Bool)
-    # explicitly compute for k = 1 and k = 0
+    # explicitly compute for k = 0 and k = 1
     eikx[0] = exp(0.0 * im)
     @fastmath eikx[1] = exp(im * kx_dot_dx)
 
@@ -148,7 +148,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
                     if kb < 0
                         continue
                     end
-                    if kb == 0 && (kc <= 0)
+                    if kb == 0 && kc <= 0
                         continue
                     end
                 end
