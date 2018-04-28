@@ -42,17 +42,28 @@ type MarkovCounts
 end
 
 # TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
-@inline function potential_energy(molecule_id::Int, molecules::Array{Molecule, 1}, framework::Framework,
-                                  ljforcefield::LennardJonesForceField, simulation_box::Box,
-                                  repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
-                                  kvectors::Array{Kvector, 1}, α::Float64, charged_molecules::Bool, charged_framework::Bool)
+@inline function potential_energy(molecule_id::Int, 
+                                  molecules::Array{Molecule, 1},
+                                  framework::Framework,
+                                  ljforcefield::LennardJonesForceField,
+                                  simulation_box::Box,
+                                  repfactors::Tuple{Int, Int, Int},
+                                  sr_cutoff_radius::Float64,
+                                  kreps::Tuple{Int, Int, Int},
+                                  eikar::OffsetArray{Complex{Float64}},
+                                  eikbr::OffsetArray{Complex{Float64}},
+                                  eikcr::OffsetArray{Complex{Float64}},
+                                  kvec_wts::OffsetArray{Float64, 3, Array{Float64, 3}},
+                                  α::Float64,
+                                  charged_molecules::Bool,
+                                  charged_framework::Bool)
     energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
     energy.vdw_gg = vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
     energy.vdw_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield, repfactors)
     if charged_molecules
-        energy.electro_gg = electrostatic_potential_energy(molecules, molecule_id, simulation_box, sr_cutoff_radius, kvectors, α)
+        energy.electro_gg = electrostatic_potential_energy(molecules, molecule_id, simulation_box, sr_cutoff_radius, eikar, eikbr, eikcr, kreps, kvec_wts, α)
         if charged_framework
-            energy.electro_gh = electrostatic_potential_energy(framework, molecules[molecule_id], simulation_box, repfactors, sr_cutoff_radius, kvectors, α)
+            energy.electro_gh = electrostatic_potential_energy(framework, molecules[molecule_id], simulation_box, repfactors, sr_cutoff_radius, eikar, eikbr, eikcr, kreps, kvec_wts, α)
         end
     end
     return energy
@@ -96,8 +107,11 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     if verbose
         pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
-
+    
+    # replication factors for applying nearest image convention for short-range 
+    #   interactions
     const repfactors = replication_factors(framework.box, ljforcefield)
+    # the simulation box = replicated primitive framework box
     const simulation_box = replicate_box(framework.box, repfactors)
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
     const molecule_template = deepcopy(molecule)
@@ -113,12 +127,15 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     
     # define Ewald summation params
     #  TODO do this automatically with rules!
-    const k_rep_factors = (11, 11, 9)
+    const kreps = (11, 11, 9)
     const α = 0.265058
     const sr_cutoff_radius = sqrt(ljforcefield.cutoffradius_squared)
 
-    # pre-compute k-vectors for Ewald summation for electrostatics
-    const kvectors = compute_kvectors(simulation_box, k_rep_factors, α)
+    # pre-compute weights on k-vector contributions to long-rage interactions in
+    #   Ewald summation for electrostatics
+    const kvec_wts = precompute_kvec_wts(simulation_box, kreps, α)
+    # allocate memory for exp^{i * n * k ⋅ r}
+    eikar, eikbr, eikcr = allocate_eikr(kreps)
 
     # TODO in adsorption isotherm dump coords from previous pressure and load them in here.
     # only true if starting with 0 molecules 
@@ -146,7 +163,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             # compute the potential energy of the inserted molecule
             energy = potential_energy(length(molecules), molecules, framework, ljforcefield, 
                                       simulation_box, repfactors, sr_cutoff_radius,
-                                      kvectors, α, charged_molecules, charged_framework)
+                                      kreps, eikar, eikbr, eikcr, kvec_wts, α, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Insertion
             if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
@@ -166,7 +183,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             # compute the potential energy of the molecule we propose to delete
             energy = potential_energy(molecule_id, molecules, framework, ljforcefield, 
                                       simulation_box, repfactors, sr_cutoff_radius,
-                                      kvectors, α, charged_molecules, charged_framework)
+                                      kreps, eikar, eikbr, eikcr, kvec_wts,α, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Deletion
             if rand() < length(molecules) * KB * temperature / (fugacity *
@@ -184,15 +201,15 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             # energy of the molecule before it was translated
             energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield, 
-                                          simulation_box, repfactors, sr_cutoff_radius,
-                                          kvectors, α, charged_molecules, charged_framework)
+                                      simulation_box, repfactors, sr_cutoff_radius,
+                                      kreps, eikar, eikbr, eikcr, kvec_wts, α, charged_molecules, charged_framework)
 
             old_molecule = translate_molecule!(molecules[molecule_id], simulation_box)
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield, 
-                                          simulation_box, repfactors, sr_cutoff_radius,
-                                          kvectors, α, charged_molecules, charged_framework)
+                                      simulation_box, repfactors, sr_cutoff_radius,
+                                      kreps, eikar, eikbr, eikcr, kvec_wts, α, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for translation
             if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -243,12 +260,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     if ! isapprox(total_U_gh, incremented_U_gh, atol=0.01)
         println("U_gh, incremented = ", incremented_U_gh)
         println("U_gh, computed at end of simulation =", total_U_gh)
-        error("guest-host energy incremented improperly")
+ #         error("guest-host energy incremented improperly")
     end
     if ! isapprox(total_U_gg, incremented_U_gg, atol=0.01)
         println("U_gg, incremented = ", incremented_U_gg)
         println("U_gg, computed at end of simulation =", total_U_gg)
-        error("guest-guest energy incremented improperly")
+ #         error("guest-guest energy incremented improperly")
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))

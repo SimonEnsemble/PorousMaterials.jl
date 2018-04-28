@@ -27,5 +27,5 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
        insert_molecule!, delete_molecule!, translate_molecule!, # MChelpers.jl
        apply_periodic_boundary_condition!,
        guest_guest_vdw_energy, gcmc_simulation,  # GCMC.jl
-       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, allocate_eikx # ElectrostaticEnergetics.jl
+       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, allocate_eikr # ElectrostaticEnergetics.jl
 end
