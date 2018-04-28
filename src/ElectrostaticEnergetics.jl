@@ -104,9 +104,9 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         ###
         #  Long-range contribution
         ###
-        eika = OffsetArray(Complex, 0:kreps[1])
-        eikb = OffsetArray(Complex, -kreps[2]:kreps[2])
-        eikc = OffsetArray(Complex, -kreps[3]:kreps[3])
+        eika = OffsetArray(Complex{Float64}, 0:kreps[1])
+        eikb = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
+        eikc = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
         
         # ka, kb, kc = 0.0
         eika[0] = 1.0 + 0.0 * im
