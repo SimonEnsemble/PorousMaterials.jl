@@ -61,6 +61,33 @@ function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Floa
     end
     return kvec_wts
 end
+        
+function allocate_eikx(kreps::Tuple{Int, Int, Int})
+    eika = OffsetArray(Complex{Float64}, 0:kreps[1])
+    eikb = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
+    eikc = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
+    return eika, eikb, eikc
+end
+
+@unsafe function fill_eikx!(eikx::OffsetArray{Complex{Float64}},
+                    kx_dot_dx::Float64,
+                    krep::Int, include_neg_reps::Bool)
+    # explicitly compute for k = 1 and k = 0
+    eikx[0] = exp(0.0 * im)
+    @fastmath eikx[1] = exp(im * kx_dot_dx)
+
+    # recursion relation for higher frequencies
+    for k = 2:krep
+        eikx[k] = eikx[k - 1] * eikx[1]
+    end
+
+    # negative kreps are complex conjugate 
+    if include_neg_reps
+        for k = -krep:-1
+            eikx[k] = conj(eikx[-k])
+        end
+    end
+end
 
 """
     ϕ = electrostatic_potential(framework, x, simulation_box, repfactors, sr_cutoff_radius,
@@ -87,7 +114,11 @@ conditions are applied through the Ewald summation.
 """
 function electrostatic_potential(framework::Framework, x::Array{Float64, 1}, 
                                  sim_box::Box, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
-                                 kreps::Tuple{Int, Int, Int}, kvec_wts::OffsetArray{Float64,3,Array{Float64,3}}, α::Float64)
+                                 eika::OffsetArray{Complex{Float64}},
+                                 eikb::OffsetArray{Complex{Float64}},
+                                 eikc::OffsetArray{Complex{Float64}},
+                                 kreps::Tuple{Int, Int, Int}, 
+                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}}, α::Float64)
     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
     xf = mod.(framework.box.c_to_f * x, 1.0)
 
@@ -97,65 +128,31 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
         # x - x_i vector in fractional coords; i corresponds to atom of framework.
         #  same as: dxf = xf - (framework.xf[:, i] + [ra, rb, rc]) = (xf - [ra, rb, rc]) - framework.xf[:, i]
-        dxf = broadcast(-, xf - [ra, rb, rc], framework.xf)
+        @inbounds dxf = broadcast(-, xf - [ra, rb, rc], framework.xf)
         # convert distance vector to Cartesian coordinates
-        dx = framework.box.f_to_c * dxf
+        @inbounds dx = framework.box.f_to_c * dxf
+        # compute dot product with each of the three reciprocal lattice vectors
+        #   k_dot_dx[i, j] = kᵢ ⋅ (x - xⱼ)
+        @inbounds k_dot_dx = transpose(sim_box.reciprocal_lattice) * dx
         
         ###
         #  Long-range contribution
         ###
-        eika = OffsetArray(Complex{Float64}, 0:kreps[1])
-        eikb = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
-        eikc = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
-        
-        # ka, kb, kc = 0.0
-        eika[0] = exp(0.0 * im)
-        eikb[0] = exp(0.0 * im)
-        eikc[0] = exp(0.0 * im)
-        
         for i = 1:framework.n_atoms
-            # compute dot product with each of the three reciprocal lattice vectors
-            ka_dot_dx = dot(dx[:, i], sim_box.reciprocal_lattice[:, 1])
-            kb_dot_dx = dot(dx[:, i], sim_box.reciprocal_lattice[:, 2])
-            kc_dot_dx = dot(dx[:, i], sim_box.reciprocal_lattice[:, 3])
+            fill_eikx!(eika, k_dot_dx[1, i], kreps[1], false)
+            fill_eikx!(eikb, k_dot_dx[2, i], kreps[2], true)
+            fill_eikx!(eikc, k_dot_dx[3, i], kreps[3], true)
 
-            # explicitly compute for ka, kb, kc = 1
-            eika[1] = exp(im * ka_dot_dx)
-            eikb[1] = exp(im * kb_dot_dx)
-            eikc[1] = exp(im * kc_dot_dx)
-            
-            # recursion relation for higher frequency cosines.
-            for ka = 2:kreps[1]
-                eika[ka] = eika[ka - 1] * eika[1]
-            end
-            for kb = 2:kreps[2]
-                eikb[kb] = eikb[kb - 1] * eikb[1]
-            end
-            for kc = 2:kreps[3]
-                eikc[kc] = eikc[kc - 1] * eikc[1]
-            end
-
-            # for negatives, complex conjugate 
-            for kb = -kreps[2]:-1
-                eikb[kb] = conj(eikb[-kb])
-            end
-            for kc = -kreps[3]:-1
-                eikc[kc] = conj(eikc[-kc])
-            end
-
-            # now the double for loop
-            for ka = 0:kreps[1], kb = -kreps[2]:kreps[2], kc=-kreps[3]:kreps[3]
-                if (ka == 0) && (kb == 0) && (kc == 0)
-                    continue
+            for kc=-kreps[3]:kreps[3], kb = -kreps[2]:kreps[2], ka = 0:kreps[1]
+                if ka == 0
+                    if kb < 0
+                        continue
+                    end
+                    if kb == 0 && (kc <= 0)
+                        continue
+                    end
                 end
-                if (ka == 0) && (kb < 0)
-                    continue
-                end
-                if (ka == 0) && (kb == 0) && (kc < 0)
-                    continue
-                end
-                da_cos::Float64 = real(eika[ka] * eikb[kb] * eikc[kc])
-                lr_potential::Float64 += framework.charges[i] * kvec_wts[ka, kb, kc] * da_cos
+                @inbounds lr_potential += framework.charges[i] * kvec_wts[ka, kb, kc] * real(eika[ka] * eikb[kb] * eikc[kc])
             end
         end
 
@@ -166,7 +163,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         nearest_image!(dxf, repfactors)
 
         # convert distance vector to Cartesian coordinates
-        dx = framework.box.f_to_c * dxf
+        @inbounds dx = framework.box.f_to_c * dxf
 
         for i = 1:framework.n_atoms
             @inbounds @fastmath r = sqrt(dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i])
