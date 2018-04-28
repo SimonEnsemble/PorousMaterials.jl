@@ -7,23 +7,19 @@ const ϵ₀ = 4.7622424954949676e-7  # \epsilon_0 vacuum permittivity units: ele
 
 # TODO use NIST test data https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
 #   to untar: tar zxvf spce_sample_configurations-tar.gz
-struct Kvector
-    k::Array{Float64, 1}
-    wt::Float64
-end
 
 """
-    kvectors = compute_kvectors(sim_box, k_repfactors, α)
+    kvectors = precompute_kvec_wts(sim_box, kreps, α)
 
-For speed, pre-compute the reciprocal lattice k-vectors for the long-range Ewald summation 
-in Fourier space. This function takes advantage of the symmetry:
+For speed, pre-compute the weights for each reciprocal lattice vector for the Ewald sum in
+Fourier space. This function takes advantage of the symmetry:
     cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
-to reduce the number of k-vectors in the long-range computation. This reduction is 
-accounted for in the `weight` attribute of the `Kvector`. Returns an array of `Kvector`'s.
+Returns an OffsetArray `kvec_wts` so e.g. `kvec_wts[0, -5, 4]` corresponds to the weight 
+with ka=0, kb=-5, kc=4.
 
 # Arguments
 - `sim_box::Box`: the simulation box that consits of replicated primitive unit cells of the framework
-- `k_repfactors::Tuple{Int, Int, Int}`: The number of reciprocal lattice space replications to include in the long-range Ewald sum.
+- `kreps::Tuple{Int, Int, Int}`: The number of reciprocal lattice space replications to include in the long-range Ewald sum.
 - `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
 """
 function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Float64)
@@ -32,7 +28,7 @@ function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Floa
     #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
     #   hence ka goes from 0:k_repfactors[3]
     for ka = 0:kreps[1], kb = -kreps[2]:kreps[2], kc=-kreps[3]:kreps[3]
-        # don't include home unit cell
+        # don't include the home unit cell
         if (ka == 0) && (kb == 0) && (kc == 0)
             kvec_wts[ka, kb, kc] = NaN
             continue
@@ -60,30 +56,46 @@ function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Floa
     end
     return kvec_wts
 end
-        
-function allocate_eikx(kreps::Tuple{Int, Int, Int})
-    eika = OffsetArray(Complex{Float64}, 0:kreps[1])
-    eikb = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
-    eikc = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
-    return eika, eikb, eikc
+
+"""
+    eikr = allocate_eikr(kreps)
+
+Allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal
+lattice vector.
+eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
+eikrb has indices -kreps[2]:kreps[2] and corresponds to recip. vector in b-direction
+eikrc has indices -kreps[3]:kreps[3] and corresponds to recip. vector in c-direction
+"""
+function allocate_eikr(kreps::Tuple{Int, Int, Int})
+    eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
+    eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
+    eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
+    return eikar, eikbr, eikcr
 end
 
-@unsafe function fill_eikx!(eikx::OffsetArray{Complex{Float64}},
-                    kx_dot_dx::Float64,
-                    krep::Int, include_neg_reps::Bool)
-    # explicitly compute for k = 0 and k = 1
-    eikx[0] = exp(0.0 * im)
-    @fastmath eikx[1] = exp(im * kx_dot_dx)
+"""
+    fill_eikr!(eikr, k_dot_dx, krep, include_neg_reps)
 
-    # recursion relation for higher frequencies
+Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
+`eikr`. If `include_neg_reps` is true, also compute n=-krep:-1.
+"""
+@unsafe function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64, 
+                            krep::Int, include_neg_reps::Bool)
+    # explicitly compute for k = 0 and k = 1
+    eikr[0] = exp(0.0 * im)
+    @fastmath eikr[1] = exp(im * k_dot_r)
+
+    # recursion relation for higher frequencies to avoid expensive computing of cosine.
+    #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
     for k = 2:krep
-        eikx[k] = eikx[k - 1] * eikx[1]
+        eikr[k] = eikr[k - 1] * eikr[1]
     end
 
-    # negative kreps are complex conjugate 
+    # negative kreps are complex conjugate of positive ones.
+    #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
     if include_neg_reps
         for k = -krep:-1
-            eikx[k] = conj(eikx[-k])
+            eikr[k] = conj(eikr[-k])
         end
     end
 end
@@ -112,10 +124,11 @@ conditions are applied through the Ewald summation.
 - `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
 """
 function electrostatic_potential(framework::Framework, x::Array{Float64, 1}, 
-                                 sim_box::Box, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
-                                 eika::OffsetArray{Complex{Float64}},
-                                 eikb::OffsetArray{Complex{Float64}},
-                                 eikc::OffsetArray{Complex{Float64}},
+                                 sim_box::Box, repfactors::Tuple{Int, Int, Int},
+                                 sr_cutoff_radius::Float64,
+                                 eikar::OffsetArray{Complex{Float64}},
+                                 eikbr::OffsetArray{Complex{Float64}},
+                                 eikcr::OffsetArray{Complex{Float64}},
                                  kreps::Tuple{Int, Int, Int}, 
                                  kvec_wts::OffsetArray{Float64,3,Array{Float64,3}}, α::Float64)
     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
@@ -132,17 +145,21 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         @inbounds dx = framework.box.f_to_c * dxf
         # compute dot product with each of the three reciprocal lattice vectors
         #   k_dot_dx[i, j] = kᵢ ⋅ (x - xⱼ)
+        # TODO make recip lattice transposed...
         @inbounds k_dot_dx = transpose(sim_box.reciprocal_lattice) * dx
         
         ###
         #  Long-range contribution
         ###
         for i = 1:framework.n_atoms
-            fill_eikx!(eika, k_dot_dx[1, i], kreps[1], false)
-            fill_eikx!(eikb, k_dot_dx[2, i], kreps[2], true)
-            fill_eikx!(eikc, k_dot_dx[3, i], kreps[3], true)
-
+            # compute e^{ i * n * k * (x - xᵢ)} for n = -krep:krep
+            fill_eikr!(eikar, k_dot_dx[1, i], kreps[1], false) # via symmetry only need +ve
+            fill_eikr!(eikbr, k_dot_dx[2, i], kreps[2], true)
+            fill_eikr!(eikcr, k_dot_dx[3, i], kreps[3], true)
+            
+            # loop over kevectors
             for kc=-kreps[3]:kreps[3], kb = -kreps[2]:kreps[2], ka = 0:kreps[1]
+                # same logic as in `precompute_kvec_wts` but faster.
                 if ka == 0
                     if kb < 0
                         continue
@@ -151,7 +168,12 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
                         continue
                     end
                 end
-                @inbounds lr_potential += framework.charges[i] * kvec_wts[ka, kb, kc] * real(eika[ka] * eikb[kb] * eikc[kc])
+                # cos( i * this_k * r) = real part of:
+                #     e^{i ka r * vec(ka)} * 
+                #     e^{i kb r * vec(kb)} * 
+                #     e^{i kb r * vec(kc)} where r = x - xᵢ
+                #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
+                @unsafe @inbounds lr_potential += framework.charges[i] * kvec_wts[ka, kb, kc] * real(eikar[ka] * eikbr[kb] * eikcr[kc])
             end
         end
 
@@ -167,7 +189,7 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         for i = 1:framework.n_atoms
             @inbounds @fastmath r = sqrt(dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i])
             if r < sr_cutoff_radius
-                @inbounds @fastmath sr_potential += framework.charges[i] / r* erfc(r * α)
+                @inbounds @fastmath sr_potential += framework.charges[i] / r * erfc(r * α)
             end
         end
     end
@@ -177,12 +199,17 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
     return (lr_potential + sr_potential)::Float64
 end		
 
-function electrostatic_potential_energy(framework::Framework, molecule::Molecule, 
-                                        sim_box::Box, repfactors::Tuple{Int, Int, Int}, sr_cutoff_radius::Float64,
-                                        kvectors::Array{Kvector, 1}, α::Float64)
+function electrostatic_potential(framework::Framework, molecule::Molecule,
+                                 sim_box::Box, repfactors::Tuple{Int, Int, Int},
+                                 sr_cutoff_radius::Float64,
+                                 eikar::OffsetArray{Complex{Float64}},
+                                 eikbr::OffsetArray{Complex{Float64}},
+                                 eikcr::OffsetArray{Complex{Float64}},
+                                 kreps::Tuple{Int, Int, Int}, 
+                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}}, α::Float64)
     ϕ = 0.0
     for charge in molecule.charges
-        ϕ += charge.q * electrostatic_potential(framework, charge.x, sim_box, repfactors, sr_cutoff_radius, kvectors, α)
+        ϕ += charge.q * electrostatic_potential(framework, charge.x, sim_box, rep_factors, sr_cutoff, eikar, eikbr, eikcr, kreps, kvec_wts, α)
     end
     return ϕ
 end
@@ -194,60 +221,91 @@ end
 Compute the electrostatic potential generated by a set of molecules (in `molecules`) in a 
 simulation box, excluding the contribution of `molecules[exclude_molecule_id]`.
 """
- # #TODO TEST THIS!
- # function electrostatic_potential(molecules::Array{Molecule, 1}, exclude_molecule_id::Int,
- #                                  x::Array{Float64, 1}, sim_box::Box,
- #                                  sr_cutoff_radius::Float64,
- #                                  kvectors::Array{Kvector, 1}, α::Float64)
- # 	sr_potential = 0.0 # short-range contribution
- # 	lr_potential = 0.0 # long-range contribution
- #     for (i, molecule) in enumerate(molecules)
- #         if i == exclude_molecule_id
- #             continue
- #         end
- #         
- #         for charge in molecule.charges
- #             # vector from pt charge to pt of interest x in Cartesian coordinates
- #             dx = x - charge.x
- #             
- #             ###
- #             #  Long-range contribution
- #             ###
- #             @simd for kvector in kvectors
- #                 # k ⋅ (x - x_a)
- #                 @inbounds k_dot_dx = kvector.k[1] * dx[1] + kvector.k[2] * dx[2] + kvector.k[3] * dx[3]
- #                 @inbounds @fastmath lr_potential += charge.q * cos(k_dot_dx) * kvector.weight
- #             end
- # 
- #             ###
- #             #  Short range contribution
- #             ###
- #             dxf = sim_box.c_to_f * dx
- #             # apply nearest image convention for periodic BCs
- #             nearest_image!(dxf, (1, 1, 1))
- # 
- #             # convert distance vector to Cartesian coordinates
- #             dx = sim_box.f_to_c * dxf
- # 
- #             @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
- #             if r < sr_cutoff_radius
- #                 @inbounds @fastmath sr_potential += charge.q / r* erfc(r * α)
- #             end
- #         end
- #     end
- #     sr_potential /= 4.0 * π * ϵ₀
- #     lr_potential /= sim_box.Ω
- # 
- #     return (lr_potential + sr_potential)::Float64
- # end
- # 
- # function electrostatic_potential_energy(molecules::Array{Molecule, 1}, molecule_id::Int, 
- #                                         sim_box::Box, sr_cutoff_radius::Float64,
- #                                         kvectors::Array{Kvector, 1}, α::Float64)
- #     ϕ = 0.0
- #     for charge in molecules[molecule_id].charges
- #         ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, sim_box,
- #                                                 sr_cutoff_radius, kvectors, α)
- #     end
- #     return ϕ
- # end
+#TODO TEST THIS!
+function electrostatic_potential(molecules::Array{Molecule, 1}, exclude_molecule_id::Int,
+                                 x::Array{Float64, 1},
+                                 sim_box::Box,
+                                 sr_cutoff_radius::Float64,
+                                 eikar::OffsetArray{Complex{Float64}},
+                                 eikbr::OffsetArray{Complex{Float64}},
+                                 eikcr::OffsetArray{Complex{Float64}},
+                                 kreps::Tuple{Int, Int, Int}, 
+                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}}, α::Float64)
+	sr_potential = 0.0 # short-range contribution
+	lr_potential::Float64 = 0.0 # long-range contribution
+    for (i, molecule) in enumerate(molecules)
+        if i == exclude_molecule_id
+            continue
+        end
+        
+        for charge in molecule.charges
+            # vector from pt charge to pt of interest x in Cartesian coordinates
+            dx = x - charge.x
+            # reciprocal lattice vectors ⋅ dx
+            k_dot_dx = transpose(sim_box.reciprocal_lattice) * dx
+        
+            ###
+            #  Long-range contribution
+            ###
+            # compute e^{ i * n * k * (x - charge.x)} for n = -krep:krep
+            fill_eikr!(eikar, k_dot_dx[1], kreps[1], false) # via symmetry only need +ve
+            fill_eikr!(eikbr, k_dot_dx[2], kreps[2], true)
+            fill_eikr!(eikcr, k_dot_dx[3], kreps[3], true)
+            
+            # loop over kevectors
+            for kc=-kreps[3]:kreps[3], kb = -kreps[2]:kreps[2], ka = 0:kreps[1]
+                # same logic as in `precompute_kvec_wts` but faster.
+                if ka == 0
+                    if kb < 0
+                        continue
+                    end
+                    if kb == 0 && kc <= 0
+                        continue
+                    end
+                end
+                # cos( i * this_k * r) = real part of:
+                #     e^{i ka r * vec(ka)} * 
+                #     e^{i kb r * vec(kb)} * 
+                #     e^{i kb r * vec(kc)} where r = x - xᵢ
+                #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
+                @unsafe @inbounds lr_potential += charges.q * kvec_wts[ka, kb, kc] * real(eikar[ka] * eikbr[kb] * eikcr[kc])
+            end
+            
+            ###
+            #  Short range contribution
+            ###
+            dxf = sim_box.c_to_f * dx
+            # apply nearest image convention for periodic BCs
+            nearest_image!(dxf, (1, 1, 1))
+
+            # convert distance vector to Cartesian coordinates
+            dx = sim_box.f_to_c * dxf
+
+            @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
+            if r < sr_cutoff_radius
+                @inbounds @fastmath sr_potential += charge.q / r* erfc(r * α)
+            end
+        end
+    end
+    sr_potential /= 4.0 * π * ϵ₀
+    lr_potential /= sim_box.Ω
+
+    return (lr_potential + sr_potential)::Float64
+end
+
+function electrostatic_potential_energy(molecules::Array{Molecule, 1}, molecule_id::Int, 
+                                 sim_box::Box,
+                                 sr_cutoff_radius::Float64,
+                                 eikar::OffsetArray{Complex{Float64}},
+                                 eikbr::OffsetArray{Complex{Float64}},
+                                 eikcr::OffsetArray{Complex{Float64}},
+                                 kreps::Tuple{Int, Int, Int}, 
+                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}}, α::Float64)
+    ϕ = 0.0
+    for charge in molecules[molecule_id].charges
+        ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, sim_box,
+                                                sr_cutoff_radius, eikar, eikbr, eikcr, 
+                                                kreps, α)
+    end
+    return ϕ
+end
