@@ -109,9 +109,9 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
         eikc = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
         
         # ka, kb, kc = 0.0
-        eika[0] = 1.0 + 0.0 * im
-        eikb[0] = 1.0 + 0.0 * im
-        eikc[0] = 1.0 + 0.0 * im
+        eika[0] = exp(0.0 * im)
+        eikb[0] = exp(0.0 * im)
+        eikc[0] = exp(0.0 * im)
         
         for i = 1:framework.n_atoms
             # compute dot product with each of the three reciprocal lattice vectors
@@ -120,9 +120,9 @@ function electrostatic_potential(framework::Framework, x::Array{Float64, 1},
             kc_dot_dx = dot(dx[:, i], sim_box.reciprocal_lattice[:, 3])
 
             # explicitly compute for ka, kb, kc = 1
-            eika[1] = cos(ka_dot_dx) + im * sin(ka_dot_dx)
-            eikb[1] = cos(kb_dot_dx) + im * sin(kb_dot_dx)
-            eikc[1] = cos(kc_dot_dx) + im * sin(kc_dot_dx)
+            eika[1] = exp(im * ka_dot_dx)
+            eikb[1] = exp(im * kb_dot_dx)
+            eikc[1] = exp(im * kc_dot_dx)
             
             # recursion relation for higher frequency cosines.
             for ka = 2:kreps[1]
