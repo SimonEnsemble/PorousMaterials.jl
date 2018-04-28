@@ -8,6 +8,13 @@ const ϵ₀ = 4.7622424954949676e-7  # \epsilon_0 vacuum permittivity units: ele
 # TODO use NIST test data https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
 #   to untar: tar zxvf spce_sample_configurations-tar.gz
 
+struct EwaldParams
+    kreps::Tuple{Int, Int, Int}
+    α::Float64
+    sr_cutoff_r::Float64
+    box::Box
+end
+
 """
     kvectors = precompute_kvec_wts(sim_box, kreps, α)
 
@@ -22,12 +29,12 @@ with ka=0, kb=-5, kc=4.
 - `kreps::Tuple{Int, Int, Int}`: The number of reciprocal lattice space replications to include in the long-range Ewald sum.
 - `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
 """
-function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Float64)
-    kvec_wts = OffsetArray(Float64, 0:kreps[1], -kreps[2]:kreps[2], -kreps[3]:kreps[3])
+function precompute_kvec_wts(eparams::EwaldParams)
+    kvec_wts = OffsetArray(Float64, 0:eparams.kreps[1], -eparams.kreps[2]:eparams.kreps[2], -eparams.kreps[3]:eparams.kreps[3])
     # take advantage of symmetry. cos(k ⋅ dx) = cos( (-k) ⋅ dx)
     #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
     #   hence ka goes from 0:k_repfactors[3]
-    for ka = 0:kreps[1], kb = -kreps[2]:kreps[2], kc=-kreps[3]:kreps[3]
+    for ka = 0:eparams.kreps[1], kb = -eparams.kreps[2]:eparams.kreps[2], kc=-eparams.kreps[3]:eparams.kreps[3]
         # don't include the home unit cell
         if (ka == 0) && (kb == 0) && (kc == 0)
             kvec_wts[ka, kb, kc] = NaN
@@ -46,13 +53,13 @@ function precompute_kvec_wts(sim_box::Box, kreps::Tuple{Int, Int, Int}, α::Floa
         end
 
         # reciprocal vector, k
-        k = sim_box.reciprocal_lattice * [ka, kb, kc]
+        k = eparams.box.reciprocal_lattice * [ka, kb, kc]
         # |k|²
         norm_squared = dot(k, k)
         
         # factor of 2 from cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
         #  and how we include ka>=0 only and the two if statements above
-        kvec_wts[ka, kb, kc] = 2 * exp(- norm_squared / (4.0 * α ^ 2)) / norm_squared / ϵ₀
+        kvec_wts[ka, kb, kc] = 2 * exp(- norm_squared / (4.0 * eparams.α ^ 2)) / norm_squared / ϵ₀
     end
     return kvec_wts
 end
@@ -66,11 +73,13 @@ eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
 eikrb has indices -kreps[2]:kreps[2] and corresponds to recip. vector in b-direction
 eikrc has indices -kreps[3]:kreps[3] and corresponds to recip. vector in c-direction
 """
-function allocate_eikr(kreps::Tuple{Int, Int, Int})
+function setup_Ewald_sum(kreps::Tuple{Int, Int, Int}, α::Float64, sr_cutoff_r::Float64, sim_box::Box)
+    eparams = EwaldParams(kreps, α, sr_cutoff_r, sim_box)
+    kvec_wts = precompute_kvec_wts(eparams)
     eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
     eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
     eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
-    return eikar, eikbr, eikcr
+    return eparams, kvec_wts, eikar, eikbr, eikcr
 end
 
 """
@@ -124,16 +133,13 @@ conditions are applied through the Ewald summation.
 - `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
 """
 function electrostatic_potential(framework::Framework,
-                                 x::Array{Float64, 1}, 
-                                 sim_box::Box,
+                                 x::Array{Float64, 1},
                                  repfactors::Tuple{Int, Int, Int},
-                                 sr_cutoff_radius::Float64,
+                                 eparams::EwaldParams,
+                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
                                  eikar::OffsetArray{Complex{Float64}},
                                  eikbr::OffsetArray{Complex{Float64}},
-                                 eikcr::OffsetArray{Complex{Float64}},
-                                 kreps::Tuple{Int, Int, Int}, 
-                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
-                                 α::Float64)
+                                 eikcr::OffsetArray{Complex{Float64}})
     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
     xf = mod.(framework.box.c_to_f * x, 1.0)
 
@@ -149,19 +155,19 @@ function electrostatic_potential(framework::Framework,
         # compute dot product with each of the three reciprocal lattice vectors
         #   k_dot_dx[i, j] = kᵢ ⋅ (x - xⱼ)
         # TODO make recip lattice transposed...
-        @inbounds k_dot_dx = transpose(sim_box.reciprocal_lattice) * dx
+        @inbounds k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
         
         ###
         #  Long-range contribution
         ###
         for i = 1:framework.n_atoms
             # compute e^{ i * n * k * (x - xᵢ)} for n = -krep:krep
-            fill_eikr!(eikar, k_dot_dx[1, i], kreps[1], false) # via symmetry only need +ve
-            fill_eikr!(eikbr, k_dot_dx[2, i], kreps[2], true)
-            fill_eikr!(eikcr, k_dot_dx[3, i], kreps[3], true)
+            fill_eikr!(eikar, k_dot_dx[1, i], eparams.kreps[1], false) # via symmetry only need +ve
+            fill_eikr!(eikbr, k_dot_dx[2, i], eparams.kreps[2], true)
+            fill_eikr!(eikcr, k_dot_dx[3, i], eparams.kreps[3], true)
             
             # loop over kevectors
-            for kc=-kreps[3]:kreps[3], kb = -kreps[2]:kreps[2], ka = 0:kreps[1]
+            for kc=-eparams.kreps[3]:eparams.kreps[3], kb = -eparams.kreps[2]:eparams.kreps[2], ka = 0:eparams.kreps[1]
                 # same logic as in `precompute_kvec_wts` but faster.
                 if ka == 0
                     if kb < 0
@@ -191,31 +197,28 @@ function electrostatic_potential(framework::Framework,
 
         for i = 1:framework.n_atoms
             @inbounds @fastmath r = sqrt(dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i])
-            if r < sr_cutoff_radius
-                @inbounds @fastmath sr_potential += framework.charges[i] / r * erfc(r * α)
+            if r < eparams.sr_cutoff_r
+                @inbounds @fastmath sr_potential += framework.charges[i] / r * erfc(r * eparams.α)
             end
         end
     end
     sr_potential /= 4.0 * π * ϵ₀
-    lr_potential /= sim_box.Ω
+    lr_potential /= eparams.box.Ω
 
     return (lr_potential + sr_potential)::Float64
 end		
 
 function electrostatic_potential_energy(framework::Framework,
-                                        molecule::Molecule,
-                                        sim_box::Box,
-                                        repfactors::Tuple{Int, Int, Int},
-                                        sr_cutoff_radius::Float64,
-                                        eikar::OffsetArray{Complex{Float64}},
-                                        eikbr::OffsetArray{Complex{Float64}},
-                                        eikcr::OffsetArray{Complex{Float64}},
-                                        kreps::Tuple{Int, Int, Int}, 
-                                        kvec_wts::OffsetArray{Float64, 3, Array{Float64,3}},
-                                        α::Float64)
+                                     molecule::Molecule,
+                                     repfactors::Tuple{Int, Int, Int},
+                                     eparams::EwaldParams,
+                                     kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
+                                     eikar::OffsetArray{Complex{Float64}},
+                                     eikbr::OffsetArray{Complex{Float64}},
+                                     eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for charge in molecule.charges
-        ϕ += charge.q * electrostatic_potential(framework, charge.x, sim_box, repfactors, sr_cutoff_radius, eikar, eikbr, eikcr, kreps, kvec_wts, α)
+        ϕ += charge.q * electrostatic_potential(framework, charge.x, repfactors, eparams, kvec_wts, eikar, eikbr, eikcr)
     end
     return ϕ
 end
@@ -231,14 +234,11 @@ simulation box, excluding the contribution of `molecules[exclude_molecule_id]`.
 function electrostatic_potential(molecules::Array{Molecule, 1},
                                  exclude_molecule_id::Int,
                                  x::Array{Float64, 1},
-                                 sim_box::Box,
-                                 sr_cutoff_radius::Float64,
+                                 eparams::EwaldParams,
+                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
                                  eikar::OffsetArray{Complex{Float64}},
                                  eikbr::OffsetArray{Complex{Float64}},
-                                 eikcr::OffsetArray{Complex{Float64}},
-                                 kreps::Tuple{Int, Int, Int}, 
-                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
-                                 α::Float64)
+                                 eikcr::OffsetArray{Complex{Float64}})
 	sr_potential = 0.0 # short-range contribution
 	lr_potential::Float64 = 0.0 # long-range contribution
     for (i, molecule) in enumerate(molecules)
@@ -250,18 +250,18 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
             # vector from pt charge to pt of interest x in Cartesian coordinates
             dx = x - charge.x
             # reciprocal lattice vectors ⋅ dx
-            k_dot_dx = transpose(sim_box.reciprocal_lattice) * dx
+            k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
         
             ###
             #  Long-range contribution
             ###
             # compute e^{ i * n * k * (x - charge.x)} for n = -krep:krep
-            fill_eikr!(eikar, k_dot_dx[1], kreps[1], false) # via symmetry only need +ve
-            fill_eikr!(eikbr, k_dot_dx[2], kreps[2], true)
-            fill_eikr!(eikcr, k_dot_dx[3], kreps[3], true)
+            fill_eikr!(eikar, k_dot_dx[1], eparams.kreps[1], false) # via symmetry only need +ve
+            fill_eikr!(eikbr, k_dot_dx[2], eparams.kreps[2], true)
+            fill_eikr!(eikcr, k_dot_dx[3], eparams.kreps[3], true)
             
             # loop over kevectors
-            for kc=-kreps[3]:kreps[3], kb = -kreps[2]:kreps[2], ka = 0:kreps[1]
+            for kc=-eparams.kreps[3]:eparams.kreps[3], kb = -eparams.kreps[2]:eparams.kreps[2], ka = 0:eparams.kreps[1]
                 # same logic as in `precompute_kvec_wts` but faster.
                 if ka == 0
                     if kb < 0
@@ -282,40 +282,36 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
             ###
             #  Short range contribution
             ###
-            dxf = sim_box.c_to_f * dx
+            dxf = eparams.box.c_to_f * dx
             # apply nearest image convention for periodic BCs
             nearest_image!(dxf, (1, 1, 1))
 
             # convert distance vector to Cartesian coordinates
-            dx = sim_box.f_to_c * dxf
+            dx = eparams.box.f_to_c * dxf
 
             @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
-            if r < sr_cutoff_radius
-                @inbounds @fastmath sr_potential += charge.q / r* erfc(r * α)
+            if r < eparams.sr_cutoff_r
+                @inbounds @fastmath sr_potential += charge.q / r * erfc(r * eparams.α)
             end
         end
     end
     sr_potential /= 4.0 * π * ϵ₀
-    lr_potential /= sim_box.Ω
+    lr_potential /= eparams.box.Ω
 
     return (lr_potential + sr_potential)::Float64
 end
 
 function electrostatic_potential_energy(molecules::Array{Molecule, 1},
-                                        molecule_id::Int, 
-                                        sim_box::Box,
-                                        sr_cutoff_radius::Float64,
-                                        eikar::OffsetArray{Complex{Float64}},
-                                        eikbr::OffsetArray{Complex{Float64}},
-                                        eikcr::OffsetArray{Complex{Float64}},
-                                        kreps::Tuple{Int, Int, Int}, 
-                                        kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
-                                        α::Float64)
+                                        molecule_id::Int,
+                                     eparams::EwaldParams,
+                                     kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
+                                     eikar::OffsetArray{Complex{Float64}},
+                                     eikbr::OffsetArray{Complex{Float64}},
+                                     eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for charge in molecules[molecule_id].charges
-        ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, sim_box,
-                                                sr_cutoff_radius, eikar, eikbr, eikcr, 
-                                                kreps, kvec_wts, α)
+        ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, eparams,
+                                                kvec_wts, eikar, eikbr, eikcr)
     end
     return ϕ
 end
