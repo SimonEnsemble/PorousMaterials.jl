@@ -148,7 +148,7 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
         return true
     else
         @printf("Framework %s possesses the following atoms not covered by the forcefield %s:\n", framework.name, ljforcefield.name)
-        println(missing_atoms)
+        println(string(missing_atoms))
         return false
     end
 end
@@ -167,7 +167,7 @@ function check_forcefield_coverage(molecule::Molecule, ljforcefield::LennardJone
         return true
     else
         @printf("Molecule %s possesses the following atoms not covered by the forcefield %s:\n", molecule.species, ljforcefield.name)
-        println(missing_atoms)
+        println(string(missing_atoms))
         return false
     end
 end
