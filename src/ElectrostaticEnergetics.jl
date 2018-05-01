@@ -8,10 +8,15 @@ const ϵ₀ = 4.7622424954949676e-7  # \epsilon_0 vacuum permittivity units: ele
 # TODO use NIST test data https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
 #   to untar: tar zxvf spce_sample_configurations-tar.gz
 
+"Data structure for storing Ewald summation settings"
 struct EwaldParams
+    "number of k-vector replications in reciprocal space e.g.(1,3,1)"
     kreps::Tuple{Int, Int, Int}
+    "Ewald summation convergence parameter"
     α::Float64
+    "short-range cutoff radius (units: Å)"
     sr_cutoff_r::Float64
+    "simulation box"
     box::Box
 end
 
@@ -30,10 +35,14 @@ with ka=0, kb=-5, kc=4.
 - `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
 """
 function precompute_kvec_wts(eparams::EwaldParams)
-    kvec_wts = OffsetArray(Float64, 0:eparams.kreps[1], -eparams.kreps[2]:eparams.kreps[2], -eparams.kreps[3]:eparams.kreps[3])
+    # wts. on k-vector contributions to Ewald sum in Fourier space
+    #  offset array. goal: kvec_wts[2, -4, 5] gives contribution of k-vec (2,-4, 5)
+    kvec_wts = OffsetArray(Float64, 0:eparams.kreps[1], 
+                                    -eparams.kreps[2]:eparams.kreps[2],
+                                    -eparams.kreps[3]:eparams.kreps[3])
     # take advantage of symmetry. cos(k ⋅ dx) = cos( (-k) ⋅ dx)
     #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
-    #   hence ka goes from 0:k_repfactors[3]
+    #   hence ka goes from 0:k_repfactors[1]
     for ka = 0:eparams.kreps[1], kb = -eparams.kreps[2]:eparams.kreps[2], kc=-eparams.kreps[3]:eparams.kreps[3]
         # don't include the home unit cell
         if (ka == 0) && (kb == 0) && (kc == 0)
@@ -52,7 +61,7 @@ function precompute_kvec_wts(eparams::EwaldParams)
             continue
         end
 
-        # reciprocal vector, k
+        # compute reciprocal vector, k
         k = eparams.box.reciprocal_lattice * [ka, kb, kc]
         # |k|²
         norm_squared = dot(k, k)
@@ -65,8 +74,11 @@ function precompute_kvec_wts(eparams::EwaldParams)
 end
 
 """
-    eikr = allocate_eikr(kreps)
+    eparams, kvec_wts, eikr = setup_Ewald_sum()
 
+Construct Ewald parameters data type.
+Pre-compute weights on k-vector contributions to Ewald sum in Fourier space, return as 
+OffsetArray.
 Allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal
 lattice vector.
 eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
