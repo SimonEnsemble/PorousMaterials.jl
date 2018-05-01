@@ -112,7 +112,7 @@ end;
     @test all(isapprox.([norm(m.ljspheres[1].x) for m in ms], 1.0))
     write_to_xyz(ms, "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
-    
+
     # Test to see if rotation_matrix() is random and uniform on sphere surface
     N = 1000000
     points = Array{Float64, 2}(3,N)
@@ -148,7 +148,7 @@ end;
     end
     @test r_orthogonal
     @test r_det_1
-    
+
     # test rotate function
     translate_to!(m2, [50.0, 100.0, 150.0])
     for i = 1:2000
@@ -286,7 +286,7 @@ end
     molecules = Array{Molecule}(0)
     repfactors = replication_factors(frame.box, ljforcefield)
     sim_box = replicate_box(frame.box, repfactors)
-    
+
     m = read_molecule_file("He")
     for i = 1:100
         insert_molecule!(molecules, sim_box, m)
@@ -365,7 +365,7 @@ end
     dxf = [1.2, -0.2, 2.4]
     nearest_image!(dxf, repfactors)
     @test isapprox(dxf, [0.2, -0.2, -0.6])
-    
+
     dxf = [1.2 -0.3; -0.2 -0.1; 2.4 3.4]
     nearest_image!(dxf, repfactors)
     @test isapprox(dxf, [0.2 -0.3; -0.2 -0.1; -0.6 0.4])
@@ -381,21 +381,21 @@ end
     energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:Xe][:He])
     @test energy ≈ vdw_energy(1, molecules, ljforcefield, sim_box)
     @test energy ≈ vdw_energy(2, molecules, ljforcefield, sim_box) # symmetry
-    
+
     # via PBC, a distance (24.0 - 5.0) > (1+5)
     translate_to!(molecules[2], [24.0, 12.0, 12.0])
     r² = (1.0 + 5.0) ^ 2 # PBC
     energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:He][:Xe])
     @test energy ≈ vdw_energy(2, molecules, ljforcefield, sim_box)
     @test energy ≈ vdw_energy(1, molecules, ljforcefield, sim_box) # symmetry again.
-    
+
     # put a molecule on top of first one.
     push!(molecules, deepcopy(molecules[1]))
     @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 2 * energy
-    
+
     @test vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
     @test vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
-    
+
     # interaction energy between first and second should be same via PBC
     molecules_a = [read_molecule_file("Xe"), read_molecule_file("He")]
     translate_to!(molecules_a[1], [11.0, 1.0, 12.0])
@@ -404,7 +404,7 @@ end
     translate_to!(molecules_b[1], [11.0, 1.0, 12.0])
     translate_to!(molecules_b[2], [11.0, 23.0, 12.0])
     @test vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ vdw_energy(1, molecules_b, ljforcefield, sim_box)
-    
+
     # another PBC one where three coords are different.
     molecules = [read_molecule_file("Xe"), read_molecule_file("He")]
     translate_to!(molecules[1], [24.0, 23.0, 11.0])
@@ -423,4 +423,53 @@ end
     @test all(molecules[1].ljspheres[1].x .== [0.0, 0.0, 0.0])
     @test all(molecules[2].ljspheres[1].x .== [12.0, 12.0, 12.0])
     # TODO write tests for CO2 where there are more than one beads
+
+    # Molecules with more than one ljsphere
+
+    # two CO2 molecules 6.0 units apart
+    molecules_co2 = [read_molecule_file("CO2"), read_molecule_file("CO2")]
+    translate_to!(molecules_co2[1], [12.0, 9.0, 12.0])
+    translate_to!(molecules_co2[2], [12.0, 15.0, 12.0])
+    # because the molecules have not been rotated, all corresponding beads are same
+    #   distance apart when they are separated along the y-axis
+    r²_com = (15.0 - 9.0)^2
+    # distance between teh central carbon and an oxygen in one molecule this
+    #   takes advantage of the fact that the carbon is the central atom, and that
+    #   all three atoms are in a line
+    r²_co = 1.16^2
+    # distance between the two oxygens in one molecule
+    r²_oo = (2.0 * 1.16)^2
+    energy = (2.0 * lennard_jones(r²_com, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + 4.0 * lennard_jones(r²_com + r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2])
+        + 2.0 * lennard_jones(r²_com + r²_oo, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + lennard_jones(r²_com, ljforcefield.σ²[:C_CO2][:C_CO2], ljforcefield.ϵ[:C_CO2][:C_CO2]))
+    @test vdw_energy(1, molecules_co2, ljforcefield, sim_box) ≈ energy
+    @test vdw_energy(2, molecules_co2, ljforcefield, sim_box) ≈ energy
+    # TODO this didn't work when the symbols were regular (:O and :C) but it did work when they were :C_CO2 and :O_CO2
+
+    # PBC placing one at 2.0 and the other at 21.0
+    translate_to!(molecules_co2[1], [12.0, 2.0, 12.0])
+    translate_to!(molecules_co2[2], [12.0, 21.0, 12.0])
+    r²_com = (4.0 + 2.0)^2
+    energy = (2.0 * lennard_jones(r²_com, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + 4.0 * lennard_jones(r²_com + r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2])
+        + 2.0 * lennard_jones(r²_com + r²_oo, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + lennard_jones(r²_com, ljforcefield.σ²[:C_CO2][:C_CO2], ljforcefield.ϵ[:C_CO2][:C_CO2]))
+    @test vdw_energy(1, molecules_co2, ljforcefield, sim_box) ≈ energy
+    @test vdw_energy(2, molecules_co2, ljforcefield, sim_box) ≈ energy
+
+    # testing cutoff radius, so only one oxygen from each will be able to interact
+    # making a larger sim_box so that only a few ljspheres from each CO2 will be able to interact
+    sim_box_large = construct_box(50.0, 50.0, 50.0, π/2, π/2, π/2)
+    # placed 12.6 units apart so the C atoms will be outside the cutoff radius,
+    #   but one O atom from each will be inside, so these will interact
+    translate_to!(molecules_co2[1], [0.0, 0.0, 0.0])
+    translate_to!(molecules_co2[2], [13.0, 0.0, 0.0])
+    r²_com = (13.0)^2
+    r²_o = (13.0 - (2.0 * 1.16))^2
+    r²_co = (13.0 - 1.16)^2
+    energy = (lennard_jones(r²_o, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + 2 * lennard_jones(r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2]))
+    @test vdw_energy(1, molecules_co2, ljforcefield, sim_box_large) ≈ energy
+    @test vdw_energy(2, molecules_co2, ljforcefield, sim_box_large) ≈ energy
 end
