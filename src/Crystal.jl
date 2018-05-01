@@ -144,46 +144,57 @@ end
 Read a crystal structure file (.cif or .cssr) and construct a Framework object.
 If `run_checks=True`, checks for atom overlap and charge neutrality. `net_charge_tol` is the tolerance for net charge.
 """
-function read_crystal_structure_file(filename::String; run_checks::Bool=true, net_charge_tol::Float64=0.001)
-    # read file extension, ensure reader implemented.
+function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=true, net_charge_tol::Float64=0.001, remove_overlap = false)
+    # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
         error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
     end
 
-    # read in crystal structure file
-    if ! isfile(PATH_TO_DATA * "crystals/" * filename)
+    path_to_file = PATH_TO_DATA * "crystals/" * filename
+    # Read in crystal structure file
+    if ! isfile(path_to_file)
         error(@sprintf("Could not open crystal structure file %s\n",
-                       PATH_TO_DATA * "crystals/" * filename))
+                       path_to_file))
     end
 
-    f = open(PATH_TO_DATA * "crystals/" * filename, "r")
+    f = open(path_to_file, "r")
     lines = readlines(f)
     close(f)
 
-    # populate these arrays when reading the xtal structure file.
-    charges = Float64[] # point charges on each atom
-    xf = Float64[] # fractional coords
-    yf = Float64[]
-    zf = Float64[]
-    atoms = Symbol[] # atom names
+    # Initialize arrays. We'll populate them when reading through the crystal structure file.
+    charges = Array{Float64, 1}()
+    xf = Array{Float64, 1}()
+    yf = Array{Float64, 1}()
+    zf = Array{Float64, 1}()
+    atoms = Array{Symbol, 1}()
 
-    # .cif reader
+
+    # Start of .cif reader
     if extension == "cif"
-        data = Dict()
+        data = Dict{AbstractString, Float64}()
         loop_starts = -1
-        for i = 1:length(lines)
-            line = split(lines[i])
+        for (i, line) in enumerate(lines)
+            line = split(line)
+            # Skip empty lines
             if length(line) == 0
                 continue
             end
 
+            # Make sure the space group is P1
             if line[1] == "_symmetry_space_group_name_H-M"
-                # TODO long-term write our own replicator?
                 if length(line) == 3
-					@assert(contains(line[2] * line[3], "P1") || contains(line[2] * line[3], "P 1") || contains(line[2] * line[3], "P-1") || contains(line[2] * line[3], "-P1"), ".cif must have P1 symmetry.\n")
+                    @assert(contains(line[2] * line[3], "P1") ||
+                            contains(line[2] * line[3], "P 1") ||
+                            contains(line[2] * line[3], "P-1") ||
+                            contains(line[2] * line[3], "-P1"),
+                            "cif must have P1 symmetry.\n")
                 elseif length(line) == 2
-					@assert(contains(line[2], "P1") || contains(line[2], "P 1") || contains(line[2], "P -1") || contains(line[2], "-P 1"), ".cif must have P1 symmetry\n")
+                    @assert(contains(line[2], "P1") ||
+                            contains(line[2], "P 1") ||
+                            contains(line[2], "P -1") ||
+                            contains(line[2], "-P1"),
+                            "cif must have P1 symmetry.\n")
                 else
                     println(line)
                     error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
@@ -192,34 +203,38 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true, ne
 
             for axis in ["a", "b", "c"]
                 if line[1] == @sprintf("_cell_length_%s", axis)
-					data[axis] = parse(Float64, split(line[2],'(')[1])
+                    data[axis] = parse(Float64, split(line[2],'(')[1])
                 end
             end
 
             for angle in ["alpha", "beta", "gamma"]
                 if line[1] == @sprintf("_cell_angle_%s", angle)
-					data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
+                    data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
                 end
             end
 
-            if (line[1] == "loop_")
+            # As soon as we reach the coordinate loop, we break this for-loop
+            # and replace it with a while-loop further down
+            if line[1] == "loop_"
                 next_line = split(lines[i+1])
                 if contains(next_line[1], "_atom_site")
                     loop_starts = i + 1
                     break
                 end
             end
-        end  # end loop over lines
+
+        end # End loop over lines
 
         if loop_starts == -1
-            error("Could not find _atom_site* after loop_ if .cif file\n")
+            error("Could not find _atom_site* after loop_ in .cif file\n")
         end
 
-        # broke the loop. so loop_starts is line where "_loop" first starts
+
+        atom_column_name = ""
         # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
         #   use example: name_to_column["_atom_site_fract_x"] gives 3
-        atom_column_name = "_atom_site_type_symbol"  # this can be different for different .cifs...
         name_to_column = Dict{AbstractString, Int}()
+
         i = loop_starts
         while length(split(lines[i])) == 1
             if i == loop_starts
@@ -229,39 +244,27 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true, ne
             i += 1
         end
 
-		#TODO clean up exclude_multiple_labels function? Right now it checks to see if two labels represent the same atom (poorly), but it's far from optimized and there has to be a better way to do it. -Arni
-		exclude_boolean = exclude_multiple_labels(lines, loop_starts+length(name_to_column), name_to_column)
-        # now extract fractional coords of atoms and their charges
-		atom_labels = Array{AbstractString,1}()
+
         for i = loop_starts+length(name_to_column):length(lines)
+            # Skip identical atoms if they're present
+
             line = split(lines[i])
             if length(line) != length(name_to_column)
                 break
             end
 
-			# Check to see if label already exists
-            if haskey(name_to_column, "_atom_site_label")
-                label = split(line[name_to_column["_atom_site_label"]],'_')[1]
+            push!(atoms, line[name_to_column[atom_column_name]])
+            push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
+            push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
+            push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
+            # If charges present, import them
+            if haskey(name_to_column, "_atom_site_charge")
+                push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
             else
-                label = Void
+                push!(charges, 0.0)
             end
-
-			if !in(label,atom_labels)
-				push!(atoms, Symbol(line[name_to_column[atom_column_name]]))
-				push!(xf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]],'(')[1]), 1.0))
-				push!(yf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]],'(')[1]), 1.0))
-				push!(zf, mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]],'(')[1]), 1.0))
-				# if charges present, import them
-				if haskey(name_to_column, "_atom_site_charge")
-					push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
-				else
-					push!(charges, 0.0)
-				end
-                if haskey(name_to_column, "_atom_site_label") & exclude_boolean
-					push!(atom_labels, label)
-				end
-			end
         end
+
         n_atoms = length(xf)
         a = data["a"]
         b = data["b"]
@@ -270,14 +273,15 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true, ne
         β = data["beta"]
         γ = data["gamma"]
 
+    # Start of cssr reader #TODO make sure this works for different .cssr files!
     elseif extension == "cssr"
-        # get unit cell sizes
-        line = split(lines[1]) # first line is (a, b, c)
+        # First line contains unit cell lenghts
+        line = split(lines[1])
         a = parse(Float64, line[1])
         b = parse(Float64, line[2])
         c = parse(Float64, line[3])
 
-        # get unit cell angles. Convert to radians
+        # Second line contains unit cell angles
         line = split(lines[2])
         α = parse(Float64, line[1]) * pi / 180.0
         β = parse(Float64, line[2]) * pi / 180.0
@@ -285,40 +289,44 @@ function read_crystal_structure_file(filename::String; run_checks::Bool=true, ne
 
         n_atoms = parse(Int, split(lines[3])[1])
 
-        # read in atoms and fractional coordinates
+        # Read in atoms and fractional coordinates
         for i = 1:n_atoms
             line = split(lines[4 + i])
-
             push!(atoms, line[2])
 
-            push!(xf, mod(parse(Float64, line[3]), 1.0)) # wrap to [0,1]
-            push!(yf, mod(parse(Float64, line[4]), 1.0)) # wrap to [0,1]
-            push!(zf, mod(parse(Float64, line[5]), 1.0)) # wrap to [0,1]
+            push!(xf, mod(parse(Float64, line[3]), 1.0)) # Wrap to [0,1]
+            push!(yf, mod(parse(Float64, line[4]), 1.0)) # Wrap to [0,1]
+            push!(zf, mod(parse(Float64, line[5]), 1.0)) # Wrap to [0,1]
 
             push!(charges, parse(Float64, line[14]))
         end
     end
 
-    # construct the unit cell box
+    # Construct the unit cell box
     box = construct_box(a, b, c, α, β, γ)
 
     fractional_coords = Array{Float64, 2}(3, n_atoms)
-    fractional_coords[1, :] = xf[:]; fractional_coords[2, :] = yf[:]; fractional_coords[3, :] = zf[:]
+    fractional_coords[1, :] = xf[:]; fractional_coords[2,:] = yf[:]; fractional_coords[3,:] = zf[:]
 
-    # finally construct the framework
+    # And finally construct the framework
     framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
 
-    if run_checks
+    if run_checks && !remove_overlap
         if atom_overlap(framework)
-            error(@sprintf("At least one pair of atoms overlap in %s\n", framework.name))
+            error(@sprintf("At least one pair of atoms overlap in %s\nConsider calling this function again with `remove_overlap = true`\n", framework.name))
         end
         if ! charge_neutral(framework, net_charge_tol)
             error(@sprintf("Framework %s is not charge neutral; sum of charges is : %f e\n", framework.name, sum(framework.charges)))
         end
     end
 
+    if remove_overlap
+        framework = remove_overlapping_atoms(framework, run_checks = run_checks)
+    end
+
     return framework
-end # constructframework end
+end
+
 
 """
     replicate_to_xyz(framework, xyzfilename=nothing; comment="", repfactors=(0, 0, 0),
@@ -396,6 +404,45 @@ function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose:
     return overlap
 end
 
+
+"""
+    remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0.1, verbose::Bool=false, run_checks = true)
+"""
+function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0.1, run_checks = true, net_charge_tol::Float64=0.001)
+    if !atom_overlap(framework)
+        @printf("No atoms were overlapping.\nReturning original framework...\n")
+        return framework
+    end
+    atoms_to_keep = trues(framework.n_atoms)
+
+    for i = 1:framework.n_atoms
+        for j = (i + 1):framework.n_atoms
+            dxf = framework.xf[:, i] - framework.xf[:, j]
+            dx = framework.box.f_to_c * dxf
+
+            if norm(dx) < hard_diameter && framework.atoms[i] == framework.atoms[j]
+                atoms_to_keep[j] = false
+            end
+        end
+    end
+    n_atoms = sum(atoms_to_keep)
+
+    new_frame = Framework(framework.name, framework.box, 
+                          n_atoms, framework.atoms[atoms_to_keep], 
+                          framework.xf[:,atoms_to_keep], framework.charges[atoms_to_keep])
+
+    if run_checks
+        if atom_overlap(new_frame)
+            error(@sprintf("At least one pair of atoms still overlaps in %s after we removed identical atoms. Consider checking if different elements are overlapping.\n", new_frame.name))
+        end
+        if ! charge_neutral(new_frame, net_charge_tol)
+            error(@sprintf("Framework %s is not charge neutral; sum of charges is : %f e\n For comparison, the sum of charges for the old framework was : %f e\n", new_frame.name, sum(new_frame.charges), sum(framework.charges)))
+        end
+    end
+    return new_frame
+end
+
+
 """
     cn = charge_neutral(framework::Framework, net_charge_tol::Float64) # true or false
 
@@ -421,7 +468,7 @@ function charged(framework::Framework)
 end
 
 """
-    strip_numbers_from_atom_labels(framework::Framework)
+    strip_numbers_from_atom_labels!(framework::Framework)
 
 Strip numbers from labels for `framework.atoms`.
 Precisely, for `atom` in `framework.atoms`, find the first number that appears in `atom`. Remove this number and all following characters from `atom`.
@@ -591,33 +638,8 @@ function crystal_density(framework::Framework)
     return mw / framework.box.Ω * 1660.53892  # --> kg/m3
 end
 
-"""
-	exclude_boolean = exclude_multiple_labels(lines, start, name_to_column)
 
-Checks to see if atom labels 0 and 1 (according to cif standards) are the same. If so, it will throw a `true` and the crystal structure reader will (hopefully) deal with it accordingly.
-"""
-function exclude_multiple_labels(lines, start, name_to_column)
-    if haskey(name_to_column, "_atom_site_label")
-        for (i,line) in enumerate(lines[start:length(lines)])
-            line = split(line)
-            if length(line) != length(name_to_column)
-                break
-            end
-            label = line[name_to_column["_atom_site_label"]]
-            if contains(label,"_")
-                for line2 in lines[start:start+i]
-                    line2 = split(line2)
-                    if split(label,"_")[1] == line2[name_to_column["_atom_site_label"]]
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    return false
-end
-
-function Base.print(io::IO, framework::Framework)
+function Base.show(io::IO, framework::Framework)
 	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
 	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
 	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
@@ -631,21 +653,14 @@ function Base.print(io::IO, framework::Framework)
 	@printf(io, "Number of atoms = %d", framework.n_atoms)
 end
 
-function Base.show(io::IO, framework::Framework)
-	print(io, framework)
-end
 
-function Base.print(io::IO, box::Box)
+function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
     @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
         box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
     @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n", 
         box.a, box.b, box.c)
     @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
-end
-
-function Base.show(io::IO, box::Box)
-	print(io, box)
 end
 
 function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
