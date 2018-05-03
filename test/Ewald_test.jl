@@ -21,12 +21,10 @@ q_test = 0.8096
 
     x = [4.269654927228, 23.137319129548, 28.352847101096]
     ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    println(ϕ * q_test)
     @test isapprox(ϕ * q_test, -531.0, atol=0.5)
 
     x = [-0.047382031804, 7.209555961450, 5.158180463556]
     ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    println(ϕ * q_test)
     @test isapprox(ϕ * q_test, -2676.8230141, atol=0.5)
 end
 

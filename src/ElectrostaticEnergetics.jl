@@ -11,12 +11,13 @@ const ϵ₀ = 4.7622424954949676e-7  # \epsilon_0 vacuum permittivity units: ele
 
 "Data structure for storing Ewald summation settings"
 struct EwaldParams
+    "number of replications in k-space in a, b, c directions"
     kreps::Tuple{Int, Int, Int}
-    "Ewald summation convergence parameter"
+    "Ewald summation convergence parameter (units: inverse Å)"
     α::Float64
     "short-range cutoff radius (units: Å)"
     sr_cutoff_r::Float64
-    "simulation box"
+    "simulation box in which Ewald sum is conducted (contains reciprocal lattice)"
     box::Box
 end
 
@@ -27,7 +28,13 @@ function Base.print(io::IO, eparams::EwaldParams)
     @printf(io, "\tshort-range cutoff radius (Å): %f\n", eparams.sr_cutoff_r)
 end
 
-struct Kvec
+"""
+Data structure for a k-vector replication, although the reciprocal lattice is needed to
+specify the exact k-vector.
+Stores the weight determining the contribution of kvector (ka, kb, kc) to the Fourier
+component of the Ewald sum. Ewald sums work with an array of `Kvec`'s.
+"""
+struct Kvector
     ka::Int
     kb::Int
     kc::Int
@@ -35,11 +42,17 @@ struct Kvec
     wt::Float64
 end
 
-function choose_ewald_params(sr_cutoff_r::Float64, sim_box::Box, ϵ::Float64)
+"""
+    α, max_mag_k_sqrd = determine_ewald_params(sr_cutoff_r, ϵ)
+
+For a given precision `ϵ` and short-range cutoff radius, compute the Ewald summation 
+convergence parameter α and the cutoff value for |k|² in the reciprocal space.
+"""
+function determine_ewald_params(sr_cutoff_r::Float64, ϵ::Float64)
     # α is Ewald sum convergence parameter. It determines how fast the long- and short-
     #  range interactions decay with r in the Fourier and real space sum, respectively.
-    #  erfc(α * r) / r dependence for short-range
-    #  exp(mag_k_squared / (4α²)) / mag_k_squared dependence for long-range
+    #    erfc(α * r) / r dependence for short-range
+    #    exp(-mag_k_squared / (4α²)) / mag_k_squared dependence for long-range
     #   as α increases, short-range contributions decays with r more quickly;
     #   thus need smaller sr_cutoff. but long-range decays more slowly with r with larger
     #   α. thus would need more kevectors.
@@ -48,16 +61,16 @@ function choose_ewald_params(sr_cutoff_r::Float64, sim_box::Box, ϵ::Float64)
     # solve for α to allow short-range interactions to decay beyond the cutoff radius. 
     sr_error(α) = erfc(sr_cutoff_r * α) / sr_cutoff_r - ϵ
     α = fzero(sr_error, 0.0, 25.0) # 25.0 should be safe bracket.
-    # solve for the magnitude of the k vectors required to allow long-range interactions 
-    #   to decay beyond the cutoff radius. 
+    # solve for the max squre norm of the k-vectors required to allow long-range 
+    #   interactions in Fourier space to decay beyond for k-vectors longer than this. 
     lr_error(mag_k_sqrd) = 2 * exp(- mag_k_sqrd / (4.0 * α ^ 2)) / mag_k_sqrd - ϵ
     max_mag_k_sqrd = fzero(lr_error, 0.0, 100.0)
     return α, max_mag_k_sqrd
 end
 
 """
-Given a value of |k|², how many k-reps do we require to ensure there are no k-vectors 
-outside of [ka, kb, kc] with a smaller square magnitude?
+Determine replications of k-vectors in Fourier sum, `kreps`, required to assert all 
+k-vectors with square magnitude less than |k|² (`max_mag_k_sqrd`) are included.
 """
 function required_kreps(box::Box, max_mag_k_sqrd::Float64)
     # fill in later
@@ -78,21 +91,18 @@ function required_kreps(box::Box, max_mag_k_sqrd::Float64)
 end
 
 """
-    kvectors = precompute_kvec_wts(sim_box, kreps, α)
+    kvectors = precompute_kvec_wts(eparams, max_mag_k_sqrd=Inf)
 
 For speed, pre-compute the weights for each reciprocal lattice vector for the Ewald sum in
 Fourier space. This function takes advantage of the symmetry:
     cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
-Returns an OffsetArray `kvec_wts` so e.g. `kvec_wts[0, -5, 4]` corresponds to the weight 
-with ka=0, kb=-5, kc=4.
+Returns an array of `Kvector`'s.
 
-# Arguments
-- `sim_box::Box`: the simulation box that consits of replicated primitive unit cells of the framework
-- `kreps::Tuple{Int, Int, Int}`: The number of reciprocal lattice space replications to include in the long-range Ewald sum.
-- `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
+If `max_mag_k_sqrd` is passed, k-vectors with a magnitude greater than `max_mag_k_sqrd` are
+not included.
 """
 function precompute_kvec_wts(eparams::EwaldParams, max_mag_k_sqrd::Float64=Inf)
-    kvecs = Kvec[]
+    kvecs = Kvector[]
     # take advantage of symmetry. cos(k ⋅ dx) = cos( (-k) ⋅ dx)
     #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
     #   hence ka goes from 0:k_repfactors[1]
@@ -120,51 +130,45 @@ function precompute_kvec_wts(eparams::EwaldParams, max_mag_k_sqrd::Float64=Inf)
         #  and how we include ka>=0 only and the two if statements above
         if mag_k_sqrd < max_mag_k_sqrd
             wt = 2 * exp(- mag_k_sqrd / (4.0 * eparams.α ^ 2)) / mag_k_sqrd / ϵ₀
-            push!(kvecs, Kvec(ka, kb, kc, wt))
+            push!(kvecs, Kvector(ka, kb, kc, wt))
         end
     end
     return kvecs
 end
 
- # """
- #     eparams, kvec_wts, eikr = setup_Ewald_sum()
- # 
- # Construct Ewald parameters data type.
- # Pre-compute weights on k-vector contributions to Ewald sum in Fourier space, return as 
- # OffsetArray.
- # Allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal
- # lattice vector.
- # eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
- # eikrb has indices -kreps[2]:kreps[2] and corresponds to recip. vector in b-direction
- # eikrc has indices -kreps[3]:kreps[3] and corresponds to recip. vector in c-direction
- # """
- # function setup_Ewald_sum(kreps::Tuple{Int, Int, Int},
- #                          α::Float64,
- #                          sr_cutoff_r::Float64,
- #                          sim_box::Box)
- #     eparams = EwaldParams(kreps, α, sr_cutoff_r, sim_box)
- #     kvecs = precompute_kvec_wts(eparams)
- #     eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
- #     eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
- #     eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
- #     return eparams, kvecs, eikar, eikbr, eikcr
- # end
-
 """
-Automatically compute Ewald convergence parameter α and number of kreps.
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, ϵ=1e-6, verbose=false)
+
+Given the short-range cutoff radius `sr_cutoff_r`, automatically compute Ewald convergence 
+parameter `α` and number of k-vector replications in Fourier space, `kreps`.
+Construct Ewald parameters data type.
+Pre-compute weights on k-vector contributions to Ewald sum in Fourier space, return as 
+OffsetArray.
+Allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal
+lattice vector.
+eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
+eikrb has indices -kreps[2]:kreps[2] and corresponds to recip. vector in b-direction
+eikrc has indices -kreps[3]:kreps[3] and corresponds to recip. vector in c-direction
 """
 function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-6, verbose::Bool=false)
-    α, max_mag_k_sqrd = choose_ewald_params(sr_cutoff_r, sim_box, ϵ)
+    # determine Ewald convergence parameter and cutoff for |k|² for sum in Fourier space
+    α, max_mag_k_sqrd = determine_ewald_params(sr_cutoff_r, ϵ)
+    # determine kreps required to assert all k-vectors with magnitude less than |k|² are included.
     kreps = required_kreps(sim_box, max_mag_k_sqrd)
+    # construct Ewald parameters
     eparams = EwaldParams(kreps, α, sr_cutoff_r, sim_box)
     if verbose
         print(eparams)
     end
-    kvecs = precompute_kvec_wts(eparams, max_mag_k_sqrd)
+    # pre-compute weights associated with each k-vector in sum in Fourier space.
+    #  discards k-vector replications whose |k|² > max_mag_k_sqrd for efficiency.
+    kvectors = precompute_kvec_wts(eparams, max_mag_k_sqrd)
+    # pre-allocate memory for e^{i k vec(k) ⋅ r}. Don't put these in EwaldParams for speed,
+    #  so they are passed as reference. These are OffsetArrays, which changes indexing scheme.
     eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
     eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
     eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
-    return eparams, kvecs, eikar, eikbr, eikcr
+    return eparams, kvectors, eikar, eikbr, eikcr
 end
 
 """
@@ -221,7 +225,7 @@ function electrostatic_potential(framework::Framework,
                                  x::Array{Float64, 1},
                                  repfactors::Tuple{Int, Int, Int},
                                  eparams::EwaldParams,
-                                 kvecs::Array{Kvec, 1},
+                                 kvectors::Array{Kvector, 1},
                                  eikar::OffsetArray{Complex{Float64}},
                                  eikbr::OffsetArray{Complex{Float64}},
                                  eikcr::OffsetArray{Complex{Float64}})
@@ -253,13 +257,14 @@ function electrostatic_potential(framework::Framework,
             fill_eikr!(eikcr, k_dot_dx[3, i], eparams.kreps[3], true)
             
             # loop over kevectors
-            for kvec in kvecs
+            for kvector in kvectors
                 # cos( i * this_k * r) = real part of:
                 #     e^{i ka r * vec(ka)} * 
                 #     e^{i kb r * vec(kb)} * 
                 #     e^{i kb r * vec(kc)} where r = x - xᵢ
                 #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-                @unsafe @inbounds lr_potential += framework.charges[i] * kvec.wt * real(eikar[kvec.ka] * eikbr[kvec.kb] * eikcr[kvec.kc])
+                @unsafe @inbounds lr_potential += framework.charges[i] * kvector.wt * real(
+                        eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
             end
         end
 
@@ -312,7 +317,7 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
                                  exclude_molecule_id::Int,
                                  x::Array{Float64, 1},
                                  eparams::EwaldParams,
-                                 kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
+                                 kvectors::Array{Kvector, 1},
                                  eikar::OffsetArray{Complex{Float64}},
                                  eikbr::OffsetArray{Complex{Float64}},
                                  eikcr::OffsetArray{Complex{Float64}})
@@ -338,22 +343,14 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
             fill_eikr!(eikcr, k_dot_dx[3], eparams.kreps[3], true)
             
             # loop over kevectors
-            for kc=-eparams.kreps[3]:eparams.kreps[3], kb = -eparams.kreps[2]:eparams.kreps[2], ka = 0:eparams.kreps[1]
-                # same logic as in `precompute_kvec_wts` but faster.
-                if ka == 0
-                    if kb < 0
-                        continue
-                    end
-                    if kb == 0 && kc <= 0
-                        continue
-                    end
-                end
+            for kvector in kvectors
                 # cos( i * this_k * r) = real part of:
                 #     e^{i ka r * vec(ka)} * 
                 #     e^{i kb r * vec(kb)} * 
                 #     e^{i kb r * vec(kc)} where r = x - xᵢ
                 #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-                @unsafe @inbounds lr_potential += charge.q * kvec_wts[ka, kb, kc] * real(eikar[ka] * eikbr[kb] * eikcr[kc])
+                @unsafe @inbounds lr_potential += charge.q * kvector.wt * real(
+                        eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
             end
             
             ###
