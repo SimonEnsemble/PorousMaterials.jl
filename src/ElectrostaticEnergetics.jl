@@ -1,5 +1,6 @@
-using SpecialFunctions
+using SpecialFunctions # for erfc
 using OffsetArrays
+using Roots # for fzero
 # Vacuum permittivity eps0 = 8.854187817e-12 # C^2/(J-m)
 # 1 m = 1e10 A, 1 e = 1.602176e-19 C, kb = 1.3806488e-23 J/K
 # 8.854187817e-12 C^2/(J-m) [1 m / 1e10 A] [1 e / 1.602176e-19 C]^2 [kb = 1.3806488e-23 J/K]
@@ -18,6 +19,48 @@ struct EwaldParams
     sr_cutoff_r::Float64
     "simulation box"
     box::Box
+end
+
+function choose_ewald_params(sr_cutoff_r::Float64, ϵ::Float64)
+    # α is Ewald sum convergence parameter. It determines how fast the long- and short-
+    #  range interactions decay with r in the Fourier and real space sum, respectively.
+    #  erfc(α * r) / r dependence for short-range
+    #  exp(mag_k_squared / (4α²)) / mag_k_squared dependence for long-range
+    #   as α increases, short-range contributions decays with r more quickly;
+    #   thus need smaller sr_cutoff. but long-range decays more slowly with r with larger
+    #   α. thus would need more kevectors.
+    #      this approach is similar to DLPoly according to here:
+    #       http://www.cse.scitech.ac.uk/ccg/software/DL_POLY_CLASSIC/FAQ/FAQ2.shtml
+    # solve for α to allow short-range interactions to decay beyond the cutoff radius. 
+    sr_error(α) = erfc(α * sr_cutoff_r) / sr_cutoff_r - ϵ
+    α = fzero(sr_error, 0.0, 25.0) # 25.0 should be safe bracket.
+    # solve for the magnitude of the k vectors required to allow long-range interactions 
+    #   to decay beyond the cutoff radius. 
+    lr_error(k_mag_sqrd) = exp(-k_mag_sqrd / (4.0 * α) ^ 2) / k_mag_sqrd - ϵ
+    k_mag_sqrd = fzero(lr_error, 0.0, 100.0)
+    return α, k_mag_sqrd
+end
+
+"""
+Given a value of |k|², how many k-reps do we require to ensure there are no k-vectors 
+outside of [ka, kb, kc] with a smaller square magnitude?
+"""
+function required_kreps(box::Box, k_mag_sqrd::Float64)
+    # fill in later
+    kreps = [0, 0, 0]
+    for abc = 1:3
+        n = [0, 0, 0]
+        while true
+            n[abc] += 1
+            # compute reciprocal vector, k
+            k = box.reciprocal_lattice * n
+            if norm(k) ^ 2 > k_mag_sqrd
+                kreps[abc] = n[abc] - 1
+                break
+            end
+        end
+    end
+    return (kreps[1], kreps[2], kreps[3])
 end
 
 """
@@ -64,11 +107,11 @@ function precompute_kvec_wts(eparams::EwaldParams)
         # compute reciprocal vector, k
         k = eparams.box.reciprocal_lattice * [ka, kb, kc]
         # |k|²
-        norm_squared = dot(k, k)
+        mag_k_sqrd = dot(k, k)
         
         # factor of 2 from cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
         #  and how we include ka>=0 only and the two if statements above
-        kvec_wts[ka, kb, kc] = 2 * exp(- norm_squared / (4.0 * eparams.α ^ 2)) / norm_squared / ϵ₀
+        kvec_wts[ka, kb, kc] = 2 * exp(- mag_k_sqrd / (4.0 * eparams.α ^ 2)) / mag_k_sqrd / ϵ₀
     end
     return kvec_wts
 end
@@ -85,7 +128,7 @@ eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
 eikrb has indices -kreps[2]:kreps[2] and corresponds to recip. vector in b-direction
 eikrc has indices -kreps[3]:kreps[3] and corresponds to recip. vector in c-direction
 """
-function setup_Ewald_sum(kreps::Tuple{Int, Int, Int}, α::Float64, sr_cutoff_r::Float64, sim_box::Box)
+function setup_Ewald_sum(kreps::Tuple{Int, Int, Int}, α::Float64, sr_cutoff_r::Float64, sim_box::Box; max_mag_k_sqrd::Float64=Inf)
     eparams = EwaldParams(kreps, α, sr_cutoff_r, sim_box)
     kvec_wts = precompute_kvec_wts(eparams)
     eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
@@ -95,9 +138,18 @@ function setup_Ewald_sum(kreps::Tuple{Int, Int, Int}, α::Float64, sr_cutoff_r::
 end
 
 """
-    fill_eikr!(eikr, k_dot_dx, krep, include_neg_reps)
+Automatically compute Ewald convergence parameter α and number of kreps.
+"""
+function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-4)
+    α, max_mag_k_sqrd = choose_ewald_params(sr_cutoff_r, ϵ)
+    kreps = required_kreps(sim_box, max_mag_k_sqrd)
+    return setup_Ewald_sum(kreps, α, sr_cutoff_r, sim_box)
+end
 
-Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
+"""
+    fill_eikr!(eikr, k_dot_dx, krep, include_neg_reps)
+Given k ⋅ r:w
+, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
 `eikr`. If `include_neg_reps` is true, also compute n=-krep:-1.
 """
 @unsafe function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64, 
@@ -172,6 +224,7 @@ function electrostatic_potential(framework::Framework,
         ###
         #  Long-range contribution
         ###
+        # TODO should this be over primitive unit cell or simulation box?
         for i = 1:framework.n_atoms
             # compute e^{ i * n * k * (x - xᵢ)} for n = -krep:krep
             fill_eikr!(eikar, k_dot_dx[1, i], eparams.kreps[1], false) # via symmetry only need +ve
@@ -189,6 +242,9 @@ function electrostatic_potential(framework::Framework,
                         continue
                     end
                 end
+ #                 if isnan(kvec_wts[ka, kb, kc])
+ #                     continue
+ #                 end
                 # cos( i * this_k * r) = real part of:
                 #     e^{i ka r * vec(ka)} * 
                 #     e^{i kb r * vec(kb)} * 
