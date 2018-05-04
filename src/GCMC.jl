@@ -315,6 +315,22 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     return results
 end # gcmc_simulation
 
+"""
+Determine the name of files saved during the GCMC simulation, be molecule positions or results.
+"""
+function root_save_filename(framework::Framework,
+                            molecule::Molecule,
+                            ljforcefield::LennardJonesForceField,
+                            temperature::Float64,
+                            fugacity::Float64,
+                            n_burn_cycles::Int,
+                            n_sample_cycles::Int)
+        fname = split(framework.name, ".")[1]
+        ffname = split(ljforcefield.name, ".")[1]
+        return @sprintf("gcmc_%f_%s_T%f_fug%f_%s_%dburn_%dsample", fname, molecule.species,
+                        temperature, fugacity, ffname, n_burn_cycles, n_sample_cycles)
+end
+
 function print_results(results::Dict)
     @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n\n",
             results["adsorbate"], results["crystal"], results["temperature (K)"],
