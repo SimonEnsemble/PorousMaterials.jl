@@ -59,5 +59,5 @@ if co2_tests
     strip_numbers_from_atom_labels!(f)
     ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
     results = gcmc_simulation(f, 313.0, 20000.0, co2, ff, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
-    @time results = gcmc_simulation(f, 313.0, 20000.0, co2, ff, n_burn_cycles=100, n_sample_cycles=100, verbose=true)
+    @time results = gcmc_simulation(f, 313.0, 20000.0, co2, ff, n_burn_cycles=1000, n_sample_cycles=1000, verbose=true)
 end

@@ -291,13 +291,13 @@ function electrostatic_potential(framework::Framework,
 end		
 
 function electrostatic_potential_energy(framework::Framework,
-                                     molecule::Molecule,
-                                     repfactors::Tuple{Int, Int, Int},
-                                     eparams::EwaldParams,
-                                     kvectors::Array{Kvector, 1},
-                                     eikar::OffsetArray{Complex{Float64}},
-                                     eikbr::OffsetArray{Complex{Float64}},
-                                     eikcr::OffsetArray{Complex{Float64}})
+                                       molecule::Molecule,
+                                       repfactors::Tuple{Int, Int, Int},
+                                       eparams::EwaldParams,
+                                       kvectors::Array{Kvector, 1},
+                                       eikar::OffsetArray{Complex{Float64}},
+                                       eikbr::OffsetArray{Complex{Float64}},
+                                       eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for charge in molecule.charges
         ϕ += charge.q * electrostatic_potential(framework, charge.x, repfactors, eparams, kvectors, eikar, eikbr, eikcr)
