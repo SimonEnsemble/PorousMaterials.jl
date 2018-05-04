@@ -294,13 +294,13 @@ function electrostatic_potential_energy(framework::Framework,
                                      molecule::Molecule,
                                      repfactors::Tuple{Int, Int, Int},
                                      eparams::EwaldParams,
-                                     kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
+                                     kvectors::Array{Kvector, 1},
                                      eikar::OffsetArray{Complex{Float64}},
                                      eikbr::OffsetArray{Complex{Float64}},
                                      eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for charge in molecule.charges
-        ϕ += charge.q * electrostatic_potential(framework, charge.x, repfactors, eparams, kvec_wts, eikar, eikbr, eikcr)
+        ϕ += charge.q * electrostatic_potential(framework, charge.x, repfactors, eparams, kvectors, eikar, eikbr, eikcr)
     end
     return ϕ
 end
@@ -377,15 +377,15 @@ end
 
 function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                         molecule_id::Int,
-                                     eparams::EwaldParams,
-                                     kvec_wts::OffsetArray{Float64,3,Array{Float64,3}},
-                                     eikar::OffsetArray{Complex{Float64}},
-                                     eikbr::OffsetArray{Complex{Float64}},
-                                     eikcr::OffsetArray{Complex{Float64}})
+                                        eparams::EwaldParams,
+                                        kvectors::Array{Kvector, 1},
+                                        eikar::OffsetArray{Complex{Float64}},
+                                        eikbr::OffsetArray{Complex{Float64}},
+                                        eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for charge in molecules[molecule_id].charges
         ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, eparams,
-                                                kvec_wts, eikar, eikbr, eikcr)
+                                                kvectors, eikar, eikbr, eikcr)
     end
     return ϕ
 end
