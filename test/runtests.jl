@@ -223,7 +223,7 @@ framework = read_crystal_structure_file("NU-1000_Greg.cif")
 sr_cutoff_r = 12.5
 rep_factors = replication_factors(framework, sr_cutoff_r)
 sim_box = replicate_box(framework.box, rep_factors)
-eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, verbose=true, ϵ=1e-6)
+eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, verbose=false, ϵ=1e-6)
 
 q_test = 0.8096
 
