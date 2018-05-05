@@ -321,6 +321,8 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
                                  eikar::OffsetArray{Complex{Float64}},
                                  eikbr::OffsetArray{Complex{Float64}},
                                  eikcr::OffsetArray{Complex{Float64}})
+    # the view here is that all other molecules create an electrostatic potential for the
+    #  molecules[exclude_molecule_id] molecule.
 	sr_potential = 0.0 # short-range contribution
 	lr_potential::Float64 = 0.0 # long-range contribution
     for (i, molecule) in enumerate(molecules)
@@ -386,6 +388,35 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
     for charge in molecules[molecule_id].charges
         ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, eparams,
                                                 kvectors, eikar, eikbr, eikcr)
+    end
+    return ϕ
+end
+
+function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
+                                              eparams::EwaldParams,
+                                              kvectors::Array{Kvector, 1},
+                                              eikar::OffsetArray{Complex{Float64}},
+                                              eikbr::OffsetArray{Complex{Float64}},
+                                              eikcr::OffsetArray{Complex{Float64}})
+    ϕ = 0.0
+    for i = 1:length(molecules)
+        ϕ += electrostatic_potential_energy(molecules, i, eparams, kvectors, eikar, eikbr, eikcr)
+    end
+    return ϕ / 2
+end
+
+function total_electrostatic_potential_energy(framework::Framework,
+                                               molecules::Array{Molecule, 1},
+                                               repfactors::Tuple{Int, Int, Int},
+                                               eparams::EwaldParams,
+                                               kvectors::Array{Kvector, 1},
+                                               eikar::OffsetArray{Complex{Float64}},
+                                               eikbr::OffsetArray{Complex{Float64}},
+                                               eikcr::OffsetArray{Complex{Float64}})
+    ϕ = 0.0
+    for molecule in molecules
+        ϕ += electrostatic_potential_energy(framework, molecule, repfactors, eparams, 
+                                            kvectors, eikar, eikbr, eikcr)
     end
     return ϕ
 end
