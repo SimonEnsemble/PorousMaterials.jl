@@ -22,13 +22,9 @@ type GCMCstats
     n::Int
     n²::Int
 
-    U_gh::Float64
-    U_gh²::Float64
-
-    U_gg::Float64
-    U_gg²::Float64
-
-    U_ggU_gh::Float64
+    U::PotentialEnergy
+    U²::PotentialEnergy
+    
     Un::Float64 # ⟨U n⟩
 end
 
@@ -131,12 +127,13 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
     eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, simulation_box, 
-                                                             verbose=verbose, ϵ=1e-6)
+                        verbose=verbose & (charged_framework || charged_molecules), ϵ=1e-6)
 
     # TODO in adsorption isotherm dump coords from previous pressure and load them in here.
     # only true if starting with 0 molecules 
     system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
-    gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    gcmc_stats = GCMCstats(0, 0, 0, PotentialEnergy(0.0, 0.0, 0.0, 0.0),
+                           PotentialEnergy(0.0, 0.0, 0.0, 0.0), 0.0)
 
     molecules = Molecule[]
 
@@ -226,42 +223,31 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
         # sample the current configuration
         if (outer_cycle > n_burn_cycles) && (markov_chain_time % sample_frequency == 0)
-            current_energy_gg = system_energy.vdw_gg + system_energy.electro_gg
-            current_energy_gh = system_energy.vdw_gh + system_energy.electro_gh
-
             gcmc_stats.n_samples += 1
 
             gcmc_stats.n += length(molecules)
             gcmc_stats.n² += length(molecules) ^ 2
 
-            gcmc_stats.U_gh += current_energy_gh
-            gcmc_stats.U_gh² += current_energy_gh ^ 2
+            gcmc_stats.U += system_energy
+            gcmc_stats.U² += square(system_energy)
 
-            gcmc_stats.U_gg += current_energy_gg
-            gcmc_stats.U_gg² += current_energy_gg ^ 2
-
-            gcmc_stats.U_ggU_gh += current_energy_gg * current_energy_gh
-
-            gcmc_stats.Un += (current_energy_gg + current_energy_gh) * length(molecules)
+            gcmc_stats.Un += sum(system_energy) * length(molecules)
         end
     end # finished markov chain proposal moves
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     # TODO need function for total electrostatic energy...
-    total_U_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
-    total_U_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
-    incremented_U_gg = system_energy.vdw_gg + system_energy.electro_gg
-    incremented_U_gh = system_energy.vdw_gh + system_energy.electro_gh
+    system_energy_end = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
+    system_energy_end.vdw_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
+    system_energy_end.vdw_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
+    system_energy_end.electro_gh = total_electrostatic_potential_energy(framework, molecules,
+                                        repfactors, eparams, kvectors, eikar, eikbr, eikcr)
+    system_energy_end.electro_gg = total_electrostatic_potential_energy(molecules,
+                                        eparams, kvectors, eikar, eikbr, eikcr)
 
-    if ! isapprox(total_U_gh, incremented_U_gh, atol=0.01)
-        println("U_gh, incremented = ", incremented_U_gh)
-        println("U_gh, computed at end of simulation =", total_U_gh)
- #         error("guest-host energy incremented improperly")
-    end
-    if ! isapprox(total_U_gg, incremented_U_gg, atol=0.01)
-        println("U_gg, incremented = ", incremented_U_gg)
-        println("U_gg, computed at end of simulation =", total_U_gg)
- #         error("guest-guest energy incremented improperly")
+    # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch 
+    if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
+        error("energy incremented improperly")
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
@@ -276,10 +262,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     results["# sample cycles"] = n_sample_cycles
     results["# burn cycles"] = n_burn_cycles
-
     results["# samples"] = gcmc_stats.n_samples
-
-    results["# samples"] = gcmc_stats.n_samples
+    
+    # number of adsorbed molecules
     results["⟨N⟩ (molecules)"] = gcmc_stats.n / gcmc_stats.n_samples
     results["⟨N⟩ (molecules/unit cell)"] = results["⟨N⟩ (molecules)"] /
         (repfactors[1] * repfactors[2] * repfactors[3])
@@ -287,21 +272,25 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     #    (unit cell/framework amu) * (amu/ 1.66054 * 10^-24)
     results["⟨N⟩ (mmol/g)"] = results["⟨N⟩ (molecules/unit cell)"] * 1000 /
         (6.022140857e23 * molecular_weight(framework) * 1.66054e-24)
-    results["⟨U_gg⟩ (K)"] = gcmc_stats.U_gg / gcmc_stats.n_samples
-    results["⟨U_gh⟩ (K)"] = gcmc_stats.U_gh / gcmc_stats.n_samples
-    results["⟨Energy⟩ (K)"] = (gcmc_stats.U_gg + gcmc_stats.U_gh) /
-        gcmc_stats.n_samples
-    #variances
     results["var(N)"] = (gcmc_stats.n² / gcmc_stats.n_samples) -
         (results["⟨N⟩ (molecules)"] ^ 2)
-    results["Q_st (K)"] = temperature - (gcmc_stats.Un / gcmc_stats.n_samples - results["⟨Energy⟩ (K)"] * results["⟨N⟩ (molecules)"]) / results["var(N)"]
-    results["var(U_gg)"] = (gcmc_stats.U_gg² / gcmc_stats.n_samples) -
-        (results["⟨U_gg⟩ (K)"] ^ 2)
-    results["var⟨U_gh⟩"] = (gcmc_stats.U_gh² / gcmc_stats.n_samples) -
-        (results["⟨U_gh⟩ (K)"] ^ 2)
-    results["var(Energy)"] = ((gcmc_stats.U_gg² + gcmc_stats.U_gh² + 2 *
-        gcmc_stats.U_ggU_gh) / gcmc_stats.n_samples) -
-        (results["⟨Energy⟩ (K)"] ^ 2)
+
+    # potential energies
+    results["⟨U_gg, vdw⟩ (K)"]     = gcmc_stats.U.vdw_gg     / gcmc_stats.n_samples
+    results["⟨U_gg, electro⟩ (K)"] = gcmc_stats.U.electro_gg / gcmc_stats.n_samples
+    results["⟨U_gh, vdw⟩ (K)"]     = gcmc_stats.U.vdw_gh     / gcmc_stats.n_samples
+    results["⟨U_gh, electro⟩ (K)"] = gcmc_stats.U.electro_gh / gcmc_stats.n_samples
+
+    results["⟨U⟩ (K)"] = sum(gcmc_stats.U) / gcmc_stats.n_samples
+    
+    results["var(U_gg, vdw)"] = (gcmc_stats.U².vdw_gg / gcmc_stats.n_samples) - results["⟨U_gg, vdw⟩ (K)"] ^ 2
+    results["var(U_gh, vdw)"] = (gcmc_stats.U².vdw_gh / gcmc_stats.n_samples) - results["⟨U_gh, vdw⟩ (K)"] ^ 2
+    results["var(U_gg, electro)"] = (gcmc_stats.U².electro_gg / gcmc_stats.n_samples) - results["⟨U_gg, electro⟩ (K)"] ^ 2
+    results["var(U_gh, electro)"] = (gcmc_stats.U².electro_gh / gcmc_stats.n_samples) - results["⟨U_gh, electro⟩ (K)"] ^ 2
+
+    # heat of adsorption
+    results["Q_st (K)"] = temperature - (gcmc_stats.Un / gcmc_stats.n_samples - results["⟨U⟩ (K)"] * results["⟨N⟩ (molecules)"]) / results["var(N)"]
+
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
         results[@sprintf("Total # %s proposals", proposal_description)] = markov_counts.n_proposed[proposal_id]
@@ -325,10 +314,11 @@ function root_save_filename(framework::Framework,
                             fugacity::Float64,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int)
-        fname = split(framework.name, ".")[1]
-        ffname = split(ljforcefield.name, ".")[1]
-        return @sprintf("gcmc_%f_%s_T%f_fug%f_%s_%dburn_%dsample", fname, molecule.species,
-                        temperature, fugacity, ffname, n_burn_cycles, n_sample_cycles)
+        frameworkname = split(framework.name, ".")[1] # remove file extension
+        forcefieldname = split(ljforcefield.name, ".")[1] # remove file extension
+        return @sprintf("gcmc_%s_%s_T%f_fug%f_%s_%dburn_%dsample", frameworkname, 
+                    molecule.species, temperature, fugacity, forcefieldname, 
+                    n_burn_cycles, n_sample_cycles)
 end
 
 function print_results(results::Dict)
@@ -354,9 +344,9 @@ function print_results(results::Dict)
 
 
     println("")
-    for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)",
-                "⟨N⟩ (mmol/g)", "⟨U_gg⟩ (K)", "⟨U_gh⟩ (K)", "⟨Energy⟩ (K)",
-                "var(N)", "var(U_gg)", "var⟨U_gh⟩", "var(Energy)"]
+    for key in ["⟨N⟩ (molecules)", "var(N)", "⟨N⟩ (molecules/unit cell)", "⟨N⟩ (mmol/g)", 
+                "⟨U_gg, vdw⟩ (K)", "⟨U_gh, vdw⟩ (K)", "⟨U_gg, electro⟩ (K)", 
+                "⟨U_gh, electro⟩ (K)", "⟨U⟩ (K)"]
         println(key * ": ", results[key])
     end
 
