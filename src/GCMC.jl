@@ -347,10 +347,13 @@ function print_results(results::Dict)
     for key in ["⟨N⟩ (molecules)", "var(N)", "⟨N⟩ (molecules/unit cell)", "⟨N⟩ (mmol/g)", 
                 "⟨U_gg, vdw⟩ (K)", "⟨U_gh, vdw⟩ (K)", "⟨U_gg, electro⟩ (K)", 
                 "⟨U_gh, electro⟩ (K)", "⟨U⟩ (K)"]
-        println(key * ": ", results[key])
+        println(key * ": ", results[key]) # for spacing
+        if key == "⟨N⟩ (mmol/g)"
+            println("")
+        end
     end
 
-    @printf("Q_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
+    @printf("\nQ_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
     return
 end
 
