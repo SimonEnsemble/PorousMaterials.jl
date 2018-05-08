@@ -10,7 +10,7 @@ See comments in vdw_energy for more description.
 """
 function nearest_image!(dxf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
     for k = 1:3 # loop over components
-        if abs(dxf[k]) > repfactors[k] / 2.0
+        @inbounds if abs(dxf[k]) > repfactors[k] / 2.0
             @inbounds dxf[k] -= sign(dxf[k]) * repfactors[k]
         end
     end
@@ -19,7 +19,7 @@ end
 function nearest_image!(dxf::Array{Float64, 2}, repfactors::Tuple{Int, Int, Int})
     for a = 1:size(dxf)[2] # loop over atoms
         for k = 1:3 # loop over components
-            if abs(dxf[k, a]) > repfactors[k] / 2.0
+            @inbounds if abs(dxf[k, a]) > repfactors[k] / 2.0
                 @inbounds dxf[k, a] -= sign(dxf[k, a]) * repfactors[k]
             end
         end
@@ -42,10 +42,34 @@ Base.sum(v::PotentialEnergy) = v.vdw_gh + v.vdw_gg + v.electro_gh + v.electro_gg
                                                             u.vdw_gg     - v.vdw_gg,
                                                             u.electro_gh - v.electro_gh,
                                                             u.electro_gg - v.electro_gg)
-Base.isapprox(u::PotentialEnergy, v::PotentialEnergy) = (isapprox(u.vdw_gh    , v.vdw_gh) &&
-                                                         isapprox(u.vdw_gg    , v.vdw_gg) &&
-                                                         isapprox(u.electro_gh, v.electro_gh) &&
-                                                         isapprox(u.electro_gg, v.electro_gg))
+function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=true, atol::Float64=1e-6)
+    if ! isapprox(u.vdw_gh, v.vdw_gh, atol=atol)
+        if verbose
+            println("vdw_gh mismatch")
+        end
+        return false
+    end
+    if ! isapprox(u.vdw_gg, v.vdw_gg, atol=atol)
+        if verbose
+            println("vdw_gg mismatch")
+        end
+        return false
+    end
+    if ! isapprox(u.electro_gh, v.electro_gh, atol=atol)
+        if verbose
+            println("electro_gh mismatch")
+        end
+        return false
+    end
+    if ! isapprox(u.electro_gg, v.electro_gg, atol=atol)
+        if verbose
+            println("electro_gg mismatch")
+        end
+        return false
+    end
+    return true
+end
+square(u::PotentialEnergy) = PotentialEnergy(u.vdw_gh^2, u.vdw_gg^2, u.electro_gh^2, u.electro_gg^2)
 
 # Arni's notes on Nearest image convention.
 #  If the interaction between the adsorbate molecule and atom k is being looked

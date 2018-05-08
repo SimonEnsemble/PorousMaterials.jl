@@ -238,33 +238,45 @@ end;
 #@printf("------------------------------\n")
 
 
-@printf("\n------------------------------\nTesting Ewald.jl\n\n")
+@printf("------------------------------\nTesting Electrostatics\n\n")
 framework = read_crystal_structure_file("NU-1000_Greg.cif")
 
-k_rep_factors = (11, 11, 9)
-α = 0.265058
-sr_cutoff = 12.5
-rep_factors = replication_factors(framework, sr_cutoff)
+ # kreps = (11, 11, 9)
+ # α = 0.265058
+sr_cutoff_r = 12.5
+rep_factors = replication_factors(framework, sr_cutoff_r)
 sim_box = replicate_box(framework.box, rep_factors)
-const kvectors = compute_kvectors(sim_box, k_rep_factors, α)
+eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, verbose=false, ϵ=1e-6)
 
 q_test = 0.8096
 
 @testset "Ewald summation Tests" begin
-    @test charged(framework)
+    # ensure getting right Ewald settings
+    #  note there are differnet method to choose
+    #  these params for a givne precision so if you changed
+    #  `determine_ewald_params` that may be ok if you still get the
+    #  right electrostatic potential...
+    @test eparams.kreps == (9, 9, 9)
+    @test isapprox(eparams.α, 0.2471, atol=0.05)
+    # construct box so recip. lattice is dimension (2, 10, 5)
+    box = construct_box(0.5*2*π, 0.1*2*π, 0.2*2*π, π/2, π/2, π/2)
+    @test PorousMaterials.required_kreps(box, 2.1^2) == (1, 0, 0)
+    @test PorousMaterials.required_kreps(box, 5.1^2) == (2, 0, 1)
+    @test PorousMaterials.required_kreps(box, 10.1^2) == (5, 1, 2)
+
     x = [9.535619863743, 20.685576379935, 0.127344239990]
-    ϕ = electrostatic_potential(framework, x, sim_box, rep_factors, sr_cutoff, kvectors, α)
+    ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ * q_test, 111373.38, atol=2.5)
 
     x = [4.269654927228, 23.137319129548, 28.352847101096]
-    ϕ = electrostatic_potential(framework, x, sim_box, rep_factors, sr_cutoff, kvectors, α)
+    ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ * q_test, -531.0, atol=0.5)
 
     x = [-0.047382031804, 7.209555961450, 5.158180463556]
-    ϕ = electrostatic_potential(framework, x, sim_box, rep_factors, sr_cutoff, kvectors, α)
+    ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ * q_test, -2676.8230141, atol=0.5)
 end
-#@printf("------------------------------\n")
+@printf("------------------------------\n")
 
 @printf("\n------------------------------\nTesting GCMC.jl\n\n")
 @testset "Monte Carlo Functions Tests" begin

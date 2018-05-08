@@ -55,7 +55,9 @@ end
 
 if co2_tests
     co2 = read_molecule_file("CO2")
-    nu1000 = read_crystal_structure_file("NU-1000_Greg.cif")
-    dreiding = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
-    @time results = gcmc_simulation(nu1000, 298.0, 20000.0, co2, dreiding, n_burn_cycles=1000, n_sample_cycles=1000, verbose=true)
+    f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+    strip_numbers_from_atom_labels!(f)
+    ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+    results = gcmc_simulation(f, 313.0, 20000.0, co2, ff, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
+    @time results = gcmc_simulation(f, 313.0, 20000.0, co2, ff, n_burn_cycles=1000, n_sample_cycles=1000, verbose=true)
 end
