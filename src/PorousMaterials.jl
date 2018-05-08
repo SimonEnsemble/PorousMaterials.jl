@@ -14,7 +14,7 @@ include("Grid.jl")
 include("MChelpers.jl")
 include("GCMC.jl")
 
-export Box, Framework, read_crystal_structure_file, replicate_to_xyz,
+export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
        convert_cif_to_P1_symmetry, construct_box, replicate_box, read_atomic_masses, charged, # Crystal.jl
        LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl

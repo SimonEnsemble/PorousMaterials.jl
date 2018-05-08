@@ -30,9 +30,10 @@ end
 
 """
 Data structure for a k-vector replication, although the reciprocal lattice is needed to
-specify the exact k-vector.
-Stores the weight determining the contribution of kvector (ka, kb, kc) to the Fourier
-component of the Ewald sum. Ewald sums work with an array of `Kvec`'s.
+specify the exact k-vector. This data structure stores the weight determining the 
+contribution of kvector (ka, kb, kc) (all Int's) to the Fourier component of the Ewald sum.
+Precomputing this weight saves computation time. So Ewald sums work with an array of 
+`Kvecvtors`'s.
 """
 struct Kvector
     ka::Int
@@ -45,8 +46,22 @@ end
 """
     α, max_mag_k_sqrd = determine_ewald_params(sr_cutoff_r, ϵ)
 
-For a given precision `ϵ` and short-range cutoff radius, compute the Ewald summation 
-convergence parameter α and the cutoff value for |k|² in the reciprocal space.
+Compute the Ewald summation convergence parameter α and the cutoff value for |k|² in the 
+reciprocal space.
+
+# Arguments
+* `sr_cutoff_r::Float64`: cutoff-radius (units: Å) for short-range contributions to Ewald
+sum. This must be consistent with the number of replication factors used to apply the
+nearest image convention, so typically this is chosen to be the same as for short-range
+van-der Waals interactions. 
+* `ϵ::Float64`: desired level of precision. Typical value is 1e-6, but this does not 
+guarentee this precision technically since that depends on the charges in the system, but
+it is very helpful to think of this as the weight on contributions near the edge of the
+short-range cutoff radius or max |k|².
+
+# Returns
+* `α::Float64`: Ewald sum convergence parameter (units: inverse Å)
+* `max_mag_k_sqrd::Float64`: cutoff for |k|², where k is a k-vector, in the Fourier sum.
 """
 function determine_ewald_params(sr_cutoff_r::Float64, ϵ::Float64)
     # α is Ewald sum convergence parameter. It determines how fast the long- and short-
@@ -69,8 +84,18 @@ function determine_ewald_params(sr_cutoff_r::Float64, ϵ::Float64)
 end
 
 """
-Determine replications of k-vectors in Fourier sum, `kreps`, required to assert all 
-k-vectors with square magnitude less than |k|² (`max_mag_k_sqrd`) are included.
+    kreps = required_kreps(box, max_mag_k_sqrd)
+
+Determine replications of k-vectors in Fourier sum, `kreps`, a Tuple of Ints, required to 
+assert all k-vectors with square magnitude less than |k|² (`max_mag_k_sqrd`) are included.
+
+# Arguments
+* `box::Box`: the simulation box containing the reciprocal lattice.
+* `max_mag_k_sqrd::Float64`: cutoff value for |k|² in reciprocal space sum.
+
+# Returns
+* `kreps::Tuple{Int, Int, Int}`: number of k-vector replications required in a, b, c 
+directions.
 """
 function required_kreps(box::Box, max_mag_k_sqrd::Float64)
     # fill in later
@@ -81,6 +106,8 @@ function required_kreps(box::Box, max_mag_k_sqrd::Float64)
             n[abc] += 1
             # compute reciprocal vector, k
             k = box.reciprocal_lattice * n
+            # if we reached a k-vector with sq. mag. g.t. max_mag_k_sqrd...
+            #   we have enough kreps
             if dot(k, k) > max_mag_k_sqrd
                 kreps[abc] = n[abc] - 1
                 break
@@ -96,10 +123,18 @@ end
 For speed, pre-compute the weights for each reciprocal lattice vector for the Ewald sum in
 Fourier space. This function takes advantage of the symmetry:
     cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
-Returns an array of `Kvector`'s.
 
 If `max_mag_k_sqrd` is passed, k-vectors with a magnitude greater than `max_mag_k_sqrd` are
 not included.
+
+# Arguments
+* `eparams::EwaldParams`: data structure containing Ewald summation settings
+* `max_mag_k_sqrd::Float64`: cutoff for |k|² in Fourier sum; if passed, do not include
+k-vectors with magnitude squared greater than this.
+
+# Returns
+* `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
+corresponding weights indicating the contribution to the Fourier sum.
 """
 function precompute_kvec_wts(eparams::EwaldParams, max_mag_k_sqrd::Float64=Inf)
     kvecs = Kvector[]
@@ -139,16 +174,27 @@ end
 """
     eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, ϵ=1e-6, verbose=false)
 
-Given the short-range cutoff radius `sr_cutoff_r`, automatically compute Ewald convergence 
-parameter `α` and number of k-vector replications in Fourier space, `kreps`.
-Construct Ewald parameters data type.
-Pre-compute weights on k-vector contributions to Ewald sum in Fourier space, return as 
-OffsetArray.
-Allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal
+Given the short-range cutoff radius and simulation box, automatically compute Ewald 
+convergence parameter and number of k-vector replications in Fourier space required for a
+given precision. Constructs and returns Ewald parameters data type with this information.
+
+Also, pre-compute weights on k-vector contributions to Ewald sum in Fourier space.
+
+Also, allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal
 lattice vector.
-eikra has indices 0:kreps[1] and corresponds to recip. vector in a-direction
-eikrb has indices -kreps[2]:kreps[2] and corresponds to recip. vector in b-direction
-eikrc has indices -kreps[3]:kreps[3] and corresponds to recip. vector in c-direction
+
+# Arguments
+
+# Returns
+* `eparams::EwaldParams`: data structure containing Ewald summation settings
+* `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
+corresponding weights indicating the contribution to the Fourier sum.
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices 
+    0:kreps[1] and corresponds to recip. vectors in a-direction
+* `eikrb::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices 
+    -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices 
+    -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 """
 function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-6, verbose::Bool=false)
     # determine Ewald convergence parameter and cutoff for |k|² for sum in Fourier space
@@ -172,9 +218,9 @@ function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-6, v
 end
 
 """
-    fill_eikr!(eikr, k_dot_dx, krep, include_neg_reps)
-Given k ⋅ r:w
-, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
+    fill_eikr!(eikr, k_dot_dr, krep, include_neg_reps)
+
+Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
 `eikr`. If `include_neg_reps` is true, also compute n=-krep:-1.
 """
 @unsafe function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64, 
@@ -210,16 +256,18 @@ conditions are applied through the Ewald summation.
 - `framework::Framework`: Crystal structure (see `framework.charges` for charges)
 - `x::Array{Float64, 1}`: point (Cartesian coordinates) at which we compute the electrostatic
     potential
-- `sim_box::Box`: the simulation box for the Ewald summation. This must be consistent with 
-    the repfactors applied to `framework.box`. We could compute it in here but we pass it 
-    to the function instead for speed.
-- `repfactors::Tuple{Int64, Int64, Int64}`: The replication factors used to form the super
-    cell defined by `sim_box` from the home unit cell in `framework`.
-- `sr_cutoff_radius::Float64`: the short-range cutoff radius for the real space sum in the
-    Ewald summation.
-- `kvectors::Array{Kvector, 1}`: pre-computed (for speed) reciprocal lattice vectors and
-    weights associated with them for the Fourier space sum in the Ewald summation.
-- `α::Float64`: Ewald sum convergence parameter. Units: inverse Å.
+* `eparams::EwaldParams`: data structure containing Ewald summation settings
+* `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
+corresponding weights indicating the contribution to the Fourier sum.
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices 
+    0:kreps[1] and corresponds to recip. vectors in a-direction
+* `eikrb::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices 
+    -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices 
+    -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
+
+# Returns
+electrostatic potential inside `framework` at point `x` (units: K)
 """
 function electrostatic_potential(framework::Framework,
                                  x::Array{Float64, 1},
@@ -311,6 +359,24 @@ end
 
 Compute the electrostatic potential generated by a set of molecules (in `molecules`) in a 
 simulation box, excluding the contribution of `molecules[exclude_molecule_id]`.
+
+# Arguments
+- `molecules::Array{Molecules, 1}`: molecules creating the electrostatic potential field.
+- `exclude_molecule_id::Int`: exclude this molecule when computing the electrostatic
+    potential.
+- `x::Array{Float64, 1}`: point (Cartesian coordinates) at which we compute the electrostatic
+    potential
+* `eparams::EwaldParams`: data structure containing Ewald summation settings
+* `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
+corresponding weights indicating the contribution to the Fourier sum.
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices 
+    0:kreps[1] and corresponds to recip. vectors in a-direction
+* `eikrb::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices 
+    -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices 
+    -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
+
+
 """
 #TODO TEST THIS!
 function electrostatic_potential(molecules::Array{Molecule, 1},
