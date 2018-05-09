@@ -3,15 +3,20 @@
 const δ = 0.35 # Å
 
 """
-    insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
+    insert_molecule!(molecules, simulation_box, template)
 
 Inserts an additional adsorbate molecule into the simulation box using the template provided.
 The center of mass of the molecule is chosen at a uniform random position in the simulation box.
 A uniformly random orientation of the molecule is chosen by rotating about the center of mass.
+
+# Arguments
+- `molecules::Array{Molecule, 1}`: An array of Molecule objects
+- `simulation_box::Box`: The simulation box
+- `template::Molecule`: A template molecule used as reference when inserting molecules
 """
-function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
+function insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, template::Molecule)
     # choose center of mass
-    x = box.f_to_c * rand(3)
+    x = simulation_box.f_to_c * rand(3)
     # copy the template
     molecule = deepcopy(template)
     # conduct a rotation
@@ -25,22 +30,30 @@ function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Mol
 end
 
 """
-    delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
+    delete_molecule!(molecule_id, molecules)
 
 Removes a random molecule from the current molecules in the framework.
 molecule_id decides which molecule will be deleted, for a simulation, it must
-    be a randomly generated value
+be a randomly generated value
+
+# Arguments
+- `molecule_id::Int`: The molecule ID is used to determine which molecule in `molecules` should be removed
+- `molecules::Array{Molecule, 1}`: An array of Molecule objects
 """
 function delete_molecule!(molecule_id::Int, molecules::Array{Molecule, 1})
     splice!(molecules, molecule_id)
 end
 
 """
-    apply_periodic_boundary_condition!(molecule::Molecule, simulation_box::Box)
+    apply_periodic_boundary_condition!(molecule, simulation_box)
 
 Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic 
 boundary conditions and translate the center of mass of the `Molecule` (and its atoms 
 and point charges) so that it is inside of the `Box`.
+
+# Arguments
+- `molecule::Molecule`: A molecule we're interested in seeing if its' center of mass falls within `simulation_box`
+- `simulation_box::Box`: The simulation box
 """
 function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
     outside_box = false # do nothing if not outside the box
@@ -68,12 +81,19 @@ function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
 end
 
 """
-    translate_molecule!(molecule::Molecule, simulation_box::Box)
+    translate_molecule!(molecule, simulation_box)
 
 Perturbs the Cartesian coordinates of a molecule about its center of mass by a random 
 vector of max length δ. Applies periodic boundary conditions to keep the molecule inside 
 the simulation box. Returns a deep copy of the old molecule in case it needs replaced
 if the Monte Carlo proposal is rejected.
+
+# Arguments
+- `molecule::Molecule`: The molecule we want to perturb
+- `simulation_box::Box`: The simulation box
+
+# Returns
+- `old_molecule::Molecule`: The old molecule in case the MC proposal is rejected
 """
 function translate_molecule!(molecule::Molecule, simulation_box::Box)
     # store old molecule and return at the end for possible restoration
