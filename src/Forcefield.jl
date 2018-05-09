@@ -152,13 +152,14 @@ function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljforcefield::Le
 end
 
 """
-    check_forcefield_coverage(framework, ljforcefield)
+    check_forcefield_coverage(Union{framework, molecule}, ljforcefield)
 
-Check that the force field contains parameters for every atom present in the framework.
+Check that the force field contains parameters for every atom present in a framework or molecule.
 Will print out which atoms are missing.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
+- `molecule::Molecule`: A molecule object
 - `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield object containing information on atom interactions
 
 # Returns
@@ -176,19 +177,6 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
     end
 end
 
-"""
-    check_forcefield_coverage(molecule, ljforcefield)
-
-Check that the force field contains parameters for every atom present in the molecule.
-Will print out which atoms are missing.
-
-# Arguments
-- `molecule::Molecule`: A molecule object
-- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield object containing information on atom interactions
-
-# Returns
-- `check_forcefield_coverage::Bool`: Returns true if all atoms in the `molecule` are also included in `ljforcefield`. False otherwise
-"""
 function check_forcefield_coverage(molecule::Molecule, ljforcefield::LennardJonesForceField)
     atoms = unique([ljs.atom for ljs in molecule.ljspheres])
     missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
