@@ -7,6 +7,10 @@ Applies the nearest image convention on a vector `dxf` between two atoms
 in fractional space; modifies `dxf` for nearest image convention.
 
 See comments in vdw_energy for more description.
+
+# Arguments
+- `dxf::Array{Float64, 1}`: A vector between two atoms in fractional coordinates
+- `repfactors::Tuple{Int, Int, Int}`: Replication factors used to determine how many times the unit cell should be replicated
 """
 function nearest_image!(dxf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
     for k = 1:3 # loop over components
@@ -26,6 +30,15 @@ function nearest_image!(dxf::Array{Float64, 2}, repfactors::Tuple{Int, Int, Int}
     end
 end
 
+"""
+Data structure containing the guest-host and guest-guest potential and electrostatic energy
+
+# Attributes
+- `vdw_gh::Float64`: Guest-host van der Waals energy
+- `vdw_gg::Float64`: Guest-guest van der Waals energy
+- `electro_gh::Float64`: Guest-host electrostatic energy
+- `electro_gg::Float64`: Guest-guest electrostatic energy
+"""
 type PotentialEnergy
     vdw_gh::Float64
     vdw_gg::Float64

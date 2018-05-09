@@ -2,7 +2,7 @@
 Data structure for a regular [equal spacing between points in each coordinate] grid of points superimposed on a unit cell box (`Box`).
 Each grid point has data, `data`, associated with it, of type `T`, stored in a 3D array.
 
-# Arguments
+# Attributes
 - `box::Box`: describes Bravais lattice over which a grid of points is super-imposed. grid points on all faces are included.
 - `n_pts::Tuple{Int, Int, Int}`: number of grid points in x, y, z directions. 0 and 1 fractional coordinates are included.
 - `data::Array{T, 3}`: three dimensional array conaining data associated with each grid point.
@@ -11,14 +11,14 @@ Each grid point has data, `data`, associated with it, of type `T`, stored in a 3
 """
 struct Grid{T}
     box::Box
-    n_pts::Tuple{Int64, Int64, Int64}
+    n_pts::Tuple{Int, Int, Int}
     data::Array{T, 3}
     units::Symbol
     origin::Array{Float64, 1}
 end
 
 """
-    write_cube(grid::Grid, filename::String)
+    write_cube(grid filename)
 
 Write grid to a .cube file format. This format is described here:
 http://paulbourke.net/dataformats/cube/
@@ -28,7 +28,7 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 - `grid::Grid`: grid with associated data at each grid point.
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
 """
-function write_cube(grid::Grid, filename::String)
+function write_cube(grid::Grid, filename::AbstractString)
     if ! isdir(PATH_TO_DATA * "grids/")
         mkdir(PATH_TO_DATA * "grids/")
     end
@@ -68,12 +68,15 @@ function write_cube(grid::Grid, filename::String)
 end
 
 """
-    grid = read_cube(filename::String)
+    grid = read_cube(filename)
 
 Read a .cube file and return a populated `Grid` data structure.
 
 # Arguments
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`grids/.
+
+# Returns
+- `grid::Grid`: A grid data structure
 """
 function read_cube(filename::AbstractString)
     if ! contains(filename, ".cube")
@@ -131,7 +134,7 @@ function read_cube(filename::AbstractString)
 end
 
 """
-	grid = energy_grid(framework, moleclule, ljforcefield, n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
+	grid = energy_grid(framework, molecule, ljforcefield; n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
 
 Superimposes a regular grid of points (regularly spaced in fractional coordinates of the `framework.box`) over the unit cell of a crystal, with `n_gridpts` dictating the number of grid points in the a, b, c directions (including 0 and 1 fractional coords).
 The fractional coordinates 0 and 1 are included in the grid, although they are redundant.
@@ -149,6 +152,9 @@ This is only relevant for molecules that are comprised of more than one Lennard 
 - `temperature::Float64`: the temperature at which to compute the free energy for molecules where rotations are required. Lower temperatures overemphasize the minimum potential energy rotational conformation at that point.
 - `units::Symbol`: either `:K` or `:kJ_mol`, the units in which the energy should be stored in the returned `Grid`.
 - `verbose::Bool=true`: print some information.
+
+# Returns
+- `grid::Grid`: A grid data structure containing the potential energy of the system
 """
 function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField;
                      n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
