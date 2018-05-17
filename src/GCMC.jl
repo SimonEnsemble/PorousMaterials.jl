@@ -64,17 +64,20 @@ function adsorption_isotherm(framework::Framework, temperature::Float64,
                         n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                         sample_frequency::Int=25, verbose::Bool=false)
 
-    function run_fugacity_test(fugacity::Float64)
+    function run_fugacity(fugacity::Float64)
         return gcmc_simulation(framework, temperature, fugacity, molecule,
                         ljforcefield, n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles,
                         sample_frequency=sample_frequency, verbose=verbose)
     end
 
-    #for load balancing, longer computation time goes first
-    #sort!(fugacities, rev=true)
+    # for load balancing, longer computation time goes first
+    ids = sortperm(fugacities, rev=true)
 
-    return pmap(run_fugacity_test, fugacities)
+    # gcmc simulations in parallel
+    results = pmap(run_fugacity, fugacities[ids])
 
+    # put results in same order as original fugacity
+    return results[[find(x -> x==i, ids)[1] for i = 1:length(ids)]]
 end
 
 
