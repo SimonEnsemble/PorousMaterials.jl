@@ -58,7 +58,7 @@ end
     return energy
 end
 
-function gcmc_simulate_fugacities(framework::Framework, temperature::Float64,
+function adsorption_isotherm(framework::Framework, temperature::Float64,
                         fugacities::Array{Float64}, molecule::Molecule,
                         ljforcefield::LennardJonesForceField;
                         n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
@@ -66,9 +66,12 @@ function gcmc_simulate_fugacities(framework::Framework, temperature::Float64,
 
     function run_fugacity_test(fugacity::Float64)
         return gcmc_simulation(framework, temperature, fugacity, molecule,
-                        ljforcefield, n_burn_cycles, n_sample_cycles,
-                        sample_frequency, verbose)
+                        ljforcefield, n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles,
+                        sample_frequency=sample_frequency, verbose=verbose)
     end
+
+    #for load balancing, longer computation time goes first
+    #sort!(fugacities, rev=true)
 
     return pmap(run_fugacity_test, fugacities)
 
