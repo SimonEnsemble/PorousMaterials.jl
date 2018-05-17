@@ -57,19 +57,35 @@ end
     end
     return energy
 end
-                                  
+
+function gcmc_simulate_fugacities(framework::Framework, temperature::Float64,
+                        fugacities::Array{Float64}, molecule::Molecule,
+                        ljforcefield::LennardJonesForceField;
+                        n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
+                        sample_frequency::Int=25, verbose::Bool=false)
+
+    function run_fugacity_test(fugacity::Float64)
+        return gcmc_simulation(framework, temperature, fugacity, molecule,
+                        ljforcefield, n_burn_cycles, n_sample_cycles,
+                        sample_frequency, verbose)
+    end
+
+    return pmap(run_fugacity_test, fugacities)
+
+end
+
 
 """
     results = gcmc_simulation(framework, temperature, fugacity, molecule, ljforcefield;
                               n_sample_cycles=100000, n_burn_cycles=10000,
                               sample_frequency=25, verbose=false)
 
-Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a 
+Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
 framework at a particular temperature and fugacity (= pressure for an ideal gas) using a
 Lennard Jones force field.
 
 A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
-proposals. Current Markov chain moves implemented are particle insertion/deletion and 
+proposals. Current Markov chain moves implemented are particle insertion/deletion and
 translation.
 
 # Arguments
@@ -82,7 +98,7 @@ translation.
     the adsorption
 - `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
-- `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before 
+- `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before
     sampling.
 - `n_sample_cycles::Int`: number of cycles used for sampling
 - `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
@@ -90,7 +106,7 @@ translation.
 - `verbose::Bool`: whether or not to print off information during the simulation.
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         molecule::Molecule, ljforcefield::LennardJonesForceField; 
+                         molecule::Molecule, ljforcefield::LennardJonesForceField;
                          n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                          sample_frequency::Int=25, verbose::Bool=false)
     if verbose
@@ -105,12 +121,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
         error("Missing atoms from forcefield")
     end
-    
+
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
     const charged_framework = charged(framework)
     const charged_molecules = charged(molecule)
-    
+
     # define Ewald summation params
     #  TODO do this automatically with rules!
     const k_rep_factors = (11, 11, 9)
@@ -121,7 +137,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const kvectors = compute_kvectors(simulation_box, k_rep_factors, α)
 
     # TODO in adsorption isotherm dump coords from previous pressure and load them in here.
-    # only true if starting with 0 molecules 
+    # only true if starting with 0 molecules
     system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
     gcmc_stats = GCMCstats(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
@@ -144,7 +160,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             insert_molecule!(molecules, simulation_box, molecule_template)
 
             # compute the potential energy of the inserted molecule
-            energy = potential_energy(length(molecules), molecules, framework, ljforcefield, 
+            energy = potential_energy(length(molecules), molecules, framework, ljforcefield,
                                       simulation_box, repfactors, sr_cutoff_radius,
                                       kvectors, α, charged_molecules, charged_framework)
 
@@ -164,7 +180,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             molecule_id = rand(1:length(molecules))
 
             # compute the potential energy of the molecule we propose to delete
-            energy = potential_energy(molecule_id, molecules, framework, ljforcefield, 
+            energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
                                       simulation_box, repfactors, sr_cutoff_radius,
                                       kvectors, α, charged_molecules, charged_framework)
 
@@ -183,14 +199,14 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             molecule_id = rand(1:length(molecules))
 
             # energy of the molecule before it was translated
-            energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield, 
+            energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
                                           simulation_box, repfactors, sr_cutoff_radius,
                                           kvectors, α, charged_molecules, charged_framework)
 
             old_molecule = translate_molecule!(molecules[molecule_id], simulation_box)
 
             # energy of the molecule after it is translated
-            energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield, 
+            energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
                                           simulation_box, repfactors, sr_cutoff_radius,
                                           kvectors, α, charged_molecules, charged_framework)
 
