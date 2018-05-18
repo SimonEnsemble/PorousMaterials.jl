@@ -2,8 +2,8 @@
 @everywhere using Base.Test
 
 ig_tests = false
-xe_in_sbmof1_tests = false
-co2_tests =true
+xe_in_sbmof1_tests = true
+co2_tests = false
 
 #
 # Ideal gas tests.
@@ -45,10 +45,11 @@ if xe_in_sbmof1_tests
     test_mmol_g = [0.1931, 1.007, 1.4007]
     test_molec_unit_cell = [0.266, 1.388, 1.929]
 
-    result_arr = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
-    for i in 1:length(test_fugacities)
-        @test isapprox(results_arr[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
-        @test isapprox(results_arr[i]["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
+    results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
+
+    for i = 1:length(test_fugacities)
+        @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
+        @test isapprox(results[i]["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
     end
 """
     for (i, fugacity) in enumerate(test_fugacities)
