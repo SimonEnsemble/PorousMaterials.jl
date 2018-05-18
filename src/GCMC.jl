@@ -62,19 +62,41 @@ end
     end
     return energy
 end
-                                  
+
+function adsorption_isotherm(framework::Framework, temperature::Float64,
+                        fugacities::Array{Float64}, molecule::Molecule,
+                        ljforcefield::LennardJonesForceField;
+                        n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
+                        sample_frequency::Int=25, verbose::Bool=false)
+
+    function run_fugacity(fugacity::Float64)
+        return gcmc_simulation(framework, temperature, fugacity, molecule,
+                        ljforcefield, n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles,
+                        sample_frequency=sample_frequency, verbose=verbose)
+    end
+
+    # for load balancing, longer computation time goes first
+    ids = sortperm(fugacities, rev=true)
+
+    # gcmc simulations in parallel
+    results = pmap(run_fugacity, fugacities[ids])
+
+    # put results in same order as original fugacity
+    return results[[find(x -> x==i, ids)[1] for i = 1:length(ids)]]
+end
+
 
 """
     results = gcmc_simulation(framework, temperature, fugacity, molecule, ljforcefield;
                               n_sample_cycles=100000, n_burn_cycles=10000,
                               sample_frequency=25, verbose=false)
 
-Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a 
+Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
 framework at a particular temperature and fugacity (= pressure for an ideal gas) using a
 Lennard Jones force field.
 
 A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
-proposals. Current Markov chain moves implemented are particle insertion/deletion and 
+proposals. Current Markov chain moves implemented are particle insertion/deletion and
 translation.
 
 # Arguments
@@ -87,7 +109,7 @@ translation.
     the adsorption
 - `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
-- `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before 
+- `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before
     sampling.
 - `n_sample_cycles::Int`: number of cycles used for sampling
 - `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
@@ -95,7 +117,7 @@ translation.
 - `verbose::Bool`: whether or not to print off information during the simulation.
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         molecule::Molecule, ljforcefield::LennardJonesForceField; 
+                         molecule::Molecule, ljforcefield::LennardJonesForceField;
                          n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                          sample_frequency::Int=25, verbose::Bool=false)
     if verbose
@@ -113,12 +135,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
         error("Missing atoms from forcefield")
     end
-    
+
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
     const charged_framework = charged(framework)
     const charged_molecules = charged(molecule)
-    
+
     # define Ewald summation params
     #  TODO do this automatically with rules!
     const sr_cutoff_r = sqrt(ljforcefield.cutoffradius_squared)
@@ -130,7 +152,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                         verbose=verbose & (charged_framework || charged_molecules), ϵ=1e-6)
 
     # TODO in adsorption isotherm dump coords from previous pressure and load them in here.
-    # only true if starting with 0 molecules 
+    # only true if starting with 0 molecules
     system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
     gcmc_stats = GCMCstats(0, 0, 0, PotentialEnergy(0.0, 0.0, 0.0, 0.0),
                            PotentialEnergy(0.0, 0.0, 0.0, 0.0), 0.0)
