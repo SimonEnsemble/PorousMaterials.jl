@@ -12,6 +12,9 @@ the potential energy in units Kelvin (well, whatever the units of ϵ are).
 - `r²::Float64`: distance between two (pseudo)atoms in question squared (Angstrom²)
 - `σ²::Float64`: sigma parameter in Lennard Jones potential squared (units: Angstrom²)
 - `ϵ::Float64`: epsilon parameter in Lennard Jones potential (units: Kelvin)
+
+# Returns
+- `energy::Float64`: Lennard Jones potential energy
 """
 function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
 	ratio = (σ² / r²) ^ 3
@@ -29,8 +32,11 @@ Applies the nearest image convention to find the closest replicate of a specific
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation/atoms)
 - `ljforcefield::LennardJonesForceField`: Lennard Jones force field
-- `repfactors::Tuple{Int64, Int64, Int64}`: replication factors of the home unit cell to build
+- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build
 the supercell such that the nearest image convention can be applied in this function.
+
+# Returns
+- `energy::Float64`: Van der Waals interaction energy
 """
 function vdw_energy(framework::Framework, molecule::Molecule,
                     ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
@@ -82,6 +88,15 @@ end
 Calculates van der Waals interaction energy of a single adsorbate `molecules[molecule_id]`
 with all of the other molecules in the system. Periodic boundary conditions are applied,
 using the nearest image convention.
+
+# Arguments
+- `molecule_id::Int`: Molecule ID used to determine which molecule in `molecules` we wish to calculate the guest-guest interactions
+- `molecules::Array{Molecule, 1}`: An array of Molecule data structures
+- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
+- `simulation_box::Box`: The simulation box for the computation.
+
+# Returns
+- `gg_energy::Float64`: The guest-guest interaction energy of `molecules[molecule_id]` with the other molecules in `molecules`
 """
 function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefield::LennardJonesForceField, simulation_box::Box)
     energy = 0.0 # energy is pair-wise additive
@@ -120,7 +135,18 @@ function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefiel
 end
 
 """
+    total_energy = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
+
 Compute total guest-host interaction energy (sum over all adsorbates).
+
+# Arguments
+- `framework::Framework`: The framework containing the crystal structure information
+- `molecules::Array{Molecule, 1}`: An array of Molecule data structures
+- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
+- `repfactors::Tuple{Int, Int, Int}`: The replication factors we use to replicate our unit cell
+
+# Returns
+- `total_energy::Float64`: The total guest-host van der Waals energy
 """
 function total_guest_host_vdw_energy(framework::Framework,
                                      molecules::Array{Molecule, 1},
@@ -134,7 +160,17 @@ function total_guest_host_vdw_energy(framework::Framework,
 end
 
 """
+    total_energy = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
+
 Compute sum of all guest-guest interaction energy from vdW interactions.
+
+# Arguments
+- `molecules::Array{Molecule, 1}`: An array of Molecule data structures
+- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
+- `simulation_box::Box`: The simulation box for the computation.
+
+# Returns
+- `total_energy::Float64`: The total guest-guest van der Waals energy
 """
 function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1},
                                       ljforcefield::LennardJonesForceField,

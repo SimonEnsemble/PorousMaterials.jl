@@ -1,8 +1,12 @@
-# Molecules are composed of Lennard-Jones spheres and point charges.
+"""
+Lennard-Jones spheres containing an atom and its' cartesian coordinates
+
+# Attributes
+- `atom::Symbol`: Atom name corresponding to force field
+- `x::Array{Float64, 1}`: Cartesian coordinates in Angstrom
+"""
 struct LennardJonesSphere
-    "atom name corresponding to force field"
     atom::Symbol
-    "Cartesian coordinates (units: A)"
     x::Array{Float64, 1}
 end
 
@@ -10,11 +14,15 @@ function Base.isapprox(ljs1::LennardJonesSphere, ljs2::LennardJonesSphere)
     return ((ljs1.atom == ljs2.atom) & isapprox(ljs1.x, ljs2.x))
 end
 
-"A point charge"
+"""
+Point charge data structure containing a charge and the charges' cartesian coordinates
+
+# Attributes
+- `q::Float64`: Charge magnitude (electrons)
+- `x::Array{Float64, 1}`: Cartesian coordinates in Angstrom
+"""
 struct PointCharge
-    "charge magnitude (electrons)"
     q::Float64
-    "Cartesian coordinates (units: A)"
     x::Array{Float64, 1}
 end
 
@@ -56,8 +64,14 @@ end
 
 Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
 Center of mass assigned using atomic masses from `read_atomic_masses()`
+
+# Arguments
+- `species::AbstractString`: Name of the molecule
+
+# Returns
+- `molecule::Molecule`: A fully constructed molecule data structure
 """
-function read_molecule_file(species::String)
+function read_molecule_file(species::AbstractString)
     if ! isdir(PATH_TO_DATA * "molecules/" * species)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
@@ -119,7 +133,7 @@ function read_molecule_file(species::String)
 end
 
 """
-    translate!(molecule::Molecule, dx::Array{Float64, 1})
+    translate!(molecule, dx)
 
 Translate a molecule by Cartesian vector `dx`. Adds `dx` to the coordinates of each `LennardJonesSphere` and `Charge` in the `Molecule` and shifts the center of mass as well.
 This function does *not* account for periodic boundary conditions applied in the context of a `Box`.
@@ -140,7 +154,7 @@ function translate_by!(molecule::Molecule, dx::Array{Float64, 1})
 end
 
 """
-    translate_to!(molecule::Molecule, x::Array{Float64, 1})
+    translate_to!(molecule, x)
 
 Translate a molecule so that its center of mass is at Cartesian vector `x`. Charges the coordinates of each `LennardJonesSphere` and `Charge` in the `Molecule` and its center of mass as well.
 This function does *not* account for periodic boundary conditions applied in the context of a `Box`.
@@ -176,6 +190,9 @@ end
     u = rand_point_on_unit_sphere()
     
 Generate a unit vector with a random orientation.
+
+# Returns
+- `u::Array{Float64, 1}`: A unit vector with a random orientation
 """
 function rand_point_on_unit_sphere()
     u = randn(3)
@@ -193,6 +210,9 @@ Generate a 3x3 random rotation matrix `r` such that when a point `x` is rotated 
 See James Arvo. Fast Random Rotation Matrices.
 
 https://pdfs.semanticscholar.org/04f3/beeee1ce89b9adf17a6fabde1221a328dbad.pdf
+
+# Returns
+- `r::Array{Float64, 2}`: A 3x3 random rotation matrix
 """
 function rotation_matrix()
     # random rotation about the z-axis
@@ -208,9 +228,12 @@ function rotation_matrix()
 end
 
 """
-    rotate!(molecule::Molecule)
+    rotate!(molecule)
 
 Conduct a uniform random rotation of a molecule about its center of mass.
+
+# Arguments
+- `molecule::Molecule`: The molecule which will be rotated
 """
 function rotate!(molecule::Molecule)
     # generate a random rotation matrix
@@ -233,9 +256,16 @@ function rotate!(molecule::Molecule)
 end
 
 """
-    outside_box = completely_outside_box(molecule::Molecule, box::Box)
+    outside_box = completely_outside_box(molecule, box)
 
-returns true if the center of mass of a molecule is outside of the box and false otherwise.
+Checks if a Molecule object is within the boundaries of a Box unitcell.
+
+# Arguments
+- `molecule::Molecule`: The molecule object
+- `box::Box`: The unit cell object
+
+# Returns
+- `outside_box::Bool`: True if the center of mass of `molecule` is outisde of `box`. False otherwise
 """
 function outside_box(molecule::Molecule, box::Box)
     xf = box.c_to_f * molecule.center_of_mass
@@ -248,11 +278,16 @@ function outside_box(molecule::Molecule, box::Box)
 end
 
 """
-    write_to_xyz(molecules, filename)
+    write_to_xyz(molecules, filename; comment="")
 
 Write an array of molecules to an .xyz file. Write only the Lennard-Jones spheres to file (not charges).
+
+# Arguments
+- `molecules::Array{Molecule, 1}`: An array of molecules
+- `filename::AbstractString`: Name of the output file
+- `comment::AbstractString`: A comment that will be printed in the xyz file
 """
-function write_to_xyz(molecules::Array{Molecule, 1}, filename::String; comment::String="")
+function write_to_xyz(molecules::Array{Molecule, 1}, filename::AbstractString; comment::AbstractString="")
     if ! contains(filename, ".xyz")
         filename *= ".xyz"
     end
@@ -270,9 +305,15 @@ function write_to_xyz(molecules::Array{Molecule, 1}, filename::String; comment::
 end
 
 """
-    total_charge = total_charge(molecule::Molecule)
+    total_charge = total_charge(molecule)
 
 Sum up point charges on a molecule.
+
+# Arguments
+- `molecule::Molecule`: the molecule we wish to calculate the total charge of
+
+# Returns
+- `total_charge::Float64`: The sum of the point charges of `molecule`
 """
 function total_charge(molecule::Molecule)
     total_charge = 0.0

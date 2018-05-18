@@ -1,9 +1,11 @@
 @everywhere using PorousMaterials
 @everywhere using Base.Test
+using CSV
+using DataFrames
 
 ig_tests = false
-xe_in_sbmof1_tests = true
-co2_tests = false
+xe_in_sbmof1_tests = false
+co2_tests = true
 
 #
 # Ideal gas tests.
@@ -29,41 +31,44 @@ if ig_tests
     end
 end
 
+## Xe adsorption in SBMOF-1 tests
 if xe_in_sbmof1_tests
-    ## SBMOF-1 tests
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
     dreiding_forcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
-
-    ##Getting template for use with the sim
     molecule = read_molecule_file("Xe")
-
-    # very quick test
-    results = gcmc_simulation(sbmof1, 298.0, 2300.0, molecule, dreiding_forcefield, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
-
 
     test_fugacities = [20.0, 200.0, 2000.0]
     test_mmol_g = [0.1931, 1.007, 1.4007]
     test_molec_unit_cell = [0.266, 1.388, 1.929]
 
-    results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
+    results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=25000, n_sample_cycles=25000, verbose=true)
 
     for i = 1:length(test_fugacities)
-        @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
-        @test isapprox(results[i]["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
+        @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)
+        @test isapprox(results[i]["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.025)
     end
-"""
-    for (i, fugacity) in enumerate(test_fugacities)
-        @time results = gcmc_simulation(sbmof1, 298.0, fugacity, molecule, dreiding_forcefield, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
-        println("Should be (molec/unit cell: ", test_molec_unit_cell[i])
-        @test isapprox(results["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.01)
-        @test isapprox(results["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.01)
-    end
-"""
 end
 
 if co2_tests
+    # load test data, adsorption isotherm at 313 K simulated by Greg
+    df = CSV.read("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
+
     co2 = read_molecule_file("CO2")
-    nu1000 = read_crystal_structure_file("NU-1000_Greg.cif")
-    dreiding = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
-    @time results = gcmc_simulation(nu1000, 298.0, 20000.0, co2, dreiding, n_burn_cycles=1000, n_sample_cycles=1000, verbose=true)
+    f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+    strip_numbers_from_atom_labels!(f)
+    ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+    
+    # simulate with PorousMaterials.jl in parallel
+    results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:P_Pa]), co2, ff, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
+    n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
+    
+    # plot comparison
+    using PyPlot
+    figure()
+    xlabel("Pressure (bar)")
+    ylabel("Molecules/unit cell")
+    scatter(df[:P_Pa], df[:molecules_per_unit_cell], label="Greg")
+    scatter(df[:P_Pa], n_sim, label="PorousMaterials.jl")
+    legend()
+    savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
 end
