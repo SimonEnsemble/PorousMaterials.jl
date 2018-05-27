@@ -90,16 +90,16 @@ for c = 1:4
     # compute energy of the configuration
     sr_cutoff_r = 10.0
     # use PorousMaterials.jl settings
-    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, box, verbose=true, ϵ=1e-6)
+ #     eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, box, verbose=true, ϵ=1e-6)
     # use NIST reported settings
- #     kreps = (5, 5, 5)
- #     eparams = PorousMaterials.EwaldParams((5,5,5), 5.6/box.a, sr_cutoff_r, box)
- #     kvecs = PorousMaterials.precompute_kvec_wts(eparams, 27.0)
- #     eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
- #     eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
- #     eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
+    kreps = (5, 5, 5)
+    eparams = PorousMaterials.EwaldParams(kreps, 5.6/box.a, sr_cutoff_r, box)
+    kvecs = PorousMaterials.precompute_kvec_wts(eparams, 27.0)
+    eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
+    eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
+    eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
     energy = PorousMaterials.total_electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
-    @assert(isapprox(energy, energies_should_be[c], rtol=0.01))
-    println(energy)
-    println(energies_should_be[c])
+    @assert(isapprox(energy, energies_should_be[c], rtol=0.005))
+ #     println(energy)
+ #     println(energies_should_be[c])
 end
