@@ -234,6 +234,42 @@ end
     @test ! isapprox(v, PotentialEnergy(3.1, 4.0, 5.0, 6.0))
     @test isapprox(v + PotentialEnergy(2.0, 3.0, 4.0, 5.0), PotentialEnergy(5.0, 7.0, 9.0, 11.0))
     @test isapprox(v - PotentialEnergy(2.0, 3.0, 4.0, 5.0), PotentialEnergy(1.0, 1.0, 1.0, 1.0))
+
+    # NIST data to test LJ potentials
+    # data from here: https://www.nist.gov/mml/csd/chemical-informatics-research-group/lennard-jones-fluid-reference-calculations
+    # created bogus atom X for this purpose.
+    ljff = read_forcefield_file("NIST.csv", cutoffradius=3.0)
+    energies_should_be = [-4.3515E+03, -6.9000E+02, -1.1467E+03, -1.6790E+01]
+    for c = 1:4 # four configurations
+        # read in positions of atoms provided by NIST ("X" atoms)
+        posfile = open("nist/lennardjones/lj_sample_config_periodic$c.txt")
+        lines = readlines(posfile)
+        # first line is dims of unit cell box
+        dims = parse.(Float64, split(lines[1]))
+        box = construct_box(dims..., π/2, π/2, π/2)
+        # second line is # of molecules
+        n = parse(Int, lines[2])
+
+        # read in molecule positions, construct them
+        ms = Molecule[]
+        for i = 1:n
+            xyz = split(lines[2+i])[2:end]
+            x = parse.(Float64, xyz)
+            m = read_molecule_file("X")
+            translate_to!(m, x)
+            push!(ms, m)
+        end
+        close(posfile)
+        
+        # compute energy of the configuration
+        repfactors = (1, 1, 1)
+        energy = 0.0
+        for i = 1:length(ms)
+            energy += vdw_energy(i, ms, ljff, box)
+        end
+        energy /= 2
+        @test isapprox(energy, energies_should_be[c], atol=1.0)
+    end
 end;
 #@printf("------------------------------\n")
 
