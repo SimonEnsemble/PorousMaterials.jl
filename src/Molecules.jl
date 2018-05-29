@@ -60,14 +60,14 @@ function Base.isapprox(m1::Molecule, m2::Molecule)
 end
 
 """
-    molecule = read_molecule_file("Xe")
+    molecule = read_molecule_file("Xe", assert_charge_neutrality=true)
 
 Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
 Center of mass assigned using atomic masses from `read_atomic_masses()`
 
 # Arguments
 - `species::AbstractString`: Name of the molecule
-- `assert_charge_neutrality::Bool=true`: assert the molecule is charge neutral for safety.
+- `assert_charge_neutrality::Bool`: assert the molecule is charge neutral for safety.
 
 # Returns
 - `molecule::Molecule`: A fully constructed molecule data structure
