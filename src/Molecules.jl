@@ -60,18 +60,19 @@ function Base.isapprox(m1::Molecule, m2::Molecule)
 end
 
 """
-    molecule = read_molecule_file("Xe")
+    molecule = read_molecule_file("Xe", assert_charge_neutrality=true)
 
 Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
 Center of mass assigned using atomic masses from `read_atomic_masses()`
 
 # Arguments
 - `species::AbstractString`: Name of the molecule
+- `assert_charge_neutrality::Bool`: assert the molecule is charge neutral for safety.
 
 # Returns
 - `molecule::Molecule`: A fully constructed molecule data structure
 """
-function read_molecule_file(species::AbstractString)
+function read_molecule_file(species::AbstractString; assert_charge_neutrality::Bool=true)
     if ! isdir(PATH_TO_DATA * "molecules/" * species)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
@@ -125,7 +126,9 @@ function read_molecule_file(species::AbstractString)
     # check for charge neutrality
     if length(charges) > 0
         if ! (total_charge(molecule) ≈ 0.0)
-            error(@sprintf("Molecule %s is not charge neutral!", species))
+            if assert_charge_neutrality
+                error(@sprintf("Molecule %s is not charge neutral! Pass `assert_charge_neutrality=false` to ignore this error message.", species))
+            end
         end
     end
 
