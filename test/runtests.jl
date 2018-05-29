@@ -315,12 +315,13 @@ q_test = 0.8096
 
     # NIST data to test Ewald sums
     # data from here:  https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
-    energies_should_be = [-5.58889E+05+6.27009E+03+-2.84469E+06+2.80999E+06,
-                         -1.19295E+06+6.03495E+03+-5.68938E+06+5.61998E+06,
-                         -1.96297E+06+5.24461E+03+-8.53407E+06+8.42998E+06,
-                         -3.57226E+06+7.58785E+03+-1.42235E+07+1.41483E+07]
-
-    for c = 1:4
+    # what the energies should be for all four configurations provided by NIST
+    energies_should_be = [-5.58889e05 + 6.27009e03 + -2.84469e06 + 2.80999e06,
+                         -1.19295e06  + 6.03495e03 + -5.68938e06 + 5.61998e06,
+                         -1.96297e06  + 5.24461e03 + -8.53407e06 + 8.42998e06,
+                         -3.57226e06  + 7.58785e03 + -1.42235e07 + 1.41483e07]
+    # loop over all four configurations provided by NIST
+    for (c, energy_should_be) in enumerate(energies_should_be)
         # read in positions of atoms provided by NIST ("X" atoms)
         posfile = open("nist/electrostatics/spce_sample_config_periodic$c.txt")
         lines = readlines(posfile)
@@ -373,9 +374,7 @@ q_test = 0.8096
         eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
         eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
         energy = PorousMaterials.total_electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
-        @test isapprox(energy, energies_should_be[c], rtol=0.005)
-     #     println(energy)
-     #     println(energies_should_be[c])
+        @test isapprox(energy, energy_should_be, rtol=0.005)
     end
 end
 @printf("------------------------------\n")
