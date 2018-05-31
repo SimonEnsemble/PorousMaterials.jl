@@ -35,6 +35,11 @@ strip_numbers_from_atom_labels!(framework)
     @test isapprox(transpose(framework.box.reciprocal_lattice), 2 * π * inv(framework.box.f_to_c))
     @test framework.atoms == framework2.atoms && framework.xf == framework2.xf && framework.charges == framework2.charges
 
+    # test .cif writer; write, read in, assert equal
+    write_cif(framework, "data/crystals/rewritten_test_structure2.cif")
+    framework_rewritten = read_crystal_structure_file("rewritten_test_structure2.cif")
+    @test isapprox(framework, framework_rewritten)
+
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = read_crystal_structure_file("test_structure2.cif")
     strip_numbers_from_atom_labels!(framework_from_cssr)
@@ -261,7 +266,7 @@ end
             push!(ms, m)
         end
         close(posfile)
-        
+
         # compute energy of the configuration
         repfactors = (1, 1, 1)
         energy = 0.0
@@ -361,7 +366,7 @@ q_test = 0.8096
         end
         @assert(length(ms) == n/3)
         close(posfile)
-        
+
         # compute energy of the configuration
         sr_cutoff_r = 10.0
         # use PorousMaterials.jl settings
