@@ -120,6 +120,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          molecule::Molecule, ljforcefield::LennardJonesForceField;
                          n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                          sample_frequency::Int=25, verbose::Bool=false)
+    tic()
     if verbose
         pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
@@ -276,6 +277,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
+    toc()
 
     results = Dict{String, Any}()
     results["crystal"] = framework.name
