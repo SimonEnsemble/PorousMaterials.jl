@@ -741,16 +741,19 @@ end
 
 """
     com = center_of_mass(frame; fractional = false)
+    com = center_of_mass(molecule::Molecule)
 
-Finds the center of mass of a unit cell, taking periodic boundaries into consideration.
+Finds the center of mass of a unit cell or molecule, taking periodic boundaries into consideration for periodic unit cells.
 It maps the unit cell to a circle and uses the periodic nature of the circle to calculate the center of mass.
-Note that with periodic boundaries, a center of mass is not properly defined, so take the results with a grain of salt.
+(Note that with periodic boundaries, a center of mass is not properly defined, so take the results with a grain of salt.)
 
 # Arguments
 - `frame::Framework`: The framework containing the crystal structure information
+- `molecule::Molecule`: A molecule object
+- `fractional::Bool`: An optional argument which changes the return output to fractional coordinates. Not an option for Molecule objects.
 
 # Returns
-- `com::Array{Float64, 1}(3)
+- `com::Array{Float64, 1}`: Center of mass coordinates
 """
 function center_of_mass(frame::Framework; fractional = false)
     atomic_masses = read_atomic_masses()
