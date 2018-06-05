@@ -86,6 +86,8 @@ end;
     for i = 1:3
         @test all(molecule.charges[i].x ≈ molecule.ljspheres[i].x)
     end
+    molecule2 = read_molecule_file("IG")
+    @test all(molecule.center_of_mass .≈ [0.0, 0.0, 0.0])
 
     # test translate
     m1 = read_molecule_file("CO2")

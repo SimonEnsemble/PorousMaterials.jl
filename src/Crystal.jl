@@ -739,6 +739,47 @@ function crystal_density(framework::Framework)
     return mw / framework.box.Ω * 1660.53892  # --> kg/m3
 end
 
+"""
+    com = center_of_mass(frame; fractional = false)
+    com = center_of_mass(molecule::Molecule)
+
+Finds the center of mass of a unit cell or molecule, taking periodic boundaries into consideration for periodic unit cells.
+It maps the unit cell to a circle and uses the periodic nature of the circle to calculate the center of mass.
+(Note that with periodic boundaries, a center of mass is not properly defined, so take the results with a grain of salt.)
+
+# Arguments
+- `frame::Framework`: The framework containing the crystal structure information
+- `molecule::Molecule`: A molecule object
+- `fractional::Bool`: An optional argument which changes the return output to fractional coordinates. Not an option for Molecule objects.
+
+# Returns
+- `com::Array{Float64, 1}`: Center of mass coordinates
+"""
+function center_of_mass(frame::Framework; fractional = false)
+    atomic_masses = read_atomic_masses()
+    xf_com = Array{Float64, 1}(3)
+    for axis in 1:3
+        ξ_bar = 0.0
+        ζ_bar = 0.0
+        M = 0.0
+        for i in 1:frame.n_atoms
+            θ = frame.xf[axis, i] * 2 * pi
+            ξ = cos(θ) * atomic_masses[frame.atoms[i]] / (2 * pi)
+            ζ = sin(θ) * atomic_masses[frame.atoms[i]] / (2 * pi)
+            ξ_bar += ξ
+            ζ_bar += ζ
+            M += atomic_masses[frame.atoms[i]]
+        end
+        ξ_bar /= M
+        ζ_bar /= M
+        θ_bar = atan2(-ζ_bar, -ξ_bar) + pi
+        xf_com[axis] = θ_bar / (2 * pi)
+    end
+    if fractional
+        return xf_com
+    end
+    return frame.box.f_to_c * xf_com
+end
 
 function Base.show(io::IO, framework::Framework)
 	@printf(io, "a = %.3f Angstrom\n", framework.box.a)

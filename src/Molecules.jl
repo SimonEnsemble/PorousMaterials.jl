@@ -30,6 +30,8 @@ function Base.isapprox(c1::PointCharge, c2::PointCharge)
     return ((c1.q == c2.q) & isapprox(c1.x, c2.x))
 end
 
+
+
 """
 Data structure for a molecule/adsorbate.
 
@@ -92,8 +94,6 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
     end
     df_lj = CSV.read(ljspheresfilename)
     
-    COM = [0.0, 0.0, 0.0]
-    total_mass = 0.0
     ljspheres = LennardJonesSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
@@ -102,10 +102,7 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
-        total_mass += atomic_masses[atom]
-        COM += atomic_masses[atom] .* x
     end
-    COM /= total_mass
 
     # Read in point charges
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
@@ -120,6 +117,9 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
         x = [row[:x], row[:y], row[:z]]
         push!(charges, PointCharge(row[:q], x))
     end
+
+    # Calculate center of mass
+    COM = center_of_mass(ljspheres)
 
     molecule = Molecule(Symbol(species), ljspheres, charges, COM)
 
@@ -328,4 +328,35 @@ end
 
 function charged(molecule::Molecule)
     return length(molecule.charges) > 0 ? true : false
+end
+
+
+function center_of_mass(ljspheres::Array{LennardJonesSphere, 1})
+    atomic_masses = read_atomic_masses()
+    # Checks if any ljsphere has zero mass. If so, we calculate the geometric mean of ljspheres, otherwise a weighted average
+    if all([atomic_masses[x.atom] for x in ljspheres] .> 0)
+        return _center_of_mass_weighted(ljspheres, atomic_masses)
+    else
+        return _center_of_mass_geometric(ljspheres)
+    end
+end
+
+center_of_mass(molecule::Molecule) = center_of_mass(molecule.ljspheres)
+
+function _center_of_mass_weighted(ljspheres::Array{LennardJonesSphere, 1}, atomic_masses::Dict{Symbol, Float64})
+    COM = [0., 0., 0.]
+    M = 0.0
+    for ljsphere in ljspheres
+        COM += atomic_masses[ljsphere.atom] .* ljsphere.x
+        M += atomic_masses[ljsphere.atom]
+    end
+    return COM ./ M
+end
+
+function _center_of_mass_geometric(ljspheres::Array{LennardJonesSphere, 1})
+    COM = [0., 0., 0.]
+    for ljsphere in ljspheres
+        COM += ljsphere.x
+    end
+    return COM ./ length(ljspheres)
 end
