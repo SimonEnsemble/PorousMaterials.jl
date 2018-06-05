@@ -137,13 +137,9 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_DATA * "molecules/"`
 ### Energetics
 
 # TODO
-* random rotation matrix needs tests
-* rules for Ewald summation parameters
 * add hook so that tests run before committing
 * henry coeff (Melanie)
-* Ewald for molecules in GCMC (Arthur)
 * make sure no 100000000000 - 10000000000.01 is going on with electrostatics adding to vdw...
-* add guest-guest tests for CO2, other moleucles that are multiple beads
 * get test data from Greg on ENTIRE molecule's energies
 
 # Help wanted
