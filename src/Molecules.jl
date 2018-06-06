@@ -337,7 +337,7 @@ function center_of_mass(ljspheres::Array{LennardJonesSphere, 1})
         total_mass += atomic_masses[ljsphere.atom]
     end
     if total_mass > 0.0
-        return center_of_mass ./ total_mass
+        return center_of_mass / total_mass
     else
         warn("The total atomic mass of the molecule is zero; instead assigning the
                 geometric center as the center of mass.")
@@ -352,5 +352,5 @@ function _geometric_center(ljspheres::Array{LennardJonesSphere, 1})
     for ljsphere in ljspheres
         center_of_mass += ljsphere.x
     end
-    return center_of_mass ./ length(ljspheres)
+    return center_of_mass / length(ljspheres)
 end
