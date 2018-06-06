@@ -30,8 +30,6 @@ function Base.isapprox(c1::PointCharge, c2::PointCharge)
     return ((c1.q == c2.q) & isapprox(c1.x, c2.x))
 end
 
-
-
 """
 Data structure for a molecule/adsorbate.
 
@@ -39,7 +37,7 @@ Data structure for a molecule/adsorbate.
 - `species::Symbol`: Species of molecule, e.g. `CO2` or `ethane`
 - `ljspheres::Array{LennardJonesSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
 - `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
-- `center_of_mass::Array{Float64, 1}`: center of mass of the molecule
+- `center_of_mass::Array{Float64, 1}`: center of mass of the molecule in Cartesian coords
 """
 struct Molecule
     species::Symbol
@@ -85,7 +83,7 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
         error(@sprintf("No file 'atomicmasses.csv' exists. This file is needed to calculate the center of mass"))
     end
     atomic_masses = read_atomic_masses()
-    
+
     # Read in Lennard Jones spheres
     ljspheresfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
     if ! isfile(ljspheresfilename)
@@ -93,7 +91,7 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
                        ljspheresfilename))
     end
     df_lj = CSV.read(ljspheresfilename)
-    
+
     ljspheres = LennardJonesSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
@@ -183,7 +181,7 @@ function Base.show(io::IO, molecule::Molecule)
     if length(molecule.charges) > 0
         print(io, "\nPoint charges: ")
         for charge in molecule.charges
-            @printf(io, "\n\tq = %f, x = [%.3f, %.3f, %.3f]", charge.q, 
+            @printf(io, "\n\tq = %f, x = [%.3f, %.3f, %.3f]", charge.q,
                     charge.x[1], charge.x[2], charge.x[3])
         end
     end
@@ -191,7 +189,7 @@ end
 
 """
     u = rand_point_on_unit_sphere()
-    
+
 Generate a unit vector with a random orientation.
 
 # Returns
@@ -221,7 +219,7 @@ function rotation_matrix()
     # random rotation about the z-axis
     u₁ = rand() * 2.0 * π
     r = [cos(u₁) sin(u₁) 0.0; -sin(u₁) cos(u₁) 0.0; 0.0 0.0 1.0]
-    
+
     # househoulder matrix
     u₂ = 2.0 * π * rand()
     u₃ = rand()
@@ -330,33 +328,29 @@ function charged(molecule::Molecule)
     return length(molecule.charges) > 0 ? true : false
 end
 
-
 function center_of_mass(ljspheres::Array{LennardJonesSphere, 1})
     atomic_masses = read_atomic_masses()
-    # Checks if any ljsphere has zero mass. If so, we calculate the geometric mean of ljspheres, otherwise a weighted average
-    if all([atomic_masses[x.atom] for x in ljspheres] .> 0)
-        return _center_of_mass_weighted(ljspheres, atomic_masses)
+    center_of_mass = [0., 0., 0.]
+    total_mass = 0.0
+    for ljsphere in ljspheres
+        center_of_mass += atomic_masses[ljsphere.atom] .* ljsphere.x
+        total_mass += atomic_masses[ljsphere.atom]
+    end
+    if total_mass > 0.0
+        return center_of_mass ./ total_mass
     else
-        return _center_of_mass_geometric(ljspheres)
+        warn("The total atomic mass of the molecule is zero; instead assigning the
+                geometric center as the center of mass.")
+        return _geometric_center(ljspheres)
     end
 end
 
 center_of_mass(molecule::Molecule) = center_of_mass(molecule.ljspheres)
 
-function _center_of_mass_weighted(ljspheres::Array{LennardJonesSphere, 1}, atomic_masses::Dict{Symbol, Float64})
-    COM = [0., 0., 0.]
-    M = 0.0
+function _geometric_center(ljspheres::Array{LennardJonesSphere, 1})
+    center_of_mass = [0., 0., 0.]
     for ljsphere in ljspheres
-        COM += atomic_masses[ljsphere.atom] .* ljsphere.x
-        M += atomic_masses[ljsphere.atom]
+        center_of_mass += ljsphere.x
     end
-    return COM ./ M
-end
-
-function _center_of_mass_geometric(ljspheres::Array{LennardJonesSphere, 1})
-    COM = [0., 0., 0.]
-    for ljsphere in ljspheres
-        COM += ljsphere.x
-    end
-    return COM ./ length(ljspheres)
+    return center_of_mass ./ length(ljspheres)
 end
