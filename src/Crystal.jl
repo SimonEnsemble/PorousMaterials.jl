@@ -9,10 +9,10 @@ fractional and Cartesian coordinates.
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional 
+- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional
 coordinates to cartesian coordinates. The columns of this matrix define the unit cell
 axes.
-- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian 
+- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian
 coordinates to fractional coordinates
 - `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
 """
@@ -67,7 +67,7 @@ Automatically calculates Ω, f_to_c, and c_to_f for `Box` data structure and ret
 # Returns
 - `box::Box`: Fully formed Box object
 """
-function construct_box(a::Float64, b::Float64, c::Float64, 
+function construct_box(a::Float64, b::Float64, c::Float64,
                        α::Float64, β::Float64, γ::Float64)
     # unit cell volume (A³)
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
@@ -98,20 +98,20 @@ The columns of this matrix are the unit cell axes. Units must be in Å.
 function construct_box(f_to_c::Array{Float64, 2})
     # unit cell volume (A³) is the determinant of the matrix
     Ω = det(f_to_c)
-    
+
     # unit cell dimensions are lengths of the unit cell axes (Å)
     a = norm(f_to_c[:, 1])
     b = norm(f_to_c[:, 2])
     c = norm(f_to_c[:, 3])
-    
+
     # c_to_f is the inverse
     c_to_f = inv(f_to_c)
-    
+
     # angles (radians)
     α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
     β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
     γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
-   
+
     # the columns of f_to_c are the unit cell axes
     r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
@@ -485,8 +485,8 @@ function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0
     end
     n_atoms = sum(atoms_to_keep)
 
-    new_framework = Framework(framework.name, framework.box, 
-                          n_atoms, framework.atoms[atoms_to_keep], 
+    new_framework = Framework(framework.name, framework.box,
+                          n_atoms, framework.atoms[atoms_to_keep],
                           framework.xf[:,atoms_to_keep], framework.charges[atoms_to_keep])
 
     if run_checks
@@ -739,6 +739,44 @@ function crystal_density(framework::Framework)
     return mw / framework.box.Ω * 1660.53892  # --> kg/m3
 end
 
+"""
+    write_cif(framework, filename)
+
+Write a `framework::Framework` to a .cif file with `filename::String`. If `filename` does
+not include the .cif extension, it will automatically be added.
+"""
+function write_cif(framework::Framework, filename::String)
+    # append ".cif" to filename if it doesn't already have the extension
+    if ! contains(filename, ".cif")
+        filename *= ".cif"
+    end
+    cif_file = open(filename, "w")
+    @printf(cif_file, "_symmetry_space_group_name_H-M   'P 1'\n")
+
+    @printf(cif_file, "_cell_length_a %f\n", framework.box.a)
+    @printf(cif_file, "_cell_length_b %f\n", framework.box.b)
+    @printf(cif_file, "_cell_length_c %f\n", framework.box.c)
+
+    @printf(cif_file, "_cell_angle_alpha %f\n", framework.box.α * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_beta %f\n", framework.box.β * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_gamma %f\n", framework.box.γ * 180.0 / pi)
+
+    @printf(cif_file, "_symmetry_Int_Tables_number 1\n\n")
+    @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n 'x, y, z'\n\n")
+
+    @printf(cif_file, "loop_\n_atom_site_label\n")
+    @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
+    @printf(cif_file, "_atom_site_charge\n")
+
+    for i = 1:framework.n_atoms
+        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms[i],
+                    framework.xf[1, i],
+                    framework.xf[2, i],
+                    framework.xf[3, i],
+                    framework.charges[i])
+     end
+     close(cif_file)
+end
 
 function Base.show(io::IO, framework::Framework)
 	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
@@ -759,7 +797,7 @@ function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
     @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
         box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
-    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n", 
+    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n",
         box.a, box.b, box.c)
     @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
 end

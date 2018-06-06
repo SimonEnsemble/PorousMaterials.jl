@@ -59,7 +59,7 @@ if co2_tests
     ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
     
     # simulate with PorousMaterials.jl in parallel
-    results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true)
+    results = stepwise_adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=1, n_sample_cycles=1, verbose=true)
     n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
     
     # plot comparison
