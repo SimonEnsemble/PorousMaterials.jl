@@ -117,7 +117,7 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
     end
 
     # Calculate center of mass
-    com = center_of_mass(ljspheres)
+    com = center_of_mass(ljspheres, atomic_masses)
 
     molecule = Molecule(Symbol(species), ljspheres, charges, com)
 
@@ -328,8 +328,7 @@ function charged(molecule::Molecule)
     return length(molecule.charges) > 0 ? true : false
 end
 
-function center_of_mass(ljspheres::Array{LennardJonesSphere, 1})
-    atomic_masses = read_atomic_masses()
+function center_of_mass(ljspheres::Array{LennardJonesSphere, 1}, atomic_masses::Dict{Symbol, Float64})
     com = [0., 0., 0.]
     total_mass = 0.0
     for ljsphere in ljspheres
