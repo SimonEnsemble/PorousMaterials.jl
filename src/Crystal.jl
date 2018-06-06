@@ -742,17 +742,24 @@ end
 """
     com = center_of_mass(framework::Framework; fractional_coordinates=false)
     com = center_of_mass(molecule::Molecule)
+    com = center_of_mass(ljspheres::Array{LennardJonesSphere, 1})
 
-Computes the center of mass of a crystal or molecule. Atomic masses are retreived from
-[`read_atomic_masses`](@ref).
+Computes the center of mass of a crystal, molecule, or array of Lennard-Jones spheres.
+
+Atomic masses are retreived from [`read_atomic_masses`](@ref).
 
 For the `Framework`, periodic boundaries are taken into consideration. The unit cell
 fractional coordinates are mapped to a circle, then the periodic nature of the circle is
 used to calculate the center of mass.
 
-# Arguments
+For the molecule and Lennard-Jones spheres, periodic boundary conditions are not applied.
+If the total mass of the molecule is zero, the geometric center is returned instead, and a
+warning is printed.
+
+# Possible Arguments
 - `framework::Framework`: The framework containing the crystal structure information
 - `molecule::Molecule`: A molecule object
+- `ljspheres::Array{LennardJonesSphere, 1}`: array of `LennardJonesSphere`s
 - `fractional_coordinates::Bool`: optional argument to return center of mass in fractional
 coordinates instead of Cartesian. (Not an option for `Molecule`s.)
 
