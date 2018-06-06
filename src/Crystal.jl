@@ -9,10 +9,10 @@ fractional and Cartesian coordinates.
 - `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
 - `α,β,γ::Float64`: unit cell angles (units: radians)
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional 
+- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional
 coordinates to cartesian coordinates. The columns of this matrix define the unit cell
 axes.
-- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian 
+- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian
 coordinates to fractional coordinates
 - `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
 """
@@ -67,7 +67,7 @@ Automatically calculates Ω, f_to_c, and c_to_f for `Box` data structure and ret
 # Returns
 - `box::Box`: Fully formed Box object
 """
-function construct_box(a::Float64, b::Float64, c::Float64, 
+function construct_box(a::Float64, b::Float64, c::Float64,
                        α::Float64, β::Float64, γ::Float64)
     # unit cell volume (A³)
     Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
@@ -98,20 +98,20 @@ The columns of this matrix are the unit cell axes. Units must be in Å.
 function construct_box(f_to_c::Array{Float64, 2})
     # unit cell volume (A³) is the determinant of the matrix
     Ω = det(f_to_c)
-    
+
     # unit cell dimensions are lengths of the unit cell axes (Å)
     a = norm(f_to_c[:, 1])
     b = norm(f_to_c[:, 2])
     c = norm(f_to_c[:, 3])
-    
+
     # c_to_f is the inverse
     c_to_f = inv(f_to_c)
-    
+
     # angles (radians)
     α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
     β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
     γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
-   
+
     # the columns of f_to_c are the unit cell axes
     r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
@@ -485,8 +485,8 @@ function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0
     end
     n_atoms = sum(atoms_to_keep)
 
-    new_framework = Framework(framework.name, framework.box, 
-                          n_atoms, framework.atoms[atoms_to_keep], 
+    new_framework = Framework(framework.name, framework.box,
+                          n_atoms, framework.atoms[atoms_to_keep],
                           framework.xf[:,atoms_to_keep], framework.charges[atoms_to_keep])
 
     if run_checks
@@ -740,42 +740,46 @@ function crystal_density(framework::Framework)
 end
 
 """
-    com = center_of_mass(frame; fractional = false)
+    com = center_of_mass(framework::Framework; fractional_coordinates=false)
     com = center_of_mass(molecule::Molecule)
 
-Finds the center of mass of a unit cell or molecule, taking periodic boundaries into consideration for periodic unit cells.
-It maps the unit cell to a circle and uses the periodic nature of the circle to calculate the center of mass.
-(Note that with periodic boundaries, a center of mass is not properly defined, so take the results with a grain of salt.)
+Computes the center of mass of a crystal or molecule. Atomic masses are retreived from
+[`read_atomic_masses`](@ref).
+
+For the `Framework`, periodic boundaries are taken into consideration. The unit cell
+fractional coordinates are mapped to a circle, then the periodic nature of the circle is
+used to calculate the center of mass.
 
 # Arguments
-- `frame::Framework`: The framework containing the crystal structure information
+- `framework::Framework`: The framework containing the crystal structure information
 - `molecule::Molecule`: A molecule object
-- `fractional::Bool`: An optional argument which changes the return output to fractional coordinates. Not an option for Molecule objects.
+- `fractional_coordinates::Bool`: optional argument to return center of mass in fractional
+coordinates instead of Cartesian. (Not an option for `Molecule`s.)
 
 # Returns
-- `com::Array{Float64, 1}`: Center of mass coordinates
+- `com::Array{Float64, 1}`: center of mass coordinates
 """
-function center_of_mass(frame::Framework; fractional = false)
+function center_of_mass(frame::Framework; fractional_coordinates::Bool=false)
     atomic_masses = read_atomic_masses()
-    xf_com = Array{Float64, 1}(3)
+    xf_com = Array{Float64, 1}(3) # center of mass in fractional coordinates
     for axis in 1:3
         ξ_bar = 0.0
         ζ_bar = 0.0
-        M = 0.0
+        total_mass = 0.0
         for i in 1:frame.n_atoms
             θ = frame.xf[axis, i] * 2 * pi
             ξ = cos(θ) * atomic_masses[frame.atoms[i]] / (2 * pi)
             ζ = sin(θ) * atomic_masses[frame.atoms[i]] / (2 * pi)
             ξ_bar += ξ
             ζ_bar += ζ
-            M += atomic_masses[frame.atoms[i]]
+            total_mass += atomic_masses[frame.atoms[i]]
         end
-        ξ_bar /= M
-        ζ_bar /= M
+        ξ_bar /= total_mass
+        ζ_bar /= total_mass
         θ_bar = atan2(-ζ_bar, -ξ_bar) + pi
         xf_com[axis] = θ_bar / (2 * pi)
     end
-    if fractional
+    if fractional_coordinates
         return xf_com
     end
     return frame.box.f_to_c * xf_com
@@ -800,7 +804,7 @@ function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
     @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
         box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
-    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n", 
+    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n",
         box.a, box.b, box.c)
     @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
 end
