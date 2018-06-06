@@ -117,9 +117,9 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
     end
 
     # Calculate center of mass
-    COM = center_of_mass(ljspheres)
+    com = center_of_mass(ljspheres)
 
-    molecule = Molecule(Symbol(species), ljspheres, charges, COM)
+    molecule = Molecule(Symbol(species), ljspheres, charges, com)
 
     # check for charge neutrality
     if length(charges) > 0
@@ -240,9 +240,9 @@ function rotate!(molecule::Molecule)
     # generate a random rotation matrix
     r = rotation_matrix()
     # store the center of mass
-    center_of_mass = deepcopy(molecule.center_of_mass)
+    com = deepcopy(molecule.center_of_mass)
     # move the molecule to the origin
-    translate_by!(molecule, -center_of_mass)
+    translate_by!(molecule, -com)
     # conduct the rotation
     for ljsphere in molecule.ljspheres
         ljsphere.x[:] = r * ljsphere.x
@@ -253,7 +253,7 @@ function rotate!(molecule::Molecule)
     end
     # no need to rotate center of mass since it is now the origin.
     # translate back to the center of mass.
-    translate_by!(molecule, center_of_mass)
+    translate_by!(molecule, com)
 end
 
 """
@@ -330,14 +330,14 @@ end
 
 function center_of_mass(ljspheres::Array{LennardJonesSphere, 1})
     atomic_masses = read_atomic_masses()
-    center_of_mass = [0., 0., 0.]
+    com = [0., 0., 0.]
     total_mass = 0.0
     for ljsphere in ljspheres
-        center_of_mass += atomic_masses[ljsphere.atom] .* ljsphere.x
+        com += atomic_masses[ljsphere.atom] .* ljsphere.x
         total_mass += atomic_masses[ljsphere.atom]
     end
     if total_mass > 0.0
-        return center_of_mass / total_mass
+        return com / total_mass
     else
         warn("The total atomic mass of the molecule is zero; instead assigning the
                 geometric center as the center of mass.")
@@ -348,9 +348,9 @@ end
 center_of_mass(molecule::Molecule) = center_of_mass(molecule.ljspheres)
 
 function _geometric_center(ljspheres::Array{LennardJonesSphere, 1})
-    center_of_mass = [0., 0., 0.]
+    com = [0., 0., 0.]
     for ljsphere in ljspheres
-        center_of_mass += ljsphere.x
+        com += ljsphere.x
     end
-    return center_of_mass / length(ljspheres)
+    return com / length(ljspheres)
 end
