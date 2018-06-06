@@ -51,7 +51,7 @@ end
 
 if co2_tests
     # load test data, adsorption isotherm at 313 K simulated by Greg
-    df = CSV.read("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
+    df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
 
     co2 = read_molecule_file("CO2")
     f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
@@ -59,16 +59,26 @@ if co2_tests
     ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
     
     # simulate with PorousMaterials.jl in parallel
-    results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:P_Pa]), co2, ff, n_burn_cycles=10, n_sample_cycles=10, verbose=true)
+    results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true)
     n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
     
     # plot comparison
     using PyPlot
     figure()
-    xlabel("Pressure (bar)")
+    xlabel("Fugacity (bar)")
     ylabel("Molecules/unit cell")
-    scatter(df[:P_Pa], df[:molecules_per_unit_cell], label="Greg")
-    scatter(df[:P_Pa], n_sim, label="PorousMaterials.jl")
+    scatter(df[:fugacity_Pa] / 100000.0, df[:molecules_per_unit_cell], label="Greg")
+    scatter(df[:fugacity_Pa] / 100000.0, n_sim, label="PorousMaterials.jl")
     legend()
     savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
 end
+        
+ # co2 = read_molecule_file("CO2")
+ # f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+ # strip_numbers_from_atom_labels!(f)
+ # ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+ # 
+ # results = gcmc_simulation(f, 313.0, 20.0*100000, co2, ff,
+ #             n_burn_cycles=1, n_sample_cycles=1, verbose=true)
+ # @time results = gcmc_simulation(f, 313.0, 1816566.334, co2, ff,
+ #             n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)

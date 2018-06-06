@@ -120,6 +120,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          molecule::Molecule, ljforcefield::LennardJonesForceField;
                          n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                          sample_frequency::Int=25, verbose::Bool=false)
+    tic()
     if verbose
         pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
@@ -131,9 +132,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const simulation_box = replicate_box(framework.box, repfactors)
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
     const molecule_template = deepcopy(molecule)
+    if ! (total_charge(molecule_template) ≈ 0.0)
+        error("Molecule in GCMC simulation must be charge neutral.\n")
+    end
 
     if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
-        error("Missing atoms from forcefield")
+        error("Missing atoms from forcefield.")
     end
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
@@ -273,6 +277,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
+    toc()
 
     results = Dict{String, Any}()
     results["crystal"] = framework.name
