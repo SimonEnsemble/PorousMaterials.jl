@@ -276,10 +276,56 @@ end
         energy /= 2
         @test isapprox(energy, energies_should_be[c], atol=1.0)
     end
+
+    ###
+    #  Greg Chung's ZIF-71 w/ bogus charges tests
+    ###
+    zif71 = read_crystal_structure_file("zif71_bogus_charges.cif")
+    strip_numbers_from_atom_labels!(zif71)
+    ff = read_forcefield_file("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
+    co2 = read_molecule_file("CO2EPM2")
+
+    # test 1: guest-host
+    @assert(co2.ljspheres[1].atom == :C_CO2) # assumed C is first in input file...
+    @assert(isapprox(co2.charges[1].q, 0.7)) # assumed C is first in input file...
+    # load in coordinates of CO2 at test location
+    co2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788] # C
+    co2.ljspheres[2].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461] # O
+    co2.ljspheres[3].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116] # O
+    co2.charges[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788] # C
+    co2.charges[2].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461] # O
+    co2.charges[3].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116] # O
+    # test vdW energy
+	@test isapprox(vdw_energy(zif71, co2, ff, (1, 1 ,1)), -132.56, atol=0.01)
+    # test electrostatics
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, zif71.box, verbose=false, ϵ=1e-6)
+    ϕ = electrostatic_potential_energy(zif71, co2, (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(ϕ, -9.37846564, atol=0.1)
+
+    # test 2: guest-guest
+    co2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788]
+    co2.ljspheres[2].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116]
+    co2.ljspheres[3].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461]
+    co2.charges[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788]
+    co2.charges[2].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116]
+    co2.charges[3].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461]
+
+    co2_2 = read_molecule_file("CO2EPM2")
+    co2_2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50680, 0.38496, 0.50788]
+    co2_2.ljspheres[2].x[:] =  zif71.box.f_to_c * [0.54340, 0.38451, 0.49116]
+    co2_2.ljspheres[3].x[:] =  zif71.box.f_to_c * [0.47020, 0.38540, 0.52461]
+    co2_2.charges[1].x[:] =  zif71.box.f_to_c * [0.50680, 0.38496, 0.50788]
+    co2_2.charges[2].x[:] =  zif71.box.f_to_c * [0.54340, 0.38451, 0.49116]
+    co2_2.charges[3].x[:] =  zif71.box.f_to_c * [0.47020, 0.38540, 0.52461]
+    @test isapprox(PorousMaterials.total_guest_host_vdw_energy(zif71, [co2, co2_2], ff, (1, 1, 1)), -311.10392551, atol=0.1)
+    @test isapprox(PorousMaterials.total_guest_guest_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
+    @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
+    @test isapprox(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), 59.3973, atol=0.1)
+
 end;
 #@printf("------------------------------\n")
 
-
+# TODO energetics and electrostatics can be grouped together...
 @printf("------------------------------\nTesting Electrostatics\n\n")
 framework = read_crystal_structure_file("NU-1000_Greg.cif")
 
