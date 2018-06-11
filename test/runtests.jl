@@ -322,6 +322,16 @@ end
     @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
     @test isapprox(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), 59.3973, atol=0.1)
 
+    # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
+    #  The following "framework" is a cage floating in space so no atoms are near the boundary
+    #   of the unit cell box. So with cutoff should get same with or without PBCs.
+    co2 = read_molecule_file("CO2")
+    translate_to!(co2, [50.0, 50.0, 50.0])
+    atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
+    f = read_crystal_structure_file("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
+    ljff = read_forcefield_file("UFF.csv")
+    @test isapprox(vdw_energy(f, co2, ljff, (1,1,1)), vdw_energy_no_PBC(co2, atoms, x .+ [50.0, 50.0, 50.0], ljff)) 
+
 end;
 #@printf("------------------------------\n")
 
