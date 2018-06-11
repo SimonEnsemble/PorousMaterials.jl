@@ -181,3 +181,33 @@ function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1},
     end
     return total_energy / 2.0 # avoid double-counting pairs
 end
+
+"""
+    energy = vdw_energy_no_PBC(molecule, atoms, x, ljff)
+
+Calculates the van der Waals interaction energy between a molecule and a list of `atoms`
+at Cartesian positions `x` using a lennard jones force field `ljff`
+No periodic boundary conditions are applied.
+"""
+function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{Symbol, 1}, x::Array{Float64, 2},
+                           ljforcefield::LennardJonesForceField)
+	energy = 0.0
+    # loop over lennard-jones spheres in the molecule
+    for ljs in molecule.ljspheres
+        # loop over atoms
+        for i = 1:length(atoms)
+            dx = x[:, i] - ljs.x
+            r² = dx[1] ^ 2 + dx[2] ^ 2 + dx[3] ^ 2
+
+            if r² < R_OVERLAP_squared
+                return Inf
+            elseif r² < ljforcefield.cutoffradius_squared
+                # add pairwise contribution to potential energy
+                energy += lennard_jones(r²,
+                    ljforcefield.σ²[atoms[i]][ljs.atom],
+                    ljforcefield.ϵ[atoms[i]][ljs.atom])
+            end 
+        end # loop over atoms
+    end # loop over ljspheres
+	return energy
+end
