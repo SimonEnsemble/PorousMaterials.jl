@@ -1,7 +1,9 @@
 @everywhere using PorousMaterials
 @everywhere using Base.Test
 using CSV
+using PyPlot
 using DataFrames
+using JLD
 
 ig_tests = false
 xe_in_sbmof1_tests = false
@@ -41,6 +43,7 @@ if xe_in_sbmof1_tests
     test_mmol_g = [0.1931, 1.007, 1.4007]
     test_molec_unit_cell = [0.266, 1.388, 1.929]
 
+ #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=25000, n_sample_cycles=25000, verbose=true)
 
     for i = 1:length(test_fugacities)
@@ -50,27 +53,55 @@ if xe_in_sbmof1_tests
 end
 
 if co2_tests
-    # load test data, adsorption isotherm at 313 K simulated by Greg
-    df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
+    ###
+    #  Test isotherm 1: by greg chung. co2 at 313 k
+    ###
+ #     co2 = read_molecule_file("CO2")
+ #     f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+ #     strip_numbers_from_atom_labels!(f)
+ #     ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+ # 
+ #     # load in test data
+ #     df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
+ #     
+ #     # simulate with PorousMaterials.jl in parallel
+ #     results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
+ #     JLD.save("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld", "results", results)
+ #     n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
+ #     
+ #     # plot comparison
+ #     figure()
+ #     xlabel("Fugacity (bar)")
+ #     ylabel("Molecules/unit cell")
+ #     scatter(df[:fugacity_Pa] / 100000.0, df[:molecules_per_unit_cell], label="Greg")
+ #     scatter(df[:fugacity_Pa] / 100000.0, n_sim, label="PorousMaterials.jl")
+ #     legend()
+ #     savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
+    
+    ###
+    #  Test isotherm 2: by greg chung. co2 at 298 K
+    ###
+    zif71 = read_crystal_structure_file("zif71_bogus_charges.cif")
+    strip_numbers_from_atom_labels!(zif71)
+    ff = read_forcefield_file("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
+    co2 = read_molecule_file("CO2EPM2")
 
-    co2 = read_molecule_file("CO2")
-    f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
-    strip_numbers_from_atom_labels!(f)
-    ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+    # load in test data
+    df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")
     
     # simulate with PorousMaterials.jl in parallel
-    results = stepwise_adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=1, n_sample_cycles=1, verbose=true)
-    n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
+    results = stepwise_adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=7500, n_sample_cycles=7500, verbose=true, sample_frequency=1, ewald_precision=1e-7)
+    JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
+    n_sim = [result["⟨N⟩ (mmol/g)"] for result in results]
     
     # plot comparison
-    using PyPlot
     figure()
     xlabel("Fugacity (bar)")
     ylabel("Molecules/unit cell")
-    scatter(df[:fugacity_Pa] / 100000.0, df[:molecules_per_unit_cell], label="Greg")
+    scatter(df[:fugacity_Pa] / 100000.0, df[:L_mmol_g], label="Greg")
     scatter(df[:fugacity_Pa] / 100000.0, n_sim, label="PorousMaterials.jl")
     legend()
-    savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
+    savefig("Greg_bogus_ZIF71_298K_co2_isotherm_test.png", format="png", dpi=300)
 end
         
  # co2 = read_molecule_file("CO2")
