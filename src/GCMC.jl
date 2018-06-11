@@ -1,3 +1,4 @@
+import Base: +
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # define Markov chain proposals here.
@@ -6,6 +7,9 @@ const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION   = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
+
+# break collection of statistics into blocks to gauge convergence
+const N_BLOCKS = 5
 
 """
 Data structure to keep track of statistics collected during a grand-canonical Monte Carlo
@@ -26,6 +30,29 @@ type GCMCstats
     U²::PotentialEnergy
 
     Un::Float64 # ⟨U n⟩
+end
+
+# constructor
+GCMCstats() = GCMCstats(0, 0, 0, PotentialEnergy(0.0, 0.0, 0.0, 0.0), PotentialEnergy(0.0, 0.0, 0.0, 0.0), 0.0)
+
+# adding two stats.
++(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples,
+                                            s1.n + s2.n,
+                                            s1.n² + s2.n²,
+                                            s1.U + s2.U,
+                                            s1.U² + s2.U²,
+                                            s1.Un + s2.Un)
+                                                
+function Base.print(gcmc_stats::GCMCstats)
+    println("\t# samples: ", gcmc_stats.n_samples)
+    println("\t⟨N⟩ (molecules) = ", gcmc_stats.n / gcmc_stats.n_samples)
+
+    println("\t⟨U_gg, vdw⟩ (K) = ",     gcmc_stats.U.vdw_gg     / gcmc_stats.n_samples)
+    println("\t⟨U_gg, electro⟩ (K) = ", gcmc_stats.U.electro_gg / gcmc_stats.n_samples)
+    println("\t⟨U_gh, vdw⟩ (K) = ",     gcmc_stats.U.vdw_gh     / gcmc_stats.n_samples)
+    println("\t⟨U_gh, electro⟩ (K) = ", gcmc_stats.U.electro_gh / gcmc_stats.n_samples)
+
+    println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
 end
 
 """
@@ -83,7 +110,8 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LennardJonesForceField;
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                                      sample_frequency::Int=25, verbose::Bool=false)
+                                      sample_frequency::Int=25, verbose::Bool=false,
+                                      ewald_precision::Float64=1e-6)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for fugacity in fugacities
@@ -91,7 +119,8 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                             ljforcefield, n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
-                                            verbose=verbose, molecules=molecules)
+                                            verbose=verbose, molecules=molecules,
+                                            ewald_precision=ewald_precision)
         push!(results, result)
     end
 
@@ -171,7 +200,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          molecule::Molecule, ljforcefield::LennardJonesForceField;
                          n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                          sample_frequency::Int=25, verbose::Bool=false,
-                         molecules::Array{Molecule, 1}=Molecule[])
+                         molecules::Array{Molecule, 1}=Molecule[],
+                         ewald_precision::Float64=1e-6)
     tic()
     if verbose
         pretty_print(molecule.species, framework.name, temperature, fugacity)
@@ -194,8 +224,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
-    const charged_framework = charged(framework)
-    const charged_molecules = charged(molecule)
+    const charged_framework = charged(framework, verbose=verbose)
+    const charged_molecules = charged(molecule, verbose=verbose)
 
     # define Ewald summation params
     #  TODO do this automatically with rules!
@@ -205,7 +235,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
     eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, simulation_box,
-                        verbose=verbose & (charged_framework || charged_molecules), ϵ=1e-6)
+                        verbose=verbose & (charged_framework || charged_molecules), ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
     system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
@@ -223,9 +253,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                                             eparams, kvectors, eikar, eikbr, eikcr)
     end
 
-    # initiate GCMC statistics collected during sampling period
-    gcmc_stats = GCMCstats(0, 0, 0, PotentialEnergy(0.0, 0.0, 0.0, 0.0),
-                           PotentialEnergy(0.0, 0.0, 0.0, 0.0), 0.0)
+    # initiate GCMC statistics collected during *entire* sampling period
+    gcmc_stats = GCMCstats()
+    # break simulation into `N_BLOCKS` blocks to gauge convergence
+    gcmc_stats_this_block = GCMCstats()
+    current_block = 1
+    const n_cycles_per_block = floor(Int, n_sample_cycles / N_BLOCKS)
 
     markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)),
                                  zeros(Int, length(PROPOSAL_ENCODINGS)))
@@ -311,22 +344,41 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             @assert(! outside_box(molecule, simulation_box), "molecule outside box!")
         end
 
-        # sample the current configuration
-        if (outer_cycle > n_burn_cycles) && (markov_chain_time % sample_frequency == 0)
-            gcmc_stats.n_samples += 1
+        # if we're in the production MC cycles. i.e. we've done all burn cycles...
+        if (outer_cycle > n_burn_cycles)
+            # take a sample.
+            if markov_chain_time % sample_frequency == 0
+                gcmc_stats_this_block.n_samples += 1
 
-            gcmc_stats.n += length(molecules)
-            gcmc_stats.n² += length(molecules) ^ 2
+                gcmc_stats_this_block.n += length(molecules)
+                gcmc_stats_this_block.n² += length(molecules) ^ 2
 
-            gcmc_stats.U += system_energy
-            gcmc_stats.U² += square(system_energy)
+                gcmc_stats_this_block.U += system_energy
+                gcmc_stats_this_block.U² += square(system_energy)
 
-            gcmc_stats.Un += sum(system_energy) * length(molecules)
-        end
+                gcmc_stats_this_block.Un += sum(system_energy) * length(molecules)
+            end
+
+            # print block statistics if first inner cycle of the right outer cycle.
+            if (inner_cycle == 1) && ((outer_cycle - n_burn_cycles) % n_cycles_per_block == 0)
+                # keep track of stats over entire simulation.
+                gcmc_stats = gcmc_stats + gcmc_stats_this_block
+                # print results
+                if verbose
+                    print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+                    print(gcmc_stats_this_block)
+                end
+                # reset block stats
+                current_block += 1
+                gcmc_stats_this_block = GCMCstats()
+            end
+        end # end sampling code
     end # finished markov chain proposal moves
 
+    # in case there are leftover samples b/c blocks did not divide cycles evenly
+    gcmc_stats = gcmc_stats + gcmc_stats_this_block
+
     # compute total energy, compare to `current_energy*` variables where were incremented
-    # TODO need function for total electrostatic energy...
     system_energy_end = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
     system_energy_end.vdw_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
     system_energy_end.vdw_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
@@ -389,7 +441,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end
 
     if verbose
-        print_results(results)
+        print_results(results, print_title=false)
     end
 
     return results, molecules # summary of statistics and ending configuration of molecules
@@ -412,10 +464,13 @@ function root_save_filename(framework::Framework,
                     n_burn_cycles, n_sample_cycles)
 end
 
-function print_results(results::Dict)
-    @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n\n",
-            results["adsorbate"], results["crystal"], results["temperature (K)"],
-            results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
+function print_results(results::Dict; print_title::Bool=true)
+    if print_title
+        # already print in GCMC tests...
+        @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n\n",
+                results["adsorbate"], results["crystal"], results["temperature (K)"],
+                results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
+    end
 
     @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
                                                          results["repfactors"][2],
