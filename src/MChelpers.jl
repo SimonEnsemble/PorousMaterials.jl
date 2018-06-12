@@ -47,8 +47,8 @@ end
 """
     apply_periodic_boundary_condition!(molecule, simulation_box)
 
-Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic 
-boundary conditions and translate the center of mass of the `Molecule` (and its atoms 
+Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, apply periodic
+boundary conditions and translate the center of mass of the `Molecule` (and its atoms
 and point charges) so that it is inside of the `Box`.
 
 # Arguments
@@ -83,8 +83,8 @@ end
 """
     translate_molecule!(molecule, simulation_box)
 
-Perturbs the Cartesian coordinates of a molecule about its center of mass by a random 
-vector of max length δ. Applies periodic boundary conditions to keep the molecule inside 
+Perturbs the Cartesian coordinates of a molecule about its center of mass by a random
+vector of max length δ. Applies periodic boundary conditions to keep the molecule inside
 the simulation box. Returns a deep copy of the old molecule in case it needs replaced
 if the Monte Carlo proposal is rejected.
 
@@ -103,6 +103,33 @@ function translate_molecule!(molecule::Molecule, simulation_box::Box)
     translate_by!(molecule, dx)
     # done, unless the molecule has moved outside of the box, then apply PBC
     apply_periodic_boundary_condition!(molecule, simulation_box)
+
+    return old_molecule # in case we need to restore
+end
+
+"""
+    reinsert_molecule(molecule, simulation_box)
+
+Move molecule to a new center of mass randomly distrubted in the unit cell and choose
+a random orientation for it. Return a deep copy of the starting molecule for possible
+restoration. This MC move can be viewed as a more aggressive `translate_molecule!`.
+"""
+function reinsert_molecule!(molecule::Molecule, simulation_box::Box)
+    # store old molecule and return at the end for possible restoration
+    old_molecule = deepcopy(molecule)
+
+    # choose new center of mass
+    x = simulation_box.f_to_c * rand(3)
+
+    # translate molecule to its new center of mass
+    translate_to!(molecule, x)
+
+    # conduct a rotation
+    if (length(molecule.ljspheres) + length(molecule.charges) > 1)
+        rotate!(molecule)
+    end
+
+    # no need to apply BCs b/c by construction we inserted it in the sim box.
 
     return old_molecule # in case we need to restore
 end

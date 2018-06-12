@@ -1,12 +1,20 @@
 import Base: +
+using StatsBase
+
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # define Markov chain proposals here.
-const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation")
+const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation", 4 => "reinsertion")
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION   = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
+const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
+# define probabilty of proposing each type of MC move here. from StatsBase.jl
+const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.3, 0.3, 0.3, 0.1])
+@assert(PROBABILITIES_OF_MC_PROPOSALS[INSERTION] ≈ PROBABILITIES_OF_MC_PROPOSALS[DELETION], "insertion/deletion probabilities must be equal")
+@assert(length(PROBABILITIES_OF_MC_PROPOSALS) == N_PROPOSAL_TYPES, "probability of each MC proposal not specified")
+@assert(sum(PROBABILITIES_OF_MC_PROPOSALS) ≈ 1.0, "sum of probabilities of MC moves should be 1.0")
 
 # break collection of statistics into blocks to gauge convergence
 const N_BLOCKS = 5
@@ -42,7 +50,7 @@ GCMCstats() = GCMCstats(0, 0, 0, PotentialEnergy(0.0, 0.0, 0.0, 0.0), PotentialE
                                             s1.U + s2.U,
                                             s1.U² + s2.U²,
                                             s1.Un + s2.Un)
-                                                
+
 function Base.print(gcmc_stats::GCMCstats)
     println("\t# samples: ", gcmc_stats.n_samples)
     println("\t⟨N⟩ (molecules) = ", gcmc_stats.n / gcmc_stats.n_samples)
@@ -94,7 +102,8 @@ end
     results = adsorption_isotherm(framework, temperature, fugacities, molecule,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=25,
-                                  verbose=false, molecules=Molecule[])
+                                  verbose=false, molecules=Molecule[],
+                                  ewald_precision=1e-6)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
@@ -131,7 +140,8 @@ end
     results = adsorption_isotherm(framework, temperature, fugacities, molecule,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=25,
-                                  verbose=false, molecules=Molecule[])
+                                  verbose=false, molecules=Molecule[],
+                                  ewald_precision=1e-6)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
@@ -143,14 +153,16 @@ function adsorption_isotherm(framework::Framework, temperature::Float64,
                              fugacities::Array{Float64, 1}, molecule::Molecule,
                              ljforcefield::LennardJonesForceField;
                              n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                             sample_frequency::Int=25, verbose::Bool=false)
+                             sample_frequency::Int=25, verbose::Bool=false,
+                             ewald_precision::Float64=1e-6)
     # make a function of fugacity only to facilitate uses of `pmap`
     run_fugacity(fugacity::Float64) = gcmc_simulation(framework, temperature, fugacity,
                                                       molecule, ljforcefield,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
                                                       sample_frequency=sample_frequency,
-                                                      verbose=verbose)[1] # only return results
+                                                      verbose=verbose,
+                                                      ewald_precision=ewald_precision)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
     ids = sortperm(fugacities, rev=true)
@@ -270,7 +282,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         markov_chain_time += 1
 
         # choose proposed move randomly; keep track of proposals
-        which_move = rand(1:N_PROPOSAL_TYPES)
+        which_move = sample(1:N_PROPOSAL_TYPES, PROBABILITIES_OF_MC_PROPOSALS) # StatsBase.jl
         markov_counts.n_proposed[which_move] += 1
 
         if which_move == INSERTION
@@ -326,6 +338,35 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
                                       simulation_box, repfactors, eparams,
                                       kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+
+            # Metropolis Hastings Acceptance for translation
+            if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
+                # accept the move, adjust current energy
+                markov_counts.n_accepted[which_move] += 1
+
+                system_energy += energy_new - energy_old
+            else
+                # reject the move, reset the molecule at molecule_id
+                molecules[molecule_id] = deepcopy(old_molecule)
+            end
+        elseif (which_move == REINSERTION) && (length(molecules) != 0)
+            # propose which molecule to re-insert
+            molecule_id = rand(1:length(molecules))
+
+            # compute the potential energy of the molecule we propose to re-insert
+            energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
+                                         simulation_box, repfactors, eparams,
+                                         kvectors, eikar, eikbr, eikcr, charged_molecules,
+                                         charged_framework)
+
+            # reinsert molecule; store old configuration of the molecule in case proposal is rejected
+            old_molecule = reinsert_molecule!(molecules[molecule_id], simulation_box)
+
+            # compute the potential energy of the molecule in its new configuraiton
+            energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
+                                         simulation_box, repfactors, eparams,
+                                         kvectors, eikar, eikbr, eikcr, charged_molecules,
+                                         charged_framework)
 
             # Metropolis Hastings Acceptance for translation
             if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
