@@ -11,7 +11,7 @@ const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 # define probabilty of proposing each type of MC move here. from StatsBase.jl
-const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.3, 0.3, 0.3, 0.1])
+const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.35, 0.35, 0.2, 0.1])
 @assert(PROBABILITIES_OF_MC_PROPOSALS[INSERTION] ≈ PROBABILITIES_OF_MC_PROPOSALS[DELETION], "insertion/deletion probabilities must be equal")
 @assert(length(PROBABILITIES_OF_MC_PROPOSALS) == N_PROPOSAL_TYPES, "probability of each MC proposal not specified")
 @assert(sum(PROBABILITIES_OF_MC_PROPOSALS) ≈ 1.0, "sum of probabilities of MC moves should be 1.0")
@@ -101,7 +101,7 @@ end
 """
     results = adsorption_isotherm(framework, temperature, fugacities, molecule,
                                   ljforcefield; n_sample_cycles=100000,
-                                  n_burn_cycles=10000, sample_frequency=25,
+                                  n_burn_cycles=10000, sample_frequency=10,
                                   verbose=false, molecules=Molecule[],
                                   ewald_precision=1e-6)
 
@@ -119,7 +119,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LennardJonesForceField;
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                                      sample_frequency::Int=25, verbose::Bool=false,
+                                      sample_frequency::Int=10, verbose::Bool=false,
                                       ewald_precision::Float64=1e-6)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -346,7 +346,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
                 system_energy += energy_new - energy_old
             else
-                # reject the move, reset the molecule at molecule_id
+                # reject the move, put back the old molecule
                 molecules[molecule_id] = deepcopy(old_molecule)
             end
         elseif (which_move == REINSERTION) && (length(molecules) != 0)
@@ -368,14 +368,14 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                                          kvectors, eikar, eikbr, eikcr, charged_molecules,
                                          charged_framework)
 
-            # Metropolis Hastings Acceptance for translation
+            # Metropolis Hastings Acceptance for reinsertion
             if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                 # accept the move, adjust current energy
                 markov_counts.n_accepted[which_move] += 1
 
                 system_energy += energy_new - energy_old
             else
-                # reject the move, reset the molecule at molecule_id
+                # reject the move, put back old molecule
                 molecules[molecule_id] = deepcopy(old_molecule)
             end
         end # which move the code executes
@@ -386,7 +386,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         end
 
         # if we're in the production MC cycles. i.e. we've done all burn cycles...
-        if (outer_cycle > n_burn_cycles)
+        if outer_cycle > n_burn_cycles
             # take a sample.
             if markov_chain_time % sample_frequency == 0
                 gcmc_stats_this_block.n_samples += 1
@@ -430,7 +430,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
     if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
-        error("energy incremented improperly")
+        error("energy incremented improperly during simulation...")
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
