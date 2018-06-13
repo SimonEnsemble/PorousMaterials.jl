@@ -532,6 +532,18 @@ end
     @test translation_old_molecule_stored_properly
     @test translation_coords_changed
     @test translation_inside_box
+
+    #
+    #REINSERTION TESTS
+    #
+    box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    molecules = [read_molecule_file("He"), read_molecule_file("CO2")]
+    old_he = reinsert_molecule!(molecules[1], box)
+    old_co2 = reinsert_molecule!(molecules[2], box)
+    @test isapprox(old_he, read_molecule_file("He"))
+    @test isapprox(old_co2, read_molecule_file("CO2"))
+    @test ! isapprox(molecules[1].center_of_mass, read_molecule_file("He").center_of_mass)
+    @test ! isapprox(molecules[2].center_of_mass, read_molecule_file("CO2").center_of_mass)
 end
 @printf("------------------------------\n")
 @testset "Guest-guest Energetics Tests" begin
