@@ -6,7 +6,7 @@ using DataFrames
 using JLD
 
 ig_tests = false
-xe_in_sbmof1_tests = false
+xe_in_sbmof1_tests = true
 co2_tests = true
 
 #
@@ -40,11 +40,12 @@ if xe_in_sbmof1_tests
     molecule = read_molecule_file("Xe")
 
     test_fugacities = [20.0, 200.0, 2000.0]
-    test_mmol_g = [0.1931, 1.007, 1.4007]
-    test_molec_unit_cell = [0.266, 1.388, 1.929]
+    test_mmol_g = [0.18650, 1.00235, 1.39812]
+    test_molec_unit_cell = [0.2568, 1.3806, 1.9257]
 
  #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
-    results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=25000, n_sample_cycles=25000, verbose=true)
+    results = stepwise_adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, 
+                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=10)
 
     for i = 1:length(test_fugacities)
         @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)
@@ -90,7 +91,7 @@ if co2_tests
     df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")
     
     # simulate with PorousMaterials.jl in parallel
-    results = stepwise_adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=7500, n_sample_cycles=7500, verbose=true, sample_frequency=1, ewald_precision=1e-7)
+    results = adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-7)
     JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
     n_sim = [result["⟨N⟩ (mmol/g)"] for result in results]
     
