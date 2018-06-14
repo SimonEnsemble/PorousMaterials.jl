@@ -1,7 +1,7 @@
 """
     atoms, x = read_xyz(filename)
 
-Return the list of `atoms` (Array{Symbol, 1}) and their Cartesian coordinates 
+Return the list of `atoms` (Array{Symbol, 1}) and their Cartesian coordinates
 `x::Array{Float64, 2}` as stored in the .xyz file. `x[:, k]` will return Cartesian
 coords of the kth atom.
 
@@ -9,8 +9,9 @@ coords of the kth atom.
 - `filename::AbstractString`: The filename of the .xyz file
 
 # Returns
-- `atoms::Array{Symbol, 1}`: A symbolic array of the atoms in the .xyz file
-- `x::Array{Float64, 2}`: The cartesian coordinates of the atoms. `x[:, k]` will return cartesian coordinates of the k-th atom
+- `atoms::Array{Symbol, 1}`: An array of atoms stored as symbols e.g. [:H, :H, :O] read
+from the .xyz file.
+- `x::Array{Float64, 2}`: The Cartesian coordinates of the atoms. `x[:, k]` will return cartesian coordinates of the k-th atom
 """
 function read_xyz(filename::AbstractString)
     f = open(filename)
@@ -29,6 +30,34 @@ function read_xyz(filename::AbstractString)
     end
     close(f)
     return atoms, x
+end
+
+"""
+    write_to_xyz(atoms, x, filename; comment="")
+
+Write a list of `atoms` (Array{Symbol, 1}) and their Cartesian coordinates
+`x::Array{Float64, 2}` to an .xyz file. `x[:, k]` has Cartesian coords of the kth atom.
+
+# Arguments
+- `atoms::Array{Symbol, 1}`: An array of atoms stored as symbols e.g. [:H, :H, :O]
+- `x::Array{Float64, 2}`: The Cartesian coordinates of the atoms.
+ `x[:, k]` contains Cartesian coordinates of the k-th atom
+- `filename::AbstractString`: The filename of the .xyz file. (".xyz" appended automatically
+if the extension is not provided.)
+- `comment::AbstractString`: comment if you'd like to write to the file.
+"""
+function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
+                      filename::AbstractString; comment::AbstractString="")
+    if ! contains(filename, ".xyz")
+        filename *= ".xyz"
+    end
+
+    xyzfile = open(filename, "w")
+    @printf(xyzfile, "%d\n%s\n", length(atoms), comment)
+    for i = 1:length(atoms)
+		@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", atoms[i], x[1, i], x[2, i], x[3, i])
+    end
+    close(xyzfile)
 end
 
 """
@@ -53,7 +82,7 @@ end
 """
     atomic_radii = read_atomic_radii()
 
-Return `atomic_radii::Dict{Symbol, Float64}`, where `atom_masses[":C"]` gives 
+Return `atomic_radii::Dict{Symbol, Float64}`, where `atom_masses[":C"]` gives
 the atomic radii of carbon (10.87 Angstrom).
 
 # Returns
