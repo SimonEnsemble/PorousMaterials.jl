@@ -1,6 +1,6 @@
 # δ is the maximal distance a particle is perturbed in a given coordinate
 #  during particle translations
-const δ = 0.35 # Å
+const δ = 1.0 # Å
 
 """
     insert_molecule!(molecules, simulation_box, template)
