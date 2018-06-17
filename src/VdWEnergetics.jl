@@ -4,8 +4,8 @@ const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
 """
 	energy = lennard_jones(r², σ², ϵ)  (units: Kelvin)
 
-Calculate the lennard jones potential energy given the square of the radius r between two 
-lennard-jones spheres. σ and ϵ are specific to interaction between two elements. Return 
+Calculate the lennard jones potential energy given the square of the radius r between two
+lennard-jones spheres. σ and ϵ are specific to interaction between two elements. Return
 the potential energy in units Kelvin (well, whatever the units of ϵ are).
 
 # Arguments
@@ -60,7 +60,7 @@ function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
         dxf = broadcast(-, xf_molecule - [ra, rb, rc], framework.xf)
 
         nearest_image!(dxf, repfactors)
-            
+
         # Distance in cartesian coordinate space
         dx = framework.box.f_to_c * dxf
 
@@ -112,7 +112,7 @@ function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefiel
             for other_ljsphere in molecules[other_molecule_id].ljspheres
                 # compute vector between molecules in fractional coordinates
                 dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
-                
+
                 # simulation box has fractional coords [0, 1] by construction
                 nearest_image!(dxf, (1, 1, 1))
 
@@ -135,23 +135,26 @@ function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefiel
 end
 
 """
-    total_energy = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
+    total_gh_energy = total_vdw_energy(framework, molecules, ljforcefield, repfactors) # guest-host
+    total_gg_energy = total_vdw_energy(molecules, ljforcefield, simulation_box) # guest-guest
 
-Compute total guest-host interaction energy (sum over all adsorbates).
+Compute total guest-host (gh) or guest-guest (gg) interaction energy, i.e. the contribution
+from all adsorbates in `molecules`.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
 - `molecules::Array{Molecule, 1}`: An array of Molecule data structures
 - `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
 - `repfactors::Tuple{Int, Int, Int}`: The replication factors we use to replicate our unit cell
+- `simulation_box::Box`: The simulation box for application of PBCs.
 
 # Returns
-- `total_energy::Float64`: The total guest-host van der Waals energy
+- `total_energy::Float64`: The total guest-host or guest-guest van der Waals energy
 """
-function total_guest_host_vdw_energy(framework::Framework,
-                                     molecules::Array{Molecule, 1},
-                                     ljforcefield::LennardJonesForceField,
-                                     repfactors::Tuple{Int, Int, Int})
+function total_vdw_energy(framework::Framework,
+                          molecules::Array{Molecule, 1},
+                          ljforcefield::LennardJonesForceField,
+                          repfactors::Tuple{Int, Int, Int})
     total_energy = 0.0
     for molecule in molecules
         total_energy += vdw_energy(framework, molecule, ljforcefield, repfactors)
@@ -159,22 +162,9 @@ function total_guest_host_vdw_energy(framework::Framework,
     return total_energy
 end
 
-"""
-    total_energy = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
-
-Compute sum of all guest-guest interaction energy from vdW interactions.
-
-# Arguments
-- `molecules::Array{Molecule, 1}`: An array of Molecule data structures
-- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
-- `simulation_box::Box`: The simulation box for the computation.
-
-# Returns
-- `total_energy::Float64`: The total guest-guest van der Waals energy
-"""
-function total_guest_guest_vdw_energy(molecules::Array{Molecule, 1},
-                                      ljforcefield::LennardJonesForceField,
-                                      simulation_box::Box)
+function total_vdw_energy(molecules::Array{Molecule, 1},
+                         ljforcefield::LennardJonesForceField,
+                         simulation_box::Box)
     total_energy = 0.0
     for molecule_id = 1:length(molecules)
         total_energy += vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
@@ -206,7 +196,7 @@ function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{Symbol, 1}, x::Array
                 energy += lennard_jones(r²,
                     ljforcefield.σ²[atoms[i]][ljs.atom],
                     ljforcefield.ϵ[atoms[i]][ljs.atom])
-            end 
+            end
         end # loop over atoms
     end # loop over ljspheres
 	return energy
