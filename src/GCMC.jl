@@ -291,8 +291,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
 
-        system_energy.vdw_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
-        system_energy.vdw_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
+        system_energy.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield, repfactors)
+        system_energy.vdw_gg = total_vdw_energy(molecules, ljforcefield, simulation_box)
         system_energy.electro_gh = total_electrostatic_potential_energy(framework, molecules,
                                             repfactors, eparams, kvectors, eikar, eikbr, eikcr)
         system_energy.electro_gg = total_electrostatic_potential_energy(molecules,
@@ -452,8 +452,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     system_energy_end = PotentialEnergy()
-    system_energy_end.vdw_gh = total_guest_host_vdw_energy(framework, molecules, ljforcefield, repfactors)
-    system_energy_end.vdw_gg = total_guest_guest_vdw_energy(molecules, ljforcefield, simulation_box)
+    system_energy_end.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield, repfactors)
+    system_energy_end.vdw_gg = total_vdw_energy(molecules, ljforcefield, simulation_box)
     system_energy_end.electro_gh = total_electrostatic_potential_energy(framework, molecules,
                                         repfactors, eparams, kvectors, eikar, eikbr, eikcr)
     system_energy_end.electro_gg = total_electrostatic_potential_energy(molecules,
