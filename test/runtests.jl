@@ -268,13 +268,8 @@ end
         close(posfile)
 
         # compute energy of the configuration
-        repfactors = (1, 1, 1)
-        energy = 0.0
-        for i = 1:length(ms)
-            energy += vdw_energy(i, ms, ljff, box)
-        end
-        energy /= 2
-        @test isapprox(energy, energies_should_be[c], atol=1.0)
+        energy = PorousMaterials.total_vdw_energy(ms, ljff, box)
+        @test isapprox(energy, energies_should_be[c], atol=0.1)
     end
 
     ###
@@ -317,10 +312,10 @@ end
     co2_2.charges[1].x[:] =  zif71.box.f_to_c * [0.50680, 0.38496, 0.50788]
     co2_2.charges[2].x[:] =  zif71.box.f_to_c * [0.54340, 0.38451, 0.49116]
     co2_2.charges[3].x[:] =  zif71.box.f_to_c * [0.47020, 0.38540, 0.52461]
-    @test isapprox(PorousMaterials.total_guest_host_vdw_energy(zif71, [co2, co2_2], ff, (1, 1, 1)), -311.10392551, atol=0.1)
-    @test isapprox(PorousMaterials.total_guest_guest_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
+    @test isapprox(PorousMaterials.total_vdw_energy(zif71, [co2, co2_2], ff, (1, 1, 1)), -311.10392551, atol=0.1)
+    @test isapprox(PorousMaterials.total_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
     @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
-    @test isapprox(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), 59.3973, atol=0.1)
+    @test isapprox(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), 59.3973, atol=0.01)
 
     # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
     #  The following "framework" is a cage floating in space so no atoms are near the boundary
@@ -330,7 +325,7 @@ end
     atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
     f = read_crystal_structure_file("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
     ljff = read_forcefield_file("UFF.csv")
-    @test isapprox(vdw_energy(f, co2, ljff, (1,1,1)), vdw_energy_no_PBC(co2, atoms, x .+ [50.0, 50.0, 50.0], ljff)) 
+    @test isapprox(vdw_energy(f, co2, ljff, (1,1,1)), vdw_energy_no_PBC(co2, atoms, x .+ [50.0, 50.0, 50.0], ljff))
 
 end;
 #@printf("------------------------------\n")
@@ -382,7 +377,7 @@ q_test = 0.8096
                          -1.96297e06  + 5.24461e03 + -8.53407e06 + 8.42998e06,
                          -3.57226e06  + 7.58785e03 + -1.42235e07 + 1.41483e07]
     # loop over all four configurations provided by NIST
-    for (c, energy_should_be) in enumerate(energies_should_be)
+    for c = 1:length(energies_should_be)
         # read in positions of atoms provided by NIST ("X" atoms)
         posfile = open("nist/electrostatics/spce_sample_config_periodic$c.txt")
         lines = readlines(posfile)
@@ -416,6 +411,7 @@ q_test = 0.8096
                 end
                 com /= 3
                 m = Molecule(:H2O, [], qs, com)
+                @assert(PorousMaterials.total_charge(m) == 0.0)
                 push!(ms, m)
                 @assert(isapprox(PorousMaterials.total_charge(m), 0.0, rtol=0.001))
             end
@@ -435,7 +431,7 @@ q_test = 0.8096
         eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
         eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
         energy = PorousMaterials.total_electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
-        @test isapprox(energy, energy_should_be, rtol=0.005)
+        @test isapprox(energy, energies_should_be[c], rtol=0.005)
     end
 end
 @printf("------------------------------\n")
