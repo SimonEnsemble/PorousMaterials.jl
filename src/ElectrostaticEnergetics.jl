@@ -6,6 +6,14 @@ using Roots # for fzero
 # 8.854187817e-12 C^2/(J-m) [1 m / 1e10 A] [1 e / 1.602176e-19 C]^2 [kb = 1.3806488e-23 J/K]
 const ϵ₀ = 8.854187817e-12 / (1.602176565e-19 ^ 2) / 1.0e10 * 1.3806488e-23  # \epsilon_0 vacuum permittivity units: electron charge^2 /(A - K)
 
+"Data structure to faciltate partitioning Ewald sums into short- and long-range and self contributions."
+mutable struct EwaldSum
+    sr::Float64 # short-range sum
+    lr::Float64 # long-range sum
+    self::Float64 # spurious self-interaction
+end
+total(ews::EwaldSum) = ews.sr + ews.lr - ews.self
+
 "Data structure for storing Ewald summation settings"
 struct EwaldParams
     "number of replications in k-space in a, b, c directions"
@@ -161,7 +169,7 @@ function precompute_kvec_wts(eparams::EwaldParams, max_mag_k_sqrd::Float64=Inf)
         # factor of 2 from cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
         #  and how we include ka>=0 only and the two if statements above
         if mag_k_sqrd < max_mag_k_sqrd
-            wt = 2 * exp(- mag_k_sqrd / (4.0 * eparams.α ^ 2)) / mag_k_sqrd / ϵ₀
+            wt = 2.0 * exp(- mag_k_sqrd / (4.0 * eparams.α ^ 2)) / mag_k_sqrd / ϵ₀
             push!(kvecs, Kvector(ka, kb, kc, wt))
         end
     end
@@ -248,12 +256,15 @@ end
 
 Compute the electrostatic potential at a point x inside of a framework. The electrostatic
 potential is created by the point charges assigned to the framework atoms. Periodic boundary
-conditions are applied through the Ewald summation.
+conditions are applied through the Ewald summation. The spurious self-interaction term is
+neglected here because we are looking at differences in energy in a Monte Carlo simulation.
 
 # Arguments
 - `framework::Framework`: Crystal structure (see `framework.charges` for charges)
 - `x::Array{Float64, 1}`: point (Cartesian coordinates) at which we compute the electrostatic
     potential
+- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build
+    the supercell such that the nearest image convention can be applied in this function.
 * `eparams::EwaldParams`: data structure containing Ewald summation settings
 * `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
 corresponding weights indicating the contribution to the Fourier sum.
@@ -277,9 +288,9 @@ function electrostatic_potential(framework::Framework,
                                  eikcr::OffsetArray{Complex{Float64}})
     # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
     xf = mod.(framework.box.c_to_f * x, 1.0)
-
-	sr_potential = 0.0 # short-range contribution
-	lr_potential::Float64 = 0.0 # long-range contribution
+    
+    ϕ_lr = 0.0
+    ϕ_sr = 0.0
     # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
         # x - x_i vector in fractional coords; i corresponds to atom of framework.
@@ -309,7 +320,7 @@ function electrostatic_potential(framework::Framework,
                 #     e^{i kb r * vec(kb)} *
                 #     e^{i kb r * vec(kc)} where r = x - xᵢ
                 #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-                @unsafe @inbounds lr_potential += framework.charges[i] * kvector.wt * real(
+                @unsafe @inbounds ϕ_lr += framework.charges[i] * kvector.wt * real(
                         eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
             end
         end
@@ -326,14 +337,14 @@ function electrostatic_potential(framework::Framework,
         for i = 1:framework.n_atoms
             @inbounds @fastmath r = sqrt(dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i])
             if r < eparams.sr_cutoff_r
-                @inbounds @fastmath sr_potential += framework.charges[i] / r * erfc(r * eparams.α)
+                @inbounds @fastmath ϕ_sr += framework.charges[i] / r * erfc(r * eparams.α)
             end
         end
     end
-    sr_potential /= 4.0 * π * ϵ₀
-    lr_potential /= eparams.box.Ω
+    ϕ_sr /= 4.0 * π * ϵ₀
+    ϕ_lr /= eparams.box.Ω
 
-    return (lr_potential + sr_potential)::Float64
+    return (ϕ_sr + ϕ_lr)::Float64
 end
 
 function electrostatic_potential_energy(framework::Framework,
@@ -348,15 +359,15 @@ function electrostatic_potential_energy(framework::Framework,
     for charge in molecule.charges
         ϕ += charge.q * electrostatic_potential(framework, charge.x, repfactors, eparams, kvectors, eikar, eikbr, eikcr)
     end
-    return ϕ
+    return ϕ::Float64
 end
 
 """
-    ϕ = electrostatic_potential(molecules, exclude_molecule_id, x, sim_box,
-                                sr_cutoff_radius, kvectors, α)
+    ϕ = electrostatic_potential(molecules, exclude_molecule_id, x, eparams, kvectors,
+                                eikar, eikbr, eikcr)
 
-Compute the electrostatic potential generated by a set of molecules (in `molecules`) in a
-simulation box, excluding the contribution of `molecules[exclude_molecule_id]`.
+Compute the electrostatic potential at a point `x` generated by an array of `Molecule`s
+excluding the contribution of `molecules[exclude_molecule_id]`.
 
 # Arguments
 - `molecules::Array{Molecules, 1}`: molecules creating the electrostatic potential field.
@@ -384,8 +395,8 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
                                  eikcr::OffsetArray{Complex{Float64}})
     # the view here is that all other molecules create an electrostatic potential for the
     #  molecules[exclude_molecule_id] molecule.
-	sr_potential = 0.0 # short-range contribution
-	lr_potential::Float64 = 0.0 # long-range contribution
+    ϕ_lr = 0.0
+    ϕ_sr = 0.0
     for (i, molecule) in enumerate(molecules)
         if i == exclude_molecule_id
             continue
@@ -411,7 +422,7 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
                 #     e^{i kb r * vec(kb)} *
                 #     e^{i kb r * vec(kc)} where r = x - xᵢ
                 #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-                @unsafe @inbounds lr_potential += charge.q * kvector.wt * real(
+                @unsafe @inbounds ϕ_lr += charge.q * kvector.wt * real(
                         eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
             end
 
@@ -427,14 +438,102 @@ function electrostatic_potential(molecules::Array{Molecule, 1},
 
             @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
             if r < eparams.sr_cutoff_r
-                @inbounds @fastmath sr_potential += charge.q / r * erfc(r * eparams.α)
+                @inbounds @fastmath ϕ_sr += charge.q / r * erfc(r * eparams.α)
             end
         end
     end
-    sr_potential /= 4.0 * π * ϵ₀
-    lr_potential /= eparams.box.Ω
+    ϕ_sr /= 4.0 * π * ϵ₀
+    ϕ_lr /= eparams.box.Ω
 
-    return (lr_potential + sr_potential)::Float64
+    return (ϕ_lr + ϕ_sr)::Float64
+end
+
+"""
+    ϕ = electrostatic_potential_energy(molecules, eparams, kvectors, eikar, eikbr, eikcr)
+
+Compute the electrostatic potential energy of a system comprised of an array of `Molecule`s.
+
+The EWald summation is used here in a double for loop; do not use this function for Monte
+Carlo simulations because it is expensive.
+
+Returns an `EwaldSum` type containing short-range and long-range contributions to the Ewald
+sum as well as the spurious self-interaction.
+
+# Arguments
+- `molecules::Array{Molecules, 1}`: array of molecules comprising the system.
+* `eparams::EwaldParams`: data structure containing Ewald summation settings
+* `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
+corresponding weights indicating the contribution to the Fourier sum.
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
+    0:kreps[1] and corresponds to recip. vectors in a-direction
+* `eikrb::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
+    -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
+* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
+    -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
+"""
+function electrostatic_potential_energy(molecules::Array{Molecule, 1},
+                                        eparams::EwaldParams, kvectors::Array{Kvector, 1},
+                                        eikar::OffsetArray{Complex{Float64}},
+                                        eikbr::OffsetArray{Complex{Float64}},
+                                        eikcr::OffsetArray{Complex{Float64}})
+    ϕ = EwaldSum(0.0, 0.0, 0.0)
+    for (i, molecule_i) in enumerate(molecules)
+        for charge_i in molecule_i.charges
+            for (j, molecule_j) in enumerate(molecules)
+                for charge_j in molecule_j.charges
+                    # vector from pt charge to pt charge
+                    dx = charge_i.x - charge_j.x
+                    # reciprocal lattice vectors ⋅ dx
+                    k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
+
+                    ###
+                    #  Long-range contribution
+                    ###
+                    # compute e^{ i * n * k * (x - charge.x)} for n = -krep:krep
+                    fill_eikr!(eikar, k_dot_dx[1], eparams.kreps[1], false) # via symmetry only need +ve
+                    fill_eikr!(eikbr, k_dot_dx[2], eparams.kreps[2], true)
+                    fill_eikr!(eikcr, k_dot_dx[3], eparams.kreps[3], true)
+
+                    # loop over kevectors
+                    for kvector in kvectors
+                        # cos( i * this_k * r) = real part of:
+                        #     e^{i ka r * vec(ka)} *
+                        #     e^{i kb r * vec(kb)} *
+                        #     e^{i kb r * vec(kc)} where r = x - xᵢ
+                        #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
+                        @unsafe @inbounds ϕ.lr += charge_i.q * charge_j.q * kvector.wt * real(
+                                eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
+                    end
+
+                    ###
+                    #  Short range contribution
+                    ###
+                    if i != j
+                        dxf = eparams.box.c_to_f * dx
+                        # apply nearest image convention for periodic BCs
+                        nearest_image!(dxf, (1, 1, 1))
+
+                        # convert distance vector to Cartesian coordinates
+                        dx = eparams.box.f_to_c * dxf
+
+                        @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
+                        if r < eparams.sr_cutoff_r
+                            @inbounds @fastmath ϕ.sr += charge_i.q * charge_j.q / r * erfc(r * eparams.α)
+                        end
+                    end 
+                end # charge j
+            end # molecule j
+            ###
+            #  Spurious self-interaction of point charge with Gaussian charge
+            ###
+            ϕ.self += charge_i.q ^ 2
+        end # charge i
+    end # molecule i
+    ϕ.sr /= 4.0 * π * ϵ₀ * 2.0 # two to avoid double-counting
+    ϕ.lr /= eparams.box.Ω * 2.0 # two to avoid double-counting
+    ϕ.self *= eparams.α / sqrt(pi)  / (4.0 * π * ϵ₀)
+
+    return ϕ::EwaldSum
 end
 
 function electrostatic_potential_energy(molecules::Array{Molecule, 1},
@@ -449,7 +548,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
         ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, eparams,
                                                 kvectors, eikar, eikbr, eikcr)
     end
-    return ϕ
+    return ϕ::Float64
 end
 
 function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
@@ -458,25 +557,25 @@ function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                               eikar::OffsetArray{Complex{Float64}},
                                               eikbr::OffsetArray{Complex{Float64}},
                                               eikcr::OffsetArray{Complex{Float64}})
-    ϕ = 0.0
-    for i = 1:length(molecules)
-        ϕ += electrostatic_potential_energy(molecules[i:end], 1, eparams, kvectors, eikar, eikbr, eikcr)
-    end
-    return ϕ
+   ϕ = 0.0
+   for i = 1:length(molecules)
+       ϕ += electrostatic_potential_energy(molecules[i:end], 1, eparams, kvectors, eikar, eikbr, eikcr)
+   end
+   return ϕ::Float64
 end
 
 function total_electrostatic_potential_energy(framework::Framework,
-                                               molecules::Array{Molecule, 1},
-                                               repfactors::Tuple{Int, Int, Int},
-                                               eparams::EwaldParams,
-                                               kvectors::Array{Kvector, 1},
-                                               eikar::OffsetArray{Complex{Float64}},
-                                               eikbr::OffsetArray{Complex{Float64}},
-                                               eikcr::OffsetArray{Complex{Float64}})
+                                              molecules::Array{Molecule, 1},
+                                              repfactors::Tuple{Int, Int, Int},
+                                              eparams::EwaldParams,
+                                              kvectors::Array{Kvector, 1},
+                                              eikar::OffsetArray{Complex{Float64}},
+                                              eikbr::OffsetArray{Complex{Float64}},
+                                              eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for molecule in molecules
         ϕ += electrostatic_potential_energy(framework, molecule, repfactors, eparams,
                                             kvectors, eikar, eikbr, eikcr)
     end
-    return ϕ
+    return ϕ::Float64
 end
