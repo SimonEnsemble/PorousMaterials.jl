@@ -303,6 +303,11 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     # break simulation into `N_BLOCKS` blocks to gauge convergence
     gcmc_stats = [GCMCstats() for bleh = 1:N_BLOCKS]
     current_block = 1
+    # make sure the number of sample cycles is at least equal to N_BLOCKS
+    if n_sample_cycles < N_BLOCKS
+        n_sample_cycles = N_BLOCKS
+        warn(@sprintf("# sample cycles set to minimum %d, which is number of blocks.", N_BLOCKS))
+    end
     const N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
     markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)),
