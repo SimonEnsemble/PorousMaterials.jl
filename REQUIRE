@@ -1,4 +1,4 @@
-julia 0.6
+julia 0.6.3
 DataFrames
 PyCall
 CSV
@@ -7,3 +7,4 @@ OffsetArrays
 SpecialFunctions
 Roots
 StatsBase
+JLD
