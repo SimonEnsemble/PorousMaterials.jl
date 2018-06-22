@@ -562,19 +562,6 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
     return ϕ::EwaldSum
 end
 
-function intramolecular_electrostatic_potential_energy(molecule::Molecule)
-    # note our convention that a molecule is never split across a periodic boundary
-    #  during our simulations, which is an essential assumption here.
-    ϕ = 0.0
-    for i = 1:length(molecule.charges)
-        for j = (i + 1):length(molecule.charges)
-            r = norm(molecule.charges[i].x - molecule.charges[j].x)
-            ϕ += molecule.charges[i].q * molecule.charges[j].q / r
-        end
-    end
-    return (ϕ / (4.0 * π * ϵ₀))::Float64
-end
-
 function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                         molecule_id::Int,
                                         eparams::EwaldParams,
