@@ -370,10 +370,10 @@ q_test = 0.8096
     # NIST data to test Ewald sums
     # data from here:  https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
     # what the energies should be for all four configurations provided by NIST
-    energies_should_be = [Dict(["real"=> -5.58889e05, "fourier"=> 6.27009e03, "self"=> -2.84469e06]),
-                          Dict(["real"=> -1.19295e06, "fourier"=> 6.03495e03, "self"=> -5.68938e06]),
-                          Dict(["real"=> -1.96297e06, "fourier"=> 5.24461e03, "self"=> -8.53407e06]),
-                          Dict(["real"=> -3.57226e06, "fourier"=> 7.58785e03, "self"=> -1.42235e07])]
+    energies_should_be = [Dict(["real"=> -5.58889e05, "fourier"=> 6.27009e03, "self"=> -2.84469e06, "intra" => 2.80999e06]),
+                          Dict(["real"=> -1.19295e06, "fourier"=> 6.03495e03, "self"=> -5.68938e06, "intra" => 5.61998e06]),
+                          Dict(["real"=> -1.96297e06, "fourier"=> 5.24461e03, "self"=> -8.53407e06, "intra" => 8.42998e06]),
+                          Dict(["real"=> -3.57226e06, "fourier"=> 7.58785e03, "self"=> -1.42235e07, "intra" => 1.41483e07])]
     # loop over all four configurations provided by NIST
     for c = 1:length(energies_should_be)
         # read in positions of atoms provided by NIST ("X" atoms)
@@ -431,10 +431,11 @@ q_test = 0.8096
         eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
         eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
         eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
-        ϕ = PorousMaterials.electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
-        @test isapprox(-ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
+        ϕ = electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
+        @test isapprox(ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
         @test isapprox(ϕ.sr, energies_should_be[c]["real"], rtol=0.00001)
         @test isapprox(ϕ.lr, energies_should_be[c]["fourier"],  rtol=0.00001)
+        @test isapprox(ϕ.intra, energies_should_be[c]["intra"],  rtol=0.0001)
 
     end
 end

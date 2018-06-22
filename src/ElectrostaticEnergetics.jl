@@ -11,8 +11,9 @@ mutable struct EwaldSum
     sr::Float64 # short-range sum
     lr::Float64 # long-range sum
     self::Float64 # spurious self-interaction
+    intra::Float64 # intramolecular interactions
 end
-total(ews::EwaldSum) = ews.sr + ews.lr - ews.self
+total(ews::EwaldSum) = ews.sr + ews.lr + ews.self + ews.intra
 
 "Data structure for storing Ewald summation settings"
 struct EwaldParams
@@ -476,7 +477,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                         eikar::OffsetArray{Complex{Float64}},
                                         eikbr::OffsetArray{Complex{Float64}},
                                         eikcr::OffsetArray{Complex{Float64}})
-    ϕ = EwaldSum(0.0, 0.0, 0.0)
+    ϕ = EwaldSum(0.0, 0.0, 0.0, 0.0)
     for (i, molecule_i) in enumerate(molecules)
         for charge_i in molecule_i.charges
             for (j, molecule_j) in enumerate(molecules)
@@ -526,14 +527,52 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
             ###
             #  Spurious self-interaction of point charge with Gaussian charge
             ###
-            ϕ.self += charge_i.q ^ 2
+            ϕ.self -= charge_i.q ^ 2
         end # charge i
     end # molecule i
     ϕ.sr /= 4.0 * π * ϵ₀ * 2.0 # two to avoid double-counting
     ϕ.lr /= eparams.box.Ω * 2.0 # two to avoid double-counting
     ϕ.self *= eparams.α / sqrt(pi)  / (4.0 * π * ϵ₀)
+    
+    ###
+    #  Intramolecular interactions
+    #    this function allows the molecule to be split apart across a periodic boundary
+    ###
+    for molecule in molecules
+        for i = 1:length(molecule.charges)
+            for j = (i + 1):length(molecule.charges)
+                dx = molecule.charges[i].x - molecule.charges[j].x
+                
+                # allowing molecule to be split across the periodic boundary, apply PBC
+                dxf = eparams.box.c_to_f * dx
+
+                # apply nearest image convention for periodic BCs
+                nearest_image!(dxf, (1, 1, 1))
+
+                # convert distance vector to Cartesian coordinates
+                dx = eparams.box.f_to_c * dxf
+
+                @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
+                ϕ.intra -= molecule.charges[i].q * molecule.charges[j].q * erf(eparams.α * r) / r
+            end
+        end
+    end
+    ϕ.intra /= (4.0 * π * ϵ₀)
 
     return ϕ::EwaldSum
+end
+
+function intramolecular_electrostatic_potential_energy(molecule::Molecule)
+    # note our convention that a molecule is never split across a periodic boundary
+    #  during our simulations, which is an essential assumption here.
+    ϕ = 0.0
+    for i = 1:length(molecule.charges)
+        for j = (i + 1):length(molecule.charges)
+            r = norm(molecule.charges[i].x - molecule.charges[j].x)
+            ϕ += molecule.charges[i].q * molecule.charges[j].q / r
+        end
+    end
+    return (ϕ / (4.0 * π * ϵ₀))::Float64
 end
 
 function electrostatic_potential_energy(molecules::Array{Molecule, 1},
