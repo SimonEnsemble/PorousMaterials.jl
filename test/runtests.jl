@@ -293,7 +293,7 @@ end
     # test electrostatics
     eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, zif71.box, verbose=false, ϵ=1e-6)
     ϕ = electrostatic_potential_energy(zif71, co2, (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(sum(ϕ), -9.37846564, atol=0.1)
+    @test isapprox(ϕ, -9.37846564, atol=0.1)
 
     # test 2: guest-guest
     co2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788]
