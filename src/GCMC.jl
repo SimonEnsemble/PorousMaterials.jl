@@ -47,11 +47,8 @@ GCMCstats() = GCMCstats(0, 0, 0, PotentialEnergy(), PotentialEnergy(), 0.0)
 +(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples, s1.n + s2.n,
                                             s1.n² + s2.n², s1.U + s2.U,
                                             s1.U² + s2.U², s1.Un + s2.Un)
-"""
-    sum_stats = sum(gcmc_stats)
 
-Sum up all quantities within a GCMCstats type.
-"""
+"Sum up all quantities within a GCMCstats type."
 function Base.sum(gcmc_stats::Array{GCMCstats, 1})
     sum_stats = GCMCstats()
     for gs in gcmc_stats
@@ -301,7 +298,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # initiate GCMC statistics for each block
     # break simulation into `N_BLOCKS` blocks to gauge convergence
-    gcmc_stats = [GCMCstats() for bleh = 1:N_BLOCKS]
+    gcmc_stats = [GCMCstats() for block_no = 1:N_BLOCKS]
     current_block = 1
     # make sure the number of sample cycles is at least equal to N_BLOCKS
     if n_sample_cycles < N_BLOCKS

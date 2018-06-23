@@ -195,11 +195,11 @@ lattice vector.
 * `eparams::EwaldParams`: data structure containing Ewald summation settings
 * `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
 corresponding weights indicating the contribution to the Fourier sum.
-* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
+* `eikar::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
     0:kreps[1] and corresponds to recip. vectors in a-direction
-* `eikrb::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
+* `eikbr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
     -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
-* `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
+* `eikcr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
     -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 """
 function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-6, verbose::Bool=false)
