@@ -455,10 +455,13 @@ end
 Compute the electrostatic potential energy of a system comprised of an array of `Molecule`s.
 
 The EWald summation is used here in a double for loop; do not use this function for Monte
-Carlo simulations because it is expensive.
+Carlo simulations because it is computationally expensive.
 
 Returns an `EwaldSum` type containing short-range and long-range contributions to the Ewald
-sum as well as the spurious self-interaction.
+sum as well as the spurious self-interaction and intramolecular interactions. Access via
+(ϕ.sr, ϕ.lr, ϕ.self, ϕ.intra).
+
+Units of energy: Kelvin
 
 # Arguments
 - `molecules::Array{Molecules, 1}`: array of molecules comprising the system.
@@ -524,6 +527,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                     end 
                 end # charge j
             end # molecule j
+
             ###
             #  Spurious self-interaction of point charge with Gaussian charge
             ###
@@ -574,6 +578,10 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
         ϕ += charge.q * electrostatic_potential(molecules, molecule_id, charge.x, eparams,
                                                 kvectors, eikar, eikbr, eikcr)
     end
+
+    # TODO: self
+    # TODO: intra
+    # TODO: interaction w its own periodic image.
     return ϕ::Float64
 end
 
