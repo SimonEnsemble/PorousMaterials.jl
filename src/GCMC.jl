@@ -48,7 +48,7 @@ GCMCstats() = GCMCstats(0, 0, 0, PotentialEnergy(), PotentialEnergy(), 0.0)
                                             s1.n² + s2.n², s1.U + s2.U,
                                             s1.U² + s2.U², s1.Un + s2.Un)
 
-"Sum up all quantities within a GCMCstats type."
+# Facilitate summing all quantities within a GCMCstats type.
 function Base.sum(gcmc_stats::Array{GCMCstats, 1})
     sum_stats = GCMCstats()
     for gs in gcmc_stats
