@@ -521,7 +521,7 @@ function charge_neutral(framework::Framework, net_charge_tol::Float64)
 end
 
 """
-    charged_flag = charged(framework)
+    charged_flag = charged(framework, verbose=false)
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
@@ -529,9 +529,13 @@ end
 # Returns
 - `charged_flag::Bool`: True iff any of the atoms of the framework are assigned nonzero point charge. False otherwise.
 """
-function charged(framework::Framework)
+function charged(framework::Framework; verbose::Bool=false)
     zero_charge_flags = isapprox.(abs.(framework.charges), 0.0)
-    return ! all(zero_charge_flags)
+    charged_flag = ! all(zero_charge_flags)
+    if verbose
+        @printf("\tFramework atoms of %s have charges? %s\n", framework.name, charged_flag)
+    end
+    return charged_flag
 end
 
 """

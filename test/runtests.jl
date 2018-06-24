@@ -173,8 +173,6 @@ end;
     end
     write_to_xyz(ms, "co2s")
     println("see co2s.xyz for dist'n of rotations")
-
-
 end
 
 @printf("\n------------------------------\nTesting Energetics.jl\n\n")
@@ -268,18 +266,69 @@ end
         close(posfile)
 
         # compute energy of the configuration
-        repfactors = (1, 1, 1)
-        energy = 0.0
-        for i = 1:length(ms)
-            energy += vdw_energy(i, ms, ljff, box)
-        end
-        energy /= 2
-        @test isapprox(energy, energies_should_be[c], atol=1.0)
+        energy = PorousMaterials.total_vdw_energy(ms, ljff, box)
+        @test isapprox(energy, energies_should_be[c], atol=0.1)
     end
+
+    ###
+    #  Greg Chung's ZIF-71 w/ bogus charges tests
+    ###
+    zif71 = read_crystal_structure_file("zif71_bogus_charges.cif")
+    strip_numbers_from_atom_labels!(zif71)
+    ff = read_forcefield_file("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
+    co2 = read_molecule_file("CO2EPM2")
+
+    # test 1: guest-host
+    @assert(co2.ljspheres[1].atom == :C_CO2) # assumed C is first in input file...
+    @assert(isapprox(co2.charges[1].q, 0.7)) # assumed C is first in input file...
+    # load in coordinates of CO2 at test location
+    co2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788] # C
+    co2.ljspheres[2].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461] # O
+    co2.ljspheres[3].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116] # O
+    co2.charges[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788] # C
+    co2.charges[2].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461] # O
+    co2.charges[3].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116] # O
+    # test vdW energy
+	@test isapprox(vdw_energy(zif71, co2, ff, (1, 1 ,1)), -132.56, atol=0.01)
+    # test electrostatics
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, zif71.box, verbose=false, ϵ=1e-6)
+    ϕ = electrostatic_potential_energy(zif71, co2, (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(ϕ, -9.37846564, atol=0.1)
+
+    # test 2: guest-guest
+    co2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788]
+    co2.ljspheres[2].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116]
+    co2.ljspheres[3].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461]
+    co2.charges[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788]
+    co2.charges[2].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116]
+    co2.charges[3].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461]
+
+    co2_2 = read_molecule_file("CO2EPM2")
+    co2_2.ljspheres[1].x[:] =  zif71.box.f_to_c * [0.50680, 0.38496, 0.50788]
+    co2_2.ljspheres[2].x[:] =  zif71.box.f_to_c * [0.54340, 0.38451, 0.49116]
+    co2_2.ljspheres[3].x[:] =  zif71.box.f_to_c * [0.47020, 0.38540, 0.52461]
+    co2_2.charges[1].x[:] =  zif71.box.f_to_c * [0.50680, 0.38496, 0.50788]
+    co2_2.charges[2].x[:] =  zif71.box.f_to_c * [0.54340, 0.38451, 0.49116]
+    co2_2.charges[3].x[:] =  zif71.box.f_to_c * [0.47020, 0.38540, 0.52461]
+    @test isapprox(PorousMaterials.total_vdw_energy(zif71, [co2, co2_2], ff, (1, 1, 1)), -311.10392551, atol=0.1)
+    @test isapprox(PorousMaterials.total_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
+    @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
+    @test isapprox(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), 59.3973, atol=0.01)
+
+    # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
+    #  The following "framework" is a cage floating in space so no atoms are near the boundary
+    #   of the unit cell box. So with cutoff should get same with or without PBCs.
+    co2 = read_molecule_file("CO2")
+    translate_to!(co2, [50.0, 50.0, 50.0])
+    atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
+    f = read_crystal_structure_file("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
+    ljff = read_forcefield_file("UFF.csv")
+    @test isapprox(vdw_energy(f, co2, ljff, (1,1,1)), vdw_energy_no_PBC(co2, atoms, x .+ [50.0, 50.0, 50.0], ljff))
+
 end;
 #@printf("------------------------------\n")
 
-
+# TODO energetics and electrostatics can be grouped together...
 @printf("------------------------------\nTesting Electrostatics\n\n")
 framework = read_crystal_structure_file("NU-1000_Greg.cif")
 
@@ -308,25 +357,25 @@ q_test = 0.8096
 
     x = [9.535619863743, 20.685576379935, 0.127344239990]
     ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(ϕ * q_test, 111373.38, atol=2.5)
+    @test isapprox(sum(ϕ) * q_test, 111373.38, atol=2.5)
 
     x = [4.269654927228, 23.137319129548, 28.352847101096]
     ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(ϕ * q_test, -531.0, atol=0.5)
+    @test isapprox(sum(ϕ) * q_test, -531.0, atol=0.5)
 
     x = [-0.047382031804, 7.209555961450, 5.158180463556]
     ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(ϕ * q_test, -2676.8230141, atol=0.5)
+    @test isapprox(sum(ϕ) * q_test, -2676.8230141, atol=0.5)
 
     # NIST data to test Ewald sums
     # data from here:  https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
     # what the energies should be for all four configurations provided by NIST
-    energies_should_be = [-5.58889e05 + 6.27009e03 + -2.84469e06 + 2.80999e06,
-                         -1.19295e06  + 6.03495e03 + -5.68938e06 + 5.61998e06,
-                         -1.96297e06  + 5.24461e03 + -8.53407e06 + 8.42998e06,
-                         -3.57226e06  + 7.58785e03 + -1.42235e07 + 1.41483e07]
+    energies_should_be = [Dict(["real"=> -5.58889e05, "fourier"=> 6.27009e03, "self"=> -2.84469e06, "intra" => 2.80999e06]),
+                          Dict(["real"=> -1.19295e06, "fourier"=> 6.03495e03, "self"=> -5.68938e06, "intra" => 5.61998e06]),
+                          Dict(["real"=> -1.96297e06, "fourier"=> 5.24461e03, "self"=> -8.53407e06, "intra" => 8.42998e06]),
+                          Dict(["real"=> -3.57226e06, "fourier"=> 7.58785e03, "self"=> -1.42235e07, "intra" => 1.41483e07])]
     # loop over all four configurations provided by NIST
-    for (c, energy_should_be) in enumerate(energies_should_be)
+    for c = 1:length(energies_should_be)
         # read in positions of atoms provided by NIST ("X" atoms)
         posfile = open("nist/electrostatics/spce_sample_config_periodic$c.txt")
         lines = readlines(posfile)
@@ -360,6 +409,7 @@ q_test = 0.8096
                 end
                 com /= 3
                 m = Molecule(:H2O, [], qs, com)
+                @assert(PorousMaterials.total_charge(m) == 0.0)
                 push!(ms, m)
                 @assert(isapprox(PorousMaterials.total_charge(m), 0.0, rtol=0.001))
             end
@@ -374,12 +424,19 @@ q_test = 0.8096
         # use NIST reported settings
         kreps = (5, 5, 5)
         eparams = PorousMaterials.EwaldParams(kreps, 5.6/box.a, sr_cutoff_r, box)
-        kvecs = PorousMaterials.precompute_kvec_wts(eparams, 27.0)
+        kvecs = PorousMaterials.precompute_kvec_wts(eparams)
+        # only include kvecs with <27 acc to NIST website
+        kvec_keep = [kvec.ka ^ 2 + kvec.kb ^2 + kvec.kc ^2 < 27 for kvec in kvecs]
+        kvecs = kvecs[kvec_keep]
         eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
         eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
         eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
-        energy = PorousMaterials.total_electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
-        @test isapprox(energy, energy_should_be, rtol=0.005)
+        ϕ = electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
+        @test isapprox(ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
+        @test isapprox(ϕ.sr, energies_should_be[c]["real"], rtol=0.00001)
+        @test isapprox(ϕ.lr, energies_should_be[c]["fourier"],  rtol=0.00001)
+        @test isapprox(ϕ.intra, energies_should_be[c]["intra"],  rtol=0.0001)
+
     end
 end
 @printf("------------------------------\n")
@@ -476,6 +533,18 @@ end
     @test translation_old_molecule_stored_properly
     @test translation_coords_changed
     @test translation_inside_box
+
+    #
+    #REINSERTION TESTS
+    #
+    box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    molecules = [read_molecule_file("He"), read_molecule_file("CO2")]
+    old_he = reinsert_molecule!(molecules[1], box)
+    old_co2 = reinsert_molecule!(molecules[2], box)
+    @test isapprox(old_he, read_molecule_file("He"))
+    @test isapprox(old_co2, read_molecule_file("CO2"))
+    @test ! isapprox(molecules[1].center_of_mass, read_molecule_file("He").center_of_mass)
+    @test ! isapprox(molecules[2].center_of_mass, read_molecule_file("CO2").center_of_mass)
 end
 @printf("------------------------------\n")
 @testset "Guest-guest Energetics Tests" begin

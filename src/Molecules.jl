@@ -326,6 +326,13 @@ function total_charge(molecule::Molecule)
     return total_charge
 end
 
-function charged(molecule::Molecule)
-    return length(molecule.charges) > 0 ? true : false
+function charged(molecule::Molecule; verbose::Bool=false)
+    charged_flag = true
+    if length(molecule.charges) == 0
+        charged_flag = false
+    end
+    if verbose
+        @printf("\tMolecule %s has point charges? %s\n", molecule.species, charged_flag)
+    end
+    return charged_flag
 end

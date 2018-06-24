@@ -1,4 +1,4 @@
-import Base: +, -
+import Base: +, -, /, *
 
 """
     nearest_image!(dxf, repfactors)
@@ -55,6 +55,13 @@ Base.sum(v::PotentialEnergy) = v.vdw_gh + v.vdw_gg + v.electro_gh + v.electro_gg
                                                             u.vdw_gg     - v.vdw_gg,
                                                             u.electro_gh - v.electro_gh,
                                                             u.electro_gg - v.electro_gg)
+
+*(u::PotentialEnergy, a::Float64) = PotentialEnergy(a * u.vdw_gh, a * u.vdw_gg, a * u.electro_gh, a * u.electro_gg)
+*(a::Float64, u::PotentialEnergy) = *(u::PotentialEnergy, a::Float64)
+                                                  
+# constructor
+PotentialEnergy() = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
+
 function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=true, atol::Float64=1e-6)
     if ! isapprox(u.vdw_gh, v.vdw_gh, atol=atol)
         if verbose
@@ -83,6 +90,8 @@ function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=tru
     return true
 end
 square(u::PotentialEnergy) = PotentialEnergy(u.vdw_gh^2, u.vdw_gg^2, u.electro_gh^2, u.electro_gg^2)
+/(u::PotentialEnergy, x::Float64) = PotentialEnergy(u.vdw_gh / x, u.vdw_gg / x, u.electro_gh / x, u.electro_gg / x)
+Base.sqrt(u::PotentialEnergy) = PotentialEnergy(sqrt(u.vdw_gh), sqrt(u.vdw_gg), sqrt(u.electro_gh), sqrt(u.electro_gg))
 
 # Arni's notes on Nearest image convention.
 #  If the interaction between the adsorbate molecule and atom k is being looked
