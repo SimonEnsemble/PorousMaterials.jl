@@ -262,20 +262,24 @@ Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fil
 end
 
 """
-    ϕ = electrostatic_potential(framework, x, simulation_box, repfactors, sr_cutoff_radius,
-                                kvectors, α)
+    ϕ = electrostatic_potential_energy(framework, molecule, eparams, kvectors,
+                                       eikar, eikbr, eikcr)
 
-Compute the electrostatic potential at a point x inside of a framework. The electrostatic
-potential is created by the point charges assigned to the framework atoms. Periodic boundary
-conditions are applied through the Ewald summation. The spurious self-interaction term is
-neglected here because we are looking at differences in energy in a Monte Carlo simulation.
+Compute the electrostatic potential energy of a molecule inside a framework. 
+
+The electrostatic potential is created by the point charges assigned to the framework 
+atoms in `framework.charges`. Periodic boundary conditions are applied through the Ewald 
+summation. The spurious self-interaction term is neglected here because we are looking at 
+*differences* in energy in a Monte Carlo simulation.
+
+Warning: it is assumed that the framework is replicated enough such that the nearest
+image convention can be applied for the short-range cutoff radius supplied in 
+`eparams.sr_cutoff_r`.
 
 # Arguments
 - `framework::Framework`: Crystal structure (see `framework.charges` for charges)
 - `x::Array{Float64, 1}`: point (Cartesian coordinates) at which we compute the electrostatic
     potential
-- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build
-    the supercell such that the nearest image convention can be applied in this function.
 * `eparams::EwaldParams`: data structure containing Ewald summation settings
 * `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
 corresponding weights indicating the contribution to the Fourier sum.
@@ -289,86 +293,22 @@ corresponding weights indicating the contribution to the Fourier sum.
 # Returns
 electrostatic potential inside `framework` at point `x` (units: K)
 """
-function electrostatic_potential(framework::Framework,
-                                 x::Array{Float64, 1},
-                                 repfactors::Tuple{Int, Int, Int},
-                                 eparams::EwaldParams,
-                                 kvectors::Array{Kvector, 1},
-                                 eikar::OffsetArray{Complex{Float64}},
-                                 eikbr::OffsetArray{Complex{Float64}},
-                                 eikcr::OffsetArray{Complex{Float64}})
-    # fractional coordinate of point at which we're computing the electrostatic potential (wrap to [0, 1.0])
-    xf = mod.(framework.box.c_to_f * x, 1.0)
-    
-    ϕ_lr = 0.0
-    ϕ_sr = 0.0
-    # build the super cell with loop over (ra, rb, rc) and atoms in the primitive unit cell
-    for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
-        # x - x_i vector in fractional coords; i corresponds to atom of framework.
-        #  same as: dxf = xf - (framework.xf[:, i] + [ra, rb, rc]) = (xf - [ra, rb, rc]) - framework.xf[:, i]
-        @inbounds dxf = broadcast(-, xf - [ra, rb, rc], framework.xf)
-        # convert distance vector to Cartesian coordinates
-        @inbounds dx = framework.box.f_to_c * dxf
-        # compute dot product with each of the three reciprocal lattice vectors
-        #   k_dot_dx[i, j] = kᵢ ⋅ (x - xⱼ)
-        # TODO make recip lattice transposed...
-        @inbounds k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
-
-        ###
-        #  Long-range contribution
-        ###
-        # TODO should this be over primitive unit cell or simulation box?
-        for i = 1:framework.n_atoms
-            # compute e^{ i * n * k * (x - xᵢ)} for n = -krep:krep
-            fill_eikr!(eikar, k_dot_dx[1, i], eparams.kreps[1], false) # via symmetry only need +ve
-            fill_eikr!(eikbr, k_dot_dx[2, i], eparams.kreps[2], true)
-            fill_eikr!(eikcr, k_dot_dx[3, i], eparams.kreps[3], true)
-
-            # loop over kevectors
-            for kvector in kvectors
-                # cos( i * this_k * r) = real part of:
-                #     e^{i ka r * vec(ka)} *
-                #     e^{i kb r * vec(kb)} *
-                #     e^{i kb r * vec(kc)} where r = x - xᵢ
-                #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-                @unsafe @inbounds ϕ_lr += framework.charges[i] * kvector.wt * real(
-                        eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
-            end
-        end
-
-        ###
-        #  Short range contribution
-        ###
-        # apply nearest image convention for periodic BCs
-        nearest_image!(dxf, repfactors)
-
-        # convert distance vector to Cartesian coordinates
-        @inbounds dx = framework.box.f_to_c * dxf
-
-        for i = 1:framework.n_atoms
-            @inbounds @fastmath r = sqrt(dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i])
-            if r < eparams.sr_cutoff_r
-                @inbounds @fastmath ϕ_sr += framework.charges[i] / r * erfc(r * eparams.α)
-            end
-        end
-    end
-    ϕ_sr /= FOUR_π_ϵ₀
-
-    return (ϕ_sr + ϕ_lr)::Float64
-end
-
-# framework-molecule electrostatic potential energy
-function electrostatic_potential_energy(framework::Framework,
+function electrostatic_potential_energy(frame::Framework,
                                         molecule::Molecule,
-                                        repfactors::Tuple{Int, Int, Int},
                                         eparams::EwaldParams,
                                         kvectors::Array{Kvector, 1},
                                         eikar::OffsetArray{Complex{Float64}},
                                         eikbr::OffsetArray{Complex{Float64}},
                                         eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
-    for charge in molecule.charges
-        ϕ += charge.q * electrostatic_potential(framework, charge.x, repfactors, eparams, kvectors, eikar, eikbr, eikcr)
+    for i = 1:frame.n_atoms
+        # construct a point charge for this framework atom
+        frame_charge = PointCharge(frame.charges[i], frame.box.f_to_c * frame.xf[:, i])
+        # look at interaction of framework charge with molecule charge
+        for charge in molecule.charges
+            ϕ += _ϕ_sr(frame_charge, charge, eparams) / FOUR_π_ϵ₀
+            ϕ += _ϕ_lr(frame_charge, charge, eparams, kvectors, eikar, eikbr, eikcr)
+        end
     end
     return ϕ::Float64
 end
@@ -402,13 +342,14 @@ function _ϕ_lr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldPara
 end
 
 # short-range contribution to Ewald sum (must divide by 4 π ϵ₀ though)
+#   use only for molecules where repfactors=(1,1,1)
 function _ϕ_sr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldParams)
     ϕ_sr = 0.0
     # vector from pt charge to pt charge
     dx = charge_a.x - charge_b.x
     dxf = eparams.box.c_to_f * dx
     # apply nearest image convention for periodic BCs
-    nearest_image!(dxf, (1, 1, 1))
+    nearest_image!(dxf)
 
     # convert distance vector to Cartesian coordinates
     dx = eparams.box.f_to_c * dxf
@@ -441,7 +382,7 @@ function _intramolecular_energy(molecule::Molecule, eparams::EwaldParams)
             dxf = eparams.box.c_to_f * dx
 
             # apply nearest image convention for periodic BCs
-            nearest_image!(dxf, (1, 1, 1))
+            nearest_image!(dxf)
 
             # convert distance vector to Cartesian coordinates
             dx = eparams.box.f_to_c * dxf
@@ -579,7 +520,6 @@ end
 
 function total_electrostatic_potential_energy(framework::Framework,
                                               molecules::Array{Molecule, 1},
-                                              repfactors::Tuple{Int, Int, Int},
                                               eparams::EwaldParams,
                                               kvectors::Array{Kvector, 1},
                                               eikar::OffsetArray{Complex{Float64}},
@@ -587,7 +527,7 @@ function total_electrostatic_potential_energy(framework::Framework,
                                               eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     for molecule in molecules
-        ϕ += electrostatic_potential_energy(framework, molecule, repfactors, eparams,
+        ϕ += electrostatic_potential_energy(framework, molecule, eparams,
                                             kvectors, eikar, eikbr, eikcr)
     end
     return ϕ::Float64
