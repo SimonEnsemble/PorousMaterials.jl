@@ -1,30 +1,30 @@
 import Base: +, -, /, *
 
 """
-    nearest_image!(dxf, repfactors)
+    nearest_image!(dxf)
 
-Applies the nearest image convention on a vector `dxf` between two atoms
-in fractional space; modifies `dxf` for nearest image convention.
+Applies the nearest image convention on a vector `dxf` between two atoms in fractional 
+space; modifies `dxf` for nearest image convention. Fractional coordinates here fall in
+[0, 1] so that the box is [0, 1]^3 in fractional space.
 
 See comments in vdw_energy for more description.
 
 # Arguments
 - `dxf::Array{Float64, 1}`: A vector between two atoms in fractional coordinates
-- `repfactors::Tuple{Int, Int, Int}`: Replication factors used to determine how many times the unit cell should be replicated
 """
-function nearest_image!(dxf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
+function nearest_image!(dxf::Array{Float64, 1})
     for k = 1:3 # loop over components
-        @inbounds if abs(dxf[k]) > repfactors[k] / 2.0
-            @inbounds dxf[k] -= sign(dxf[k]) * repfactors[k]
+        @inbounds if abs(dxf[k]) > 0.5
+            @inbounds dxf[k] -= sign(dxf[k])
         end
     end
 end
 
-function nearest_image!(dxf::Array{Float64, 2}, repfactors::Tuple{Int, Int, Int})
+function nearest_image!(dxf::Array{Float64, 2})
     for a = 1:size(dxf)[2] # loop over atoms
         for k = 1:3 # loop over components
-            @inbounds if abs(dxf[k, a]) > repfactors[k] / 2.0
-                @inbounds dxf[k, a] -= sign(dxf[k, a]) * repfactors[k]
+            @inbounds if abs(dxf[k, a]) > 0.5
+                @inbounds dxf[k, a] -= sign(dxf[k, a])
             end
         end
     end
