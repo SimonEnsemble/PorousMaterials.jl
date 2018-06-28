@@ -11,7 +11,7 @@ const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 # define probabilty of proposing each type of MC move here. from StatsBase.jl
-const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.4, 0.4, 0.18, 0.02])
+const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.35, 0.35, 0.25, 0.05])
 @assert(PROBABILITIES_OF_MC_PROPOSALS[INSERTION] ≈ PROBABILITIES_OF_MC_PROPOSALS[DELETION], "insertion/deletion probabilities must be equal")
 @assert(length(PROBABILITIES_OF_MC_PROPOSALS) == N_PROPOSAL_TYPES, "probability of each MC proposal not specified")
 @assert(sum(PROBABILITIES_OF_MC_PROPOSALS) ≈ 1.0, "sum of probabilities of MC moves should be 1.0")
@@ -242,7 +242,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                          ewald_precision::Float64=1e-6)
     tic()
     if verbose
-        pretty_print(molecule.species, framework.name, temperature, fugacity)
+        pretty_print(molecule.species, framework.name, temperature, fugacity, ljforcefield)
     end
 
     # replication factors for applying nearest image convention for short-range interactions
@@ -361,6 +361,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                                       kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
 
             old_molecule = translate_molecule!(molecules[molecule_id], framework.box)
+
+            if need_rotation(molecules[molecule_id])
+                rotate!(molecules[molecule_id])
+            end
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
@@ -584,8 +588,11 @@ function print_results(results::Dict; print_title::Bool=true)
     return
 end
 
-function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, fugacity::Float64)
-    print("Simulating (μVT) adsorption of ")
+function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, 
+                      fugacity::Float64, ljff::LennardJonesForceField)
+    print("Simulating ")
+    print_with_color(:yellow, "(μVT)")
+    print(" adsorption of ")
     print_with_color(:green, adsorbate)
     print(" in ")
     print_with_color(:green, frameworkname)
@@ -593,5 +600,6 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print_with_color(:green, @sprintf("%f K", temperature))
     print(" and ")
     print_with_color(:green, @sprintf("%f Pa", fugacity))
-    println(" (fugacity).")
+    println(" (fugacity) with ")
+    print_with_color(:green, @sprintf("%f.", ljff.name))
 end
