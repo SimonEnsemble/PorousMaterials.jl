@@ -11,7 +11,7 @@ const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 # define probabilty of proposing each type of MC move here. from StatsBase.jl
-const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.35, 0.35, 0.2, 0.1])
+const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.4, 0.4, 0.18, 0.02])
 @assert(PROBABILITIES_OF_MC_PROPOSALS[INSERTION] ≈ PROBABILITIES_OF_MC_PROPOSALS[DELETION], "insertion/deletion probabilities must be equal")
 @assert(length(PROBABILITIES_OF_MC_PROPOSALS) == N_PROPOSAL_TYPES, "probability of each MC proposal not specified")
 @assert(sum(PROBABILITIES_OF_MC_PROPOSALS) ≈ 1.0, "sum of probabilities of MC moves should be 1.0")
@@ -236,8 +236,8 @@ translation.
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
                          molecule::Molecule, ljforcefield::LennardJonesForceField;
-                         n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                         sample_frequency::Int=25, verbose::Bool=false,
+                         n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
+                         sample_frequency::Int=5, verbose::Bool=true,
                          molecules::Array{Molecule, 1}=Molecule[],
                          ewald_precision::Float64=1e-6)
     tic()
@@ -245,15 +245,16 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         pretty_print(molecule.species, framework.name, temperature, fugacity)
     end
 
-    # replication factors for applying nearest image convention for short-range  interactions
-    const repfactors = replication_factors(framework.box, ljforcefield)
+    # replication factors for applying nearest image convention for short-range interactions
+    repfactors = replication_factors(framework.box, ljforcefield)
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
+    # create a template to copy when we insert a new molecule.
     const molecule_template = deepcopy(molecule)
     if ! (total_charge(molecule_template) ≈ 0.0)
-        error("Molecule in GCMC simulation must be charge neutral.\n")
+        error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
     end
 
     if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
@@ -266,14 +267,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const charged_molecules = charged(molecule, verbose=verbose)
 
     # define Ewald summation params
-    #  TODO do this automatically with rules!
-    const sr_cutoff_r = sqrt(ljforcefield.cutoffradius_squared)
-
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, framework.box,
-                        verbose=verbose & (charged_framework || charged_molecules), ϵ=ewald_precision)
+    eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), framework.box,
+                        verbose=verbose & (charged_framework || charged_molecules), 
+                        ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
     system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
@@ -287,7 +286,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         system_energy.vdw_gg = total_vdw_energy(molecules, ljforcefield, framework.box)
         system_energy.electro_gh = total_electrostatic_potential_energy(framework, molecules,
                                             eparams, kvectors, eikar, eikbr, eikcr)
-        system_energy.electro_gg = total(total_electrostatic_potential_energy(molecules,
+        system_energy.electro_gg = total(electrostatic_potential_energy(molecules,
                                             eparams, kvectors, eikar, eikbr, eikcr))
     end
 
@@ -318,9 +317,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         if which_move == INSERTION
             insert_molecule!(molecules, framework.box, molecule_template)
 
-            # compute the potential energy of the inserted molecule
-            energy = potential_energy(length(molecules), molecules, framework, ljforcefield,
-                                      eparams, kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+            energy = potential_energy(length(molecules), molecules, framework, 
+                                            ljforcefield, eparams, kvectors, eikar, eikbr, 
+                                            eikcr, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Insertion
             if rand() < fugacity * framework.box.Ω / (length(molecules) * KB *
@@ -339,8 +338,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             # compute the potential energy of the molecule we propose to delete
             energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                      eparams,
-                                      kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+                                      eparams, kvectors, eikar, eikbr, eikcr, 
+                                      charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Deletion
             if rand() < length(molecules) * KB * temperature / (fugacity *
@@ -456,7 +455,6 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                                         eparams, kvectors, eikar, eikbr, eikcr))
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
-    warn("Not incrementing electrostatic potential energy currently.")
     if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
         error("energy incremented improperly during simulation...")
     end
@@ -587,7 +585,7 @@ function print_results(results::Dict; print_title::Bool=true)
 end
 
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, fugacity::Float64)
-    print("Simulating adsorption of ")
+    print("Simulating (μVT) adsorption of ")
     print_with_color(:green, adsorbate)
     print(" in ")
     print_with_color(:green, frameworkname)

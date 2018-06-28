@@ -27,6 +27,6 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_ove
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, # MChelpers.jl
        apply_periodic_boundary_condition!,
-       guest_guest_vdw_energy, gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
-       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, allocate_eikr, setup_Ewald_sum # ElectrostaticEnergetics.jl
+       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
+       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total # ElectrostaticEnergetics.jl
 end
