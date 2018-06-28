@@ -55,37 +55,37 @@ end
 
 if co2_tests
     plot_results = true
-    run_sims = false
+    run_sims = true
     ###
     #  Test isotherm 1: by greg chung. co2 at 313 k
     ###
-    co2 = read_molecule_file("CO2")
-    f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
-    strip_numbers_from_atom_labels!(f)
-    ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
-
-    # load in test data
-    df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
-    
-    # simulate with PorousMaterials.jl in parallel
-    if run_sims
-        results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
-        JLD.save("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld", "results", results)
-    else
-        results = JLD.load("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld")["results"]
-    end
-    n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
-    
-    # plot comparison
-    if plot_results
-        figure()
-        xlabel("Fugacity (bar)")
-        ylabel("Molecules/unit cell")
-        scatter(df[:fugacity_Pa] / 100000.0, df[:molecules_per_unit_cell], label="Greg")
-        scatter(df[:fugacity_Pa] / 100000.0, n_sim, label="PorousMaterials.jl")
-        legend()
-        savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
-    end
+ #     co2 = read_molecule_file("CO2")
+ #     f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+ #     strip_numbers_from_atom_labels!(f)
+ #     ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+ # 
+ #     # load in test data
+ #     df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
+ #     
+ #     # simulate with PorousMaterials.jl in parallel
+ #     if run_sims
+ #         results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
+ #         JLD.save("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld", "results", results)
+ #     else
+ #         results = JLD.load("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld")["results"]
+ #     end
+ #     n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
+ #     
+ #     # plot comparison
+ #     if plot_results
+ #         figure()
+ #         xlabel("Fugacity (bar)")
+ #         ylabel("Molecules/unit cell")
+ #         scatter(df[:fugacity_Pa] / 100000.0, df[:molecules_per_unit_cell], label="Greg")
+ #         scatter(df[:fugacity_Pa] / 100000.0, n_sim, label="PorousMaterials.jl")
+ #         legend()
+ #         savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
+ #     end
     
     ###
     #  Test isotherm 2: by greg chung. co2 at 298 K
@@ -100,7 +100,7 @@ if co2_tests
     
     # simulate with PorousMaterials.jl in parallel
     if run_sims
-        results = adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-7)
+        results = stepwise_adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-7)
         JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
     else
         results = JLD.load("ZIF71_bogus_charges_co2_simulated_isotherm.jld")["results"]

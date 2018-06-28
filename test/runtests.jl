@@ -313,18 +313,22 @@ end
     @test isapprox(PorousMaterials.total_vdw_energy(zif71, [co2, co2_2], ff, (1, 1, 1)), -311.10392551, atol=0.1)
     @test isapprox(PorousMaterials.total_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
     @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
-    ϕ_incremented = PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(ϕ_incremented, 59.3973, atol=0.05)
-    # incremented electrostatic potential energy should be equal to total from double sum.
-    ϕ_doublesum = electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(PorousMaterials.total(ϕ_doublesum), ϕ_incremented)
- #     # TODO add test 
- #     ϕ_both = electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
- #     ϕ_one = electrostatic_potential_energy([co2], eparams, kvecs, eikar, eikbr, eikcr)
- #     ϕ_for_MC = electrostatic_potential_energy([co2, co2_2], 1, eparams, kvecs, eikar, eikbr, eikcr)
- #     # make sure when take away molecule the ϕ_MC is diff in two
-    ##
-    ## 
+    ϕ = electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(PorousMaterials.total(ϕ), 59.3973, atol=0.05)
+
+    # MC function for electrostatic potential should be equal to difference in two systems
+    #  one with both co2's and one with just one of the co2's
+    ϕ_both = electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
+    ϕ_one = electrostatic_potential_energy([co2], eparams, kvecs, eikar, eikbr, eikcr)
+    ϕ_for_MC = electrostatic_potential_energy([co2, co2_2], 2, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(PorousMaterials.total(ϕ_both) - PorousMaterials.total(ϕ_one), PorousMaterials.total(ϕ_for_MC))
+    # difference in potential energy when adding 1 co2 should be that of the system with one co2
+    ϕ_for_MC = electrostatic_potential_energy([co2], 1, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(PorousMaterials.total(ϕ_for_MC), PorousMaterials.total(ϕ_one))
+
+    # assert total_electrostatic_potential function incrementer works
+    @test isapprox(PorousMaterials.total(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)),
+                    PorousMaterials.total(electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)))
 
     # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
     #  The following "framework" is a cage floating in space so no atoms are near the boundary
@@ -445,7 +449,7 @@ q_test = 0.8096
         ϕ = electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
         @test isapprox(ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
         @test isapprox(ϕ.sr, energies_should_be[c]["real"], rtol=0.00001)
-        @test isapprox(ϕ.lr, energies_should_be[c]["fourier"],  rtol=0.00001)
+        @test isapprox(ϕ.lr + ϕ.lr_own_images, energies_should_be[c]["fourier"],  rtol=0.00001)
         @test isapprox(ϕ.intra, energies_should_be[c]["intra"],  rtol=0.0001)
 
     end
