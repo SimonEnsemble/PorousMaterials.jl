@@ -601,5 +601,5 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print(" and ")
     print_with_color(:green, @sprintf("%f Pa", fugacity))
     println(" (fugacity) with ")
-    print_with_color(:green, @sprintf("%f.", ljff.name))
+    print_with_color(:green, ljff.name)
 end
