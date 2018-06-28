@@ -1,6 +1,6 @@
-# δ is the maximal distance a particle is perturbed in a given coordinate
+# δ is half the maximal distance a particle is perturbed in a given coordinate
 #  during particle translations
-const δ = 1.0 # Å
+const δ = 2.0 # Å
 
 """
     insert_molecule!(molecules, simulation_box, template)
@@ -133,3 +133,6 @@ function reinsert_molecule!(molecule::Molecule, simulation_box::Box)
 
     return old_molecule # in case we need to restore
 end
+
+# do we need to conduct a rotation or not?
+need_rotation(molecule::Molecule) = (length(molecule.ljspheres) + length(molecule.charges) > 1)
