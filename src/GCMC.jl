@@ -145,7 +145,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LennardJonesForceField;
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                                      sample_frequency::Int=10, verbose::Bool=false,
+                                      sample_frequency::Int=10, verbose::Bool=true,
                                       ewald_precision::Float64=1e-6)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -179,7 +179,7 @@ function adsorption_isotherm(framework::Framework, temperature::Float64,
                              fugacities::Array{Float64, 1}, molecule::Molecule,
                              ljforcefield::LennardJonesForceField;
                              n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                             sample_frequency::Int=25, verbose::Bool=false,
+                             sample_frequency::Int=25, verbose::Bool=true,
                              ewald_precision::Float64=1e-6)
     # make a function of fugacity only to facilitate uses of `pmap`
     run_fugacity(fugacity::Float64) = gcmc_simulation(framework, temperature, fugacity,
@@ -265,6 +265,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     #   there is no point in going through the computations if all charges are zero!
     const charged_framework = charged(framework, verbose=verbose)
     const charged_molecules = charged(molecule, verbose=verbose)
+
+    if verbose & rotatable(molecule) & (PROBABILITIES_OF_MC_PROPOSALS[TRANSLATION] > 0.0)
+        @printf("\tMolecule %s will undergo random rotations in conjunction with translations.\n", molecule.species)
+    end
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
@@ -362,7 +366,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             old_molecule = translate_molecule!(molecules[molecule_id], framework.box)
 
-            if need_rotation(molecules[molecule_id])
+            # perform random rotation if applicable
+            if rotatable(molecules[molecule_id])
                 rotate!(molecules[molecule_id])
             end
 
@@ -552,27 +557,27 @@ end
 function print_results(results::Dict; print_title::Bool=true)
     if print_title
         # already print in GCMC tests...
-        @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n\n",
+        @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity using %s forcefield.\n\n",
                 results["adsorbate"], results["crystal"], results["temperature (K)"],
-                results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
+                results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0, results["forcefield"])
     end
 
-    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
-                                                           results["repfactors"][2],
-                                                           results["repfactors"][3])
+    @printf("\nUnit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
+                                                             results["repfactors"][2],
+                                                             results["repfactors"][3])
     # Markov stats
-    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
-        for key in [@sprintf("Total # %s proposals", proposal_description),
-                    @sprintf("Fraction of %s proposals accepted", proposal_description)]
-            println(key * ": ", results[key])
-        end
-    end
-
     println("")
     for key in ["# sample cycles", "# burn cycles", "# samples"]
         println(key * ": ", results[key])
     end
 
+    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
+        print_with_color(:yellow, proposal_description)
+        total_proposals = results[@sprintf("Total # %s proposals", proposal_description)]
+        fraction_accepted = results[@sprintf("Fraction of %s proposals accepted", proposal_description)]
+        @printf("\t%d total proposals.\n", total_proposals)
+        @printf("\t%f %% proposals accepted.\n", 100.0 * fraction_accepted)
+    end
 
     println("")
     for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)", "⟨N⟩ (mmol/g)",
@@ -584,7 +589,7 @@ function print_results(results::Dict; print_title::Bool=true)
         end
     end
 
-    @printf("\nQ_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
+    @printf("\nQ_st (K) = %f = %f kJ/mol\n\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
     return
 end
 
@@ -600,6 +605,7 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print_with_color(:green, @sprintf("%f K", temperature))
     print(" and ")
     print_with_color(:green, @sprintf("%f Pa", fugacity))
-    println(" (fugacity) with ")
-    print_with_color(:green, ljff.name)
+    print(" (fugacity) with ")
+    print_with_color(:green, split(ljff.name, ".")[1])
+    println(" force field.")
 end

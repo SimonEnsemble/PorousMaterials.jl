@@ -185,6 +185,24 @@ end;
     end
     write_to_xyz(ms, "co2s")
     println("see co2s.xyz for dist'n of rotations")
+
+    # make sure rotation, translate does not chage bond lengths or mess up center of mass
+    co2 = read_molecule_file("CO2")
+    bond_length = norm(co2.charges[1].x - co2.charges[2].x)
+    for i = 1:100000
+        translate_to!(co2, 10.0 * [rand(), rand(), rand()])
+        translate_by!(co2, 5.0 * [randn(), randn(), randn()])
+        rotate!(co2)
+    end
+    @test isapprox(norm(co2.charges[1].x - co2.charges[2].x), bond_length, atol=1e-12)
+    @test isapprox(norm(co2.ljspheres[1].x - co2.ljspheres[2].x), bond_length, atol=1e-12)
+    @test isapprox(co2.center_of_mass, co2.ljspheres[1].x, atol=1e-12) # should be on carbon
+    # ljspheres and charges shld have same coords still
+    @test all([isapprox(co2.ljspheres[k].x, co2.charges[k].x, atol=1e-12) for k = 1:3]) 
+    # bond angles preserved.
+    co_vector1 = co2.ljspheres[2].x - co2.ljspheres[1].x
+    co_vector2 = co2.ljspheres[3].x - co2.ljspheres[1].x
+    @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-12)
 end
 
 @printf("\n------------------------------\nTesting Energetics.jl\n\n")
