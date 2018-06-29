@@ -185,14 +185,14 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
     # replicate atoms (coordinates, charges, identities)
     xf = zeros(Float64, 3, n_atoms)
     charges = zeros(Float64, n_atoms)
-    atoms = Symbol[]
+    atoms = Array{Symbol, 1}(n_atoms)
     atom_counter = 0
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
         for i = 1:framework.n_atoms
             atom_counter += 1
             xf[:, atom_counter] = framework.xf[:, i] + 1.0 * [ra, rb, rc]
             charges[atom_counter] = framework.charges[i]
-            push!(atoms, framework.atoms[i])
+            atoms[atom_counter] = framework.atoms[i]
         end
     end
     @assert(atom_counter == n_atoms)

@@ -9,11 +9,11 @@ using Roots # for fzero
 const ϵ₀ = 8.854187817e-12 / (1.602176565e-19 ^ 2) / 1.0e10 * 1.3806488e-23  # \epsilon_0 vacuum permittivity units: electron charge^2 /(A - K)
 const FOUR_π_ϵ₀ = 4.0 * π * ϵ₀
 
-"Data structure to faciltate partitioning Ewald sums into short- and long-range and self contributions."
+"Data structure to faciltate partitioning Ewald sums into different contributions."
 mutable struct EwaldSum
     sr::Float64 # short-range sum
-    lr::Float64 # long-range sum, excluding contribution from own images
-    lr_own_images::Float64 # long-range sum, contribution from own images
+    lr::Float64 # long-range sum, excluding contribution from own periodic images
+    lr_own_images::Float64 # long-range sum, contribution from own periodic images only
     self::Float64 # spurious self-interaction
     intra::Float64 # intramolecular interactions
 end
