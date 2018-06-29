@@ -221,7 +221,7 @@ function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-6, v
     eparams = EwaldParams(kreps, α, sr_cutoff_r, sim_box)
     if verbose
         print(eparams)
-        @printf("\t(calculated with specified precision %e)\n", ϵ)
+        @printf("\t\t(calculated with specified precision %e)\n", ϵ)
     end
     # pre-compute weights associated with each k-vector in sum in Fourier space.
     #  discards k-vector replications whose |k|² > max_mag_k_sqrd for efficiency.
