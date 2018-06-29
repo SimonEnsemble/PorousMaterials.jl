@@ -44,6 +44,18 @@ strip_numbers_from_atom_labels!(framework)
     framework_from_cssr = read_crystal_structure_file("test_structure2.cif")
     strip_numbers_from_atom_labels!(framework_from_cssr)
     @test isapprox(framework_from_cssr, framework, checknames=false)
+
+    # test replicate framework
+    sbmof = read_crystal_structure_file("SBMOF-1.cif")
+    replicated_sbmof = replicate(sbmof, (1, 1, 1))
+    @test isapprox(sbmof, replicated_sbmof)
+    repfactors = replication_factors(sbmof.box, 14.0)
+    replicated_sbmof = replicate(sbmof, repfactors)
+    @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
+    @test isapprox(sbmof.box.f_to_c * sbmof.xf[:, 1], replicated_sbmof.box.f_to_c * replicated_sbmof.xf[:, 1])
+    @test isapprox(transpose(replicated_sbmof.box.reciprocal_lattice), 2 * π * inv(replicated_sbmof.box.f_to_c))
+    @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
+    @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
 end;
 
 @printf("\n------------------------------\nTesting Forcefield.jl\n\n")
@@ -173,6 +185,24 @@ end;
     end
     write_to_xyz(ms, "co2s")
     println("see co2s.xyz for dist'n of rotations")
+
+    # make sure rotation, translate does not chage bond lengths or mess up center of mass
+    co2 = read_molecule_file("CO2")
+    bond_length = norm(co2.charges[1].x - co2.charges[2].x)
+    for i = 1:100000
+        translate_to!(co2, 10.0 * [rand(), rand(), rand()])
+        translate_by!(co2, 5.0 * [randn(), randn(), randn()])
+        rotate!(co2)
+    end
+    @test isapprox(norm(co2.charges[1].x - co2.charges[2].x), bond_length, atol=1e-12)
+    @test isapprox(norm(co2.ljspheres[1].x - co2.ljspheres[2].x), bond_length, atol=1e-12)
+    @test isapprox(co2.center_of_mass, co2.ljspheres[1].x, atol=1e-12) # should be on carbon
+    # ljspheres and charges shld have same coords still
+    @test all([isapprox(co2.ljspheres[k].x, co2.charges[k].x, atol=1e-12) for k = 1:3]) 
+    # bond angles preserved.
+    co_vector1 = co2.ljspheres[2].x - co2.ljspheres[1].x
+    co_vector2 = co2.ljspheres[3].x - co2.ljspheres[1].x
+    @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-12)
 end
 
 @printf("\n------------------------------\nTesting Energetics.jl\n\n")
@@ -183,8 +213,8 @@ end
     molecule2 = read_molecule_file("He")
     molecule2.ljspheres[1].x[:] = [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]]
 
-	@test vdw_energy(frame, molecule1, ljforcefield, rep_factors) ≈ vdw_energy(frame, molecule2, ljforcefield, rep_factors)
-	@test vdw_energy(frame, molecule1, ljforcefield, (1,1,1)) ≈ 4 * ljforcefield.ϵ[:He][:Zn] * ((ljforcefield.σ²[:Zn][:He] / 0.75) ^ 6 - (ljforcefield.σ²[:Zn][:He] / 0.75) ^ 3)
+	@test vdw_energy(frame, molecule1, ljforcefield) ≈ vdw_energy(frame, molecule2, ljforcefield)
+	@test vdw_energy(frame, molecule1, ljforcefield) ≈ 4 * ljforcefield.ϵ[:He][:Zn] * ((ljforcefield.σ²[:Zn][:He] / 0.75) ^ 6 - (ljforcefield.σ²[:Zn][:He] / 0.75) ^ 3)
     # the position of a molecule should not change inside vdw_energy.
     @assert(all(molecule1.ljspheres[1].x .≈ [0.5, 0.5, 0.5]))
     @assert(all(molecule2.ljspheres[1].x .≈ [0.5 + rep_factors[1], 0.5 + rep_factors[2], 0.5 + rep_factors[3]]))
@@ -196,39 +226,41 @@ end
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
+    sbmof1 = replicate(sbmof1, rep_factors_sbmof1) # replicate so nearest image convention can be applied
+
     xenon = read_molecule_file("Xe")
     @test ! charged(xenon)
     xenon.ljspheres[1].x[:] = zeros(3)
-    energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy, -5041.58, atol = 0.005)
     xenon.ljspheres[1].x[1] = 0.494265; xenon.ljspheres[1].x[2] = 2.22668; xenon.ljspheres[1].x[3] = 0.450354;
-    energy = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy, 12945.838, atol = 0.005)
 
     # test PBC, rep factors are (3, 5, 2)
     xf = [0.05, 0.4, 0.02][:, :]
     xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
-    energy1 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy1 = vdw_energy(sbmof1, xenon, ljforcefield)
     xf = [1.05, 0.4, 0.02][:, :]
     xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
-    energy2 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy2 = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy1, energy2, atol = 0.00001)
     xf = [2.05, 4.4, 1.02][:, :]
     xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
-    energy3 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy3 = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy1, energy3, atol = 0.00001)
     # outside box
     xf = [4.05, 5.4, 2.02][:, :]
     xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
-    energy4 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy4 = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy1, energy4, atol = 0.00001)
     xf = [-0.95, 5.4, 2.02][:, :]
     xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
-    energy5 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy5 = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy1, energy5, atol = 0.00001)
     xf = [-0.95, -0.6, -0.98][:, :]
     xenon.ljspheres[1].x[:] = sbmof1.box.f_to_c * xf
-    energy6 = vdw_energy(sbmof1, xenon, ljforcefield, rep_factors_sbmof1)
+    energy6 = vdw_energy(sbmof1, xenon, ljforcefield)
 	@test isapprox(energy1, energy6, atol = 0.00001)
 
     # data types for potential energies
@@ -289,10 +321,10 @@ end
     co2.charges[2].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461] # O
     co2.charges[3].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116] # O
     # test vdW energy
-	@test isapprox(vdw_energy(zif71, co2, ff, (1, 1 ,1)), -132.56, atol=0.01)
+	@test isapprox(vdw_energy(zif71, co2, ff), -132.56, atol=0.01)
     # test electrostatics
     eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, zif71.box, verbose=false, ϵ=1e-6)
-    ϕ = electrostatic_potential_energy(zif71, co2, (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr)
+    ϕ = electrostatic_potential_energy(zif71, co2, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ, -9.37846564, atol=0.1)
 
     # test 2: guest-guest
@@ -310,10 +342,25 @@ end
     co2_2.charges[1].x[:] =  zif71.box.f_to_c * [0.50680, 0.38496, 0.50788]
     co2_2.charges[2].x[:] =  zif71.box.f_to_c * [0.54340, 0.38451, 0.49116]
     co2_2.charges[3].x[:] =  zif71.box.f_to_c * [0.47020, 0.38540, 0.52461]
-    @test isapprox(PorousMaterials.total_vdw_energy(zif71, [co2, co2_2], ff, (1, 1, 1)), -311.10392551, atol=0.1)
+    @test isapprox(PorousMaterials.total_vdw_energy(zif71, [co2, co2_2], ff), -311.10392551, atol=0.1)
     @test isapprox(PorousMaterials.total_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
-    @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], (1, 1, 1), eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
-    @test isapprox(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), 59.3973, atol=0.01)
+    @test isapprox(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr), -36.00, atol=0.3)
+    ϕ = electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(total(ϕ), 59.3973, atol=0.05)
+
+    # MC function for electrostatic potential should be equal to difference in two systems
+    #  one with both co2's and one with just one of the co2's
+    ϕ_both = electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)
+    ϕ_one = electrostatic_potential_energy([co2], eparams, kvecs, eikar, eikbr, eikcr)
+    ϕ_for_MC = electrostatic_potential_energy([co2, co2_2], 2, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(total(ϕ_both) - total(ϕ_one), total(ϕ_for_MC))
+    # difference in potential energy when adding 1 co2 should be that of the system with one co2
+    ϕ_for_MC = electrostatic_potential_energy([co2], 1, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(total(ϕ_for_MC), total(ϕ_one))
+
+    # assert total_electrostatic_potential function incrementer works
+    @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)),
+                   total(electrostatic_potential_energy([co2, co2_2], eparams, kvecs, eikar, eikbr, eikcr)))
 
     # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
     #  The following "framework" is a cage floating in space so no atoms are near the boundary
@@ -323,7 +370,7 @@ end
     atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
     f = read_crystal_structure_file("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
     ljff = read_forcefield_file("UFF.csv")
-    @test isapprox(vdw_energy(f, co2, ljff, (1,1,1)), vdw_energy_no_PBC(co2, atoms, x .+ [50.0, 50.0, 50.0], ljff))
+    @test isapprox(vdw_energy(f, co2, ljff), vdw_energy_no_PBC(co2, atoms, x .+ [50.0, 50.0, 50.0], ljff))
 
 end;
 #@printf("------------------------------\n")
@@ -336,7 +383,8 @@ framework = read_crystal_structure_file("NU-1000_Greg.cif")
  # α = 0.265058
 sr_cutoff_r = 12.5
 rep_factors = replication_factors(framework, sr_cutoff_r)
-sim_box = replicate_box(framework.box, rep_factors)
+sim_box = replicate(framework.box, rep_factors)
+framework = replicate(framework, rep_factors)
 eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, verbose=false, ϵ=1e-6)
 
 q_test = 0.8096
@@ -356,16 +404,22 @@ q_test = 0.8096
     @test PorousMaterials.required_kreps(box, 10.1^2) == (5, 1, 2)
 
     x = [9.535619863743, 20.685576379935, 0.127344239990]
-    ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(sum(ϕ) * q_test, 111373.38, atol=2.5)
+    pc = PointCharge(q_test, x)
+    m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
+    ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(ϕ, 111373.38, atol=2.5)
 
     x = [4.269654927228, 23.137319129548, 28.352847101096]
-    ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(sum(ϕ) * q_test, -531.0, atol=0.5)
+    pc = PointCharge(q_test, x)
+    m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
+    ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(ϕ, -531.0, atol=0.5)
 
     x = [-0.047382031804, 7.209555961450, 5.158180463556]
-    ϕ = electrostatic_potential(framework, x, rep_factors, eparams, kvecs, eikar, eikbr, eikcr)
-    @test isapprox(sum(ϕ) * q_test, -2676.8230141, atol=0.5)
+    pc = PointCharge(q_test, x)
+    m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
+    ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
+    @test isapprox(ϕ, -2676.8230141, atol=0.5)
 
     # NIST data to test Ewald sums
     # data from here:  https://www.nist.gov/mml/csd/chemical-informatics-research-group/spce-water-reference-calculations-10%C3%A5-cutoff
@@ -434,9 +488,14 @@ q_test = 0.8096
         ϕ = electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
         @test isapprox(ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
         @test isapprox(ϕ.sr, energies_should_be[c]["real"], rtol=0.00001)
-        @test isapprox(ϕ.lr, energies_should_be[c]["fourier"],  rtol=0.00001)
+        @test isapprox(ϕ.lr + ϕ.lr_own_images, energies_should_be[c]["fourier"],  rtol=0.00001)
         @test isapprox(ϕ.intra, energies_should_be[c]["intra"],  rtol=0.0001)
-
+        # test incremented potential energy
+        @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)), total(ϕ), atol=0.01)
+        # test potential energy function for MC sims
+        ϕ_minus_molecule = electrostatic_potential_energy(ms[2:end], eparams, kvecs, eikar, eikbr, eikcr)
+        ϕ_MC =  electrostatic_potential_energy(ms, 1, eparams, kvecs, eikar, eikbr, eikcr)
+        @test(isapprox(total(ϕ) - total(ϕ_minus_molecule), total(ϕ_MC), atol=0.01))
     end
 end
 @printf("------------------------------\n")
@@ -445,9 +504,9 @@ end
 @testset "Monte Carlo Functions Tests" begin
     # replicating the unit cell to construct simulation box
     sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
-    sim_box = replicate_box(sbmof1.box, (1, 1, 1))
+    sim_box = replicate(sbmof1.box, (1, 1, 1))
     @test isapprox(sim_box, sbmof1.box)
-    sim_box = replicate_box(sbmof1.box, (2, 3, 4))
+    sim_box = replicate(sbmof1.box, (2, 3, 4))
     @test sim_box.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
     @test all(sim_box.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
 
@@ -459,8 +518,9 @@ end
     insertion_adds_molecule = true
 
     molecules = Array{Molecule}(0)
+    # TODO rm these?
     repfactors = replication_factors(frame.box, ljforcefield)
-    sim_box = replicate_box(frame.box, repfactors)
+    sim_box = replicate(frame.box, repfactors)
 
     m = read_molecule_file("He")
     for i = 1:100
@@ -548,14 +608,13 @@ end
 end
 @printf("------------------------------\n")
 @testset "Guest-guest Energetics Tests" begin
-    repfactors = (1, 2, 3)
-    dxf = [1.2, -0.2, 2.4]
-    nearest_image!(dxf, repfactors)
-    @test isapprox(dxf, [0.2, -0.2, -0.6])
+    dxf = [-0.8, -0.4, 0.7]
+    nearest_image!(dxf)
+    @test isapprox(dxf, [0.2, -0.4, -0.3])
 
-    dxf = [1.2 -0.3; -0.2 -0.1; 2.4 3.4]
-    nearest_image!(dxf, repfactors)
-    @test isapprox(dxf, [0.2 -0.3; -0.2 -0.1; -0.6 0.4])
+    dxf = [0.8 -0.3; -0.2 -0.1; 0.9 -0.9]
+    nearest_image!(dxf)
+    @test isapprox(dxf, [-0.2 -0.3; -0.2 -0.1; -0.1 0.1])
 
     sim_box = construct_box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     # a He and Xe a distance of 6.0 away

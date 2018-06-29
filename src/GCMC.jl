@@ -11,7 +11,7 @@ const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 # define probabilty of proposing each type of MC move here. from StatsBase.jl
-const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.35, 0.35, 0.2, 0.1])
+const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.35, 0.35, 0.25, 0.05])
 @assert(PROBABILITIES_OF_MC_PROPOSALS[INSERTION] ≈ PROBABILITIES_OF_MC_PROPOSALS[DELETION], "insertion/deletion probabilities must be equal")
 @assert(length(PROBABILITIES_OF_MC_PROPOSALS) == N_PROPOSAL_TYPES, "probability of each MC proposal not specified")
 @assert(sum(PROBABILITIES_OF_MC_PROPOSALS) ≈ 1.0, "sum of probabilities of MC moves should be 1.0")
@@ -39,16 +39,13 @@ type GCMCstats
 
     Un::Float64 # ⟨U n⟩
 end
-
-# constructor where start with zero everything.
 GCMCstats() = GCMCstats(0, 0, 0, PotentialEnergy(), PotentialEnergy(), 0.0)
-
-# overload + for gcmc stats to add two together.
-+(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples, s1.n + s2.n,
-                                            s1.n² + s2.n², s1.U + s2.U,
-                                            s1.U² + s2.U², s1.Un + s2.Un)
-
-# Facilitate summing all quantities within a GCMCstats type.
++(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples,
+                                            s1.n         + s2.n,
+                                            s1.n²        + s2.n²,
+                                            s1.U         + s2.U,
+                                            s1.U²        + s2.U², 
+                                            s1.Un        + s2.Un)
 function Base.sum(gcmc_stats::Array{GCMCstats, 1})
     sum_stats = GCMCstats()
     for gs in gcmc_stats
@@ -108,8 +105,6 @@ end
                                   molecules::Array{Molecule, 1},
                                   framework::Framework,
                                   ljforcefield::LennardJonesForceField,
-                                  simulation_box::Box,
-                                  repfactors::Tuple{Int, Int, Int},
                                   eparams::EwaldParams,
                                   kvectors::Array{Kvector, 1},
                                   eikar::OffsetArray{Complex{Float64}},
@@ -118,12 +113,12 @@ end
                                   charged_molecules::Bool,
                                   charged_framework::Bool)
     energy = PotentialEnergy()
-    energy.vdw_gg = vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
-    energy.vdw_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield, repfactors)
+    energy.vdw_gg = vdw_energy(molecule_id, molecules, ljforcefield, framework.box)
+    energy.vdw_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield)
     if charged_molecules
-        energy.electro_gg = electrostatic_potential_energy(molecules, molecule_id, eparams, kvectors, eikar, eikbr, eikcr)
+        energy.electro_gg = total(electrostatic_potential_energy(molecules, molecule_id, eparams, kvectors, eikar, eikbr, eikcr))
         if charged_framework
-            energy.electro_gh = electrostatic_potential_energy(framework, molecules[molecule_id], repfactors, eparams, kvectors, eikar, eikbr, eikcr)
+            energy.electro_gh = electrostatic_potential_energy(framework, molecules[molecule_id], eparams, kvectors, eikar, eikbr, eikcr)
         end
     end
     return energy
@@ -150,7 +145,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LennardJonesForceField;
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                                      sample_frequency::Int=10, verbose::Bool=false,
+                                      sample_frequency::Int=10, verbose::Bool=true,
                                       ewald_precision::Float64=1e-6)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -184,7 +179,7 @@ function adsorption_isotherm(framework::Framework, temperature::Float64,
                              fugacities::Array{Float64, 1}, molecule::Molecule,
                              ljforcefield::LennardJonesForceField;
                              n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                             sample_frequency::Int=25, verbose::Bool=false,
+                             sample_frequency::Int=25, verbose::Bool=true,
                              ewald_precision::Float64=1e-6)
     # make a function of fugacity only to facilitate uses of `pmap`
     run_fugacity(fugacity::Float64) = gcmc_simulation(framework, temperature, fugacity,
@@ -241,24 +236,25 @@ translation.
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
                          molecule::Molecule, ljforcefield::LennardJonesForceField;
-                         n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                         sample_frequency::Int=25, verbose::Bool=false,
+                         n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
+                         sample_frequency::Int=5, verbose::Bool=true,
                          molecules::Array{Molecule, 1}=Molecule[],
                          ewald_precision::Float64=1e-6)
     tic()
     if verbose
-        pretty_print(molecule.species, framework.name, temperature, fugacity)
+        pretty_print(molecule.species, framework.name, temperature, fugacity, ljforcefield)
     end
 
-    # replication factors for applying nearest image convention for short-range
-    #   interactions
-    const repfactors = replication_factors(framework.box, ljforcefield)
-    # the simulation box = replicated primitive framework box
-    const simulation_box = replicate_box(framework.box, repfactors)
+    # replication factors for applying nearest image convention for short-range interactions
+    repfactors = replication_factors(framework.box, ljforcefield)
+    # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
+    framework = replicate(framework, repfactors)
+
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
+    # create a template to copy when we insert a new molecule.
     const molecule_template = deepcopy(molecule)
     if ! (total_charge(molecule_template) ≈ 0.0)
-        error("Molecule in GCMC simulation must be charge neutral.\n")
+        error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
     end
 
     if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
@@ -270,15 +266,17 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const charged_framework = charged(framework, verbose=verbose)
     const charged_molecules = charged(molecule, verbose=verbose)
 
-    # define Ewald summation params
-    #  TODO do this automatically with rules!
-    const sr_cutoff_r = sqrt(ljforcefield.cutoffradius_squared)
+    if verbose & rotatable(molecule) & (PROBABILITIES_OF_MC_PROPOSALS[TRANSLATION] > 0.0)
+        @printf("\tMolecule %s will undergo random rotations in conjunction with translations.\n", molecule.species)
+    end
 
+    # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, simulation_box,
-                        verbose=verbose & (charged_framework || charged_molecules), ϵ=ewald_precision)
+    eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), framework.box,
+                        verbose=verbose & (charged_framework || charged_molecules), 
+                        ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
     system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
@@ -288,12 +286,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
 
-        system_energy.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield, repfactors)
-        system_energy.vdw_gg = total_vdw_energy(molecules, ljforcefield, simulation_box)
+        system_energy.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield)
+        system_energy.vdw_gg = total_vdw_energy(molecules, ljforcefield, framework.box)
         system_energy.electro_gh = total_electrostatic_potential_energy(framework, molecules,
-                                            repfactors, eparams, kvectors, eikar, eikbr, eikcr)
-        system_energy.electro_gg = total_electrostatic_potential_energy(molecules,
                                             eparams, kvectors, eikar, eikbr, eikcr)
+        system_energy.electro_gg = total(electrostatic_potential_energy(molecules,
+                                            eparams, kvectors, eikar, eikbr, eikcr))
     end
 
     # initiate GCMC statistics for each block
@@ -321,15 +319,14 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         markov_counts.n_proposed[which_move] += 1
 
         if which_move == INSERTION
-            insert_molecule!(molecules, simulation_box, molecule_template)
+            insert_molecule!(molecules, framework.box, molecule_template)
 
-            # compute the potential energy of the inserted molecule
-            energy = potential_energy(length(molecules), molecules, framework, ljforcefield,
-                                      simulation_box, repfactors, eparams,
-                                      kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+            energy = potential_energy(length(molecules), molecules, framework, 
+                                            ljforcefield, eparams, kvectors, eikar, eikbr, 
+                                            eikcr, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Insertion
-            if rand() < fugacity * simulation_box.Ω / (length(molecules) * KB *
+            if rand() < fugacity * framework.box.Ω / (length(molecules) * KB *
                     temperature) * exp(-sum(energy) / temperature)
                 # accept the move, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
@@ -345,12 +342,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             # compute the potential energy of the molecule we propose to delete
             energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                      simulation_box, repfactors, eparams,
-                                      kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+                                      eparams, kvectors, eikar, eikbr, eikcr, 
+                                      charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Deletion
             if rand() < length(molecules) * KB * temperature / (fugacity *
-                    simulation_box.Ω) * exp(sum(energy) / temperature)
+                    framework.box.Ω) * exp(sum(energy) / temperature)
                 # accept the deletion, delete molecule, adjust current_energy
                 markov_counts.n_accepted[which_move] += 1
 
@@ -364,14 +361,19 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             # energy of the molecule before it was translated
             energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                      simulation_box, repfactors, eparams,
+                                      eparams,
                                       kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
 
-            old_molecule = translate_molecule!(molecules[molecule_id], simulation_box)
+            old_molecule = translate_molecule!(molecules[molecule_id], framework.box)
+
+            # perform random rotation if applicable
+            if rotatable(molecules[molecule_id])
+                rotate!(molecules[molecule_id])
+            end
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                      simulation_box, repfactors, eparams,
+                                      eparams,
                                       kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for translation
@@ -390,16 +392,16 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             # compute the potential energy of the molecule we propose to re-insert
             energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                         simulation_box, repfactors, eparams,
+                                         eparams,
                                          kvectors, eikar, eikbr, eikcr, charged_molecules,
                                          charged_framework)
 
             # reinsert molecule; store old configuration of the molecule in case proposal is rejected
-            old_molecule = reinsert_molecule!(molecules[molecule_id], simulation_box)
+            old_molecule = reinsert_molecule!(molecules[molecule_id], framework.box)
 
             # compute the potential energy of the molecule in its new configuraiton
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                         simulation_box, repfactors, eparams,
+                                          eparams,
                                          kvectors, eikar, eikbr, eikcr, charged_molecules,
                                          charged_framework)
 
@@ -417,7 +419,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
         # TODO remove after testing.
         for molecule in molecules
-            @assert(! outside_box(molecule, simulation_box), "molecule outside box!")
+            @assert(! outside_box(molecule, framework.box), "molecule outside box!")
         end
 
         # if we're in the production MC cycles. i.e. we've done all burn cycles...
@@ -454,12 +456,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     system_energy_end = PotentialEnergy()
-    system_energy_end.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield, repfactors)
-    system_energy_end.vdw_gg = total_vdw_energy(molecules, ljforcefield, simulation_box)
+    system_energy_end.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield)
+    system_energy_end.vdw_gg = total_vdw_energy(molecules, ljforcefield, framework.box)
     system_energy_end.electro_gh = total_electrostatic_potential_energy(framework, molecules,
-                                        repfactors, eparams, kvectors, eikar, eikbr, eikcr)
-    system_energy_end.electro_gg = total_electrostatic_potential_energy(molecules,
-                                        eparams, kvectors, eikar, eikbr, eikcr)
+                                       eparams, kvectors, eikar, eikbr, eikcr)
+    system_energy_end.electro_gg = total(total_electrostatic_potential_energy(molecules,
+                                        eparams, kvectors, eikar, eikbr, eikcr))
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
     if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
@@ -517,9 +519,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     # (molecules/unit cell) * (mol/6.02 * 10^23 molecules) * (1000 mmol/mol) *
     #    (unit cell/framework amu) * (amu/ 1.66054 * 10^-24)
     results["⟨N⟩ (mmol/g)"] = results["⟨N⟩ (molecules/unit cell)"] * 1000 /
-        (6.022140857e23 * molecular_weight(framework) * 1.66054e-24)
+        (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (mmol/g)"] = results["err ⟨N⟩ (molecules/unit cell)"] * 1000 /
-        (6.022140857e23 * molecular_weight(framework) * 1.66054e-24)
+        (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
+e
 
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
@@ -554,27 +557,27 @@ end
 function print_results(results::Dict; print_title::Bool=true)
     if print_title
         # already print in GCMC tests...
-        @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity.\n\n",
+        @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity using %s forcefield.\n\n",
                 results["adsorbate"], results["crystal"], results["temperature (K)"],
-                results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0)
+                results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0, results["forcefield"])
     end
 
-    @printf("Unit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
-                                                           results["repfactors"][2],
-                                                           results["repfactors"][3])
+    @printf("\nUnit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
+                                                             results["repfactors"][2],
+                                                             results["repfactors"][3])
     # Markov stats
-    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
-        for key in [@sprintf("Total # %s proposals", proposal_description),
-                    @sprintf("Fraction of %s proposals accepted", proposal_description)]
-            println(key * ": ", results[key])
-        end
-    end
-
     println("")
     for key in ["# sample cycles", "# burn cycles", "# samples"]
         println(key * ": ", results[key])
     end
 
+    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
+        print_with_color(:yellow, proposal_description)
+        total_proposals = results[@sprintf("Total # %s proposals", proposal_description)]
+        fraction_accepted = results[@sprintf("Fraction of %s proposals accepted", proposal_description)]
+        @printf("\t%d total proposals.\n", total_proposals)
+        @printf("\t%f %% proposals accepted.\n", 100.0 * fraction_accepted)
+    end
 
     println("")
     for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)", "⟨N⟩ (mmol/g)",
@@ -586,12 +589,15 @@ function print_results(results::Dict; print_title::Bool=true)
         end
     end
 
-    @printf("\nQ_st (K) = %f = %f kJ/mol\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
+    @printf("\nQ_st (K) = %f = %f kJ/mol\n\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
     return
 end
 
-function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, fugacity::Float64)
-    print("Simulating adsorption of ")
+function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, 
+                      fugacity::Float64, ljff::LennardJonesForceField)
+    print("Simulating ")
+    print_with_color(:yellow, "(μVT)")
+    print(" adsorption of ")
     print_with_color(:green, adsorbate)
     print(" in ")
     print_with_color(:green, frameworkname)
@@ -599,5 +605,7 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print_with_color(:green, @sprintf("%f K", temperature))
     print(" and ")
     print_with_color(:green, @sprintf("%f Pa", fugacity))
-    println(" (fugacity).")
+    print(" (fugacity) with ")
+    print_with_color(:green, split(ljff.name, ".")[1])
+    println(" force field.")
 end

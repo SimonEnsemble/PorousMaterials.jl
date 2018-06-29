@@ -5,24 +5,24 @@
 #$ -cwd
 
 # name this job
-#$ -N GCMC-tester
+#$ -N gcmc_simulation
 
 # send stdout and stderror to this file
-#$ -o gcmc_results
-#$ -e gcmc_errors
+#$ -o gcmc_simulation.o
+#$ -e gcmc_simulation.e
 #$ -j y
 
 #the list of users who will recieve mail about this job
-#$ -M yorkar@oregonstate.edu
+#$ -M yourONID@oregonstate.edu
 #options for when mail is sent out, this will send mail when the job begins,
 #       ends, or is aborted
 #$ -m bea
 
-# select queue - if needed 
-#$ -q mime5,share,share2,share3,share4
+# select queue - if needed; mime5 is SimonEnsemble priority queue but is restrictive.
+#$ -q mime5
 
 #set up a parallel environment
-#$ -pe OpenMP 4 
+#$ -pe openmpi 4
 
 # print date and time
 date

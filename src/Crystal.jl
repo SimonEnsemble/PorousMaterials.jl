@@ -119,11 +119,11 @@ function construct_box(f_to_c::Array{Float64, 2})
 end
 
 """
-    new_box = replicate_box(original_box, repfactors)
+    new_box = replicate(original_box, repfactors)
 
 Replicates a `Box` in positive directions to construct a new `Box` representing a supercell.
 The `original_box` is replicated according to the factors in `repfactors`.
-Note `replicate_box(original_box, repfactors=(1, 1, 1))` returns same `Box`.
+Note `replicate(original_box, repfactors=(1, 1, 1))` returns same `Box`.
 The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
 
 # Arguments
@@ -133,7 +133,7 @@ The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [
 # Returns
 - `box::Box`: Fully formed Box object
 """
-function replicate_box(box::Box, repfactors::Tuple{Int, Int, Int})
+function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
     #because this uses construct_box, its fractional coords still go 0 - 1
     return construct_box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
                          box.α, box.β, box.γ)
@@ -159,6 +159,48 @@ struct Framework
     atoms::Array{Symbol, 1}
     xf::Array{Float64, 2}
     charges::Array{Float64, 1}
+end
+
+"""
+    replicated_frame = replicate(framework, repfactors)
+
+Replicates a `Framework` in positive directions to construct a new `Framework`.
+Note `replicate(framework, (1, 1, 1))` returns the same `Framework`.
+The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
+
+# Arguments
+- `framework::Framework`: The framework to replicate
+- `repfactors::Tuple{Int, Int, Int}`: The factor you want to replicate the framework by.
+
+# Returns
+- `replicated_frame::Framework`: Replicated framework
+"""
+function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
+    # determine number of atoms in replicated framework
+    n_atoms = framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
+
+    # replicate box
+    box = replicate(framework.box, repfactors)
+
+    # replicate atoms (coordinates, charges, identities)
+    xf = zeros(Float64, 3, n_atoms)
+    charges = zeros(Float64, n_atoms)
+    atoms = Array{Symbol, 1}(n_atoms)
+    atom_counter = 0
+    for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
+        for i = 1:framework.n_atoms
+            atom_counter += 1
+            xf[:, atom_counter] = framework.xf[:, i] + 1.0 * [ra, rb, rc]
+            charges[atom_counter] = framework.charges[i]
+            atoms[atom_counter] = framework.atoms[i]
+        end
+    end
+    @assert(atom_counter == n_atoms)
+    # scale fractional coordinates so run between 0 and 1
+    for k = 1:3
+        xf[k, :] /= 1.0 * repfactors[k]
+    end
+    return Framework(framework.name, box, n_atoms, atoms, xf, charges)
 end
 
 """
@@ -375,7 +417,7 @@ if home unit cell should be replicated in the negative directions too.
 - `framework::Framework`: The framework containing the crystal structure information
 - `xyzfilename::Union{AbstractString, Void}`: Name of the output file. If left blank, it will be named using the framework's name
 - `comment::AbstractString`: An optional comment for the xyz file
-- `repfactors::Tuple{Int, Int, Int}`: The replication factors used for the xyz file
+- `repfactors::Tuple{Int, Int, Int}`: How many times to replicate the framework in each direction.
 - `negative_replications::Bool`: If true, the function will replicate the framework in both directions
 """
 function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractString, Void}=nothing;

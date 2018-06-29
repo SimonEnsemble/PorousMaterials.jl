@@ -1,4 +1,4 @@
-const R_OVERLAP_squared = 0.0001 # Units: Angstrom²
+const R_OVERLAP_squared = 0.1 # Units: Angstrom²
 #TODO Keep consistant with `check_for_atom_overlap` in src/Crystal.jl? `check_for_atom_overlap` uses the threshold 0.1 Angstrom (0.01 Angstrom²). Which one to use?
 
 """
@@ -23,62 +23,61 @@ end
 
 
 """
-    energy = vdw_energy(framework, molecule, ljforcefield, repfactors)
+    energy = vdw_energy(framework, molecule, ljforcefield)
 
 Calculates the van der Waals interaction energy between a molecule and a framework.
 Applies the nearest image convention to find the closest replicate of a specific atom.
+
+WARNING: it is assumed that the framework is replicated sufficiently such that the nearest
+image convention can be applied. See [`replicate`](@ref).
 
 # Arguments
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation/atoms)
 - `ljforcefield::LennardJonesForceField`: Lennard Jones force field
-- `repfactors::Tuple{Int, Int, Int}`: replication factors of the home unit cell to build
-the supercell such that the nearest image convention can be applied in this function.
 
 # Returns
 - `energy::Float64`: Van der Waals interaction energy
 """
 function vdw_energy(framework::Framework, molecule::Molecule,
-                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
+                    ljforcefield::LennardJonesForceField)
 	energy = 0.0
     for ljsphere in molecule.ljspheres
-        energy += vdw_energy(framework, ljsphere, ljforcefield, repfactors)
+        energy += vdw_energy(framework, ljsphere, ljforcefield)
     end
 	return energy
 end
 
 function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
-                    ljforcefield::LennardJonesForceField, repfactors::Tuple{Int, Int, Int})
+                    ljforcefield::LennardJonesForceField)
 	energy = 0.0
     # compute fractional coordinate of the Lennard-Jones sphere and apply PBC to bring it into the
     #  home unit cell of the crystal
     xf_molecule = mod.(framework.box.c_to_f * ljsphere.x, 1.0)
 
     # loop over replications of the home unit cell to build the supercell
-	for ra = 0:1.0:(repfactors[1] - 1), rb = 0:1.0:(repfactors[2] - 1), rc = 0:1.0:(repfactors[3] - 1)
-        # distance in fractional coordinate space. same as xf_molecule - (framework.xf + [ra rb rc])
-        dxf = broadcast(-, xf_molecule - [ra, rb, rc], framework.xf)
+    # distance in fractional coordinate space.
+    dxf = broadcast(-, xf_molecule, framework.xf)
 
-        nearest_image!(dxf, repfactors)
+    nearest_image!(dxf)
 
-        # Distance in cartesian coordinate space
-        dx = framework.box.f_to_c * dxf
+    # Distance in cartesian coordinate space
+    dx = framework.box.f_to_c * dxf
 
-        # loop over atoms of the framework and compute its contribution to the vdW energy.
-        for i = 1:framework.n_atoms
-            @inbounds r² = dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i]
+    # loop over atoms of the framework and compute its contribution to the vdW energy.
+    for i = 1:framework.n_atoms
+        @inbounds r² = dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i]
 
-            if r² < R_OVERLAP_squared
-                # if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
-                return Inf
-            elseif r² < ljforcefield.cutoffradius_squared
-                # add pairwise contribution to potential energy
-                @inbounds energy += lennard_jones(r²,
-                    ljforcefield.σ²[framework.atoms[i]][ljsphere.atom],
-                    ljforcefield.ϵ[framework.atoms[i]][ljsphere.atom])
-            end # if-elseif-end
-        end # framework atoms end
-	end # repfactor end
+        if r² < R_OVERLAP_squared
+            # if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
+            return Inf
+        elseif r² < ljforcefield.cutoffradius_squared
+            # add pairwise contribution to potential energy
+            @inbounds energy += lennard_jones(r²,
+                ljforcefield.σ²[framework.atoms[i]][ljsphere.atom],
+                ljforcefield.ϵ[framework.atoms[i]][ljsphere.atom])
+        end # if-elseif-end
+    end # framework atoms end
 	return energy
 end
 
@@ -114,7 +113,7 @@ function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefiel
                 dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
 
                 # simulation box has fractional coords [0, 1] by construction
-                nearest_image!(dxf, (1, 1, 1))
+                nearest_image!(dxf)
 
                 # converts fractional distance to cartesian distance
                 dx = simulation_box.f_to_c * dxf
@@ -135,17 +134,19 @@ function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefiel
 end
 
 """
-    total_gh_energy = total_vdw_energy(framework, molecules, ljforcefield, repfactors) # guest-host
+    total_gh_energy = total_vdw_energy(framework, molecules, ljforcefield) # guest-host
     total_gg_energy = total_vdw_energy(molecules, ljforcefield, simulation_box) # guest-guest
 
 Compute total guest-host (gh) or guest-guest (gg) interaction energy, i.e. the contribution
 from all adsorbates in `molecules`.
 
+WARNING: it is assumed that the framework is replicated sufficiently such that the nearest
+image convention can be applied. See [`replicate`](@ref).
+
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
 - `molecules::Array{Molecule, 1}`: An array of Molecule data structures
 - `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
-- `repfactors::Tuple{Int, Int, Int}`: The replication factors we use to replicate our unit cell
 - `simulation_box::Box`: The simulation box for application of PBCs.
 
 # Returns
@@ -153,11 +154,10 @@ from all adsorbates in `molecules`.
 """
 function total_vdw_energy(framework::Framework,
                           molecules::Array{Molecule, 1},
-                          ljforcefield::LennardJonesForceField,
-                          repfactors::Tuple{Int, Int, Int})
+                          ljforcefield::LennardJonesForceField)
     total_energy = 0.0
     for molecule in molecules
-        total_energy += vdw_energy(framework, molecule, ljforcefield, repfactors)
+        total_energy += vdw_energy(framework, molecule, ljforcefield)
     end
     return total_energy
 end
