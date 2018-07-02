@@ -11,7 +11,6 @@
 # the real gas' fugacity. Next, it will calculate the gas' density, which is then
 # used to find molar volume. These values are then returned to the user
 
- # using PorousMaterials
 using Polynomials
 using DataFrames
 using CSV
@@ -19,7 +18,7 @@ using CSV
 # Universal gas constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
 
-# Characteristics of a real gas
+# Characteristics of a Peng-Robinson gas
 struct PengRobinsonGas
     gas::Symbol
     "critical temperature (units: K)"
@@ -36,8 +35,8 @@ a(gas::PengRobinsonGas) = (0.457235 * R ^ 2 * gas.Tc ^ 2) / gas.Pc
 b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 κ(gas::PengRobinsonGas) = 0.37464 + (1.54226 * gas.ω) - (0.26992 * gas.ω ^ 2)
 α(κ::Float64, Tr::Float64) = (1 + κ * (1 - √(Tr))) ^ 2
-A(T::Float64, P::Float64) = α(κ(gas), T / gas.Tc) * a(gas) * P / (R ^ 2 * T ^ 2)
-B(T::Float64, P::Float64) = b(gas) * P / (R * T)
+A(T::Float64, P::Float64, gas::PengRobinsonGas) = α(κ(gas), T / gas.Tc) * a(gas) * P / (R ^ 2 * T ^ 2)
+B(T::Float64, P::Float64, gas::PengRobinsonGas) = b(gas) * P / (R * T)
 
 # PREOS is a third degree polynomial. Therefore, there will be three outputs for z.
 # When z is equal to 1, the gas will behave as an ideal gas.
@@ -48,9 +47,9 @@ B(T::Float64, P::Float64) = b(gas) * P / (R * T)
 # TODO put in Julia documentation format
 function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     # construct cubic polynomial in z
-    p = Poly([-(A(T, P) * B(T, P) - B(T, P) ^ 2 - B(T, P) ^ 3), 
-              A(T, P) - 2 * B(T, P) - 3 * B(T, P) ^ 2,
-              -(1.0 - B(T, P)), 
+    p = Poly([-(A(T, P, gas) * B(T, P, gas) - B(T, P, gas) ^ 2 - B(T, P, gas) ^ 3), 
+              A(T, P, gas) - 2 * B(T, P, gas) - 3 * B(T, P, gas) ^ 2,
+              -(1.0 - B(T, P, gas)), 
               1.0])
     # solve for the roots of the cubic polynomial
     z_roots = roots(p)
@@ -65,9 +64,9 @@ end
 # Calculating for fugacity coefficient from an integration (bar)
 function calculate_ϕ(gas::PengRobinsonGas, T::Float64, P::Float64)
     z = compressibility_factor(gas, T, P)
-    log_ϕ = z - 1.0 - log(z - B(T, P)) +
-            - A(T, P) / (√8 * B(T, P)) * log(
-            (z + (1 + √2) * B(T, P)) / (z + (1 - √(2)) * B(T, P)))
+    log_ϕ = z - 1.0 - log(z - B(T, P, gas)) +
+            - A(T, P, gas) / (√8 * B(T, P, gas)) * log(
+            (z + (1 + √2) * B(T, P, gas)) / (z + (1 - √(2)) * B(T, P, gas)))
     return exp(log_ϕ) #fc_1 - fc_2 * fc_3)
 end
 
@@ -78,12 +77,14 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
     # Density (mol/m^3)
     ρ = P / (z * R * T)
     # Molar volume (L/mol)
-    Vm = 1.0 / (ρ * 1000.0)
+    Vm = 1.0 / ρ * 1000.0
     # Fugacity (bar)
-    f = calculate_ϕ(gas, T, P) * P
+    ϕ = calculate_ϕ(gas, T, P)
+    f = ϕ * P
     # Prints a dictionary holding values for compressibility factor, molar volume, density, and fugacity.
-    prop_dict = Dict("compressibility factor" => z, "molar volume (m³/mol)"=> Vm , 
-                     "density (mol/m³)" => ρ, "fugacity (bar)" => f)
+    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm , 
+                     "density (mol/m³)" => ρ, "fugacity (bar)" => f, 
+                     "fugacity coefficient" => ϕ)
     if verbose
         @printf("%s properties at T = %f K, P = %f bar:\n", gas.gas, T, P)
         for (property, value) in prop_dict
@@ -98,7 +99,7 @@ function PengRobinsonGas(gas::Symbol)
     # TODO change to Porousmaterials.PATH_TO_DATA
     df = CSV.read("data/PengRobinsonGasProps.csv")
     if ! (string(gas) in df[:gas])
-        error(@sprintf("Gas %s properties not found in PengRobinsonGasProps.csv", gas))
+        error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
     end
     # Query values for gas
     Tc = df[df[:gas].== string(gas), Symbol("Tc(K)")][1]

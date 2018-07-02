@@ -719,3 +719,15 @@ end
     @test vdw_energy(1, molecules_co2, ljforcefield, sim_box_large) ≈ energy
     @test vdw_energy(2, molecules_co2, ljforcefield, sim_box_large) ≈ energy
 end
+
+@printf("------------------------------\n")
+@testset "Equation of State (EOS.jl) Tests" begin
+    # Peng-Robinsion EOS test for methane.
+    gas = PengRobinsonGas(:CH4)
+    props = calculate_properties(gas, 298.0, 65.0)
+    @test isapprox(props["compressibility factor"], 0.874910311935475, atol=1e-4)
+    @test isapprox(props["fugacity coefficient"], 0.8732765620181274, atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 65.0 * 0.8732765620181274, atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], 2998.634526, atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], 0.333485, atol=1e-4)
+end
