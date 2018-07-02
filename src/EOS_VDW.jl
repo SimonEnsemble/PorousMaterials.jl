@@ -45,7 +45,7 @@ function compute_properties(T,P,vdw)
 
         #Finds fugacity using the derivation from the vander waals
         fug = P .* exp. (- log. (((1 ./ rho) - vdw.b) * P./(R * T))+(vdw.b ./ ((1 ./ rho)-vdw.b) - 2*vdw.a*rho/(R*T)))
-        #Dict('D' => rho, 'F' => fug)
+        Dict("D" => rho, 'F' => fug)
 end
 
 end
