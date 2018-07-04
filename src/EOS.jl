@@ -14,6 +14,7 @@
 using Polynomials
 using DataFrames
 using CSV
+using Roots
 
 # Universal gas constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
@@ -24,9 +25,17 @@ struct PengRobinsonGas
     "critical temperature (units: K)"
     Tc::Float64
     "critical pressure (units: bar)"
-    Pc::Float64 
+    Pc::Float64
     "acentric factor (unitless)"
     ω::Float64
+end
+
+#Characteristics of a Van der Waals gas
+struct vdWMolecule
+  #VDW constant a
+  a::Float64
+  #VDW constant b
+  b::Float64
 end
 
 # These functions evaluate the Peng-Robinson Equation of State to determine the the compressibility factor(z)
@@ -38,6 +47,7 @@ b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 A(T::Float64, P::Float64, gas::PengRobinsonGas) = α(κ(gas), T / gas.Tc) * a(gas) * P / (R ^ 2 * T ^ 2)
 B(T::Float64, P::Float64, gas::PengRobinsonGas) = b(gas) * P / (R * T)
 
+
 # PREOS is a third degree polynomial. Therefore, there will be three outputs for z.
 # When z is equal to 1, the gas will behave as an ideal gas.
 # Finding the value of the real number closest to 1 will be the compressibility factor of the real gas.
@@ -47,9 +57,9 @@ B(T::Float64, P::Float64, gas::PengRobinsonGas) = b(gas) * P / (R * T)
 # TODO put in Julia documentation format
 function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     # construct cubic polynomial in z
-    p = Poly([-(A(T, P, gas) * B(T, P, gas) - B(T, P, gas) ^ 2 - B(T, P, gas) ^ 3), 
+    p = Poly([-(A(T, P, gas) * B(T, P, gas) - B(T, P, gas) ^ 2 - B(T, P, gas) ^ 3),
               A(T, P, gas) - 2 * B(T, P, gas) - 3 * B(T, P, gas) ^ 2,
-              -(1.0 - B(T, P, gas)), 
+              -(1.0 - B(T, P, gas)),
               1.0])
     # solve for the roots of the cubic polynomial
     z_roots = roots(p)
@@ -82,8 +92,8 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
     ϕ = calculate_ϕ(gas, T, P)
     f = ϕ * P
     # Prints a dictionary holding values for compressibility factor, molar volume, density, and fugacity.
-    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm , 
-                     "density (mol/m³)" => ρ, "fugacity (bar)" => f, 
+    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm ,
+                     "density (mol/m³)" => ρ, "fugacity (bar)" => f,
                      "fugacity coefficient" => ϕ)
     if verbose
         @printf("%s properties at T = %f K, P = %f bar:\n", gas.gas, T, P)
@@ -92,6 +102,40 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
         end
     end
     return prop_dict
+end
+
+#Function to solve for fugacity and rho using
+function calculate_properties(gas::vdWMolecule, T::Float64, P::Float64)
+
+        A = -P
+        B = (P * gas.b + R * T)
+        C = -gas.a
+        D = gas.a * gas.b
+
+        #Creates a polynomial for the vdw cubic function
+        pol = Poly([A,B,C,D])
+        #finds roots of that polynomial
+        polroots = roots(pol)
+        #assigns rho to be the real root and then makes it real to get rid of the 0im
+        rho = real.(polroots[isreal.(polroots)])
+        #specifies that molar volume is the reciprocal of the density
+        vm = 1 ./ rho
+        #Finds fugacity using the derivation from the vander waals
+        fug = P .* exp. (- log. (((1 ./ rho) - gas.b) * P./(R * T))+(gas.b ./ ((1 ./ rho)-gas.b) - 2*gas.a*rho/(R*T)))
+        #defines the fugacity coefficient as fugacity over pressure
+        ϕ = fug ./ P
+
+        prop_dict = Dict("Density" => rho, "Fugacity" => fug, "Molar Volume" => vm, "Fugacity Coefficient" => ϕ )
+end
+
+function VDWGas(gas::Symbol)
+
+        gas = string(gas)
+        vdwfile = CSV.read("C:\\Users\\Caleb\\Programming Work\\Julia\\Actual\\vdw_constants.csv")
+        A = vdwfile[vdwfile[:molecule].== gas, 2]
+        B = vdwfile[vdwfile[:molecule].== gas, 3]
+        return vdWMolecule(A[1], B[1])
+
 end
 
 function PengRobinsonGas(gas::Symbol)
