@@ -36,6 +36,7 @@ struct vdWMolecule
   a::Float64
   #VDW constant b
   b::Float64
+  gas::Symbol
 end
 
 # These functions evaluate the Peng-Robinson Equation of State to determine the the compressibility factor(z)
@@ -113,7 +114,7 @@ function calculate_properties(gas::vdWMolecule, T::Float64, P::Float64)
         D = gas.a * gas.b
 
         #Creates a polynomial for the vdw cubic function
-        pol = Poly([A,B,C,D])
+        pol = Poly([A, B, C, D])
         #finds roots of that polynomial
         polroots = roots(pol)
         #assigns rho to be the real root and then makes it real to get rid of the 0im
@@ -132,9 +133,12 @@ function VDWGas(gas::Symbol)
 
         gas = string(gas)
         vdwfile = CSV.read("C:\\Users\\Caleb\\Programming Work\\Julia\\Actual\\vdw_constants.csv")
-        A = vdwfile[vdwfile[:molecule].== gas, 2]
-        B = vdwfile[vdwfile[:molecule].== gas, 3]
-        return vdWMolecule(A[1], B[1])
+#        if ! (gas in vdwfile(:molecule))
+#        error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
+#        end
+        A = vdwfile[vdwfile[:molecule].== gas, (:a)]
+        B = vdwfile[vdwfile[:molecule].== gas, (:b)]
+        return vdWMolecule(A[1], B[1], gas)
 
 end
 
@@ -157,4 +161,10 @@ function Base.show(io::IO, gas::PengRobinsonGas)
     println(io, "Critical temperature (K): ", gas.Tc)
     println(io, "Critical pressure (bar): ", gas.Pc)
     println(io, "Acenteric factor: ", gas.ω)
+end
+
+function Base.show(io::IO, gas::vdWMolecule)
+    println(io, "Gas species: ", gas.gas)
+    println(io, "Van der Waals constant a: ", gas.a)
+    println(io, "Van der Waals constant b: ", gas.b)
 end
