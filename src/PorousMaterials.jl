@@ -13,6 +13,7 @@ include("Misc.jl")
 include("Grid.jl")
 include("MChelpers.jl")
 include("EOS.jl")
+include("henry.jl")
 include("GCMC.jl")
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
@@ -30,5 +31,6 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_ove
        apply_periodic_boundary_condition!,
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
        electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, # ElectrostaticEnergetics.jl
-       calculate_properties, PengRobinsonGas #EOS.jl
+       calculate_properties, PengRobinsonGas, # EOS.jl
+       henry_coefficient # henry.jl
 end
