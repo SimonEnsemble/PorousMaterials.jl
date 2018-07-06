@@ -32,9 +32,9 @@ end
 
 #Characteristics of a Van der Waals gas
 struct vdWMolecule
-  #VDW constant a
+  #VDW constant a (units: m⁶bar/mol)
   a::Float64
-  #VDW constant b
+  #VDW constant b (unites: m³/mol)
   b::Float64
   gas::Symbol
 end
@@ -119,25 +119,31 @@ function calculate_properties(gas::vdWMolecule, T::Float64, P::Float64)
         polroots = roots(pol)
         #assigns rho to be the real root and then makes it real to get rid of the 0im
         rho = real.(polroots[isreal.(polroots)])
+
         #specifies that molar volume is the reciprocal of the density
-        vm = 1 ./ rho
+        # In units of L/mol
+        vm = (1./ rho) * 1000
+        #specifies the compressibility factor
+        z = (P * (1./ rho))./ (R * T)
+
+
         #Finds fugacity using the derivation from the vander waals
         fug = P .* exp. (- log. (((1 ./ rho) - gas.b) * P./(R * T))+(gas.b ./ ((1 ./ rho)-gas.b) - 2*gas.a*rho/(R*T)))
         #defines the fugacity coefficient as fugacity over pressure
         ϕ = fug ./ P
 
-        prop_dict = Dict("Density" => rho, "Fugacity" => fug, "Molar Volume" => vm, "Fugacity Coefficient" => ϕ )
+        prop_dict = Dict("Density (mol/m³)" => rho, "Fugacity (bar)" => fug, "Molar Volume (L/mol)" => vm, "Fugacity Coefficient" => ϕ, "Compressibility Factor" => z )
 end
 
 function VDWGas(gas::Symbol)
 
         gas = string(gas)
         vdwfile = CSV.read("C:\\Users\\Caleb\\Programming Work\\Julia\\Actual\\vdw_constants.csv")
-#        if ! (gas in vdwfile(:molecule))
-#        error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
-#        end
-        A = vdwfile[vdwfile[:molecule].== gas, (:a)]
-        B = vdwfile[vdwfile[:molecule].== gas, (:b)]
+        if ! (:gas in vdwfile(:molecule))
+              error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
+        end
+        A = vdwfile[vdwfile[:molecule].== gas, Symbol("a(m6bar/mol)")]
+        B = vdwfile[vdwfile[:molecule].== gas, Symbol("b(m3/mol)")]
         return vdWMolecule(A[1], B[1], gas)
 
 end
@@ -165,6 +171,6 @@ end
 
 function Base.show(io::IO, gas::vdWMolecule)
     println(io, "Gas species: ", gas.gas)
-    println(io, "Van der Waals constant a: ", gas.a)
-    println(io, "Van der Waals constant b: ", gas.b)
+    println(io, "Van der Waals constant a (m⁶bar/mol): ", gas.a)
+    println(io, "Van der Waals constant b (m³/mol): ", gas.b)
 end
