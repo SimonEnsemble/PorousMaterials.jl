@@ -1,18 +1,10 @@
-import Base: *, +, /
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
-
-# TODO update EnergyUtils.jl and GCMC.jl to use this and GuestGuest
-mutable struct GuestHostEnergy
-    vdw::Float64
-    coulomb::Float64
-end
-Base.sum(energy::GuestHostEnergy) = energy.vdw + energy.coulomb
-+(e1::GuestHostEnergy, e2::GuestHostEnergy) = GuestHostEnergy(e1.vdw + e2.vdw, e1.coulomb + e2.coulomb)
-*(a::Float64, energy::GuestHostEnergy) = GuestHostEnergy(a * energy.vdw, a * energy.coulomb)
-/(energy::GuestHostEnergy, a::Float64) = GuestHostEnergy(energy.vdw / a, energy.coulomb / a)
 
 """
 TODO doc string
+
+TODO break into blocks and report standard deviations
+TODO parallelize
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64, 
                            ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6, 
@@ -49,7 +41,9 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
                                                           verbose=(verbose & charged_system),
                                                           ϵ=ewald_precision)
 
-    wtd_energy_sum = GuestHostEnergy(0.0, 0.0)
+    # Σᵢ Eᵢe^(-βEᵢ)
+    wtd_energy_sum = PotentialEnergy(0.0, 0.0)
+    # Σᵢ e^(-βEᵢ)
     boltzmann_factor_sum = 0.0
 
     # conduct Monte Carlo insertions
@@ -64,12 +58,11 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         end
 
         # calculate potential energy of molecule at that position and orientation
-        energy = GuestHostEnergy(0.0, 0.0)
+        energy = PotentialEnergy(0.0, 0.0)
         energy.vdw = vdw_energy(framework, molecule, ljforcefield)
         if charged_system
             energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams, 
-                                                            kvecs,
-                                                            eikar, eikbr, eikcr)
+                                                            kvecs, eikar, eikbr, eikcr)
         end
 
         # calculate Boltzmann factor e^(-βE)
