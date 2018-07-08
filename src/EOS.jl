@@ -1,33 +1,28 @@
-# EOS.jl
-# ----------------------------------------------------------------------------------------
-# Description
-
-# This script calculates a real gas' compressibility factor and returns a dictionary of
-# the real gas' properties such as fugacity, molar volume, and density.
-# The script first calculates a real gas' compressibility factor using the polynomial
-# form of the Peng-Robinson Equation of State, which requires the gas' critical
-# temperature and pressure, and acentric factor, along with user input values for
-# temperature and pressure in which the gas resides in, and uses this value to determine
-# the real gas' fugacity. Next, it will calculate the gas' density, which is then
-# used to find molar volume. These values are then returned to the user
-
 using Polynomials
 using DataFrames
 using CSV
 using Roots
 
+"""
+Calculates a Peng-Robinson gas' compressibility factor and returns a dictionary of its properties.
+Properties include density, molar volume, and fugacity.
+Compressibility factor found using polynomial form of the Peng-Robinson Equation of State.
+Compressibility factor used to find density, molar volume, and fugacity.
+"""
+
 # Universal gas constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
 
-# Characteristics of a Peng-Robinson gas
+# Data structure stating characteristics of a Peng-Robinson gas
 struct PengRobinsonGas
     gas::Symbol
-    "critical temperature (units: K)"
+    # Peng-Robinson Gas
     Tc::Float64
-    "critical pressure (units: bar)"
+    # Critical temperature (units: Kelvin)
     Pc::Float64
-    "acentric factor (unitless)"
+    # Critical pressure (units: bar)
     ω::Float64
+    # Acentric factor (units: unitless)
 end
 
 #Characteristics of a Van der Waals gas
@@ -39,8 +34,18 @@ struct vdWMolecule
   gas::Symbol
 end
 
-# These functions evaluate the Peng-Robinson Equation of State to determine the the compressibility factor(z)
-# of a real gas using its critical temperature and pressure, and acentric factor.
+"""
+Evaluates the Peng-Robinson Equation of State to determine the compressibility factor(z)
+of a real gas using its critical temperature and pressure, and acentric factor.
+
+# Arguments
+- `gas::PengRobinsonGas`: Peng-Robinson gas structure
+- `κ::Float64`: Definition of α in relation to the acentric factor
+- `Tr::Float64`: Reduced temperature
+- `T::Float64`: Temperature given in Kelvin
+- `P::Float64`: Pressure given in bar
+"""
+
 a(gas::PengRobinsonGas) = (0.457235 * R ^ 2 * gas.Tc ^ 2) / gas.Pc
 b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 κ(gas::PengRobinsonGas) = 0.37464 + (1.54226 * gas.ω) - (0.26992 * gas.ω ^ 2)
@@ -48,14 +53,10 @@ b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 A(T::Float64, P::Float64, gas::PengRobinsonGas) = α(κ(gas), T / gas.Tc) * a(gas) * P / (R ^ 2 * T ^ 2)
 B(T::Float64, P::Float64, gas::PengRobinsonGas) = b(gas) * P / (R * T)
 
+# Calculates three outputs for compressibility factor using the polynomial form of
+# the Peng-Robinson Equation of State. Filters for only real roots and returns the
+# root closest to unity.
 
-# PREOS is a third degree polynomial. Therefore, there will be three outputs for z.
-# When z is equal to 1, the gas will behave as an ideal gas.
-# Finding the value of the real number closest to 1 will be the compressibility factor of the real gas.
-# By subtracting each number in the 3x1 array by 1 and taking the absolute value, the lowest number can be determined.
-# That number is then returned and called out of the function and further calculated with
-# user input values of temperature and pressure to determine z (unitless).
-# TODO put in Julia documentation format
 function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     # construct cubic polynomial in z
     p = Poly([-(A(T, P, gas) * B(T, P, gas) - B(T, P, gas) ^ 2 - B(T, P, gas) ^ 3),
@@ -72,16 +73,29 @@ function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     return real(z_factor[id_closest_to_unity])
 end
 
-# Calculating for fugacity coefficient from an integration (bar)
+# Calculating for fugacity coefficient from an integration (bar).
 function calculate_ϕ(gas::PengRobinsonGas, T::Float64, P::Float64)
     z = compressibility_factor(gas, T, P)
     log_ϕ = z - 1.0 - log(z - B(T, P, gas)) +
             - A(T, P, gas) / (√8 * B(T, P, gas)) * log(
             (z + (1 + √2) * B(T, P, gas)) / (z + (1 - √(2)) * B(T, P, gas)))
-    return exp(log_ϕ) #fc_1 - fc_2 * fc_3)
+    return exp(log_ϕ)
 end
 
-# Returns a dictionary of gas properties based on user input for T and P
+"""
+    calculate_properties = (gas, T, P)
+
+Use equation of state to calculate density, fugacity, and molar volume of a real gas at a
+given temperature and pressure.
+
+# Arguments
+- `gas::PengRobinsonGas`: Peng-Robinson gas structure
+- `T::Float64`: Temperature given in Kelvin
+- `P::Float64`: Pressure given in bar
+
+# Returns
+- `prop_dict:: `: Dictionary of Peng-Robinson gas properties
+"""
 function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verbose::Bool=true)
     # Compressbility factor (unitless)
     z = compressibility_factor(gas, T, P)
@@ -104,6 +118,17 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
     end
     return prop_dict
 end
+
+
+"""
+    gas = PengRobinsonGas(gas)
+
+Reads in properties file in the directory `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
+with gas parameters using dataframes and queries values for gas.
+
+# Returns
+- `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
+"""
 
 #Function to solve for fugacity and rho using
 function calculate_properties(gas::vdWMolecule, T::Float64, P::Float64)
@@ -148,20 +173,19 @@ function VDWGas(gas::Symbol)
 
 end
 
+
 function PengRobinsonGas(gas::Symbol)
-    # Read in file with gas parameters using dataframes
-    # TODO change to Porousmaterials.PATH_TO_DATA
-    df = CSV.read("data/PengRobinsonGasProps.csv")
+    df = CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv")
     if ! (string(gas) in df[:gas])
         error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
     end
-    # Query values for gas
     Tc = df[df[:gas].== string(gas), Symbol("Tc(K)")][1]
     Pc = df[df[:gas].== string(gas), Symbol("Pc(bar)")][1]
     ω = df[df[:gas].== string(gas), Symbol("acentric_factor")][1]
     return PengRobinsonGas(gas, Tc, Pc, ω)
 end
 
+# Prints resulting values for Peng-Robinson gas properties
 function Base.show(io::IO, gas::PengRobinsonGas)
     println(io, "Gas species: ", gas.gas)
     println(io, "Critical temperature (K): ", gas.Tc)
