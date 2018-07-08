@@ -1,24 +1,38 @@
+import Base: *, +, /
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
+
+# TODO update EnergyUtils.jl and GCMC.jl to use this and GuestGuest
+mutable struct GuestHostEnergy
+    vdw::Float64
+    coulomb::Float64
+end
+Base.sum(energy::GuestHostEnergy) = energy.vdw + energy.coulomb
++(e1::GuestHostEnergy, e2::GuestHostEnergy) = GuestHostEnergy(e1.vdw + e2.vdw, e1.coulomb + e2.coulomb)
+*(a::Float64, energy::GuestHostEnergy) = GuestHostEnergy(a * energy.vdw, a * energy.coulomb)
+/(energy::GuestHostEnergy, a::Float64) = GuestHostEnergy(energy.vdw / a, energy.coulomb / a)
 
 """
 TODO doc string
 """
-function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64, ljforcefield::LennardJonesForceField;
-                           nb_insertions::Int=1e6, verbose::Bool=true, ewald_precision::Float64=1e-6)
-    print("Simulating Henry coefficient of ")
-    print_with_color(:green, molecule.species)
-    print(" in ")
-    print_with_color(:green, framework.name)
-    print(" at ")
-    print_with_color(:green, temperature)
-    print(" K, using ")
-    print_with_color(:green, ljforcefield.name)
-    print(" force field with ")
-    print_with_color(:green, nb_insertions)
-    println(" insertions.")
+function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64, 
+                           ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6, 
+                           verbose::Bool=true, ewald_precision::Float64=1e-6)
+    if verbose
+        print("Simulating Henry coefficient of ")
+        print_with_color(:green, molecule.species)
+        print(" in ")
+        print_with_color(:green, framework.name)
+        print(" at ")
+        print_with_color(:green, temperature)
+        print(" K, using ")
+        print_with_color(:green, ljforcefield.name)
+        print(" force field with ")
+        print_with_color(:green, nb_insertions)
+        println(" insertions.")
+    end
 
     # replication factors for applying nearest image convention for short-range interactions
-    repfactors = replication_factors(framework.box, ljforcefield)                           
+    repfactors = replication_factors(framework.box, ljforcefield)
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
 
@@ -30,11 +44,13 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), framework.box,
-                        verbose=(verbose & charged_system),
-                        ϵ=ewald_precision)
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), 
+                                                          framework.box,
+                                                          verbose=(verbose & charged_system),
+                                                          ϵ=ewald_precision)
 
-    henry_coeff = 0.0
+    wtd_energy_sum = GuestHostEnergy(0.0, 0.0)
+    boltzmann_factor_sum = 0.0
 
     # conduct Monte Carlo insertions
     for i = 1:nb_insertions
@@ -48,15 +64,30 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         end
 
         # calculate potential energy of molecule at that position and orientation
-        U_vdw = vdw_energy(framework, molecule, ljforcefield)
-        U_coulomb = 0.0
+        energy = GuestHostEnergy(0.0, 0.0)
+        energy.vdw = vdw_energy(framework, molecule, ljforcefield)
         if charged_system
-            U_coulomb = electrostatic_potential_energy(framework, molecule, eparams, kvectors,
-                                                       eikar, eikbr, eikcr)
+            energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams, 
+                                                            kvecs,
+                                                            eikar, eikbr, eikcr)
         end
 
-        # increment henry coefficient
-        henry_coeff += exp(-(U_vdw + U_coulomb) / temperature)
+        # calculate Boltzmann factor e^(-βE)
+        boltzmann_factor = exp(-sum(energy) / temperature)
+
+        boltzmann_factor_sum += boltzmann_factor
+
+        wtd_energy_sum += boltzmann_factor * energy
     end
-    return henry_coeff / (universal_gas_constant * temperature * nb_insertions) # mol/(m³-bar)
+    henry_coeff = boltzmann_factor_sum / (universal_gas_constant * temperature * nb_insertions) # mol/(m³-bar)
+    average_energy = wtd_energy_sum / boltzmann_factor_sum
+
+    if verbose
+        println("henry coefficient (mol/(m³-bar)) = ", henry_coeff)
+        println("⟨E, vdw⟩ (K) = ", average_energy.vdw)
+        println("    (kJ/mol) = ", average_energy.vdw * 8.314 / 1000.0)
+        println("⟨E, coulomb⟩ (K) = ", average_energy.coulomb)
+        println("        (kJ/mol) = ", average_energy.coulomb * 8.314 / 1000.0)
+    end
+    return henry_coeff, average_energy
 end
