@@ -120,7 +120,7 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
 end
 
 
-"""
+""" 
     gas = PengRobinsonGas(gas)
 
 Reads in properties file in the directory `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
