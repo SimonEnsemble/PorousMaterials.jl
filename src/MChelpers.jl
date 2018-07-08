@@ -1,6 +1,6 @@
-# δ is the maximal distance a particle is perturbed in a given coordinate
+# δ is half the maximal distance a particle is perturbed in a given coordinate
 #  during particle translations
-const δ = 1.0 # Å
+const δ = 2.0 # Å
 
 """
     insert_molecule!(molecules, simulation_box, template)
@@ -19,8 +19,8 @@ function insert_molecule!(molecules::Array{Molecule, 1}, simulation_box::Box, te
     x = simulation_box.f_to_c * rand(3)
     # copy the template
     molecule = deepcopy(template)
-    # conduct a rotation
-    if (length(molecule.ljspheres) + length(molecule.charges) > 1)
+    # conduct a rotation if needed
+    if rotatable(molecule)
         rotate!(molecule)
     end
     # translate molecule to its new center of mass
@@ -125,7 +125,7 @@ function reinsert_molecule!(molecule::Molecule, simulation_box::Box)
     translate_to!(molecule, x)
 
     # conduct a rotation
-    if (length(molecule.ljspheres) + length(molecule.charges) > 1)
+    if rotatable(molecule)
         rotate!(molecule)
     end
 
@@ -133,3 +133,6 @@ function reinsert_molecule!(molecule::Molecule, simulation_box::Box)
 
     return old_molecule # in case we need to restore
 end
+
+# do we need to conduct a rotation or not? # TODO what if it is an ion? No need to rotate...
+rotatable(molecule::Molecule) = (length(molecule.ljspheres) + length(molecule.charges) > 1)::Bool

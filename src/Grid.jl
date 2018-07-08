@@ -173,6 +173,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
     end
 
     const repfactors = replication_factors(framework.box, ljforcefield)
+    framework = replicate(framework)
     
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
@@ -190,12 +191,12 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
 	for (i, xf) in enumerate(grid_pts[1]), (j, yf) in enumerate(grid_pts[2]), (k, zf) in enumerate(grid_pts[3])
         translate_to!(molecule, framework.box.f_to_c * [xf, yf, zf])
         if ! rotations_required
-            ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield, repfactors)
+            ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
             for r = 1:n_rotations
                 rotate!(molecule)
-                energy = vdw_energy(framework, molecule, ljforcefield, repfactors)
+                energy = vdw_energy(framework, molecule, ljforcefield)
                 boltzmann_factor_sum += exp(-energy / temperature)
             end
             ensemble_average_energy = -temperature * log(boltzmann_factor_sum / n_rotations)

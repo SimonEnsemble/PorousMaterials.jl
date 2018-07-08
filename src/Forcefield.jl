@@ -14,7 +14,7 @@ Data structure for a Lennard Jones forcefield.
 """
 struct LennardJonesForceField
     name::String
-    
+
 	pure_σ::Dict{Symbol, Float64}
 	pure_ϵ::Dict{Symbol, Float64}
 
@@ -46,17 +46,17 @@ function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Floa
 
     df = CSV.read(PATH_TO_DATA * "forcefields/" * forcefieldfile) # from DataFrames
     # assert that all atoms in the force field are unique (i.e. no duplicates)
-    @assert(length(unique(df[:atom])) == size(df, 1), 
+    @assert(length(unique(df[:atom])) == size(df, 1),
         @sprintf("Duplicate atoms found in force field file %s\n", forcefieldfile))
-    
+
     ljff = LennardJonesForceField(forcefieldfile, Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
-    
+
     # pure X-X interactions (X = (pseudo)atom)
     for row in eachrow(df)
 		ljff.pure_σ[Symbol(row[:atom])] = row[Symbol("sigma(A)")]
 		ljff.pure_ϵ[Symbol(row[:atom])] = row[Symbol("epsilon(K)")]
     end
-    
+
     # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
 	for atom in [Symbol(atom) for atom in keys(ljff.pure_σ)]
         ljff.ϵ[atom] = Dict{Symbol, Float64}()
@@ -81,11 +81,11 @@ This function ensures enough replication factors such that the nearest image con
 A non-replicated supercell has 1 as the replication factor in each dimension (`repfactors = (1, 1, 1)`).
 
 # Arguments
-- `unitcell::Box`: The unit cell of the framework 
+- `unitcell::Box`: The unit cell of the framework
 - `cutoff_radius::Float64`: Cutoff radius beyond which we define the potential energy to be zero (units: Angstrom)
 
 # Returns
-- `repfactors::Tuple{Int, Int, Int}`: The replication factors in the a, b, c directions 
+- `repfactors::Tuple{Int, Int, Int}`: The replication factors in the a, b, c directions
 """
 function replication_factors(unitcell::Box, cutoff_radius::Float64)
 	# Unit vectors used to transform from fractional coordinates to cartesian coordinates. We'll be

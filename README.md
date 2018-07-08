@@ -65,7 +65,8 @@ Van der Waals interactions:
 ```julia
 # Unit cell replication factors for application of periodic boundary conditions
 repfactors = replication_factors(framework.box, ljforcefield)
-energy = vdw_energy(framework, co2, ljforcefield, repfactors) # K
+framework = replicate(framework, repfactors)
+energy = vdw_energy(framework, co2, ljforcefield) # K
 ```
 Electrostatic potential energy:
 ```
@@ -75,7 +76,7 @@ k_rep_factors = (11, 11, 9)
 α = 0.25
 sr_cutoff = 12.0
 rep_factors = replication_factors(nu1000, sr_cutoff)
-sim_box = replicate_box(nu1000.box, rep_factors)
+sim_box = replicate(nu1000.box, rep_factors)
 kvectors = compute_kvectors(sim_box, k_rep_factors, α)
 
 x = [4.2, 23.1, 28.4]
