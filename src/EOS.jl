@@ -1,6 +1,7 @@
 using Polynomials
 using DataFrames
 using CSV
+using Roots
 
 """
 Calculates a Peng-Robinson gas' compressibility factor and returns a dictionary of its properties.
@@ -24,6 +25,15 @@ struct PengRobinsonGas
     # Acentric factor (units: unitless)
 end
 
+#Characteristics of a Van der Waals gas
+struct vdWMolecule
+  #VDW constant a (units: m⁶bar/mol)
+  a::Float64
+  #VDW constant b (unites: m³/mol)
+  b::Float64
+  gas::Symbol
+end
+
 """
 Evaluates the Peng-Robinson Equation of State to determine the compressibility factor(z)
 of a real gas using its critical temperature and pressure, and acentric factor.
@@ -35,6 +45,7 @@ of a real gas using its critical temperature and pressure, and acentric factor.
 - `T::Float64`: Temperature given in Kelvin
 - `P::Float64`: Pressure given in bar
 """
+
 a(gas::PengRobinsonGas) = (0.457235 * R ^ 2 * gas.Tc ^ 2) / gas.Pc
 b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 κ(gas::PengRobinsonGas) = 0.37464 + (1.54226 * gas.ω) - (0.26992 * gas.ω ^ 2)
@@ -42,10 +53,10 @@ b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 A(T::Float64, P::Float64, gas::PengRobinsonGas) = α(κ(gas), T / gas.Tc) * a(gas) * P / (R ^ 2 * T ^ 2)
 B(T::Float64, P::Float64, gas::PengRobinsonGas) = b(gas) * P / (R * T)
 
-
 # Calculates three outputs for compressibility factor using the polynomial form of
 # the Peng-Robinson Equation of State. Filters for only real roots and returns the
 # root closest to unity.
+
 function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     # construct cubic polynomial in z
     p = Poly([-(A(T, P, gas) * B(T, P, gas) - B(T, P, gas) ^ 2 - B(T, P, gas) ^ 3),
@@ -108,6 +119,7 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
     return prop_dict
 end
 
+
 """
     gas = PengRobinsonGas(gas)
 
@@ -117,6 +129,51 @@ with gas parameters using dataframes and queries values for gas.
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
 """
+
+#Function to solve for fugacity and rho using
+function calculate_properties(gas::vdWMolecule, T::Float64, P::Float64)
+
+        A = -P
+        B = (P * gas.b + R * T)
+        C = -gas.a
+        D = gas.a * gas.b
+
+        #Creates a polynomial for the vdw cubic function
+        pol = Poly([A, B, C, D])
+        #finds roots of that polynomial
+        polroots = roots(pol)
+        #assigns rho to be the real root and then makes it real to get rid of the 0im
+        rho = real.(polroots[isreal.(polroots)])
+
+        #specifies that molar volume is the reciprocal of the density
+        # In units of L/mol
+        vm = (1./ rho) * 1000
+        #specifies the compressibility factor
+        z = (P * (1./ rho))./ (R * T)
+
+
+        #Finds fugacity using the derivation from the vander waals
+        fug = P .* exp. (- log. (((1 ./ rho) - gas.b) * P./(R * T))+(gas.b ./ ((1 ./ rho)-gas.b) - 2*gas.a*rho/(R*T)))
+        #defines the fugacity coefficient as fugacity over pressure
+        ϕ = fug ./ P
+
+        prop_dict = Dict("Density (mol/m³)" => rho, "Fugacity (bar)" => fug, "Molar Volume (L/mol)" => vm, "Fugacity Coefficient" => ϕ, "Compressibility Factor" => z )
+end
+
+function VDWGas(gas::Symbol)
+
+        gas = string(gas)
+        vdwfile = CSV.read("C:\\Users\\Caleb\\Programming Work\\Julia\\Actual\\vdw_constants.csv")
+        if ! (:gas in vdwfile(:molecule))
+              error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
+        end
+        A = vdwfile[vdwfile[:molecule].== gas, Symbol("a(m6bar/mol)")]
+        B = vdwfile[vdwfile[:molecule].== gas, Symbol("b(m3/mol)")]
+        return vdWMolecule(A[1], B[1], gas)
+
+end
+
+
 function PengRobinsonGas(gas::Symbol)
     df = CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv")
     if ! (string(gas) in df[:gas])
@@ -134,4 +191,10 @@ function Base.show(io::IO, gas::PengRobinsonGas)
     println(io, "Critical temperature (K): ", gas.Tc)
     println(io, "Critical pressure (bar): ", gas.Pc)
     println(io, "Acenteric factor: ", gas.ω)
+end
+
+function Base.show(io::IO, gas::vdWMolecule)
+    println(io, "Gas species: ", gas.gas)
+    println(io, "Van der Waals constant a (m⁶bar/mol): ", gas.a)
+    println(io, "Van der Waals constant b (m³/mol): ", gas.b)
 end
