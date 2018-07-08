@@ -23,7 +23,7 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_ove
        Molecule, PointCharge, LennardJonesSphere, read_molecule_file, translate_by!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged, # Molecules.jl
        outside_box, write_to_xyz,
-       nearest_image!, PotentialEnergy, # Energetics_Util.jl
+       nearest_image!, PotentialEnergy, SystemPotentialEnergy, # Energetics_Util.jl
        lennard_jones, vdw_energy, vdw_energy_no_PBC, # VdWEnergetics.jl
        read_xyz, read_cpk_colors, read_atomic_radii, # Misc.jl
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
