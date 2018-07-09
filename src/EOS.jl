@@ -126,7 +126,7 @@ function PengRobinsonGas(gas::Symbol)
     Pc = df[df[:gas].== string(gas), Symbol("Pc(bar)")][1]
     ω = df[df[:gas].== string(gas), Symbol("acentric_factor")][1]
     return PengRobinsonGas(gas, Tc, Pc, ω)
-end 
+end
 
 # Prints resulting values for Peng-Robinson gas properties
 function Base.show(io::IO, gas::PengRobinsonGas)
