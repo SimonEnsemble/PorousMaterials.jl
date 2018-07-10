@@ -4,10 +4,8 @@ using CSV
 using Roots
 
 """
-Calculates a Peng-Robinson gas' compressibility factor and returns a dictionary of its properties.
-Properties include density, molar volume, and fugacity.
-Compressibility factor found using polynomial form of the Peng-Robinson Equation of State.
-Compressibility factor used to find density, molar volume, and fugacity.
+Calculates the properties of a real gas, such as the compressibility factor, fugacity,
+and molar volume.
 """
 
 # Universal gas constant (R). units: m³-bar/(K-mol)
@@ -15,31 +13,22 @@ const R = 8.3144598e-5
 
 # Data structure stating characteristics of a Peng-Robinson gas
 struct PengRobinsonGas
+    "Peng-Robinson Gas species. e.g. :CO2"
     gas::Symbol
-    # Peng-Robinson Gas
+    "Critical temperature (units: Kelvin)"
     Tc::Float64
-    # Critical temperature (units: Kelvin)
+    "Critical pressure (units: bar)"
     Pc::Float64
-    # Critical pressure (units: bar)
+    "Acentric factor (units: unitless)"
     ω::Float64
-    # Acentric factor (units: unitless)
 end
 
-"""
-Evaluates the Peng-Robinson Equation of State to determine the compressibility factor(z)
-of a real gas using its critical temperature and pressure, and acentric factor.
-
-# Arguments
-- `gas::PengRobinsonGas`: Peng-Robinson gas structure
-- `κ::Float64`: Definition of α in relation to the acentric factor
-- `Tr::Float64`: Reduced temperature
-- `T::Float64`: Temperature given in Kelvin
-- `P::Float64`: Pressure given in bar
-"""
+# Parameters in the Peng-Robinson Equation of State
+# T in Kelvin, P in bar
 a(gas::PengRobinsonGas) = (0.457235 * R ^ 2 * gas.Tc ^ 2) / gas.Pc
 b(gas::PengRobinsonGas) = (0.0777961 * R * gas.Tc) / gas.Pc
 κ(gas::PengRobinsonGas) = 0.37464 + (1.54226 * gas.ω) - (0.26992 * gas.ω ^ 2)
-α(κ::Float64, Tr::Float64) = (1 + κ * (1 - √(Tr))) ^ 2
+α(κ::Float64, Tr::Float64) = (1 + κ * (1 - √Tr)) ^ 2
 A(T::Float64, P::Float64, gas::PengRobinsonGas) = α(κ(gas), T / gas.Tc) * a(gas) * P / (R ^ 2 * T ^ 2)
 B(T::Float64, P::Float64, gas::PengRobinsonGas) = b(gas) * P / (R * T)
 
@@ -72,15 +61,16 @@ function calculate_ϕ(gas::PengRobinsonGas, T::Float64, P::Float64)
 end
 
 """
-    calculate_properties = (gas, T, P)
+    props = calculate_properties(gas, T, P, verbose=true)
 
 Use equation of state to calculate density, fugacity, and molar volume of a real gas at a
 given temperature and pressure.
 
 # Arguments
-- `gas::PengRobinsonGas`: Peng-Robinson gas structure
-- `T::Float64`: Temperature given in Kelvin
-- `P::Float64`: Pressure given in bar
+- `gas::PengRobinsonGas`: Peng-Robinson gas data structure
+- `T::Float64`: Temperature (units: Kelvin)
+- `P::Float64`: Pressure (units: bar)
+- `verbose::Bool`: print results
 
 # Returns
 - `prop_dict::Dict`: Dictionary of Peng-Robinson gas properties
@@ -102,7 +92,7 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
     if verbose
         @printf("%s properties at T = %f K, P = %f bar:\n", gas.gas, T, P)
         for (property, value) in prop_dict
-            println(property * ": ", value)
+            println("\t" * property * ": ", value)
         end
     end
     return prop_dict
@@ -112,8 +102,9 @@ end
 """
     gas = PengRobinsonGas(gas)
 
-Reads in properties file in the directory `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
-with gas parameters using dataframes and queries values for gas.
+Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol` 
+from the properties .csv file `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"` 
+and returns a complete `PengRobinsonGas` data structure.
 
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
@@ -132,7 +123,7 @@ end
 # Prints resulting values for Peng-Robinson gas properties
 function Base.show(io::IO, gas::PengRobinsonGas)
     println(io, "Gas species: ", gas.gas)
-    println(io, "Critical temperature (K): ", gas.Tc)
-    println(io, "Critical pressure (bar): ", gas.Pc)
-    println(io, "Acenteric factor: ", gas.ω)
+    println(io, "\tCritical temperature (K): ", gas.Tc)
+    println(io, "\tCritical pressure (bar): ", gas.Pc)
+    println(io, "\tAcenteric factor: ", gas.ω)
 end
