@@ -4,17 +4,13 @@ using StatsBase
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 # define Markov chain proposals here.
-const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation", 4 => "reinsertion")
+const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion", 3 => "translation", 4 => "rotation", 5 => "reinsertion")
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const INSERTION   = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
+const ROTATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
-# define probabilty of proposing each type of MC move here. from StatsBase.jl
-const PROBABILITIES_OF_MC_PROPOSALS = ProbabilityWeights([0.35, 0.35, 0.25, 0.05])
-@assert(PROBABILITIES_OF_MC_PROPOSALS[INSERTION] ≈ PROBABILITIES_OF_MC_PROPOSALS[DELETION], "insertion/deletion probabilities must be equal")
-@assert(length(PROBABILITIES_OF_MC_PROPOSALS) == N_PROPOSAL_TYPES, "probability of each MC proposal not specified")
-@assert(sum(PROBABILITIES_OF_MC_PROPOSALS) ≈ 1.0, "sum of probabilities of MC moves should be 1.0")
 
 # break collection of statistics into blocks to gauge convergence and compute standard err
 const N_BLOCKS = 5
@@ -266,10 +262,6 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     const charged_framework = charged(framework, verbose=verbose)
     const charged_molecules = charged(molecule, verbose=verbose)
 
-    if verbose & rotatable(molecule) & (PROBABILITIES_OF_MC_PROPOSALS[TRANSLATION] > 0.0)
-        @printf("\tMolecule %s will undergo random rotations in conjunction with translations.\n", molecule.species)
-    end
-
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
@@ -294,6 +286,28 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                                             eparams, kvectors, eikar, eikbr, eikcr))
     end
 
+    # define probabilty of proposing each type of MC move here.
+    mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
+    # set defaults
+    mc_proposal_probabilities[INSERTION] = 0.35
+    mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
+    mc_proposal_probabilities[REINSERTION] = 0.05
+    if rotatable(molecule)
+        mc_proposal_probabilities[TRANSLATION] = 0.125
+        mc_proposal_probabilities[ROTATION] = 0.125
+    else
+        mc_proposal_probabilities[TRANSLATION] = 0.25
+        mc_proposal_probabilities[ROTATION] = 0.0
+    end
+    mc_proposal_probabilities /= sum(mc_proposal_probabilities) # normalize
+    # StatsBase.jl functionality for sampling
+    mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
+    if verbose
+        for p = 1:N_PROPOSAL_TYPES
+            @printf("\tProbability of %s: %f\n", PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
+        end
+    end
+
     # initiate GCMC statistics for each block
     # break simulation into `N_BLOCKS` blocks to gauge convergence
     gcmc_stats = [GCMCstats() for block_no = 1:N_BLOCKS]
@@ -315,7 +329,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
         markov_chain_time += 1
 
         # choose proposed move randomly; keep track of proposals
-        which_move = sample(1:N_PROPOSAL_TYPES, PROBABILITIES_OF_MC_PROPOSALS) # StatsBase.jl
+        which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities) # StatsBase.jl
         markov_counts.n_proposed[which_move] += 1
 
         if which_move == INSERTION
@@ -366,17 +380,42 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
             old_molecule = translate_molecule!(molecules[molecule_id], framework.box)
 
-            # perform random rotation if applicable
-            if rotatable(molecules[molecule_id])
-                rotate!(molecules[molecule_id])
+            # energy of the molecule after it is translated
+            energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
+                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          charged_molecules, charged_framework)
+
+            # Metropolis Hastings Acceptance for translation
+            if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
+                # accept the move, adjust current energy
+                markov_counts.n_accepted[which_move] += 1
+
+                system_energy += energy_new - energy_old
+            else
+                # reject the move, put back the old molecule
+                molecules[molecule_id] = deepcopy(old_molecule)
             end
+        elseif (which_move == ROTATION) && (length(molecules) != 0)
+            # propose which molecule to rotate
+            molecule_id = rand(1:length(molecules))
+            
+            # energy of the molecule before we rotate it
+            energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
+                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          charged_molecules, charged_framework)
+            
+            # store old molecule to restore old position in case move is rejected
+            old_molecule = deepcopy(molecules[molecule_id])
+
+            # conduct a random rotation
+            rotate!(molecules[molecule_id])
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                      eparams,
-                                      kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          charged_molecules, charged_framework)
 
-            # Metropolis Hastings Acceptance for translation
+            # Metropolis Hastings Acceptance for rotation 
             if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                 # accept the move, adjust current energy
                 markov_counts.n_accepted[which_move] += 1
