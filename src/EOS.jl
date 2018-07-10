@@ -83,7 +83,7 @@ given temperature and pressure.
 - `P::Float64`: Pressure given in bar
 
 # Returns
-- `prop_dict:: `: Dictionary of Peng-Robinson gas properties
+- `prop_dict::Dict`: Dictionary of Peng-Robinson gas properties
 """
 function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verbose::Bool=true)
     # Compressbility factor (unitless)
