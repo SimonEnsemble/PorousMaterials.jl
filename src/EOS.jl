@@ -23,16 +23,15 @@ struct PengRobinsonGas
   ω::Float64
 end
 
-
 #Data structure stating characteristics of a Van der Waals gas
 struct vdWMolecule
   #VDW constant a (units: m⁶bar/mol)
   a::Float64
-  #VDW constant b (unites: m³/mol)
+  #VDW constant b (units: m³/mol)
   b::Float64
+  #Van der Waals Gas species e.g. Hydrogen
   gas::Symbol
 end
-
 
 # Parameters in the Peng-Robinson Equation of State
 # T in Kelvin, P in bar
