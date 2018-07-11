@@ -30,12 +30,12 @@ type GCMCstats
     n::Int
     n²::Int
 
-    U::PotentialEnergy
-    U²::PotentialEnergy
+    U::SystemPotentialEnergy
+    U²::SystemPotentialEnergy
 
     Un::Float64 # ⟨U n⟩
 end
-GCMCstats() = GCMCstats(0, 0, 0, PotentialEnergy(), PotentialEnergy(), 0.0)
+GCMCstats() = GCMCstats(0, 0, 0, SystemPotentialEnergy(), SystemPotentialEnergy(), 0.0)
 +(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples,
                                             s1.n         + s2.n,
                                             s1.n²        + s2.n²,
@@ -65,7 +65,7 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     avg_n_blocks = [gs.n / gs.n_samples for gs in gcmc_stats]
     err_n = 2.0 * std(avg_n_blocks) / sqrt(length(gcmc_stats))
 
-    err_U = PotentialEnergy()
+    err_U = SystemPotentialEnergy()
     for gs in gcmc_stats
         avg_U_this_block = gs.U / (1.0 * gs.n_samples)
         err_U += square(avg_U_this_block - avg_U)
@@ -79,10 +79,10 @@ function Base.print(gcmc_stats::GCMCstats)
     println("\t# samples: ", gcmc_stats.n_samples)
     println("\t⟨N⟩ (molecules) = ", gcmc_stats.n / gcmc_stats.n_samples)
 
-    println("\t⟨U_gg, vdw⟩ (K) = ",     gcmc_stats.U.vdw_gg     / gcmc_stats.n_samples)
-    println("\t⟨U_gg, electro⟩ (K) = ", gcmc_stats.U.electro_gg / gcmc_stats.n_samples)
-    println("\t⟨U_gh, vdw⟩ (K) = ",     gcmc_stats.U.vdw_gh     / gcmc_stats.n_samples)
-    println("\t⟨U_gh, electro⟩ (K) = ", gcmc_stats.U.electro_gh / gcmc_stats.n_samples)
+    println("\t⟨U_gh, vdw⟩ (K) = ",     gcmc_stats.U.guest_host.vdw / gcmc_stats.n_samples)
+    println("\t⟨U_gh, Coulomb⟩ (K) = ", gcmc_stats.U.guest_host.coulomb / gcmc_stats.n_samples)
+    println("\t⟨U_gg, vdw⟩ (K) = ",     gcmc_stats.U.guest_guest.vdw / gcmc_stats.n_samples)
+    println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.guest_guest.coulomb / gcmc_stats.n_samples)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
 end
@@ -97,6 +97,7 @@ type MarkovCounts
 end
 
 # TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
+# potential energy change after inserting/deleting/perturbing coordinates of molecules[molecule_id]
 @inline function potential_energy(molecule_id::Int,
                                   molecules::Array{Molecule, 1},
                                   framework::Framework,
@@ -108,13 +109,13 @@ end
                                   eikcr::OffsetArray{Complex{Float64}},
                                   charged_molecules::Bool,
                                   charged_framework::Bool)
-    energy = PotentialEnergy()
-    energy.vdw_gg = vdw_energy(molecule_id, molecules, ljforcefield, framework.box)
-    energy.vdw_gh = vdw_energy(framework, molecules[molecule_id], ljforcefield)
+    energy = SystemPotentialEnergy()
+    energy.guest_guest.vdw = vdw_energy(molecule_id, molecules, ljforcefield, framework.box)
+    energy.guest_host.vdw = vdw_energy(framework, molecules[molecule_id], ljforcefield)
     if charged_molecules
-        energy.electro_gg = total(electrostatic_potential_energy(molecules, molecule_id, eparams, kvectors, eikar, eikbr, eikcr))
+        energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules, molecule_id, eparams, kvectors, eikar, eikbr, eikcr))
         if charged_framework
-            energy.electro_gh = electrostatic_potential_energy(framework, molecules[molecule_id], eparams, kvectors, eikar, eikbr, eikcr)
+            energy.guest_host.coulomb = electrostatic_potential_energy(framework, molecules[molecule_id], eparams, kvectors, eikar, eikbr, eikcr)
         end
     end
     return energy
@@ -140,14 +141,16 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LennardJonesForceField;
+                                      n_initial_burn_cycles::Int=10000, 
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                                       sample_frequency::Int=10, verbose::Bool=true,
                                       ewald_precision::Float64=1e-6)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
-    for fugacity in fugacities
+    for (i, fugacity) in enumerate(fugacities)
         result, molecules = gcmc_simulation(framework, temperature, fugacity, molecule,
-                                            ljforcefield, n_burn_cycles=n_burn_cycles,
+                                            ljforcefield, 
+                                            n_burn_cycles=(i==1) ? n_initial_burn_cycles : n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
                                             verbose=verbose, molecules=molecules,
@@ -271,18 +274,18 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                         ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
-    system_energy = PotentialEnergy(0.0, 0.0, 0.0, 0.0)
+    system_energy = SystemPotentialEnergy()
     # if we don't start with an emtpy framework, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
 
-        system_energy.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield)
-        system_energy.vdw_gg = total_vdw_energy(molecules, ljforcefield, framework.box)
-        system_energy.electro_gh = total_electrostatic_potential_energy(framework, molecules,
-                                            eparams, kvectors, eikar, eikbr, eikcr)
-        system_energy.electro_gg = total(electrostatic_potential_energy(molecules,
+        system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
+        system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
+        system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
+                                                    eparams, kvectors, eikar, eikbr, eikcr)
+        system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
                                             eparams, kvectors, eikar, eikbr, eikcr))
     end
 
@@ -494,12 +497,12 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     end # finished markov chain proposal moves
 
     # compute total energy, compare to `current_energy*` variables where were incremented
-    system_energy_end = PotentialEnergy()
-    system_energy_end.vdw_gh = total_vdw_energy(framework, molecules, ljforcefield)
-    system_energy_end.vdw_gg = total_vdw_energy(molecules, ljforcefield, framework.box)
-    system_energy_end.electro_gh = total_electrostatic_potential_energy(framework, molecules,
+    system_energy_end = SystemPotentialEnergy()
+    system_energy_end.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
+    system_energy_end.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
+    system_energy_end.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
                                        eparams, kvectors, eikar, eikbr, eikcr)
-    system_energy_end.electro_gg = total(total_electrostatic_potential_energy(molecules,
+    system_energy_end.guest_guest.coulomb = total(total_electrostatic_potential_energy(molecules,
                                         eparams, kvectors, eikar, eikbr, eikcr))
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
@@ -531,10 +534,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # averages
     results["⟨N⟩ (molecules)"]     = avg_n
-    results["⟨U_gg, vdw⟩ (K)"]     = avg_U.vdw_gg
-    results["⟨U_gg, electro⟩ (K)"] = avg_U.electro_gg
-    results["⟨U_gh, vdw⟩ (K)"]     = avg_U.vdw_gh
-    results["⟨U_gh, electro⟩ (K)"] = avg_U.electro_gh
+    results["⟨U_gh, vdw⟩ (K)"]     = avg_U.guest_host.vdw
+    results["⟨U_gh, electro⟩ (K)"] = avg_U.guest_host.coulomb
+    results["⟨U_gg, vdw⟩ (K)"]     = avg_U.guest_guest.vdw
+    results["⟨U_gg, electro⟩ (K)"] = avg_U.guest_guest.coulomb
     results["⟨U⟩ (K)"] = sum(avg_U)
 
     # variances
@@ -545,10 +548,10 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
     # error bars (confidence intervals)
     results["err ⟨N⟩ (molecules)"]     = err_n
-    results["err ⟨U_gg, vdw⟩ (K)"]     = err_U.vdw_gg
-    results["err ⟨U_gg, electro⟩ (K)"] = err_U.electro_gg
-    results["err ⟨U_gh, vdw⟩ (K)"]     = err_U.vdw_gh
-    results["err ⟨U_gh, electro⟩ (K)"] = err_U.electro_gh
+    results["err ⟨U_gh, vdw⟩ (K)"]     = err_U.guest_host.vdw
+    results["err ⟨U_gh, electro⟩ (K)"] = err_U.guest_host.coulomb
+    results["err ⟨U_gg, vdw⟩ (K)"]     = err_U.guest_guest.vdw
+    results["err ⟨U_gg, electro⟩ (K)"] = err_U.guest_guest.coulomb
     results["err ⟨U⟩ (K)"] = sum(err_U)
 
 
