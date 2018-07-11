@@ -27,6 +27,10 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
 
     # replication factors for applying nearest image convention for short-range interactions
     repfactors = replication_factors(framework.box, ljforcefield)
+    if verbose
+        @printf("\tReplicating framework %d by %d by %d for short-range cutoff %.2f\n", 
+                repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+    end
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
     
@@ -53,6 +57,8 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
 
     # progress meter
     progress_meter = Progress(nb_insertions, 1)
+    # timing
+    tic()
 
     # conduct Monte Carlo insertions
     for i = 1:nb_insertions
@@ -88,6 +94,8 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     end
     # ⟨U⟩ = Σ Uᵢ e ^(βUᵢ) / [ ∑ e^(βUᵢ) ]
     average_energy = wtd_energy_sum / boltzmann_factor_sum
+
+    toc() # timing
 
     result = Dict{String, Float64}()
     result["henry coefficient [mol/(m³-bar)]"] = boltzmann_factor_sum / (universal_gas_constant * temperature * nb_insertions)
