@@ -114,12 +114,13 @@ end
 
 Reads in properties file in the directory `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
 with gas parameters using dataframes and queries values for gas.
+**NOTE: Do not delete the last three comment lines in PengRobinsonGasProps.csv
 
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
-"""
+""" 
 function PengRobinsonGas(gas::Symbol)
-    df = CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv")
+    df = readtable(PengRobinsonGasProps.csv,allowcomments=true(CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv"; footerskip=3))
     if ! (string(gas) in df[:gas])
         error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
     end
