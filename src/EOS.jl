@@ -1,11 +1,24 @@
+<<<<<<< HEAD
 # Calculates the properties of a real gas, such as the compressibility factor, fugacity,
 #   and molar volume.
+=======
+using Polynomials
+using DataFrames
+using CSV
+using Roots
+
+"""
+Calculates the properties of a real gas, such as the compressibility factor, fugacity,
+and molar volume.
+"""
+>>>>>>> Done?
 
 # Universal gas constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
 
 # Data structure stating characteristics of a Peng-Robinson gas
 struct PengRobinsonGas
+<<<<<<< HEAD
     "Peng-Robinson Gas species. e.g. :CO2"
     gas::Symbol
     "Critical temperature (units: Kelvin)"
@@ -16,6 +29,29 @@ struct PengRobinsonGas
     ω::Float64
 end
 
+=======
+  "Peng-Robinson Gas species. e.g. :CO2"
+  gas::Symbol
+  "Critical temperature (units: Kelvin)"
+  Tc::Float64
+  "Critical pressure (units: bar)"
+  Pc::Float64
+  "Acentric factor (units: unitless)"
+  ω::Float64
+end
+
+
+#Data structure stating characteristics of a Van der Waals gas
+struct vdWMolecule
+  #VDW constant a (units: m⁶bar/mol)
+  a::Float64
+  #VDW constant b (unites: m³/mol)
+  b::Float64
+  gas::Symbol
+end
+
+
+>>>>>>> Done?
 # Parameters in the Peng-Robinson Equation of State
 # T in Kelvin, P in bar
 a(gas::PengRobinsonGas) = (0.457235 * R ^ 2 * gas.Tc ^ 2) / gas.Pc
@@ -54,15 +90,25 @@ function calculate_ϕ(gas::PengRobinsonGas, T::Float64, P::Float64)
 end
 
 """
+<<<<<<< HEAD
     props = calculate_properties(gas, T, P, verbose=true)
+=======
+    props = calculate_properties = (gas, T, P)
+>>>>>>> Done?
 
 Use equation of state to calculate density, fugacity, and molar volume of a real gas at a
 given temperature and pressure.
 
 # Arguments
+<<<<<<< HEAD
 - `gas::PengRobinsonGas`: Peng-Robinson gas data structure
 - `T::Float64`: Temperature (units: Kelvin)
 - `P::Float64`: Pressure (units: bar)
+=======
+- `gas::PengRobinsonGas`: Peng-Robinson gas structure
+- `T::Float64`: Temperature given in Kelvin
+- `P::Float64`: Pressure given in bar
+>>>>>>> Done?
 - `verbose::Bool`: print results
 
 # Returns
@@ -91,18 +137,79 @@ function calculate_properties(gas::PengRobinsonGas, T::Float64, P::Float64; verb
     return prop_dict
 end
 
+function calculate_properties(gas::vdWMolecule, T::Float64, P::Float64)
+
+    A = -P
+    B = (P * gas.b + R * T)
+    C = -gas.a
+    D = gas.a * gas.b
+
+    #Creates a polynomial for the vdw cubic function
+    pol = Poly([A, B, C, D])
+    #finds roots of that polynomial
+    polroots = roots(pol)
+    #assigns rho to be the real root and then makes it real to get rid of the 0im
+    rho = real.(polroots[isreal.(polroots)])
+
+    #specifies that molar volume is the reciprocal of the density
+    # In units of L/mol
+    vm = (1./ rho) * 1000
+    #specifies the compressibility factor
+    z = (P * (1./ rho))./ (R * T)
+
+    #Finds fugacity using the derivation from the Van der Waals
+    fug = P .* exp. (- log. (((1 ./ rho) - gas.b) * P./(R * T))+(gas.b ./ ((1 ./ rho)-gas.b) - 2*gas.a*rho/(R*T)))
+    #defines the fugacity coefficient as fugacity over pressure
+    ϕ = fug ./ P
+
+    prop_dict = Dict("Density (mol/m³)" => rho, "Fugacity (bar)" => fug, "Molar Volume (L/mol)" => vm, "Fugacity Coefficient" => ϕ, "Compressibility Factor" => z )
+end
+
+"""
+    gas = VDWGas(gas)
+
+<<<<<<< HEAD
+Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol`
+from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "PengRobinsonGasProps.csv")`
+and returns a complete `PengRobinsonGas` data structure.
+**NOTE: Do not delete the last three comment lines in PengRobinsonGasProps.csv
+=======
+Reads in vdw constants a and b of the `gas::Symbol`
+from the properties .csv file `PorousMaterials.PATH_TO_DATA * "vds_constants.csv"`
+and returns a complete `VDWMolecule` data structure.
+>>>>>>> Done?
+
+# Returns
+- `VDWMolecule::struct`: Data structure containing Peng-Robinson gas parameters.
+"""
+<<<<<<< HEAD
+=======
+
+function VDWGas(gas::Symbol)
+
+    vdwfile = CSV.read(PATH_TO_DATA * "vdw_constants.csv")
+    if ! (string(gas) in vdwfile[:molecule])
+          error(@sprintf("Gas %s properties not found in %svdw_constants.csv", gas, PATH_TO_DATA))
+    end
+    gas = string(gas)
+    A = vdwfile[vdwfile[:molecule].== gas, Symbol("a(m6bar/mol)")]
+    B = vdwfile[vdwfile[:molecule].== gas, Symbol("b(m3/mol)")]
+    return vdWMolecule(A[1], B[1], gas)
+
+end
 
 """
     gas = PengRobinsonGas(gas)
 
 Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol`
-from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "PengRobinsonGasProps.csv")`
+from the properties .csv file `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
 and returns a complete `PengRobinsonGas` data structure.
-**NOTE: Do not delete the last three comment lines in PengRobinsonGasProps.csv
 
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
 """
+
+>>>>>>> Done?
 function PengRobinsonGas(gas::Symbol)
     df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinsonGasProps.csv"); footerskip=3)
     if ! (string(gas) in df[:gas])
@@ -117,7 +224,20 @@ end
 # Prints resulting values for Peng-Robinson gas properties
 function Base.show(io::IO, gas::PengRobinsonGas)
     println(io, "Gas species: ", gas.gas)
+<<<<<<< HEAD
     println(io, "\tCritical temperature (K): ", gas.Tc)
     println(io, "\tCritical pressure (bar): ", gas.Pc)
     println(io, "\tAcenteric factor: ", gas.ω)
+=======
+    println(io, "Critical temperature (K): ", gas.Tc)
+    println(io, "Critical pressure (bar): ", gas.Pc)
+    println(io, "Acenteric factor: ", gas.ω)
+end
+
+# Prints resulting values for Van der Waals gas properties
+function Base.show(io::IO, gas::vdWMolecule)
+    println(io, "Gas species: ", gas.gas)
+    println(io, "Van der Waals constant a (m⁶bar/mol): ", gas.a)
+    println(io, "Van der Waals constant b (m³/mol): ", gas.b)
+>>>>>>> Done?
 end
