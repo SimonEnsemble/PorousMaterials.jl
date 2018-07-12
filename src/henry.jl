@@ -57,8 +57,6 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
 
     # progress meter
     progress_meter = Progress(nb_insertions, 1)
-    # timing
-    tic()
 
     # conduct Monte Carlo insertions
     for i = 1:nb_insertions
@@ -92,10 +90,9 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         end
         # else add 0.0 b/c lim E --> ∞ E exp(-E) is zero.
     end
+
     # ⟨U⟩ = Σ Uᵢ e ^(βUᵢ) / [ ∑ e^(βUᵢ) ]
     average_energy = wtd_energy_sum / boltzmann_factor_sum
-
-    toc() # timing
 
     result = Dict{String, Float64}()
     result["henry coefficient [mol/(m³-bar)]"] = boltzmann_factor_sum / (universal_gas_constant * temperature * nb_insertions)
@@ -110,7 +107,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     result["Qst (kJ/mol)"] = -result["⟨U⟩ (kJ/mol)"] + 8.314 * temperature / 1000.0
 
     if verbose
-        print_with_color(:yellow, "----- results ----\n")
+        print_with_color(:yellow, "\t----- results ----\n")
         for key in ["henry coefficient [mmol/(g-bar)]", "⟨U, vdw⟩ (kJ/mol)", "⟨U, Coulomb⟩ (kJ/mol)", "Qst (kJ/mol)"]
             @printf("\t %s = %f\n", key, result[key])
         end
