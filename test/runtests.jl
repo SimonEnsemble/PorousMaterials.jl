@@ -198,7 +198,7 @@ end;
     @test isapprox(norm(co2.ljspheres[1].x - co2.ljspheres[2].x), bond_length, atol=1e-12)
     @test isapprox(co2.center_of_mass, co2.ljspheres[1].x, atol=1e-12) # should be on carbon
     # ljspheres and charges shld have same coords still
-    @test all([isapprox(co2.ljspheres[k].x, co2.charges[k].x, atol=1e-12) for k = 1:3]) 
+    @test all([isapprox(co2.ljspheres[k].x, co2.charges[k].x, atol=1e-12) for k = 1:3])
     # bond angles preserved.
     co_vector1 = co2.ljspheres[2].x - co2.ljspheres[1].x
     co_vector2 = co2.ljspheres[3].x - co2.ljspheres[1].x
@@ -730,4 +730,13 @@ end
     @test isapprox(props["fugacity (bar)"], 65.0 * 0.8732765620181274, atol=1e-4)
     @test isapprox(props["density (mol/m³)"], 2998.634526, atol=0.2)
     @test isapprox(props["molar volume (L/mol)"], 0.333485, atol=1e-4)
+
+    #Van der Waals EOS test for Hydrogen
+    gas = VDWGasGas(:Hydrogen)
+    props = calculate_properties(gas, 293.0, 50.0)
+    @test isapprox(props["compressibility factor"], , atol=1e-4)
+    @test isapprox(props["fugacity coefficient"], , atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 50.0 * , atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], , atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], , atol=1e-4)
 end

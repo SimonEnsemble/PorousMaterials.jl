@@ -1,5 +1,7 @@
-#create dictionary for bonding rules
 
+#create dictionary for bonding rules
+    #Read in csv
+    #create dictionary
 
 function find_bonds(function find_bonds(framework::Framework, atom_id::Int, bonding_rules)
 
