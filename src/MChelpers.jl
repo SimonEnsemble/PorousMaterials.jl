@@ -2,6 +2,9 @@
 #  during particle translations
 const δ = 2.0 # Å
 
+# break collection of statistics into blocks to gauge convergence and compute standard err
+const N_BLOCKS = 5
+
 """
     insert_molecule!(molecules, simulation_box, template)
 

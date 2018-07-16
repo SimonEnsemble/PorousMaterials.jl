@@ -12,9 +12,6 @@ const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation
 const ROTATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 
-# break collection of statistics into blocks to gauge convergence and compute standard err
-const N_BLOCKS = 5
-
 """
 Data structure to keep track of statistics collected during a grand-canonical Monte Carlo
 simulation.
