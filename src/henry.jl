@@ -1,5 +1,3 @@
-using ProgressMeter
-
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
 
 """
@@ -8,8 +6,8 @@ TODO doc string
 TODO break into blocks and report standard deviations
 TODO parallelize
 """
-function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64, 
-                           ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6, 
+function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
+                           ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6,
                            verbose::Bool=true, ewald_precision::Float64=1e-6)
     if verbose
         print("Simulating Henry coefficient of ")
@@ -28,24 +26,24 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     # replication factors for applying nearest image convention for short-range interactions
     repfactors = replication_factors(framework.box, ljforcefield)
     if verbose
-        @printf("\tReplicating framework %d by %d by %d for short-range cutoff %.2f\n", 
+        @printf("\tReplicating framework %d by %d by %d for short-range cutoff %.2f\n",
                 repfactors..., sqrt(ljforcefield.cutoffradius_squared))
     end
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
-    
+
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
 
-    # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies     
-    #   there is no point in going through the computations if all charges are zero!        
-    const charged_system = charged(framework, verbose=verbose) & charged(molecule, verbose=verbose) 
-    
+    # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
+    #   there is no point in going through the computations if all charges are zero!
+    const charged_system = charged(framework, verbose=verbose) & charged(molecule, verbose=verbose)
+
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), 
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
                                                           framework.box,
                                                           verbose=(verbose & charged_system),
                                                           ϵ=ewald_precision)
@@ -55,41 +53,8 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     # Σᵢ e^(-βEᵢ)
     boltzmann_factor_sum = 0.0
 
-    # progress meter
-    progress_meter = Progress(nb_insertions, 1)
-
-    # conduct Monte Carlo insertions
-    for i = 1:nb_insertions
-        # update progress meter
-        next!(progress_meter)
-        # determine uniform random center of mass
-        x = framework.box.f_to_c * [rand(), rand(), rand()]
-        # translate molecule to the new center of mass
-        translate_to!(molecule, x)
-        # rotate randomly
-        if rotatable(molecule)
-            rotate!(molecule)
-        end
-
-        # calculate potential energy of molecule at that position and orientation
-        energy = PotentialEnergy(0.0, 0.0)
-        energy.vdw = vdw_energy(framework, molecule, ljforcefield)
-        if charged_system
-            energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams, 
-                                                            kvecs, eikar, eikbr, eikcr)
-        end
-
-        # calculate Boltzmann factor e^(-βE)
-        boltzmann_factor = exp(-sum(energy) / temperature)
-
-        boltzmann_factor_sum += boltzmann_factor
-        
-        # to avoid NaN; contribution to wtd energy sum when energy = Inf is zero.
-        if (! isinf(energy.vdw)) && (! isinf(energy.coulomb))
-            wtd_energy_sum += boltzmann_factor * energy
-        end
-        # else add 0.0 b/c lim E --> ∞ E exp(-E) is zero.
-    end
+    # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
+    pmap(henryforloop, nb_insertions)
 
     # ⟨U⟩ = Σ Uᵢ e ^(βUᵢ) / [ ∑ e^(βUᵢ) ]
     average_energy = wtd_energy_sum / boltzmann_factor_sum
@@ -113,4 +78,75 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         end
     end
     return result
+end
+
+function henryforloop(framework::Framework, molecule::Molecule, temperature::Float64,
+                           ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6,
+                           verbose::Bool=true, ewald_precision::Float64=1e-6)
+    for i = 1:nb_insertions
+        # determine uniform random center of mass
+        x = framework.box.f_to_c * [rand(), rand(), rand()]
+        # translate molecule to the new center of mass
+        translate_to!(molecule, x)
+        # rotate randomly
+        if rotatable(molecule)
+            rotate!(molecule)
+        end
+
+        # calculate potential energy of molecule at that position and orientation
+        energy = PotentialEnergy(0.0, 0.0)
+        energy.vdw = vdw_energy(framework, molecule, ljforcefield)
+        if charged_system
+            energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams,
+                                                            kvecs, eikar, eikbr, eikcr)
+        end
+
+        # calculate Boltzmann factor e^(-βE)
+        boltzmann_factor = exp(-sum(energy) / temperature)
+
+        boltzmann_factor_sum += boltzmann_factor
+
+        # to avoid NaN; contribution to wtd energy sum when energy = Inf is zero.
+        if (! isinf(energy.vdw)) && (! isinf(energy.coulomb))
+            wtd_energy_sum += boltzmann_factor * energy
+        end
+        # else add 0.0 b/c lim E --> ∞ E exp(-E) is zero.
+    end
+end
+
+function conduct_Widom_insertion(framework::Framework, w_molecule::Molecule, temperature::Float64,
+                                ljforcefield::LennardJonesForceField,
+                                verbose::Bool=true, ewald_precision::Float64=1e-6)
+
+    repfactors = replication_factors(framework.box, ljforcefield)
+    if verbose
+        @printf("\tReplicating framework %d by %d by %d for short-range cutoff %.2f\n",
+                repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+    end
+
+    framework = replicate(framework, repfactors)
+    ρ = crystal_density(framework) # kg/m³
+
+    const charged_system = charged(framework, verbose=verbose) & charged(w_molecule, verbose=verbose)
+
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
+                                                          framework.box,
+                                                          verbose=(verbose & charged_system),
+                                                          ϵ=ewald_precision)
+
+    x = framework.box.f_to_c * [rand(), rand(), rand()]
+    translate_to!(w_molecule, x)
+    if rotatable(w_molecule)
+        rotate!(w_molecule)
+    end
+
+    energy = PotentialEnergy(0.0, 0.0)
+    energy.vdw = vdw_energy(framework, w_molecule, ljforcefield)
+    if charged_system
+        energy.coulomb = electrostatic_potential_energy(framework, w_molecule, eparams,
+                                                        kvecs, eikar, eikbr, eikcr)
+    end
+
+    boltzmann_factor = exp(-sum(energy) / temperature)
+    return boltzmann_factor, energy
 end
