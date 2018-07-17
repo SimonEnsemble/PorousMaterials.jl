@@ -3,10 +3,31 @@ using ProgressMeter
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
 
 """
-TODO doc string
+   result = henry_coefficient(framework, molecule, temperature, ljforcefield,
+                             nb_insertions=1e6, verbose=true, ewald_precision=1e-6)
 
-TODO break into blocks and report standard deviations
-TODO parallelize
+Conduct Widom insertions to compute the Henry coefficient Kₕ of a molecule in a framework.
+Also, for free, the heat of adsorption and ensemble average energy of adsorption is computed.
+The Henry coefficient is a model for adsorption at infinite dilution (low coverage):
+⟨N⟩ = Kₕ P, where P is pressure and Kₕ is the Henry coefficient.
+
+Kₕ = β ⟨e^{-β U}⟩, where the average is over positions and orientations of the molecule
+in the framework.
+
+Returns a dictionary of results.
+
+# Arguments
+- `framework::Framework`: the porous crystal in which we seek to simulate adsorption
+- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
+    the adsorption
+- `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
+    in the porous material. units: Kelvin (K)
+- `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
+    energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
+- `nb_insertions::Int`: number of Widom insertions to perform for computing the average.
+- `verbose::Bool`: whether or not to print off information during the simulation.
+- `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
+the replication factors in reciprocal space.
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
                            ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6,
