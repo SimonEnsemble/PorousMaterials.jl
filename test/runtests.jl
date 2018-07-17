@@ -743,9 +743,9 @@ end
     # Peng-Robinsion EOS test for methane.
     gas = PengRobinsonGas(:CH4)
     props = calculate_properties(gas, 298.0, 65.0, verbose=false)
-    @test isapprox(props["compressibility factor"], 0.874910311935475, atol=1e-4)
-    @test isapprox(props["fugacity coefficient"], 0.8732765620181274, atol=1e-4)
-    @test isapprox(props["fugacity (bar)"], 65.0 * 0.8732765620181274, atol=1e-4)
-    @test isapprox(props["density (mol/m³)"], 2998.634526, atol=0.2)
-    @test isapprox(props["molar volume (L/mol)"], 0.333485, atol=1e-4)
+    @test isapprox(props["compressibility factor"], 0.874496226625811, atol=1e-4)
+    @test isapprox(props["fugacity coefficient"], 0.8729028157628362, atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 65.0 * 0.8729028157628362, atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], 3000.054418, atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], 0.333327, atol=1e-4)
 end
