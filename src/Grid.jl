@@ -18,7 +18,7 @@ struct Grid{T}
 end
 
 """
-    write_cube(grid filename)
+    write_cube(grid, filename, verbose=true)
 
 Write grid to a .cube file format. This format is described here:
 http://paulbourke.net/dataformats/cube/
@@ -27,8 +27,9 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 # Arguments
 - `grid::Grid`: grid with associated data at each grid point.
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
+- `verbose::Bool`: print name of file after writing.
 """
-function write_cube(grid::Grid, filename::AbstractString)
+function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     if ! isdir(PATH_TO_DATA * "grids/")
         mkdir(PATH_TO_DATA * "grids/")
     end
@@ -63,7 +64,9 @@ function write_cube(grid::Grid, filename::AbstractString)
         end # loop over y points
     end # loop over x points
     close(cubefile)
-    println("See ", PATH_TO_DATA * "grids/" * filename)
+    if verbose
+        println("See ", PATH_TO_DATA * "grids/" * filename)
+    end
     return 
 end
 
