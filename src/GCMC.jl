@@ -12,9 +12,6 @@ const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation
 const ROTATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 
-# break collection of statistics into blocks to gauge convergence and compute standard err
-const N_BLOCKS = 5
-
 """
 Data structure to keep track of statistics collected during a grand-canonical Monte Carlo
 simulation.
@@ -59,6 +56,7 @@ the simulation. The average from each bin is treated as an independent sample an
 estimate the error in the estimate as a confidence interval.
 """
 function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
+    # ⟨N⟩, ⟨U⟩
     avg_n = sum(gcmc_stats).n / sum(gcmc_stats).n_samples
     avg_U = sum(gcmc_stats).U / (1.0 * sum(gcmc_stats).n_samples)
 
@@ -614,11 +612,13 @@ function print_results(results::Dict; print_title::Bool=true)
     end
 
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
-        print_with_color(:yellow, proposal_description)
         total_proposals = results[@sprintf("Total # %s proposals", proposal_description)]
         fraction_accepted = results[@sprintf("Fraction of %s proposals accepted", proposal_description)]
-        @printf("\t%d total proposals.\n", total_proposals)
-        @printf("\t%f %% proposals accepted.\n", 100.0 * fraction_accepted)
+        if total_proposals > 0
+            print_with_color(:yellow, proposal_description)
+            @printf("\t%d total proposals.\n", total_proposals)
+            @printf("\t%f %% proposals accepted.\n", 100.0 * fraction_accepted)
+        end
     end
 
     println("")
