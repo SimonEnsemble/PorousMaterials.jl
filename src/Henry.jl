@@ -1,6 +1,7 @@
 using ProgressMeter
 
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
+const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
 
 """
    result = henry_coefficient(framework, molecule, temperature, ljforcefield,
@@ -116,13 +117,13 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     result["⟨U, Coulomb⟩ (K)"] = mean([average_energies[b].coulomb for b = 1:N_BLOCKS])
     result["⟨U⟩ (K)"] = result["⟨U, vdw⟩ (K)"] + result["⟨U, Coulomb⟩ (K)"]
 
-    result["⟨U⟩ (kJ/mol)"] = result["⟨U⟩ (K)"] * 8.314 / 1000.0
-    result["⟨U, vdw⟩ (kJ/mol)"] = result["⟨U, vdw⟩ (K)"] * 8.314 / 1000.0
-    result["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * 8.314 / 1000.0
-    result["⟨U, Coulomb⟩ (kJ/mol)"] = result["⟨U, Coulomb⟩ (K)"] * 8.314 / 1000.0
-    result["err ⟨U, Coulomb⟩ (kJ/mol)"] = err_energy.coulomb * 8.314 / 1000.0
-    result["Qst (kJ/mol)"] = -result["⟨U⟩ (kJ/mol)"] + 8.314 * temperature / 1000.0
-    result["err Qst (kJ/mol)"] = sum(err_energy) * 8.314 / 1000.0
+    result["⟨U⟩ (kJ/mol)"] = result["⟨U⟩ (K)"] * K_to_kJ_mol
+    result["⟨U, vdw⟩ (kJ/mol)"] = result["⟨U, vdw⟩ (K)"] * K_to_kJ_mol
+    result["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * K_to_kJ_mol
+    result["⟨U, Coulomb⟩ (kJ/mol)"] = result["⟨U, Coulomb⟩ (K)"] * K_to_kJ_mol
+    result["err ⟨U, Coulomb⟩ (kJ/mol)"] = err_energy.coulomb * K_to_kJ_mol
+    result["Qst (kJ/mol)"] = -result["⟨U⟩ (kJ/mol)"] + temperature * K_to_kJ_mol
+    result["err Qst (kJ/mol)"] = sum(err_energy) * K_to_kJ_mol
 
     if verbose
         print_with_color(:green, "\t----- final results ----\n")
