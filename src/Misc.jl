@@ -1,3 +1,5 @@
+using CSV
+
 """
     atoms, x = read_xyz(filename)
 
@@ -97,4 +99,29 @@ function read_atomic_radii()
         end
     end
     return atomic_radii
+end
+
+"""
+    atomic_masses = read_atomic_masses()
+
+Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and their atomic
+masses in amu.
+
+# Returns
+- `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
+"""
+function read_atomic_masses()
+    if ! isfile("data/atomicmasses.csv")
+        error("Cannot find atomicmasses.csv file in your data folder\n")
+    end
+
+    df_am = CSV.read("data/atomicmasses.csv")
+
+    atomic_masses = Dict{Symbol, Float64}()
+
+    for row in eachrow(df_am)
+		atomic_masses[Symbol(row[:atom])] = row[:mass]
+    end
+
+    return atomic_masses
 end

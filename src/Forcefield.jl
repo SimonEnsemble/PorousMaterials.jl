@@ -26,7 +26,7 @@ end
 
 
 """
-	ljforcefield = read_forcefield_file("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
+	ljforcefield = ForceField("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
 
 Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LennardJonesForceField object.
 
@@ -38,7 +38,7 @@ Read a .csv file containing Lennard Jones parameters (with the following columns
 # Returns
 - `ljforcefield::LennardJonesForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
-function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
+function ForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
     if ! (mixing_rules in ["Lorentz-Berthelot"])
         # TODO add other mixing rules with corresponding tests
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))

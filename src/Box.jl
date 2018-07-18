@@ -66,8 +66,8 @@ function Box(a::Float64, b::Float64, c::Float64,
     # the columns of f_to_c are the unit cell axes
     r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
-    @test f_to_c * c_to_f ≈ eye(3)
-    @test isapprox(transpose(r), 2.0 * π * inv(f_to_c))
+    @assert f_to_c * c_to_f ≈ eye(3)
+    @assert isapprox(transpose(r), 2.0 * π * inv(f_to_c))
 
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
@@ -113,9 +113,8 @@ The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [
 - `box::Box`: Fully formed Box object
 """
 function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
-    #because this uses construct_box, its fractional coords still go 0 - 1
-    return construct_box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
-                         box.α, box.β, box.γ)
+    return Box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
+               box.α, box.β, box.γ)
 end
 
 function Base.show(io::IO, box::Box)
