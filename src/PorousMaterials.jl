@@ -25,7 +25,8 @@ include("Forcefield.jl")
  # 
 export Box, replicate, # Box.jl
        LJSphere, PointCharge, # Matter.jl 
-        Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
+       read_xyz, read_cpk_colors, read_atomic_radii, write_to_xyz, # Misc.jl
+       Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
        convert_cif_to_P1_symmetry, construct_box, replicate, read_atomic_masses, charged, write_cif, # Crystal.jl
        Molecule, PointCharge, LJSphere, translate_by!,
@@ -34,7 +35,6 @@ export Box, replicate, # Box.jl
  #        outside_box, write_to_xyz,
  #        nearest_image!, PotentialEnergy, SystemPotentialEnergy, # Energetics_Util.jl
  #        lennard_jones, vdw_energy, vdw_energy_no_PBC, # VdWEnergetics.jl
- #        read_xyz, read_cpk_colors, read_atomic_radii, # Misc.jl
  #        Grid, write_cube, read_cube, energy_grid, # Grid.jl
  #        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable, # MChelpers.jl
  #        apply_periodic_boundary_condition!,

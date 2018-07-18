@@ -3,7 +3,7 @@ Data structure for a molecule/adsorbate.
 
 # Attributes
 - `species::Symbol`: Species of molecule, e.g. `CO2` or `ethane`
-- `ljspheres::Array{LJSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
+- `atoms::Array{LJSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
 - `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
 - `x_com::Array{Float64, 1}`: center of mass of the molecule in Cartesian coordinates
 """
@@ -16,11 +16,11 @@ end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
     species = m1.species == m2.species
-    centers_of_mass = isapprox(m1.center_of_mass, m2.center_of_mass)
-    ljs_counts = length(m1.ljspheres) == length(m2.ljspheres)
+    centers_of_mass = isapprox(m1.x_com, m2.x_com)
+    ljs_counts = length(m1.atoms) == length(m2.atoms)
     pc_counts = length(m1.charges) == length(m2.charges)
     if (species & centers_of_mass & ljs_counts & pc_counts)
-        ljspheres = all([isapprox(m1.ljspheres[i], m2.ljspheres[i]) for i = 1:length(m1.ljspheres)])
+        atoms = all([isapprox(m1.atoms[i], m2.atoms[i]) for i = 1:length(m1.atoms)])
         charges = all([isapprox(m1.charges[i], m2.charges[i]) for i = 1:length(m1.charges)])
     else
         return false
@@ -53,20 +53,20 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     atomic_masses = read_atomic_masses()
     
     # Read in Lennard Jones spheres
-    ljspheresfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
-    if ! isfile(ljspheresfilename)
+    atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
+    if ! isfile(atomsfilename)
         error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in your molecule, include a .csv file with the proper headers but no rows.",
-                       ljspheresfilename))
+                       atomsfilename))
     end
-    df_lj = CSV.read(ljspheresfilename)
+    df_lj = CSV.read(atomsfilename)
     
     COM = [0.0, 0.0, 0.0]
     total_mass = 0.0
-    ljspheres = LJSphere[]
+    atoms = LJSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
-        push!(ljspheres, LJSphere(atom, x))
+        push!(atoms, LJSphere(atom, x))
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
@@ -89,7 +89,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         push!(charges, PointCharge(row[:q], x))
     end
 
-    molecule = Molecule(Symbol(species), ljspheres, charges, COM)
+    molecule = Molecule(Symbol(species), atoms, charges, COM)
 
     # check for charge neutrality
     if length(charges) > 0
@@ -114,14 +114,14 @@ This function does *not* account for periodic boundary conditions applied in the
 - `dx::Array{Float64, 1}`: A 1-D array with 3 elements, corresponding to the Cartesian x-, y- and z- directions, that dictate by how much the molecule is perturbed in that coordinate.
 """
 function translate_by!(molecule::Molecule, dx::Array{Float64, 1})
-    for ljsphere in molecule.ljspheres
+    for ljsphere in molecule.atoms
         ljsphere.x[:] += dx
     end
 
     for charge in molecule.charges
         charge.x[:] += dx
     end
-    molecule.center_of_mass[:] += dx
+    molecule.x_com[:] += dx
 end
 
 """
@@ -135,15 +135,15 @@ This function does *not* account for periodic boundary conditions applied in the
 - `x::Array{Float64, 1}`: A 1-D array with 3 elements, corresponding to the Cartesian x-, y- and z- directions, that dictates where its new center of mass will be.
 """
 function translate_to!(molecule::Molecule, x::Array{Float64, 1})
-    translate_by!(molecule, x - molecule.center_of_mass)
+    translate_by!(molecule, x - molecule.x_com)
 end
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
-    println(io, "Center of mass: ", molecule.center_of_mass)
-    if length(molecule.ljspheres) > 0
+    println(io, "Center of mass: ", molecule.x_com)
+    if length(molecule.atoms) > 0
         print(io, "Lennard-Jones spheres: ")
-        for ljsphere in molecule.ljspheres
+        for ljsphere in molecule.atoms
             @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", ljsphere.atom,
                     ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
         end
@@ -210,11 +210,11 @@ function rotate!(molecule::Molecule)
     # generate a random rotation matrix
     r = rotation_matrix()
     # store the center of mass
-    center_of_mass = deepcopy(molecule.center_of_mass)
+    x_com = deepcopy(molecule.x_com)
     # move the molecule to the origin
-    translate_by!(molecule, -center_of_mass)
+    translate_by!(molecule, x_com)
     # conduct the rotation
-    for ljsphere in molecule.ljspheres
+    for ljsphere in molecule.atoms
         ljsphere.x[:] = r * ljsphere.x
     end
 
@@ -223,7 +223,7 @@ function rotate!(molecule::Molecule)
     end
     # no need to rotate center of mass since it is now the origin.
     # translate back to the center of mass.
-    translate_by!(molecule, center_of_mass)
+    translate_by!(molecule, x_com)
 end
 
 """
@@ -239,7 +239,7 @@ Checks if a Molecule object is within the boundaries of a Box unitcell.
 - `outside_box::Bool`: True if the center of mass of `molecule` is outisde of `box`. False otherwise
 """
 function outside_box(molecule::Molecule, box::Box)
-    xf = box.c_to_f * molecule.center_of_mass
+    xf = box.c_to_f * molecule.x_com
     for k = 1:3
         if (xf[k] > 1.0) | (xf[k] < 0.0)
             return true
@@ -263,13 +263,13 @@ function write_to_xyz(molecules::Array{Molecule, 1}, filename::AbstractString; c
         filename *= ".xyz"
     end
 
-    n_atoms = sum([length(molecules[i].ljspheres) for i = 1:length(molecules)])
+    n_atoms = sum([length(molecules[i].atoms) for i = 1:length(molecules)])
 
     xyzfile = open(filename, "w")
     @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
     for molecule in molecules
-        for ljsphere in molecule.ljspheres
-			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(ljsphere.atom), ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
+        for ljsphere in molecule.atoms
+			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(ljsphere.species), ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
         end
     end
     close(xyzfile)
