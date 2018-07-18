@@ -2,205 +2,57 @@ using Base.Test
 using PyCall # see pyimport, requires ASE
 
 """
-Data structure to describe a unit cell box (Bravais lattice) and convert between
-fractional and Cartesian coordinates.
-
-# Attributes
-- `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
-- `α,β,γ::Float64`: unit cell angles (units: radians)
-- `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional
-coordinates to cartesian coordinates. The columns of this matrix define the unit cell
-axes.
-- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian
-coordinates to fractional coordinates
-- `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
-"""
-struct Box
-    a::Float64
-    b::Float64
-    c::Float64
-
-    α::Float64
-    β::Float64
-    γ::Float64
-
-    Ω::Float64
-
-    f_to_c::Array{Float64, 2}
-    c_to_f::Array{Float64, 2}
-
-    reciprocal_lattice::Array{Float64, 2}
-end
-
-"""
-    r = reciprocal_lattice(a₁, a₂, a₃)
-
-Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the reciprocal lattice vectors.
-
-# Arguments
-- `a₁::Array{Float64, 1}`: The first unit cell vector of a Bravais lattice
-- `a₂::Array{Float64, 1}`: The second unit cell vector of a Bravais lattice
-- `a₃::Array{Float64, 1}`: The third unit cell vector of a Bravais lattice
-
-# Returns
-- `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the columns are the reciprocal lattice vectors.
-"""
-function reciprocal_lattice(a₁::Array{Float64, 1}, a₂::Array{Float64, 1}, a₃::Array{Float64, 1})
-    r = zeros(Float64, 3, 3)
-    r[:, 1] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
-    r[:, 2] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
-    r[:, 3] = 2 * π * cross(a₁, a₂) / dot(a₃, cross(a₁, a₂))
-    return r
-end
-
-"""
-    box = construct_box(a, b, c, α, β, γ)
-
-Constructs a `Box` with unit cell dimensions a, b, and c and angles α, β, and γ.
-Automatically calculates Ω, f_to_c, and c_to_f for `Box` data structure and returns a `Box`.
-
-# Arguments
-- `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
-- `α,β,γ::Float64`: unit cell angles (units: radians)
-
-# Returns
-- `box::Box`: Fully formed Box object
-"""
-function construct_box(a::Float64, b::Float64, c::Float64,
-                       α::Float64, β::Float64, γ::Float64)
-    # unit cell volume (A³)
-    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
-    # matrices to map fractional coords <--> Cartesian coords
-    f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
-    c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
-    # the columns of f_to_c are the unit cell axes
-    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
-
-    @test f_to_c * c_to_f ≈ eye(3)
-    @test isapprox(transpose(r), 2.0 * π * inv(f_to_c))
-
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
-end
-
-"""
-    box = construct_box(f_to_c)
-
-Reconstructs a `Box` from the fractional to Cartesian coordinate transformation matrix.
-The columns of this matrix are the unit cell axes. Units must be in Å.
-
-# Arguments
-- `f_to_c::Array{Float64, 2}`: fractional to Cartesian coordinate transformation matrix.
-
-# Returns
-- `box::Box`: Fully formed Box object
-"""
-function construct_box(f_to_c::Array{Float64, 2})
-    # unit cell volume (A³) is the determinant of the matrix
-    Ω = det(f_to_c)
-
-    # unit cell dimensions are lengths of the unit cell axes (Å)
-    a = norm(f_to_c[:, 1])
-    b = norm(f_to_c[:, 2])
-    c = norm(f_to_c[:, 3])
-
-    # c_to_f is the inverse
-    c_to_f = inv(f_to_c)
-
-    # angles (radians)
-    α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
-    β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
-    γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
-
-    # the columns of f_to_c are the unit cell axes
-    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
-
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
-end
-
-"""
-    new_box = replicate(original_box, repfactors)
-
-Replicates a `Box` in positive directions to construct a new `Box` representing a supercell.
-The `original_box` is replicated according to the factors in `repfactors`.
-Note `replicate(original_box, repfactors=(1, 1, 1))` returns same `Box`.
-The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
-
-# Arguments
-- `original_box::Box`: The box that you want to replicate
-- `repfactors::Tuple{Int, Int, Int}`: The factor you want to replicate the box by
-
-# Returns
-- `box::Box`: Fully formed Box object
-"""
-function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
-    #because this uses construct_box, its fractional coords still go 0 - 1
-    return construct_box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
-                         box.α, box.β, box.γ)
-end
-
-"""
 Data structure for a 3D crystal structure.
 
 # Attributes
-- `name::String`: corresponds to crystal structure filename from which it was read.
-- `box::Box`: description of unit cell (Bravais Lattice); see `Box` struct.
-- `n_atoms::Int64`: number of atoms in the unit cell
-- `atoms::Array{Symbol,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order.
-- `xf::Array{Float64,2}`: fractional coordinates of the atoms, in strict order corresponding to `atoms`, stored column-wise so that `xf[:, i]` possesses the fractional coordinates of atom `i`.
-- `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
+- `name::String`: name of crystal structure
+- `box::Box`: unit cell (Bravais Lattice)
+- `atoms::Array{LJSpheres,1}`: list of Lennard-Jones spheres in crystal unit cell
+- `charges::Array{PointCharges,1}`: list of point charges in crystal unit cell
 """
 struct Framework
     name::String
-
     box::Box
-
-    n_atoms::Int64
-    atoms::Array{Symbol, 1}
-    xf::Array{Float64, 2}
-    charges::Array{Float64, 1}
+    atoms::Array{LJspheres, 1}
+    charges::Array{PointCharges, 1}
 end
 
 """
     replicated_frame = replicate(framework, repfactors)
 
-Replicates a `Framework` in positive directions to construct a new `Framework`.
-Note `replicate(framework, (1, 1, 1))` returns the same `Framework`.
-The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
+Replicates the atoms and charges in a `Framework` in positive directions to 
+construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the same `Framework`.
 
 # Arguments
 - `framework::Framework`: The framework to replicate
-- `repfactors::Tuple{Int, Int, Int}`: The factor you want to replicate the framework by.
+- `repfactors::Tuple{Int, Int, Int}`: The factors by which to replicate the crystal structure in each direction.
 
 # Returns
 - `replicated_frame::Framework`: Replicated framework
 """
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
     # determine number of atoms in replicated framework
-    n_atoms = framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
+    n_atoms = length(framework.atoms) * repfactors[1] * repfactors[2] * repfactors[3]
 
     # replicate box
-    box = replicate(framework.box, repfactors)
+    new_box = replicate(framework.box, repfactors)
 
-    # replicate atoms (coordinates, charges, identities)
-    xf = zeros(Float64, 3, n_atoms)
-    charges = zeros(Float64, n_atoms)
-    atoms = Array{Symbol, 1}(n_atoms)
-    atom_counter = 0
+    # replicate atoms and charges
+    new_charges = PointCharge[]
+    new_atoms = LJSphere[]
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
-        for i = 1:framework.n_atoms
-            atom_counter += 1
-            xf[:, atom_counter] = framework.xf[:, i] + 1.0 * [ra, rb, rc]
-            charges[atom_counter] = framework.charges[i]
-            atoms[atom_counter] = framework.atoms[i]
+        for atom in framework.atoms
+            xf = framework.box.c_to_f * atom.x + 1.0 * [ra, rb, rc]
+            push!(new_atoms, LJSphere(atom.species, framework.box.f_to_c * xf))
+        end
+        for charge in framework.charges
+            xf = framework.box.c_to_f * charge.x + 1.0 * [ra, rb, rc]
+            push!(new_charges, PointCharge(charge.q, framework.box.f_to_c * xf))
         end
     end
-    @assert(atom_counter == n_atoms)
-    # scale fractional coordinates so run between 0 and 1
-    for k = 1:3
-        xf[k, :] /= 1.0 * repfactors[k]
-    end
-    return Framework(framework.name, box, n_atoms, atoms, xf, charges)
+    @assert(length(new_charges) == length(framework.charges) * prod(repfactors))
+    @assert(length(new_atoms) == length(framework.atoms) * prod(repfactors))
+    return Framework(framework.name, new_box, new_atoms, new_charges)
 end
 
 """
@@ -218,31 +70,25 @@ If `run_checks=True`, checks for atom overlap and charge neutrality. `net_charge
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
 """
-function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=true, net_charge_tol::Float64=0.001, remove_overlap = false)
+function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=true, 
+                                     net_charge_tol::Float64=0.001, remove_overlap::Bool=false)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
         error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
     end
 
-    path_to_file = PATH_TO_DATA * "crystals/" * filename
-    # Read in crystal structure file
-    if ! isfile(path_to_file)
-        error(@sprintf("Could not open crystal structure file %s\n",
-                       path_to_file))
-    end
-
-    f = open(path_to_file, "r")
+    # read file
+    f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
 
     # Initialize arrays. We'll populate them when reading through the crystal structure file.
-    charges = Array{Float64, 1}()
+    charge_values = Array{Float64, 1}()
     xf = Array{Float64, 1}()
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
-    atoms = Array{Symbol, 1}()
-
+    species = Array{Symbol, 1}()
 
     # Start of .cif reader
     if extension == "cif"
@@ -274,13 +120,15 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
                     error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
                 end
             end
-
+            
+            # pick up unit cell lengths
             for axis in ["a", "b", "c"]
                 if line[1] == @sprintf("_cell_length_%s", axis)
                     data[axis] = parse(Float64, split(line[2],'(')[1])
                 end
             end
-
+            
+            # pick up unit cell angles
             for angle in ["alpha", "beta", "gamma"]
                 if line[1] == @sprintf("_cell_angle_%s", angle)
                     data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
@@ -296,13 +144,11 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
                     break
                 end
             end
-
         end # End loop over lines
 
         if loop_starts == -1
             error("Could not find _atom_site* after loop_ in .cif file\n")
         end
-
 
         atom_column_name = ""
         # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
@@ -318,28 +164,24 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
             i += 1
         end
 
-
         for i = loop_starts+length(name_to_column):length(lines)
-            # Skip identical atoms if they're present
-
             line = split(lines[i])
             if length(line) != length(name_to_column)
                 break
             end
 
-            push!(atoms, line[name_to_column[atom_column_name]])
+            push!(species, line[name_to_column[atom_column_name]])
             push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
             push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
             push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
             # If charges present, import them
             if haskey(name_to_column, "_atom_site_charge")
-                push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
             else
-                push!(charges, 0.0)
+                push!(charge_values, 0.0)
             end
         end
 
-        n_atoms = length(xf)
         a = data["a"]
         b = data["b"]
         c = data["c"]
@@ -366,24 +208,29 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
         # Read in atoms and fractional coordinates
         for i = 1:n_atoms
             line = split(lines[4 + i])
-            push!(atoms, line[2])
+            push!(species, line[2])
 
             push!(xf, mod(parse(Float64, line[3]), 1.0)) # Wrap to [0,1]
             push!(yf, mod(parse(Float64, line[4]), 1.0)) # Wrap to [0,1]
             push!(zf, mod(parse(Float64, line[5]), 1.0)) # Wrap to [0,1]
 
-            push!(charges, parse(Float64, line[14]))
+            push!(charge_values, parse(Float64, line[14]))
         end
     end
 
     # Construct the unit cell box
     box = construct_box(a, b, c, α, β, γ)
 
-    fractional_coords = Array{Float64, 2}(3, n_atoms)
-    fractional_coords[1, :] = xf[:]; fractional_coords[2,:] = yf[:]; fractional_coords[3,:] = zf[:]
+    atoms = LJSphere[]
+    charges = PointCharge[]
+    for a = 1:length(species)
+        push!(atoms, LJSphere(species[a], box.f_to_c * [xf, yf, zf]))
+        if abs(charge_values[a]) > 0.0
+            push!(charges, PointCharge(charge_values[a], box.f_to_c * [xf, yf, zf]))
+        end
+    end
 
-    # And finally construct the framework
-    framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
+    framework = Framework(filename, box, atoms, charges)
 
     if run_checks && !remove_overlap
         if atom_overlap(framework)
@@ -395,7 +242,7 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
     end
 
     if remove_overlap
-        framework = remove_overlapping_atoms(framework, run_checks = run_checks)
+        framework = remove_overlapping_atoms(framework, run_checks=run_checks)
     end
 
     return framework
@@ -445,10 +292,10 @@ function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractStrin
     @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
 
     for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
-        for a = 1:framework.n_atoms
-            xf = framework.xf[:, a] + [i - 1.0, j - 1.0, k - 1.0]
+        for atom in framework.atoms
+            xf = framework.box.c_to_f * atom.x + [i - 1.0, j - 1.0, k - 1.0]
             x = framework.box.f_to_c * xf
-			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[a]), x[1], x[2], x[3])
+			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(atom.species), x[1], x[2], x[3])
         end
     end
     close(xyzfile)
@@ -461,7 +308,7 @@ end # replicate_to_xyz end
 """
     is_overlap = atom_overlap(framework; hard_diameter=0.1, verbose=false)
 
-Return true iff any two atoms in the crystal overlap by calculating the distance
+Return true iff any two `LJSphere`'s or `PointCharge`'s in the crystal overlap. by calculating the distance
 between every pair of atoms and ensuring distance is greater than
 `hard_diameter`. If verbose, print the pair of atoms which are culprits.
 # TODO include different radii for different atoms?
@@ -836,29 +683,6 @@ function Base.show(io::IO, framework::Framework)
 	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
 
 	@printf(io, "Number of atoms = %d", framework.n_atoms)
-end
-
-
-function Base.show(io::IO, box::Box)
-    println(io, "Bravais unit cell of a crystal.")
-    @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
-        box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
-    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n",
-        box.a, box.b, box.c)
-    @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
-end
-
-function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
-    return (isapprox(box1.a, box2.a, rtol=rtol) &&
-            isapprox(box1.b, box2.b, rtol=rtol) &&
-            isapprox(box1.c, box2.c, rtol=rtol) &&
-            isapprox(box1.α, box2.α, rtol=rtol) &&
-            isapprox(box1.β, box2.β, rtol=rtol) &&
-            isapprox(box1.γ, box2.γ, rtol=rtol) &&
-            isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
-            isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
-            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol) &&
-            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, rtol=rtol))
 end
 
 function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)

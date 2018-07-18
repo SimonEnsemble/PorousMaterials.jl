@@ -4,16 +4,16 @@
 Lennard-Jones sphere data structure indicates its species and its Cartesian coordinates.
 
 # Attributes
-- `atom::Symbol`: atom species name, e.g. `:C`
+- `species::Symbol`: atom species name, e.g. `:C`
 - `x::Array{Float64, 1}`: Cartesian coordinates (units: Angstrom), e.g. `[1.0, 0.0, 4.0]`.
 """
 struct LJSphere
-    atom::Symbol
+    species::Symbol
     x::Array{Float64, 1}
 end
 
 function Base.isapprox(ljs1::LJSphere, ljs2::LJSphere)
-    return ((ljs1.atom == ljs2.atom) && isapprox(ljs1.x, ljs2.x))
+    return ((ljs1.species == ljs2.species) && isapprox(ljs1.x, ljs2.x))
 end
 
 """

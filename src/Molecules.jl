@@ -1,49 +1,17 @@
 """
-Lennard-Jones spheres containing an atom and its' cartesian coordinates
-
-# Attributes
-- `atom::Symbol`: Atom name corresponding to force field
-- `x::Array{Float64, 1}`: Cartesian coordinates in Angstrom
-"""
-struct LennardJonesSphere
-    atom::Symbol
-    x::Array{Float64, 1}
-end
-
-function Base.isapprox(ljs1::LennardJonesSphere, ljs2::LennardJonesSphere)
-    return ((ljs1.atom == ljs2.atom) & isapprox(ljs1.x, ljs2.x))
-end
-
-"""
-Point charge data structure containing a charge and the charges' cartesian coordinates
-
-# Attributes
-- `q::Float64`: Charge magnitude (electrons)
-- `x::Array{Float64, 1}`: Cartesian coordinates in Angstrom
-"""
-struct PointCharge
-    q::Float64
-    x::Array{Float64, 1}
-end
-
-function Base.isapprox(c1::PointCharge, c2::PointCharge)
-    return ((c1.q == c2.q) & isapprox(c1.x, c2.x))
-end
-
-"""
 Data structure for a molecule/adsorbate.
 
 # Attributes
 - `species::Symbol`: Species of molecule, e.g. `CO2` or `ethane`
-- `ljspheres::Array{LennardJonesSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
+- `ljspheres::Array{LJSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
 - `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
-- `center_of_mass::Array{Float64, 1}`: center of mass of the molecule
+- `x_com::Array{Float64, 1}`: center of mass of the molecule in Cartesian coordinates
 """
 struct Molecule
     species::Symbol
-    ljspheres::Array{LennardJonesSphere, 1}
+    atoms::Array{LJSphere, 1}
     charges::Array{PointCharge, 1}
-    center_of_mass::Array{Float64, 1}
+    x_com::Array{Float64, 1}
 end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
@@ -94,11 +62,11 @@ function read_molecule_file(species::AbstractString; assert_charge_neutrality::B
     
     COM = [0.0, 0.0, 0.0]
     total_mass = 0.0
-    ljspheres = LennardJonesSphere[]
+    ljspheres = LJSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
-        push!(ljspheres, LennardJonesSphere(atom, x))
+        push!(ljspheres, LJSphere(atom, x))
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
@@ -138,7 +106,7 @@ end
 """
     translate!(molecule, dx)
 
-Translate a molecule by Cartesian vector `dx`. Adds `dx` to the coordinates of each `LennardJonesSphere` and `Charge` in the `Molecule` and shifts the center of mass as well.
+Translate a molecule by Cartesian vector `dx`. Adds `dx` to the coordinates of each `LJSphere` and `Charge` in the `Molecule` and shifts the center of mass as well.
 This function does *not* account for periodic boundary conditions applied in the context of a `Box`.
 
 # Arguments
@@ -159,7 +127,7 @@ end
 """
     translate_to!(molecule, x)
 
-Translate a molecule so that its center of mass is at Cartesian vector `x`. Charges the coordinates of each `LennardJonesSphere` and `Charge` in the `Molecule` and its center of mass as well.
+Translate a molecule so that its center of mass is at Cartesian vector `x`. Charges the coordinates of each `LJSphere` and `Charge` in the `Molecule` and its center of mass as well.
 This function does *not* account for periodic boundary conditions applied in the context of a `Box`.
 
 # Arguments

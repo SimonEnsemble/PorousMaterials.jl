@@ -117,3 +117,25 @@ function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
     return construct_box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
                          box.α, box.β, box.γ)
 end
+
+function Base.show(io::IO, box::Box)
+    println(io, "Bravais unit cell of a crystal.")
+    @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
+        box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
+    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n",
+        box.a, box.b, box.c)
+    @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
+end
+
+function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
+    return (isapprox(box1.a, box2.a, rtol=rtol) &&
+            isapprox(box1.b, box2.b, rtol=rtol) &&
+            isapprox(box1.c, box2.c, rtol=rtol) &&
+            isapprox(box1.α, box2.α, rtol=rtol) &&
+            isapprox(box1.β, box2.β, rtol=rtol) &&
+            isapprox(box1.γ, box2.γ, rtol=rtol) &&
+            isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
+            isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
+            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol) &&
+            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, rtol=rtol))
+end
