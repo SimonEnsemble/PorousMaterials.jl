@@ -21,7 +21,7 @@ if ig_tests
     @assert(empty_space.n_atoms == 0)
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
-    fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
     # according to ideal gas law, number of molecules in box should be:
     n_ig = fugacity * empty_space.box.Ω / (PorousMaterials.KB * temperature)
     n_sim = similar(n_ig)
@@ -39,7 +39,7 @@ if xe_in_sbmof1_tests
     dreiding_forcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)
     molecule = Molecule("Xe", sbmof1.box)
 
-    test_fugacities = [20.0, 200.0, 2000.0]
+    test_fugacities = [20.0, 200.0, 2000.0] / 100000.0 # bar
     test_mmol_g = [0.18650, 1.00235, 1.39812]
     test_molec_unit_cell = [0.2568, 1.3806, 1.9257]
 
@@ -59,8 +59,8 @@ if co2_tests
     ###
     #  Test isotherm 1: by greg chung. co2 at 313 k
     ###
- #     co2 = Molecule("CO2")
  #     f = Framework("ZnCo-ZIF-71_atom_relax_RESP.cif")
+ #     co2 = Molecule("CO2", f.box)
  #     strip_numbers_from_atom_labels!(f)
  #     ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
  # 
@@ -69,7 +69,7 @@ if co2_tests
  #     
  #     # simulate with PorousMaterials.jl in parallel
  #     if run_sims
- #         results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
+ #         results = adsorption_isotherm(f, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), co2, ff, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
  #         JLD.save("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld", "results", results)
  #     else
  #         results = JLD.load("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld")["results"]
@@ -100,7 +100,7 @@ if co2_tests
     
     # simulate with PorousMaterials.jl in parallel
     if run_sims
-        results = stepwise_adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa]), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-7)
+        results = stepwise_adsorption_isotherm(zif71, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), co2, ff, n_burn_cycles=5000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-7)
         JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
     else
         results = JLD.load("ZIF71_bogus_charges_co2_simulated_isotherm.jld")["results"]
