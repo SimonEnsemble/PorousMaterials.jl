@@ -1,5 +1,6 @@
 import Base: +, /
 using StatsBase
+using ProgressMeter
 
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
@@ -287,6 +288,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                                             eparams, kvectors, eikar, eikbr, eikcr))
     end
 
+    progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
+
     # define probabilty of proposing each type of MC move here.
     mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
     # set defaults
@@ -326,7 +329,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
     markov_chain_time = 0
-    for outer_cycle = 1:(n_burn_cycles + n_sample_cycles), inner_cycle = 1:max(20, length(molecules))
+    for outer_cycle = 1:(n_burn_cycles + n_sample_cycles)
+        next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
+    for inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
 
         # choose proposed move randomly; keep track of proposals
@@ -492,7 +497,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
                 end
             end
         end # end sampling code
-    end # finished markov chain proposal moves
+    end # inner
+    end # outer cycles
+    # finished MC moves at this point.
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     system_energy_end = SystemPotentialEnergy()

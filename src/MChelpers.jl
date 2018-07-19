@@ -62,7 +62,7 @@ function apply_periodic_boundary_condition!(molecule::Molecule, box::Box)
     outside_box = false # do nothing if not outside the box
 
     # compute its center of mass in fractional coordinates
-    xf = box.c_to_f * molecule.center_of_mass
+    xf = box.c_to_f * molecule.x_com
 
     # apply periodic boundary conditions
     for k = 1:3 # loop over xf, yf, zf components
@@ -138,4 +138,4 @@ function reinsert_molecule!(molecule::Molecule, simulation_box::Box)
 end
 
 # do we need to conduct a rotation or not? # TODO what if it is an ion? No need to rotate...
-rotatable(molecule::Molecule) = (length(molecule.ljspheres) + length(molecule.charges) > 1)::Bool
+rotatable(molecule::Molecule) = (length(molecule.atoms) + length(molecule.charges) > 1)::Bool
