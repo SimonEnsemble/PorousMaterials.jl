@@ -242,7 +242,7 @@ Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fil
 """
 @unsafe function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
                             krep::Int, include_neg_reps::Bool)
-    # explicitly compute for k = 0 and k = 1
+    # explicitly compute for k = 1, k = 0
     eikr[0] = exp(0.0 * im)
     @fastmath eikr[1] = exp(im * k_dot_r)
 
@@ -293,7 +293,7 @@ corresponding weights indicating the contribution to the Fourier sum.
 # Returns
 electrostatic potential inside `framework` at point `x` (units: K)
 """
-function electrostatic_potential_energy(frame::Framework,
+function electrostatic_potential_energy(framework::Framework,
                                         molecule::Molecule,
                                         eparams::EwaldParams,
                                         kvectors::Array{Kvector, 1},
@@ -301,10 +301,11 @@ function electrostatic_potential_energy(frame::Framework,
                                         eikbr::OffsetArray{Complex{Float64}},
                                         eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
-    for fcharge in frame
+    for fcharge in framework.charges
+        # construct a point charge for this framework atom
         # look at interaction of framework charge with molecule charge
         for mcharge in molecule.charges
-            ϕ += _ϕ_sr(fcharge, mcharge, eparams) / FOUR_π_ϵ₀
+            ϕ += _ϕ_sr(fcharge, mcharge, eparams)
             ϕ += _ϕ_lr(fcharge, mcharge, eparams, kvectors, eikar, eikbr, eikcr)
         end
     end
@@ -333,30 +334,22 @@ function _ϕ_lr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldPara
         #     e^{i kb r * vec(kb)} *
         #     e^{i kb r * vec(kc)} where r = x - xᵢ
         #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-        @unsafe @inbounds ϕ_lr += charge_a.q * charge_b.q * kvector.wt * real(
+        @unsafe @inbounds ϕ_lr += kvector.wt * real(
                 eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
     end
-    return ϕ_lr
+    return ϕ_lr * charge_a.q * charge_b.q
 end
 
 # short-range contribution to Ewald sum (must divide by 4 π ϵ₀ though)
 #   use only for molecules where repfactors=(1,1,1)
 function _ϕ_sr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldParams)
-    ϕ_sr = 0.0
-    # vector from pt charge to pt charge
-    dx = charge_a.x - charge_b.x
-    dxf = eparams.box.c_to_f * dx
-    # apply nearest image convention for periodic BCs
-    nearest_image!(dxf)
+    r = nearest_r(charge_a.x, charge_b.x, eparams.box)
 
-    # convert distance vector to Cartesian coordinates
-    dx = eparams.box.f_to_c * dxf
-
-    @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
     if r < eparams.sr_cutoff_r
-        @inbounds @fastmath ϕ_sr += charge_a.q * charge_b.q / r * erfc(r * eparams.α)
+        return charge_a.q * charge_b.q / r * erfc(r * eparams.α) / FOUR_π_ϵ₀
+    else
+        return 0.0
     end
-    return ϕ_sr # well, ϕ_sr * 4 * π * ϵ₀
 end
 
 # spurious self-interaction in EWald sum
@@ -374,18 +367,7 @@ function _intramolecular_energy(molecule::Molecule, eparams::EwaldParams)
     ϕ_intra = 0.0
     for i = 1:length(molecule.charges)
         for j = (i + 1):length(molecule.charges)
-            dx = molecule.charges[i].x - molecule.charges[j].x
-            
-            # allowing molecule to be split across the periodic boundary, apply PBC
-            dxf = eparams.box.c_to_f * dx
-
-            # apply nearest image convention for periodic BCs
-            nearest_image!(dxf)
-
-            # convert distance vector to Cartesian coordinates
-            dx = eparams.box.f_to_c * dxf
-
-            @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
+            r = nearest_r(molecule.charges[i].x, molecule.charges[j].x, eparams.box)
             ϕ_intra -= molecule.charges[i].q * molecule.charges[j].q * erf(eparams.α * r) / r
         end
     end
@@ -447,7 +429,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
             end # molecule j
         end # charge i
     end # molecule i
-    ϕ.sr /= FOUR_π_ϵ₀ * 2.0 # two to avoid double-counting
+    ϕ.sr /= 2.0 # two to avoid double-counting
     ϕ.lr /= 2.0
     ϕ.lr_own_images /= 2.0
 
@@ -490,7 +472,6 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
             end
         end
     end
-    ϕ.sr /= FOUR_π_ϵ₀
 
     # for insertions, need to include spurious self-interaction and intramolecular interaction
     #   as well as interactio with own periodic images

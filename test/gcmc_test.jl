@@ -16,10 +16,10 @@ co2_tests = true
 #  basically, this tests the acceptance rules when energy is always zero.
 #
 if ig_tests
-    empty_space = read_crystal_structure_file("empty_box.cssr") # zero atoms!
-    ideal_gas = read_molecule_file("IG")
+    empty_space = Framework("empty_box.cssr") # zero atoms!
+    ideal_gas = Molecule("IG")
     @assert(empty_space.n_atoms == 0)
-    forcefield = read_forcefield_file("Dreiding.csv")
+    forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
     fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
     # according to ideal gas law, number of molecules in box should be:
@@ -35,9 +35,9 @@ end
 
 ## Xe adsorption in SBMOF-1 tests
 if xe_in_sbmof1_tests
-    sbmof1 = read_crystal_structure_file("SBMOF-1.cif")
-    dreiding_forcefield = read_forcefield_file("Dreiding.csv", cutoffradius=12.5)
-    molecule = read_molecule_file("Xe")
+    sbmof1 = Framework("SBMOF-1.cif")
+    dreiding_forcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)
+    molecule = Molecule("Xe")
 
     test_fugacities = [20.0, 200.0, 2000.0]
     test_mmol_g = [0.18650, 1.00235, 1.39812]
@@ -59,10 +59,10 @@ if co2_tests
     ###
     #  Test isotherm 1: by greg chung. co2 at 313 k
     ###
- #     co2 = read_molecule_file("CO2")
- #     f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+ #     co2 = Molecule("CO2")
+ #     f = Framework("ZnCo-ZIF-71_atom_relax_RESP.cif")
  #     strip_numbers_from_atom_labels!(f)
- #     ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+ #     ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
  # 
  #     # load in test data
  #     df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
@@ -90,10 +90,10 @@ if co2_tests
     ###
     #  Test isotherm 2: by greg chung. co2 at 298 K
     ###
-    zif71 = read_crystal_structure_file("zif71_bogus_charges.cif")
+    zif71 = Framework("zif71_bogus_charges.cif")
     strip_numbers_from_atom_labels!(zif71)
-    ff = read_forcefield_file("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
-    co2 = read_molecule_file("CO2EPM2")
+    ff = LJForceField("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
+    co2 = Molecule("CO2EPM2")
 
     # load in test data
     df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")
@@ -119,10 +119,10 @@ if co2_tests
     end
 end
         
- # co2 = read_molecule_file("CO2")
- # f = read_crystal_structure_file("ZnCo-ZIF-71_atom_relax_RESP.cif")
+ # co2 = Molecule("CO2")
+ # f = Framework("ZnCo-ZIF-71_atom_relax_RESP.cif")
  # strip_numbers_from_atom_labels!(f)
- # ff = read_forcefield_file("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
+ # ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
  # 
  # results = gcmc_simulation(f, 313.0, 20.0*100000, co2, ff,
  #             n_burn_cycles=1, n_sample_cycles=1, verbose=true)

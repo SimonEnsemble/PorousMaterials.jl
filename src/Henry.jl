@@ -23,7 +23,7 @@ Returns a dictionary of results.
     the adsorption
 - `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
     in the porous material. units: Kelvin (K)
-- `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
+- `ljforcefield::LJForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
 - `nb_insertions::Int`: number of Widom insertions to perform for computing the average.
 - `verbose::Bool`: whether or not to print off information during the simulation.
@@ -31,7 +31,7 @@ Returns a dictionary of results.
 the replication factors in reciprocal space.
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
-                           ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6,
+                           ljforcefield::LJForceField; nb_insertions::Int=1e6,
                            verbose::Bool=true, ewald_precision::Float64=1e-6)
     if verbose
         print("Simulating Henry coefficient of ")
@@ -137,7 +137,7 @@ end
 # assumed framework is already replicated sufficiently for short-range interactions
 # to facilitate parallelization
 function _conduct_Widom_insertions(framework::Framework, molecule::Molecule, 
-                                   temperature::Float64, ljforcefield::LennardJonesForceField,
+                                   temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
                                    ewald_precision::Float64, verbose::Bool)
     # define Ewald summation params; this must be done on each core since they cannot share eikar for race condition possibility

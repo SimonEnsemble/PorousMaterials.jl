@@ -23,15 +23,7 @@ end
 
 # note this assumes the molecule is inside the box... i.e. fractional coords in [1,1,1]
 function vdw_energy(u::LJSphere, v::LJSphere, ljff::LJForceField, box::Box)
-    # distance in Cartesian space
-    dx = u.x - v.x
-    # convert to fractional so nearest image convention can be applied
-    dx = box.c_to_f * dx
-    # apply nearest image convention for PBCs
-    nearest_image!(dx)
-    # convert back to Cartesian
-    dx = box.f_to_c * dx
-    @inbounds r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
+    r² = nearest_r²(u.x, v.x, box)
     if r² < R_OVERLAP_squared # overlapping atoms
         return Inf
     elseif r² < ljff.cutoffradius_squared # within cutoff radius; not overlapping
@@ -127,7 +119,7 @@ function total_vdw_energy(framework::Framework,
                           ljff::LJForceField)
     total_energy = 0.0
     for molecule in molecules
-        total_energy += vdw_energy(framework, molecule, ljforcefield)
+        total_energy += vdw_energy(framework, molecule, ljff)
     end
     return total_energy
 end

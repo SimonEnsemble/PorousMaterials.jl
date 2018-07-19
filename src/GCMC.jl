@@ -99,7 +99,7 @@ end
 @inline function potential_energy(molecule_id::Int,
                                   molecules::Array{Molecule, 1},
                                   framework::Framework,
-                                  ljforcefield::LennardJonesForceField,
+                                  ljforcefield::LJForceField,
                                   eparams::EwaldParams,
                                   kvectors::Array{Kvector, 1},
                                   eikar::OffsetArray{Complex{Float64}},
@@ -138,7 +138,7 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 """
 function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
-                                      ljforcefield::LennardJonesForceField;
+                                      ljforcefield::LJForceField;
                                       n_initial_burn_cycles::Int=10000, 
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                                       sample_frequency::Int=10, verbose::Bool=true,
@@ -174,7 +174,7 @@ cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 """
 function adsorption_isotherm(framework::Framework, temperature::Float64,
                              fugacities::Array{Float64, 1}, molecule::Molecule,
-                             ljforcefield::LennardJonesForceField;
+                             ljforcefield::LJForceField;
                              n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                              sample_frequency::Int=25, verbose::Bool=true,
                              ewald_precision::Float64=1e-6)
@@ -221,7 +221,7 @@ translation.
     porous material. Equal to pressure for an ideal gas. units: Pascal (Pa)
 - `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
     the adsorption
-- `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
+- `ljforcefield::LJForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before
     sampling.
@@ -232,7 +232,7 @@ translation.
 - `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
-                         molecule::Molecule, ljforcefield::LennardJonesForceField;
+                         molecule::Molecule, ljforcefield::LJForceField;
                          n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
                          sample_frequency::Int=5, verbose::Bool=true,
                          molecules::Array{Molecule, 1}=Molecule[],
@@ -582,7 +582,7 @@ Determine the name of files saved during the GCMC simulation, be molecule positi
 """
 function root_save_filename(framework::Framework,
                             molecule::Molecule,
-                            ljforcefield::LennardJonesForceField,
+                            ljforcefield::LJForceField,
                             temperature::Float64,
                             fugacity::Float64,
                             n_burn_cycles::Int,
@@ -636,7 +636,7 @@ function print_results(results::Dict; print_title::Bool=true)
 end
 
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, 
-                      fugacity::Float64, ljff::LennardJonesForceField)
+                      fugacity::Float64, ljff::LJForceField)
     print("Simulating ")
     print_with_color(:yellow, "(μVT)")
     print(" adsorption of ")

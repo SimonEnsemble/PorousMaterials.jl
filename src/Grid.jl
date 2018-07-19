@@ -148,7 +148,7 @@ The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻�
 # Arguments
 - `framework::Framework`: crystal in which we seek to compute an energy grid for a molecule. `grid.box` will be `framework.box`.
 - `molecule::Molecule`: molecule for which we seek an energy grid
-- `ljforcefield::LennardJonesForceField`: molecular model for computing molecule-framework interactions
+- `ljforcefield::LJForceField`: molecular model for computing molecule-framework interactions
 - `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
 - `n_rotations::Int`: number of random rotations to conduct in a Monte Carlo simulation for finding the free energy of a molecule centered at a given grid point.
 This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
@@ -159,7 +159,7 @@ This is only relevant for molecules that are comprised of more than one Lennard 
 # Returns
 - `grid::Grid`: A grid data structure containing the potential energy of the system
 """
-function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField;
+function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJForceField;
                      n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")

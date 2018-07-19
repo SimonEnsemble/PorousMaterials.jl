@@ -8,207 +8,232 @@ using PorousMaterials
 using Base.Test
 using OffsetArrays
 
- # @testset "Box Tests" begin
- #     framework = Framework("SBMOF-1.cif")
- #     @test isapprox(framework.box, Box(framework.box.f_to_c))
- # 	@test framework.box.f_to_c * framework.box.c_to_f ≈ eye(3)
- #     @test isapprox(transpose(framework.box.reciprocal_lattice), 2 * π * inv(framework.box.f_to_c))
- #     @test isapprox(framework.box, Box(framework.box.a, framework.box.b, framework.box.c,
- #                                       framework.box.α, framework.box.β, framework.box.γ))
- #     @test isapprox(replicate(framework.box, (1, 1, 1)), framework.box)
- #     box = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
- #     @test box.Ω ≈ 1.0
- #     @test isapprox(replicate(box, (3, 5, 4)), Box(3.0, 5.0, 4.0, π/2, π/2, π/2))
- # 	@test framework.box.Ω ≈ det(framework.box.f_to_c)
- # end
- # 
- # @testset "Crystal Tests" begin
- #     framework = Framework("test_structure2.cif")
- #     strip_numbers_from_atom_labels!(framework)
- #     @test framework.name == "test_structure2.cif"
- #     @test isapprox(framework.box, Box(10.0, 20.0, 30.0, 90*π/180, 45*π/180, 120*π/180))
- #     @test length(framework.atoms) == 2
- #     @test isapprox(framework.atoms[1], LJSphere(:Ca, framework.box.f_to_c * [0.2, 0.5, 0.7]))
- #     @test isapprox(framework.atoms[2], LJSphere(:O,  framework.box.f_to_c * [0.6, 0.3, 0.1]))
- #     @test isapprox(framework.charges[1], PointCharge(1.0, framework.box.f_to_c * [0.2, 0.5, 0.7]))
- #     @test isapprox(framework.charges[2], PointCharge(-1.0,  framework.box.f_to_c * [0.6, 0.3, 0.1]))
- #     @test charged(framework)
- #     @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
- #     @test molecular_weight(framework) ≈ 15.9994 + 40.078
- #     # same as test_structure.cif but with overlapping atoms.
- #     framework2 = Framework("test_structure2B.cif", remove_overlap=true, check_charge_neutrality=false)
- #     strip_numbers_from_atom_labels!(framework2)
- #     @test all(isapprox.(framework.atoms, framework2.atoms)) && all(isapprox.(framework.charges, framework2.charges))
- # 
- #     # test .cif writer; write, read in, assert equal
- #     write_cif(framework, "data/crystals/rewritten_test_structure2.cif")
- #     framework_rewritten = Framework("rewritten_test_structure2.cif")
- #     @test isapprox(framework, framework_rewritten)
- # 
- #     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
- #     framework_from_cssr = Framework("test_structure2.cif")
- #     strip_numbers_from_atom_labels!(framework_from_cssr)
- #     @test isapprox(framework_from_cssr, framework, checknames=false)
- # 
- #     # test replicate framework
- #     sbmof = Framework("SBMOF-1.cif")
- #     replicated_sbmof = replicate(sbmof, (1, 1, 1))
- #     @test isapprox(sbmof, replicated_sbmof)
- # 
- #     repfactors = replication_factors(sbmof.box, 14.0)
- #     replicated_sbmof = replicate(sbmof, repfactors)
- #     @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
- #     @test isapprox(sbmof.atoms[1], replicated_sbmof.atoms[1])
- #     @test isapprox(transpose(replicated_sbmof.box.reciprocal_lattice), 2 * π * inv(replicated_sbmof.box.f_to_c))
- #     @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
- #     @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
+@testset "Box Tests" begin
+    framework = Framework("SBMOF-1.cif")
+    @test isapprox(framework.box, Box(framework.box.f_to_c))
+    @test framework.box.f_to_c * framework.box.c_to_f ≈ eye(3)
+    @test isapprox(transpose(framework.box.reciprocal_lattice), 2 * π * inv(framework.box.f_to_c))
+    @test isapprox(framework.box, Box(framework.box.a, framework.box.b, framework.box.c,
+                                      framework.box.α, framework.box.β, framework.box.γ))
+    @test isapprox(replicate(framework.box, (1, 1, 1)), framework.box)
+    box = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
+    @test box.Ω ≈ 1.0
+    @test isapprox(replicate(box, (3, 5, 4)), Box(3.0, 5.0, 4.0, π/2, π/2, π/2))
+    @test framework.box.Ω ≈ det(framework.box.f_to_c)
+end
 
- #     # more xtal tests
- #     sbmof1 = Framework("SBMOF-1.cif")
- #     @test !charged(sbmof1)
- #     @test isapprox(transpose(sbmof1.box.reciprocal_lattice), 2 * π * inv(sbmof1.box.f_to_c))
- #     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
- #     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
- # end;
- # 
- # @testset "Molecules Tests" begin
- #     # test reader
- #     molecule = Molecule("CO2")
- #     @test charged(molecule)
- #     atomic_masses = read_atomic_masses()
- #     @test molecule.species == :CO2
- #     @test length(molecule.atoms) == 3
- #     @test molecule.atoms[1].species == :C_CO2
- #     @test molecule.atoms[2].species == :O_CO2
- #     @test molecule.atoms[3].species == :O_CO2
- #     @test all(molecule.atoms[1].x .≈ [0.0, 0.0, 0.0])
- #     @test all(molecule.atoms[2].x .≈ [-1.16, 0.0, 0.0])
- #     @test all(molecule.atoms[3].x .≈ [1.16, 0.0, 0.0])
- #     @test all(molecule.x_com .≈ [0.0, 0.0, 0.0])
- #     @test length(molecule.charges) == 3
- #     @test molecule.charges[1].q ≈ 0.7
- #     @test molecule.charges[2].q ≈ -0.35
- #     @test molecule.charges[3].q ≈ -0.35
- #     for i = 1:3
- #         @test all(molecule.charges[i].x ≈ molecule.atoms[i].x)
- #     end
- # 
- #     # test translate
- #     m1 = Molecule("CO2")
- #     m2 = Molecule("CO2")
- #     @test isapprox(m1, m2) # overloaded this function for molecules
- #     translate_by!(m2, [0.0, 0.0, 0.0])
- #     @test isapprox(m1, m2)
- #     translate_by!(m2, [0.0, 10.0, 0.0])
- #     @test ! isapprox(m1, m2)
- #     translate_to!(m2, m1.x_com)
- #     @test isapprox(m1, m2)
- #     translate_to!(m2, [50.0, 100.0, 150.0])
- #     @test isapprox(m2.x_com, [50.0, 100.0, 150.0])
- #     for i = 1:200
- #         translate_by!(m2, [randn(), randn(), randn()])
- #     end
- #     @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
- #     @test norm(m2.atoms[1].x - m2.atoms[2].x) ≈ norm(m1.atoms[1].x - m1.atoms[2].x)
- # 
- #     # test unit vector on sphere generator
- #     ms = [Molecule("He") for i = 1:10000]
- #     for m in ms
- #         translate_to!(m, rand_point_on_unit_sphere())
- #     end
- #     @test all(isapprox.([norm(m.atoms[1].x) for m in ms], 1.0))
- #     write_to_xyz(ms, "random_vectors_on_sphere")
- #     println("See random_vectors_on_sphere")
- # 
- #     # Test to see if rotation_matrix() is random and uniform on sphere surface
- #     N = 1000000
- #     points = Array{Float64, 2}(3,N)
- #     for i = 1:N
- #         points[:,i] = rotation_matrix() * [0., 0., 1.]
- #     end
- # 
- #     for i = 1:3
- #         r = rand()
- #         count = zeros(10)
- #         for j = 1:10
- #             for k = 1:N
- #                 if points[1,k] > 0 && points[2,k]^2 + points[3,k]^2 <= r^2
- #                     count[j] += 1
- #                 end
- #             end
- #             points = rotation_matrix() * points
- #         end
- #         @test (maximum(count) - minimum(count)) / N < 0.01
- #     end
- # 
- #     # rotation matrix should be orthogonal
- #     r_orthogonal = true
- #     r_det_1 = true
- #     for i = 1:300
- #         r = rotation_matrix()
- #         if ! isapprox(r * transpose(r), eye(3))
- #             r_orthogonal = false
- #         end
- #         if ! isapprox(det(r), 1.0)
- #             r_det_1 = false
- #         end
- #     end
- #     @test r_orthogonal
- #     @test r_det_1
- # 
- #     # test rotate function
- #     translate_to!(m2, [50.0, 100.0, 150.0])
- #     for i = 1:2000
- #         rotate!(m2)
- #     end
- #     @test isapprox(m2.x_com, [50.0, 100.0, 150.0])
- #     @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
- #     @test norm(m2.atoms[1].x - m2.atoms[2].x) ≈ norm(m1.atoms[1].x - m1.atoms[2].x)
- #     m2_old = deepcopy(m2)
- #     rotate!(m2)
- #     @test ! isapprox(m2_old, m2)
- #     # visually inspect
- #     ms = [Molecule("CO2") for i = 1:1000]
- #     for m in ms
- #        rotate!(m)
- #     end
- #     write_to_xyz(ms, "co2s")
- #     println("see co2s.xyz for dist'n of rotations")
- # 
- #     # make sure rotation, translate does not chage bond lengths or mess up center of mass
- #     co2 = Molecule("CO2")
- #     bond_length = norm(co2.charges[1].x - co2.charges[2].x)
- #     for i = 1:100000
- #         translate_to!(co2, 10.0 * [rand(), rand(), rand()])
- #         translate_by!(co2, 5.0 * [randn(), randn(), randn()])
- #         rotate!(co2)
- #     end
- #     @test isapprox(norm(co2.charges[1].x - co2.charges[2].x), bond_length, atol=1e-12)
- #     @test isapprox(norm(co2.atoms[1].x - co2.atoms[2].x), bond_length, atol=1e-12)
- #     @test isapprox(co2.x_com, co2.atoms[1].x, atol=1e-12) # should be on carbon
- #     #.atoms and charges shld have same coords still
- #     @test all([isapprox(co2.atoms[k].x, co2.charges[k].x, atol=1e-12) for k = 1:3]) 
- #     # bond angles preserved.
- #     co_vector1 = co2.atoms[2].x - co2.atoms[1].x
- #     co_vector2 = co2.atoms[3].x - co2.atoms[1].x
- #     @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-12)
- # end
- # 
-const ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
+@testset "Crystal Tests" begin
+    framework = Framework("test_structure2.cif")
+    strip_numbers_from_atom_labels!(framework)
+    @test framework.name == "test_structure2.cif"
+    @test isapprox(framework.box, Box(10.0, 20.0, 30.0, 90*π/180, 45*π/180, 120*π/180))
+    @test length(framework.atoms) == 2
+    @test isapprox(framework.atoms[1], LJSphere(:Ca, framework.box.f_to_c * [0.2, 0.5, 0.7]))
+    @test isapprox(framework.atoms[2], LJSphere(:O,  framework.box.f_to_c * [0.6, 0.3, 0.1]))
+    @test isapprox(framework.charges[1], PointCharge(1.0, framework.box.f_to_c * [0.2, 0.5, 0.7]))
+    @test isapprox(framework.charges[2], PointCharge(-1.0,  framework.box.f_to_c * [0.6, 0.3, 0.1]))
+    @test charged(framework)
+    @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
+    @test molecular_weight(framework) ≈ 15.9994 + 40.078
+    # same as test_structure.cif but with overlapping atoms.
+    framework2 = Framework("test_structure2B.cif", remove_overlap=true, check_charge_neutrality=false)
+    strip_numbers_from_atom_labels!(framework2)
+    @test all(isapprox.(framework.atoms, framework2.atoms)) && all(isapprox.(framework.charges, framework2.charges))
+
+    # test .cif writer; write, read in, assert equal
+    write_cif(framework, "data/crystals/rewritten_test_structure2.cif")
+    framework_rewritten = Framework("rewritten_test_structure2.cif")
+    @test isapprox(framework, framework_rewritten)
+
+    # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
+    framework_from_cssr = Framework("test_structure2.cif")
+    strip_numbers_from_atom_labels!(framework_from_cssr)
+    @test isapprox(framework_from_cssr, framework, checknames=false)
+
+    # test replicate framework
+    sbmof = Framework("SBMOF-1.cif")
+    replicated_sbmof = replicate(sbmof, (1, 1, 1))
+    @test isapprox(sbmof, replicated_sbmof)
+
+    repfactors = replication_factors(sbmof.box, 14.0)
+    replicated_sbmof = replicate(sbmof, repfactors)
+    @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
+    @test isapprox(sbmof.atoms[1], replicated_sbmof.atoms[1])
+    @test isapprox(transpose(replicated_sbmof.box.reciprocal_lattice), 2 * π * inv(replicated_sbmof.box.f_to_c))
+    @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
+    @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
+
+    # more xtal tests
+    sbmof1 = Framework("SBMOF-1.cif")
+    @test !charged(sbmof1)
+    @test isapprox(transpose(sbmof1.box.reciprocal_lattice), 2 * π * inv(sbmof1.box.f_to_c))
+    @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
+    @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
+    
+    # replicating the unit cell to construct simulation box
+    sbmof1 = Framework("SBMOF-1.cif")
+    rbox = replicate(sbmof1.box, (2, 3, 4))
+    @test rbox.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
+    @test all(rbox.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
+
+end;
+
+@testset "Molecules Tests" begin
+    # test reader
+    molecule = Molecule("CO2")
+    @test charged(molecule)
+    atomic_masses = read_atomic_masses()
+    @test molecule.species == :CO2
+    @test length(molecule.atoms) == 3
+    @test molecule.atoms[1].species == :C_CO2
+    @test molecule.atoms[2].species == :O_CO2
+    @test molecule.atoms[3].species == :O_CO2
+    @test all(molecule.atoms[1].x .≈ [0.0, 0.0, 0.0])
+    @test all(molecule.atoms[2].x .≈ [-1.16, 0.0, 0.0])
+    @test all(molecule.atoms[3].x .≈ [1.16, 0.0, 0.0])
+    @test all(molecule.x_com .≈ [0.0, 0.0, 0.0])
+    @test length(molecule.charges) == 3
+    @test molecule.charges[1].q ≈ 0.7
+    @test molecule.charges[2].q ≈ -0.35
+    @test molecule.charges[3].q ≈ -0.35
+    for i = 1:3
+        @test all(molecule.charges[i].x ≈ molecule.atoms[i].x)
+    end
+
+    # test translate
+    m1 = Molecule("CO2")
+    m2 = Molecule("CO2")
+    @test isapprox(m1, m2) # overloaded this function for molecules
+    translate_by!(m2, [0.0, 0.0, 0.0])
+    @test isapprox(m1, m2)
+    translate_by!(m2, [0.0, 10.0, 0.0])
+    @test ! isapprox(m1, m2)
+    translate_to!(m2, m1.x_com)
+    @test isapprox(m1, m2)
+    translate_to!(m2, [50.0, 100.0, 150.0])
+    @test isapprox(m2.x_com, [50.0, 100.0, 150.0])
+    for i = 1:200
+        translate_by!(m2, [randn(), randn(), randn()])
+    end
+    @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
+    @test norm(m2.atoms[1].x - m2.atoms[2].x) ≈ norm(m1.atoms[1].x - m1.atoms[2].x)
+
+    # test unit vector on sphere generator
+    ms = [Molecule("He") for i = 1:10000]
+    for m in ms
+        translate_to!(m, rand_point_on_unit_sphere())
+    end
+    @test all(isapprox.([norm(m.atoms[1].x) for m in ms], 1.0))
+    write_to_xyz(ms, "random_vectors_on_sphere")
+    println("See random_vectors_on_sphere")
+
+    # Test to see if rotation_matrix() is random and uniform on sphere surface
+    N = 1000000
+    points = Array{Float64, 2}(3,N)
+    for i = 1:N
+        points[:,i] = rotation_matrix() * [0., 0., 1.]
+    end
+
+    for i = 1:3
+        r = rand()
+        count = zeros(10)
+        for j = 1:10
+            for k = 1:N
+                if points[1,k] > 0 && points[2,k]^2 + points[3,k]^2 <= r^2
+                    count[j] += 1
+                end
+            end
+            points = rotation_matrix() * points
+        end
+        @test (maximum(count) - minimum(count)) / N < 0.01
+    end
+
+    # rotation matrix should be orthogonal
+    r_orthogonal = true
+    r_det_1 = true
+    for i = 1:300
+        r = rotation_matrix()
+        if ! isapprox(r * transpose(r), eye(3))
+            r_orthogonal = false
+        end
+        if ! isapprox(det(r), 1.0)
+            r_det_1 = false
+        end
+    end
+    @test r_orthogonal
+    @test r_det_1
+
+    # test rotate function
+    translate_to!(m2, [50.0, 100.0, 150.0])
+    for i = 1:2000
+        rotate!(m2)
+    end
+    @test isapprox(m2.x_com, [50.0, 100.0, 150.0])
+    @test norm(m2.charges[1].x - m2.charges[2].x) ≈ norm(m1.charges[1].x - m1.charges[2].x)
+    @test norm(m2.atoms[1].x - m2.atoms[2].x) ≈ norm(m1.atoms[1].x - m1.atoms[2].x)
+    m2_old = deepcopy(m2)
+    rotate!(m2)
+    @test ! isapprox(m2_old, m2)
+    # visually inspect
+    ms = [Molecule("CO2") for i = 1:1000]
+    for m in ms
+       rotate!(m)
+    end
+    write_to_xyz(ms, "co2s")
+    println("see co2s.xyz for dist'n of rotations")
+
+    # make sure rotation, translate does not chage bond lengths or mess up center of mass
+    co2 = Molecule("CO2")
+    bond_length = norm(co2.charges[1].x - co2.charges[2].x)
+    for i = 1:100000
+        translate_to!(co2, 10.0 * [rand(), rand(), rand()])
+        translate_by!(co2, 5.0 * [randn(), randn(), randn()])
+        rotate!(co2)
+    end
+    @test isapprox(norm(co2.charges[1].x - co2.charges[2].x), bond_length, atol=1e-12)
+    @test isapprox(norm(co2.atoms[1].x - co2.atoms[2].x), bond_length, atol=1e-12)
+    @test isapprox(co2.x_com, co2.atoms[1].x, atol=1e-12) # should be on carbon
+    #.atoms and charges shld have same coords still
+    @test all([isapprox(co2.atoms[k].x, co2.charges[k].x, atol=1e-12) for k = 1:3]) 
+    # bond angles preserved.
+    co_vector1 = co2.atoms[2].x - co2.atoms[1].x
+    co_vector2 = co2.atoms[3].x - co2.atoms[1].x
+    @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-12)
+end
+
+@testset "NearestImage Tests" begin
+    dxf = [-0.8, -0.4, 0.7]
+    nearest_image!(dxf)
+    @test isapprox(dxf, [0.2, -0.4, -0.3])
+
+    dxf = [-0.3, -0.1, -0.9]
+    nearest_image!(dxf)
+    @test isapprox(dxf, [-0.3, -0.1, 0.1])
+
+    box = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
+    x = [0.9, 0.1, 0.1]
+    y = [0.0, 0.0, 0.0]
+    @test nearest_r(x, y, box) ≈ norm([-0.1, 0.1, 0.1])
+    x = [0.5, 0.5, 0.5]
+    y = [0.4, 0.4, 0.35]
+    @test nearest_r(x, y, box) ≈ norm(x-y)
+end
+
+ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 frame = Framework("test_structure.cif") # .cif
 strip_numbers_from_atom_labels!(frame)
 rep_factors = replication_factors(frame.box, ljforcefield)
 @testset "Forcefield Tests" begin
     molecule = Molecule("CO2")
     @test check_forcefield_coverage(molecule, ljforcefield)
-	@test ljforcefield.pure_σ[:He] == 1.0
-	@test ljforcefield.pure_ϵ[:Zn] == 12.0
-	@test ljforcefield.σ²[:Zn][:He] == ((1.0 + 3.0) / 2) ^ 2
-	@test ljforcefield.ϵ[:He][:Zn] == sqrt(12.0 * 3.0)
-	@test ljforcefield.ϵ[:He][:Zn] == ljforcefield.ϵ[:Zn][:He] # symmetry
-	@test ljforcefield.σ²[:He][:Zn] == ljforcefield.σ²[:Zn][:He] # symmetry
-	@test ljforcefield.cutoffradius_squared == 12.5 ^ 2
-	@test rep_factors == (25, 25, 25)
+ @test ljforcefield.pure_σ[:He] == 1.0
+ @test ljforcefield.pure_ϵ[:Zn] == 12.0
+ @test ljforcefield.σ²[:Zn][:He] == ((1.0 + 3.0) / 2) ^ 2
+ @test ljforcefield.ϵ[:He][:Zn] == sqrt(12.0 * 3.0)
+ @test ljforcefield.ϵ[:He][:Zn] == ljforcefield.ϵ[:Zn][:He] # symmetry
+ @test ljforcefield.σ²[:He][:Zn] == ljforcefield.σ²[:Zn][:He] # symmetry
+ @test ljforcefield.cutoffradius_squared == 12.5 ^ 2
+ @test rep_factors == (25, 25, 25)
     # force field coverage function
     framework10 = Framework("SBMOF-1.cif")
     @test isapprox(framework10.box, Box(framework10.box.f_to_c))
@@ -226,7 +251,7 @@ end;
     m2 = Molecule("He")
     m2.atoms[1].x[:] = frame.box.f_to_c * [1.5, 2.5, 3.5] # same spot as m1
     frame = replicate(frame, (4, 5, 4))
-	@test vdw_energy(frame, m1, ljforcefield) ≈ vdw_energy(frame, m2, ljforcefield)
+ @test vdw_energy(frame, m1, ljforcefield) ≈ vdw_energy(frame, m2, ljforcefield)
 
     # Xe in SBMOF-1 tests, comparing to RASPA
     sbmof1 = Framework("SBMOF-1.cif")
@@ -236,10 +261,10 @@ end;
     @test ! charged(xenon)
     xenon.atoms[1].x[:] = zeros(3)
     energy = vdw_energy(sbmof1, xenon, ljforcefield)
-	@test isapprox(energy, -5041.58, atol = 0.005)
+ @test isapprox(energy, -5041.58, atol = 0.005)
     xenon.atoms[1].x[1] = 0.494265; xenon.atoms[1].x[2] = 2.22668; xenon.atoms[1].x[3] = 0.450354;
     energy = vdw_energy(sbmof1, xenon, ljforcefield)
-	@test isapprox(energy, 12945.838, atol = 0.005)
+ @test isapprox(energy, 12945.838, atol = 0.005)
 
     # NIST data to test LJ potentials
     # data from here: https://www.nist.gov/mml/csd/chemical-informatics-research-group/lennard-jones-fluid-reference-calculations
@@ -312,19 +337,14 @@ end
     @test isapprox(PorousMaterials.square(us), SystemPotentialEnergy(PorousMaterials.square(u), PorousMaterials.square(v))) # square
 end
 
-framework = Framework("NU-1000_Greg.cif")
-
- # kreps = (11, 11, 9)
- # α = 0.265058
-sr_cutoff_r = 12.5
-rep_factors = replication_factors(framework, sr_cutoff_r)
-sim_box = replicate(framework.box, rep_factors)
-framework = replicate(framework, rep_factors)
-eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, verbose=false, ϵ=1e-6)
-
-q_test = 0.8096
-
-@testset "ElectrostaticEnergetics.jl Tests" begin
+@testset "ElectrostaticEnergetics Tests" begin
+    framework = Framework("NU-1000_Greg.cif")
+    sr_cutoff_r = 12.5
+    rep_factors = replication_factors(framework, sr_cutoff_r)
+    sim_box = replicate(framework.box, rep_factors)
+    framework = replicate(framework, rep_factors)
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sr_cutoff_r, sim_box, verbose=false, ϵ=1e-6)
+    q_test = 0.8096
     # ensure getting right Ewald settings
     #  note there are differnet method to choose
     #  these params for a givne precision so if you changed
@@ -340,19 +360,19 @@ q_test = 0.8096
 
     x = [9.535619863743, 20.685576379935, 0.127344239990]
     pc = PointCharge(q_test, x)
-    m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
+    m = Molecule(:pt_charge, LJSphere[], [pc], x)
     ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ, 111373.38, atol=2.5)
 
     x = [4.269654927228, 23.137319129548, 28.352847101096]
     pc = PointCharge(q_test, x)
-    m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
+    m = Molecule(:pt_charge, LJSphere[], [pc], x)
     ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ, -531.0, atol=0.5)
 
     x = [-0.047382031804, 7.209555961450, 5.158180463556]
     pc = PointCharge(q_test, x)
-    m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
+    m = Molecule(:pt_charge, LJSphere[], [pc], x)
     ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
     @test isapprox(ϕ, -2676.8230141, atol=0.5)
 
@@ -397,7 +417,7 @@ q_test = 0.8096
                    com += q.x
                 end
                 com /= 3
-                m = Molecule(:H2O, [], qs, com)
+                m = Molecule(:H2O, LJSphere[], qs, com)
                 @assert(PorousMaterials.total_charge(m) == 0.0)
                 push!(ms, m)
                 @assert(isapprox(PorousMaterials.total_charge(m), 0.0, rtol=0.001))
@@ -438,11 +458,11 @@ q_test = 0.8096
     ###
     zif71 = Framework("zif71_bogus_charges.cif")
     strip_numbers_from_atom_labels!(zif71)
-    ff = read_forcefield_file("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
+    ff = LJForceField("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
     co2 = Molecule("CO2EPM2")
 
     # test 1: guest-host
-    @assert(co2.atoms[1].atom == :C_CO2) # assumed C is first in input file...
+    @assert(co2.atoms[1].species == :C_CO2) # assumed C is first in input file...
     @assert(isapprox(co2.charges[1].q, 0.7)) # assumed C is first in input file...
     # load in coordinates of CO2 at test location
     co2.atoms[1].x[:] =  zif71.box.f_to_c * [0.50543, 0.57349, 0.50788] # C
@@ -452,7 +472,7 @@ q_test = 0.8096
     co2.charges[2].x[:] =  zif71.box.f_to_c * [0.46884, 0.57393, 0.52461] # O
     co2.charges[3].x[:] =  zif71.box.f_to_c * [0.54203, 0.57305, 0.49116] # O
     # test vdW energy
-	@test isapprox(vdw_energy(zif71, co2, ff), -132.56, atol=0.01)
+    @test isapprox(vdw_energy(zif71, co2, ff), -132.56, atol=0.01)
     # test electrostatics
     eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, zif71.box, verbose=false, ϵ=1e-6)
     ϕ = electrostatic_potential_energy(zif71, co2, eparams, kvecs, eikar, eikbr, eikcr)
@@ -495,234 +515,217 @@ q_test = 0.8096
 
 end
 
- # @printf("\n------------------------------\nTesting GCMC.jl\n\n")
- # @testset "Monte Carlo Functions Tests" begin
- #     # replicating the unit cell to construct simulation box
- #     sbmof1 = Framework("SBMOF-1.cif")
- #     sim_box = replicate(sbmof1.box, (1, 1, 1))
- #     @test isapprox(sim_box, sbmof1.box)
- #     sim_box = replicate(sbmof1.box, (2, 3, 4))
- #     @test sim_box.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
- #     @test all(sim_box.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
- # 
- #     #
- #     #INSERTION TESTS
- #     #
- #     insertion_inside_box = true
- #     insertion_at_random_coords = true
- #     insertion_adds_molecule = true
- # 
- #     molecules = Array{Molecule}(0)
- #     # TODO rm these?
- #     repfactors = replication_factors(frame.box, ljforcefield)
- #     sim_box = replicate(frame.box, repfactors)
- # 
- #     m = Molecule("He")
- #     for i = 1:100
- #         insert_molecule!(molecules, sim_box, m)
- #         if outside_box(molecules[i], sim_box)
- #             insertion_inside_box = false
- #         end
- #         if ! (length(molecules) == i)
- #             insertion_adds_molecule = false
- #         end
- #         if i > 1
- #             if isapprox(molecules[i - 1], molecules[i])
- #                 # by chance this could fail but highly unlikely!
- #                 insertion_at_random_coords = false
- #             end
- #         end
- #     end
- #     @test insertion_inside_box
- #     @test insertion_at_random_coords
- #     @test insertion_adds_molecule
- # 
- #     #
- #     #DELETION TESTS
- #     #
- #     deletion_removes_a_molecule = true
- #     for i = 1:100
- #         delete_molecule!(rand(1:length(molecules)), molecules)
- #         if length(molecules) != 100 - i
- #             deletion_removes_a_molecule = false
- #         end
- #     end
- #     @test deletion_removes_a_molecule
- # 
- #     #
- #     #TRANSLATION TESTS
- #     #
- #     # first, test function to bring molecule inside a box.
- #     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
- #     molecule = Molecule("He")
- #     translate_to!(molecule, [26.0, -0.2, 12.])
- #     apply_periodic_boundary_condition!(molecule, box)
- #     @test isapprox(molecule.x_com, [1.0, 24.8, 12.0])
- #     @test isapprox(molecule.atoms[1].x, [1.0, 24.8, 12.0])
- # 
- #     translation_old_molecule_stored_properly = true
- #     translation_coords_changed = true
- #     translation_inside_box = true
- #     molecules = [Molecule("He"), Molecule("He")]
- #     translate_to!(molecules[1], sim_box.f_to_c * [0.99, 0.99, 0.01])
- #     translate_to!(molecules[2], sim_box.f_to_c * [0.99, 0.99, 0.01])
- #     old_molecule = translate_molecule!(molecules[1], sim_box)
- #     if ! isapprox(old_molecule, molecules[2]) # constructed to be identitical!
- #         translation_old_molecule_stored_properly = false
- #     end
- #     if isapprox(molecules[1], molecules[2])
- #         translation_coords_changed = false
- #     end
- # 
- #     for i = 1:100000
- #         which_molecule = rand(1:2) # choose molecule to move
- #         old_molecule_should_be = deepcopy(molecules[which_molecule])
- #         old_molecule = translate_molecule!(molecules[which_molecule], sim_box)
- #         if ! isapprox(old_molecule, old_molecule_should_be)
- #             translation_coords_changed = false
- #         end
- #         if outside_box(molecules[which_molecule], sim_box)
- #             translation_inside_box = false
- #         end
- #     end
- #     @test translation_old_molecule_stored_properly
- #     @test translation_coords_changed
- #     @test translation_inside_box
- # 
- #     #
- #     #REINSERTION TESTS
- #     #
- #     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
- #     molecules = [Molecule("He"), Molecule("CO2")]
- #     old_he = reinsert_molecule!(molecules[1], box)
- #     old_co2 = reinsert_molecule!(molecules[2], box)
- #     @test isapprox(old_he, Molecule("He"))
- #     @test isapprox(old_co2, Molecule("CO2"))
- #     @test ! isapprox(molecules[1].x_com, Molecule("He").x_com)
- #     @test ! isapprox(molecules[2].x_com, Molecule("CO2").x_com)
- # end
- # @printf("------------------------------\n")
- # @testset "Guest-guest Energetics Tests" begin
- #     dxf = [-0.8, -0.4, 0.7]
- #     nearest_image!(dxf)
- #     @test isapprox(dxf, [0.2, -0.4, -0.3])
- # 
- #     dxf = [0.8 -0.3; -0.2 -0.1; 0.9 -0.9]
- #     nearest_image!(dxf)
- #     @test isapprox(dxf, [-0.2 -0.3; -0.2 -0.1; -0.1 0.1])
- # 
- #     sim_box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
- #     # a He and Xe a distance of 6.0 away
- #     xe = Molecule("Xe")
- #     he = Molecule("He")
- #     translate_to!(xe, [5.0, 12.0, 12.0])
- #     translate_to!(he, [11.0, 12.0, 12.0])
- #     molecules = [xe, he]
- #     r² = (11.0 - 5.0) ^ 2 # duh
- #     energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:Xe][:He])
- #     @test energy ≈ vdw_energy(1, molecules, ljforcefield, sim_box)
- #     @test energy ≈ vdw_energy(2, molecules, ljforcefield, sim_box) # symmetry
- # 
- #     # via PBC, a distance (24.0 - 5.0) > (1+5)
- #     translate_to!(molecules[2], [24.0, 12.0, 12.0])
- #     r² = (1.0 + 5.0) ^ 2 # PBC
- #     energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:He][:Xe])
- #     @test energy ≈ vdw_energy(2, molecules, ljforcefield, sim_box)
- #     @test energy ≈ vdw_energy(1, molecules, ljforcefield, sim_box) # symmetry again.
- # 
- #     # put a molecule on top of first one.
- #     push!(molecules, deepcopy(molecules[1]))
- #     @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 2 * energy
- # 
- #     @test vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
- #     @test vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
- # 
- #     # interaction energy between first and second should be same via PBC
- #     molecules_a = [Molecule("Xe"), Molecule("He")]
- #     translate_to!(molecules_a[1], [11.0, 1.0, 12.0])
- #     translate_to!(molecules_a[2], [11.0, 4.0, 12.0])
- #     molecules_b = [Molecule("Xe"), Molecule("He")]
- #     translate_to!(molecules_b[1], [11.0, 1.0, 12.0])
- #     translate_to!(molecules_b[2], [11.0, 23.0, 12.0])
- #     @test vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ vdw_energy(1, molecules_b, ljforcefield, sim_box)
- # 
- #     # another PBC one where three coords are different.
- #     molecules = [Molecule("Xe"), Molecule("He")]
- #     translate_to!(molecules[1], [24.0, 23.0, 11.0])
- #     translate_to!(molecules[2], [22.0, 2.0, 12.0])
- #     r² = 4.0^2 + 2.0^2 + 1.0^2
- #     energy = lennard_jones(r², ljforcefield.σ²[:He][:Xe], ljforcefield.ϵ[:He][:Xe])
- #     @test vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy
- #     @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ energy
- # 
- #     # test cutoff radius. molecules here are too far to interact
- #     translate_to!(molecules[1], [0.0, 0.0, 0.0])
- #     translate_to!(molecules[2], [12.0, 12.0, 12.0])
- #     @test vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
- #     @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
- #     # the position of a molecule should not change inside vdw_energy.
- #     @test all(molecules[1].atoms[1].x .== [0.0, 0.0, 0.0])
- #     @test all(molecules[2].atoms[1].x .== [12.0, 12.0, 12.0])
- #     # TODO write tests for CO2 where there are more than one beads
- # 
- #     # Molecules with more than one ljsphere
- # 
- #     # two CO2 molecules 6.0 units apart
- #     molecules_co2 = [Molecule("CO2"), Molecule("CO2")]
- #     translate_to!(molecules_co2[1], [12.0, 9.0, 12.0])
- #     translate_to!(molecules_co2[2], [12.0, 15.0, 12.0])
- #     # because the molecules have not been rotated, all corresponding beads are same
- #     #   distance apart when they are separated along the y-axis
- #     r²_com = (15.0 - 9.0)^2
- #     # distance between teh central carbon and an oxygen in one molecule this
- #     #   takes advantage of the fact that the carbon is the central atom, and that
- #     #   all three atoms are in a line
- #     r²_co = 1.16^2
- #     # distance between the two oxygens in one molecule
- #     r²_oo = (2.0 * 1.16)^2
- #     energy = (2.0 * lennard_jones(r²_com, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
- #         + 4.0 * lennard_jones(r²_com + r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2])
- #         + 2.0 * lennard_jones(r²_com + r²_oo, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
- #         + lennard_jones(r²_com, ljforcefield.σ²[:C_CO2][:C_CO2], ljforcefield.ϵ[:C_CO2][:C_CO2]))
- #     @test vdw_energy(1, molecules_co2, ljforcefield, sim_box) ≈ energy
- #     @test vdw_energy(2, molecules_co2, ljforcefield, sim_box) ≈ energy
- #     # TODO this didn't work when the symbols were regular (:O and :C) but it did work when they were :C_CO2 and :O_CO2
- # 
- #     # PBC placing one at 2.0 and the other at 21.0
- #     translate_to!(molecules_co2[1], [12.0, 2.0, 12.0])
- #     translate_to!(molecules_co2[2], [12.0, 21.0, 12.0])
- #     r²_com = (4.0 + 2.0)^2
- #     energy = (2.0 * lennard_jones(r²_com, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
- #         + 4.0 * lennard_jones(r²_com + r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2])
- #         + 2.0 * lennard_jones(r²_com + r²_oo, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
- #         + lennard_jones(r²_com, ljforcefield.σ²[:C_CO2][:C_CO2], ljforcefield.ϵ[:C_CO2][:C_CO2]))
- #     @test vdw_energy(1, molecules_co2, ljforcefield, sim_box) ≈ energy
- #     @test vdw_energy(2, molecules_co2, ljforcefield, sim_box) ≈ energy
- # 
- #     # testing cutoff radius, so only one oxygen from each will be able to interact
- #     # making a larger sim_box so that only a few.atoms from each CO2 will be able to interact
- #     sim_box_large = Box(50.0, 50.0, 50.0, π/2, π/2, π/2)
- #     # placed 12.6 units apart so the C atoms will be outside the cutoff radius,
- #     #   but one O atom from each will be inside, so these will interact
- #     translate_to!(molecules_co2[1], [0.0, 0.0, 0.0])
- #     translate_to!(molecules_co2[2], [13.0, 0.0, 0.0])
- #     r²_com = (13.0)^2
- #     r²_o = (13.0 - (2.0 * 1.16))^2
- #     r²_co = (13.0 - 1.16)^2
- #     energy = (lennard_jones(r²_o, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
- #         + 2 * lennard_jones(r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2]))
- #     @test vdw_energy(1, molecules_co2, ljforcefield, sim_box_large) ≈ energy
- #     @test vdw_energy(2, molecules_co2, ljforcefield, sim_box_large) ≈ energy
- # end
- # 
- # @printf("------------------------------\n")
- # @testset "Equation of State (EOS.jl) Tests" begin
- #     # Peng-Robinsion EOS test for methane.
- #     gas = PengRobinsonGas(:CH4)
- #     props = calculate_properties(gas, 298.0, 65.0, verbose=false)
- #     @test isapprox(props["compressibility factor"], 0.874496226625811, atol=1e-4)
- #     @test isapprox(props["fugacity coefficient"], 0.8729028157628362, atol=1e-4)
- #     @test isapprox(props["fugacity (bar)"], 65.0 * 0.8729028157628362, atol=1e-4)
- #     @test isapprox(props["density (mol/m³)"], 3000.054418, atol=0.2)
- #     @test isapprox(props["molar volume (L/mol)"], 0.333327, atol=1e-4)
- # end
+@testset "MCHelpers Tests" begin
+    sim_box = Framework("SBMOF-1.cif").box
+
+    #
+    #INSERTION TESTS
+    #
+    insertion_inside_box = true
+    insertion_at_random_coords = true
+    insertion_adds_molecule = true
+
+    molecules = Array{Molecule}(0)
+
+    m = Molecule("He")
+    for i = 1:100
+        insert_molecule!(molecules, sim_box, m)
+        if outside_box(molecules[i], sim_box)
+            insertion_inside_box = false
+        end
+        if ! (length(molecules) == i)
+            insertion_adds_molecule = false
+        end
+        if i > 1
+            if isapprox(molecules[i - 1], molecules[i])
+                # by chance this could fail but highly unlikely!
+                insertion_at_random_coords = false
+            end
+        end
+    end
+    @test insertion_inside_box
+    @test insertion_at_random_coords
+    @test insertion_adds_molecule
+
+    #
+    #DELETION TESTS
+    #
+    deletion_removes_a_molecule = true
+    for i = 1:100
+        delete_molecule!(rand(1:length(molecules)), molecules)
+        if length(molecules) != 100 - i
+            deletion_removes_a_molecule = false
+        end
+    end
+    @test deletion_removes_a_molecule
+
+    #
+    #TRANSLATION TESTS
+    #
+    # first, test function to bring molecule inside a box.
+    box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    molecule = Molecule("He")
+    translate_to!(molecule, [26.0, -0.2, 12.])
+    apply_periodic_boundary_condition!(molecule, box)
+    @test isapprox(molecule.x_com, [1.0, 24.8, 12.0])
+    @test isapprox(molecule.atoms[1].x, [1.0, 24.8, 12.0])
+
+    translation_old_molecule_stored_properly = true
+    translation_coords_changed = true
+    translation_inside_box = true
+    molecules = [Molecule("He"), Molecule("He")]
+    translate_to!(molecules[1], sim_box.f_to_c * [0.99, 0.99, 0.01])
+    translate_to!(molecules[2], sim_box.f_to_c * [0.99, 0.99, 0.01])
+    old_molecule = translate_molecule!(molecules[1], sim_box)
+    if ! isapprox(old_molecule, molecules[2]) # constructed to be identitical!
+        translation_old_molecule_stored_properly = false
+    end
+    if isapprox(molecules[1], molecules[2])
+        translation_coords_changed = false
+    end
+
+    for i = 1:100000
+        which_molecule = rand(1:2) # choose molecule to move
+        old_molecule_should_be = deepcopy(molecules[which_molecule])
+        old_molecule = translate_molecule!(molecules[which_molecule], sim_box)
+        if ! isapprox(old_molecule, old_molecule_should_be)
+            translation_coords_changed = false
+        end
+        if outside_box(molecules[which_molecule], sim_box)
+            translation_inside_box = false
+        end
+    end
+    @test translation_old_molecule_stored_properly
+    @test translation_coords_changed
+    @test translation_inside_box
+
+    #
+    #REINSERTION TESTS
+    #
+    box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    molecules = [Molecule("He"), Molecule("CO2")]
+    old_he = reinsert_molecule!(molecules[1], box)
+    old_co2 = reinsert_molecule!(molecules[2], box)
+    @test isapprox(old_he, Molecule("He"))
+    @test isapprox(old_co2, Molecule("CO2"))
+    @test ! isapprox(molecules[1].x_com, Molecule("He").x_com)
+    @test ! isapprox(molecules[2].x_com, Molecule("CO2").x_com)
+end
+
+@testset "Guest-guest Energetics Tests" begin
+    # TODO put these with VdWEnergetics
+    ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)
+    sim_box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
+    # a He and Xe a distance of 6.0 away
+    xe = Molecule("Xe")
+    he = Molecule("He")
+    translate_to!(xe, [5.0, 12.0, 12.0])
+    translate_to!(he, [11.0, 12.0, 12.0])
+    molecules = [xe, he]
+    r² = (11.0 - 5.0) ^ 2 # duh
+    energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:Xe][:He])
+    @test energy ≈ vdw_energy(1, molecules, ljforcefield, sim_box)
+    @test energy ≈ vdw_energy(2, molecules, ljforcefield, sim_box) # symmetry
+
+    # via PBC, a distance (24.0 - 5.0) > (1+5)
+    translate_to!(molecules[2], [24.0, 12.0, 12.0])
+    r² = (1.0 + 5.0) ^ 2 # PBC
+    energy = lennard_jones(r², ljforcefield.σ²[:Xe][:He], ljforcefield.ϵ[:He][:Xe])
+    @test energy ≈ vdw_energy(2, molecules, ljforcefield, sim_box)
+    @test energy ≈ vdw_energy(1, molecules, ljforcefield, sim_box) # symmetry again.
+
+    # put a molecule on top of first one.
+    push!(molecules, deepcopy(molecules[1]))
+    @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 2 * energy
+
+    @test vdw_energy(1, molecules, ljforcefield, sim_box) == Inf
+    @test vdw_energy(3, molecules, ljforcefield, sim_box) == Inf
+
+    # interaction energy between first and second should be same via PBC
+    molecules_a = [Molecule("Xe"), Molecule("He")]
+    translate_to!(molecules_a[1], [11.0, 1.0, 12.0])
+    translate_to!(molecules_a[2], [11.0, 4.0, 12.0])
+    molecules_b = [Molecule("Xe"), Molecule("He")]
+    translate_to!(molecules_b[1], [11.0, 1.0, 12.0])
+    translate_to!(molecules_b[2], [11.0, 23.0, 12.0])
+    @test vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ vdw_energy(1, molecules_b, ljforcefield, sim_box)
+
+    # another PBC one where three coords are different.
+    molecules = [Molecule("Xe"), Molecule("He")]
+    translate_to!(molecules[1], [24.0, 23.0, 11.0])
+    translate_to!(molecules[2], [22.0, 2.0, 12.0])
+    r² = 4.0^2 + 2.0^2 + 1.0^2
+    energy = lennard_jones(r², ljforcefield.σ²[:He][:Xe], ljforcefield.ϵ[:He][:Xe])
+    @test vdw_energy(1, molecules, ljforcefield, sim_box) ≈ energy
+    @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ energy
+
+    # test cutoff radius. molecules here are too far to interact
+    translate_to!(molecules[1], [0.0, 0.0, 0.0])
+    translate_to!(molecules[2], [12.0, 12.0, 12.0])
+    @test vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
+    @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
+    # the position of a molecule should not change inside vdw_energy.
+    @test all(molecules[1].atoms[1].x .== [0.0, 0.0, 0.0])
+    @test all(molecules[2].atoms[1].x .== [12.0, 12.0, 12.0])
+    # TODO write tests for CO2 where there are more than one beads
+
+    # Molecules with more than one ljsphere
+
+    # two CO2 molecules 6.0 units apart
+    molecules_co2 = [Molecule("CO2"), Molecule("CO2")]
+    translate_to!(molecules_co2[1], [12.0, 9.0, 12.0])
+    translate_to!(molecules_co2[2], [12.0, 15.0, 12.0])
+    # because the molecules have not been rotated, all corresponding beads are same
+    #   distance apart when they are separated along the y-axis
+    r²_com = (15.0 - 9.0)^2
+    # distance between teh central carbon and an oxygen in one molecule this
+    #   takes advantage of the fact that the carbon is the central atom, and that
+    #   all three atoms are in a line
+    r²_co = 1.16^2
+    # distance between the two oxygens in one molecule
+    r²_oo = (2.0 * 1.16)^2
+    energy = (2.0 * lennard_jones(r²_com, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + 4.0 * lennard_jones(r²_com + r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2])
+        + 2.0 * lennard_jones(r²_com + r²_oo, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + lennard_jones(r²_com, ljforcefield.σ²[:C_CO2][:C_CO2], ljforcefield.ϵ[:C_CO2][:C_CO2]))
+    @test vdw_energy(1, molecules_co2, ljforcefield, sim_box) ≈ energy
+    @test vdw_energy(2, molecules_co2, ljforcefield, sim_box) ≈ energy
+    # TODO this didn't work when the symbols were regular (:O and :C) but it did work when they were :C_CO2 and :O_CO2
+
+    # PBC placing one at 2.0 and the other at 21.0
+    translate_to!(molecules_co2[1], [12.0, 2.0, 12.0])
+    translate_to!(molecules_co2[2], [12.0, 21.0, 12.0])
+    r²_com = (4.0 + 2.0)^2
+    energy = (2.0 * lennard_jones(r²_com, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + 4.0 * lennard_jones(r²_com + r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2])
+        + 2.0 * lennard_jones(r²_com + r²_oo, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + lennard_jones(r²_com, ljforcefield.σ²[:C_CO2][:C_CO2], ljforcefield.ϵ[:C_CO2][:C_CO2]))
+    @test vdw_energy(1, molecules_co2, ljforcefield, sim_box) ≈ energy
+    @test vdw_energy(2, molecules_co2, ljforcefield, sim_box) ≈ energy
+
+    # testing cutoff radius, so only one oxygen from each will be able to interact
+    # making a larger sim_box so that only a few.atoms from each CO2 will be able to interact
+    sim_box_large = Box(50.0, 50.0, 50.0, π/2, π/2, π/2)
+    # placed 12.6 units apart so the C atoms will be outside the cutoff radius,
+    #   but one O atom from each will be inside, so these will interact
+    translate_to!(molecules_co2[1], [0.0, 0.0, 0.0])
+    translate_to!(molecules_co2[2], [13.0, 0.0, 0.0])
+    r²_com = (13.0)^2
+    r²_o = (13.0 - (2.0 * 1.16))^2
+    r²_co = (13.0 - 1.16)^2
+    energy = (lennard_jones(r²_o, ljforcefield.σ²[:O_CO2][:O_CO2], ljforcefield.ϵ[:O_CO2][:O_CO2])
+        + 2 * lennard_jones(r²_co, ljforcefield.σ²[:O_CO2][:C_CO2], ljforcefield.ϵ[:O_CO2][:C_CO2]))
+    @test vdw_energy(1, molecules_co2, ljforcefield, sim_box_large) ≈ energy
+    @test vdw_energy(2, molecules_co2, ljforcefield, sim_box_large) ≈ energy
+end
+
+@testset "EOS Tests" begin
+    # Peng-Robinsion EOS test for methane.
+    gas = PengRobinsonGas(:CH4)
+    props = calculate_properties(gas, 298.0, 65.0, verbose=false)
+    @test isapprox(props["compressibility factor"], 0.874496226625811, atol=1e-4)
+    @test isapprox(props["fugacity coefficient"], 0.8729028157628362, atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 65.0 * 0.8729028157628362, atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], 3000.054418, atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], 0.333327, atol=1e-4)
+end

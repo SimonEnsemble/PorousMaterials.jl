@@ -1,11 +1,10 @@
-import Base: +, -, /, *
-
 """
     nearest_image!(dxf)
+
 Applies the nearest image convention on a vector `dxf` between two atoms in fractional 
 space; modifies `dxf` for nearest image convention. Fractional coordinates here fall in
 [0, 1] so that the box is [0, 1]^3 in fractional space.
-See comments in vdw_energy for more description.
+
 # Arguments
 - `dxf::Array{Float64, 1}`: A vector between two atoms in fractional coordinates
 """
@@ -17,14 +16,22 @@ function nearest_image!(dxf::Array{Float64, 1})
     end
 end
 
-function nearest_image!(dxf::Array{Float64, 2})
-    for a = 1:size(dxf)[2] # loop over atoms
-        for k = 1:3 # loop over components
-            @inbounds if abs(dxf[k, a]) > 0.5
-                @inbounds dxf[k, a] -= sign(dxf[k, a])
-            end
-        end
-    end
+@inline function nearest_r²(x::Array{Float64, 1}, y::Array{Float64, 1}, box::Box)
+    # vector from y to x
+    @inbounds dx = x - y
+    # convert to fractional coordinates
+    @inbounds dx = box.c_to_f * dx
+    # apply nearest image convention
+    nearest_image!(dx)
+    # convert back to cartesian
+    @inbounds dx = box.f_to_c * dx
+    # return r²
+    @inbounds r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
+    return r²
+end
+
+@inline function nearest_r(x::Array{Float64, 1}, y::Array{Float64, 1}, box::Box)
+    return sqrt(nearest_r²(x, y, box))
 end
 
 # Arni's notes on Nearest image convention.
