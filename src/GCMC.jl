@@ -131,10 +131,10 @@ same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes
 exception is that we pass an array of fugacities. The adsorption isotherm is computed step-
 wise, where the ending configuration from the previous simulation (array of molecules) is
 passed into the next simulation as a starting point. The ordering of `fugacities` is
-honored. By giving each simulation a good starting point, (if the next fugacity does not
-differ significantly from the previous fugacity), we can reduce the number of burn cycles
+honored. By giving each simulation a good starting point, (if the next pressure does not
+differ significantly from the previous pressure), we can reduce the number of burn cycles
 required to reach equilibrium in the Monte Carlo simulation. Also see
-[`adsorption_isotherm`](@ref) which runs the μVT simulation at each fugacity in parallel.
+[`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
 function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
                                       fugacities::Array{Float64, 1}, molecule::Molecule,
@@ -142,17 +142,17 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       n_initial_burn_cycles::Int=10000, 
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                                       sample_frequency::Int=10, verbose::Bool=true,
-                                      ewald_precision::Float64=1e-6)
+                                      ewald_precision::Float64=1e-6, eos=:ideal)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
-    for (i, fugacity) in enumerate(fugacities)
-        result, molecules = gcmc_simulation(framework, temperature, fugacity, molecule,
+    for (i, pressure) in enumerate(fugacities)
+        result, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
                                             ljforcefield, 
                                             n_burn_cycles=(i==1) ? n_initial_burn_cycles : n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
                                             verbose=verbose, molecules=molecules,
-                                            ewald_precision=ewald_precision)
+                                            ewald_precision=ewald_precision, eos=eos)
         push!(results, result)
     end
 
@@ -173,40 +173,42 @@ cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
 function adsorption_isotherm(framework::Framework, temperature::Float64,
-                             fugacities::Array{Float64, 1}, molecule::Molecule,
+                             pressures::Array{Float64, 1}, molecule::Molecule,
                              ljforcefield::LennardJonesForceField;
                              n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                              sample_frequency::Int=25, verbose::Bool=true,
-                             ewald_precision::Float64=1e-6)
-    # make a function of fugacity only to facilitate uses of `pmap`
-    run_fugacity(fugacity::Float64) = gcmc_simulation(framework, temperature, fugacity,
+                             ewald_precision::Float64=1e-6, eos=:ideal)
+    # make a function of pressure only to facilitate uses of `pmap`
+    run_pressure(pressure::Float64) = gcmc_simulation(framework, temperature, pressure,
                                                       molecule, ljforcefield,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
                                                       sample_frequency=sample_frequency,
                                                       verbose=verbose,
-                                                      ewald_precision=ewald_precision)[1] # only return results
+                                                      ewald_precision=ewald_precision,
+                                                      eos=eos)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
     ids = sortperm(fugacities, rev=true)
 
     # run gcmc simulations in parallel using Julia's pmap parallel computing function
-    results = pmap(run_fugacity, fugacities[ids])
+    results = pmap(run_pressure, fugacities[ids])
 
-    # return results in same order as original fugacity even though we permuted them for
+    # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
     return results[[find(x -> x==i, ids)[1] for i = 1:length(ids)]]
 end
 
 
 """
-    results, molecules = gcmc_simulation(framework, temperature, fugacity, molecule,
+    results, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
                                          ljforcefield; n_sample_cycles=100000,
                                          n_burn_cycles=10000, sample_frequency=25,
-                                         verbose=false, molecules=Molecule[])
+                                         verbose=false, molecules=Molecule[],
+                                         eos=:ideal)
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
-framework at a particular temperature and fugacity (= pressure for an ideal gas) using a
+framework at a particular temperature and pressure using a
 Lennard Jones force field.
 
 A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
@@ -217,8 +219,8 @@ translation.
 - `framework::Framework`: the porous crystal in which we seek to simulate adsorption
 - `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
     in the porous material. units: Kelvin (K)
-- `fugacity::Float64`: fugacity of bulk gas phase in equilibrium with adsorbed phase in the
-    porous material. Equal to pressure for an ideal gas. units: Pascal (Pa)
+- `pressure::Float64`: pressure of bulk gas phase in equilibrium with adsorbed phase in the
+    porous material. units: bar
 - `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
     the adsorption
 - `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
@@ -230,16 +232,33 @@ translation.
     gas molecules every this number of Markov proposals.
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework
+- `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
+is ideal gas, where fugacity = pressure.
 """
-function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::Float64,
+function gcmc_simulation(framework::Framework, temperature::Float64, pressure::Float64,
                          molecule::Molecule, ljforcefield::LennardJonesForceField;
                          n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
                          sample_frequency::Int=5, verbose::Bool=true,
                          molecules::Array{Molecule, 1}=Molecule[],
-                         ewald_precision::Float64=1e-6)
+                         ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
     tic()
     if verbose
-        pretty_print(molecule.species, framework.name, temperature, fugacity, ljforcefield)
+        pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
+    end
+
+    # convert pressure to fugacity using an equation of state
+    fugacity = NaN
+    if eos == :ideal
+       fugacity = pressure * 100000.0 # bar --> Pa
+    elseif eos == :PengRobinson
+        prgas = PengRobinsonGas(molecule.species)
+        gas_props = calculate_properties(prgas, temperature, pressure, verbose=false)
+        fugacity = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
+    else
+        error("eos=:ideal and eos=:PengRobinson are only valid options for equation of state.")
+    end
+    if verbose
+        @printf("\t%s EOS fugacity = %f bar\n", eos, fugacity / 100000.0)
     end
 
     # replication factors for applying nearest image convention for short-range interactions
@@ -516,7 +535,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
     results["crystal"] = framework.name
     results["adsorbate"] = molecule.species
     results["forcefield"] = ljforcefield.name
-    results["fugacity (Pa)"] = fugacity
+    results["pressure (bar)"] = pressure
+    results["fugacity (bar)"] = fugacity / 100000.0
     results["temperature (K)"] = temperature
     results["repfactors"] = repfactors
 
@@ -584,22 +604,22 @@ function root_save_filename(framework::Framework,
                             molecule::Molecule,
                             ljforcefield::LennardJonesForceField,
                             temperature::Float64,
-                            fugacity::Float64,
+                            pressure::Float64,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int)
         frameworkname = split(framework.name, ".")[1] # remove file extension
         forcefieldname = split(ljforcefield.name, ".")[1] # remove file extension
-        return @sprintf("gcmc_%s_%s_T%f_fug%f_%s_%dburn_%dsample", frameworkname,
-                    molecule.species, temperature, fugacity, forcefieldname,
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample", frameworkname,
+                    molecule.species, temperature, pressure, forcefieldname,
                     n_burn_cycles, n_sample_cycles)
 end
 
 function print_results(results::Dict; print_title::Bool=true)
     if print_title
         # already print in GCMC tests...
-        @printf("GCMC simulation of %s in %s at %f K and %f Pa = %f bar fugacity using %s forcefield.\n\n",
+        @printf("GCMC simulation of %s in %s at %f K and %f bar pressure, %f bar fugacity using %s forcefield.\n\n",
                 results["adsorbate"], results["crystal"], results["temperature (K)"],
-                results["fugacity (Pa)"], results["fugacity (Pa)"] / 100000.0, results["forcefield"])
+                results["pressure (bar)"], results["fugacity (bar)"] / 100000.0, results["forcefield"])
     end
 
     @printf("\nUnit cell replication factors: %d %d %d\n\n", results["repfactors"][1],
@@ -636,7 +656,7 @@ function print_results(results::Dict; print_title::Bool=true)
 end
 
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, 
-                      fugacity::Float64, ljff::LennardJonesForceField)
+                      pressure::Float64, ljff::LennardJonesForceField)
     print("Simulating ")
     print_with_color(:yellow, "(μVT)")
     print(" adsorption of ")
@@ -646,8 +666,8 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print(" at ")
     print_with_color(:green, @sprintf("%f K", temperature))
     print(" and ")
-    print_with_color(:green, @sprintf("%f Pa", fugacity))
-    print(" (fugacity) with ")
+    print_with_color(:green, @sprintf("%f bar", pressure))
+    print(" (bar) with ")
     print_with_color(:green, split(ljff.name, ".")[1])
     println(" force field.")
 end
