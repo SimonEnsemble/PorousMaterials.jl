@@ -192,13 +192,13 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
     end
 
 	for (i, xf) in enumerate(grid_pts[1]), (j, yf) in enumerate(grid_pts[2]), (k, zf) in enumerate(grid_pts[3])
-        translate_to!(molecule, framework.box.f_to_c * [xf, yf, zf])
+        translate_to!(molecule, [xf, yf, zf])
         if ! rotations_required
             ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
             for r = 1:n_rotations
-                rotate!(molecule)
+                rotate!(molecule, framework.box)
                 energy = vdw_energy(framework, molecule, ljforcefield)
                 boltzmann_factor_sum += exp(-energy / temperature)
             end
