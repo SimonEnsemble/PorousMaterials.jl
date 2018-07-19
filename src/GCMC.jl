@@ -120,24 +120,24 @@ end
 end
 
 """
-    results = adsorption_isotherm(framework, temperature, fugacities, molecule,
+    results = stepwise_adsorption_isotherm(framework, temperature, pressures, molecule,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=10,
                                   verbose=false, molecules=Molecule[],
-                                  ewald_precision=1e-6)
+                                  ewald_precision=1e-6, eos=:ideal)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
-exception is that we pass an array of fugacities. The adsorption isotherm is computed step-
+exception is that we pass an array of pressures. The adsorption isotherm is computed step-
 wise, where the ending configuration from the previous simulation (array of molecules) is
-passed into the next simulation as a starting point. The ordering of `fugacities` is
+passed into the next simulation as a starting point. The ordering of `pressures` is
 honored. By giving each simulation a good starting point, (if the next pressure does not
 differ significantly from the previous pressure), we can reduce the number of burn cycles
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
 function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
-                                      fugacities::Array{Float64, 1}, molecule::Molecule,
+                                      pressures::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LennardJonesForceField;
                                       n_initial_burn_cycles::Int=10000, 
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
@@ -145,7 +145,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       ewald_precision::Float64=1e-6, eos=:ideal)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
-    for (i, pressure) in enumerate(fugacities)
+    for (i, pressure) in enumerate(pressures)
         result, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
                                             ljforcefield, 
                                             n_burn_cycles=(i==1) ? n_initial_burn_cycles : n_burn_cycles,
@@ -160,15 +160,15 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
 end
 
 """
-    results = adsorption_isotherm(framework, temperature, fugacities, molecule,
+    results = adsorption_isotherm(framework, temperature, pressures, molecule,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=25,
                                   verbose=false, molecules=Molecule[],
-                                  ewald_precision=1e-6)
+                                  ewald_precision=1e-6, eos=:ideal)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
-The only exception is that we pass an array of fugacities. To give Julia access to multiple
+The only exception is that we pass an array of pressures. To give Julia access to multiple
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
@@ -189,10 +189,10 @@ function adsorption_isotherm(framework::Framework, temperature::Float64,
                                                       eos=eos)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
-    ids = sortperm(fugacities, rev=true)
+    ids = sortperm(pressures, rev=true)
 
     # run gcmc simulations in parallel using Julia's pmap parallel computing function
-    results = pmap(run_pressure, fugacities[ids])
+    results = pmap(run_pressure, pressures[ids])
 
     # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
