@@ -60,7 +60,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     end
     df_lj = CSV.read(atomsfilename)
     
-    COM = [0.0, 0.0, 0.0]
+    x_com = [0.0, 0.0, 0.0]
     total_mass = 0.0
     atoms = LJSphere[]
     for row in eachrow(df_lj)
@@ -71,9 +71,9 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
         total_mass += atomic_masses[atom]
-        COM += atomic_masses[atom] .* x
+        x_com += atomic_masses[atom] .* x
     end
-    COM /= total_mass
+    x_com /= total_mass
 
     # Read in point charges
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
@@ -89,7 +89,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         push!(charges, PointCharge(row[:q], x))
     end
 
-    molecule = Molecule(Symbol(species), atoms, charges, COM)
+    molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
     # check for charge neutrality
     if length(charges) > 0
@@ -144,7 +144,7 @@ function Base.show(io::IO, molecule::Molecule)
     if length(molecule.atoms) > 0
         print(io, "Lennard-Jones spheres: ")
         for ljsphere in molecule.atoms
-            @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", ljsphere.atom,
+            @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", ljsphere.species,
                     ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
         end
     end
@@ -212,7 +212,7 @@ function rotate!(molecule::Molecule)
     # store the center of mass
     x_com = deepcopy(molecule.x_com)
     # move the molecule to the origin
-    translate_by!(molecule, x_com)
+    translate_by!(molecule, -x_com)
     # conduct the rotation
     for ljsphere in molecule.atoms
         ljsphere.x[:] = r * ljsphere.x
@@ -295,10 +295,7 @@ function total_charge(molecule::Molecule)
 end
 
 function charged(molecule::Molecule; verbose::Bool=false)
-    charged_flag = true
-    if length(molecule.charges) == 0
-        charged_flag = false
-    end
+    charged_flag = length(molecule.charges) > 0
     if verbose
         @printf("\tMolecule %s has point charges? %s\n", molecule.species, charged_flag)
     end

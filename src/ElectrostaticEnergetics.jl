@@ -301,13 +301,11 @@ function electrostatic_potential_energy(frame::Framework,
                                         eikbr::OffsetArray{Complex{Float64}},
                                         eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
-    for i = 1:frame.n_atoms
-        # construct a point charge for this framework atom
-        frame_charge = PointCharge(frame.charges[i], frame.box.f_to_c * frame.xf[:, i])
+    for fcharge in frame
         # look at interaction of framework charge with molecule charge
-        for charge in molecule.charges
-            ϕ += _ϕ_sr(frame_charge, charge, eparams) / FOUR_π_ϵ₀
-            ϕ += _ϕ_lr(frame_charge, charge, eparams, kvectors, eikar, eikbr, eikcr)
+        for mcharge in molecule.charges
+            ϕ += _ϕ_sr(fcharge, mcharge, eparams) / FOUR_π_ϵ₀
+            ϕ += _ϕ_lr(fcharge, mcharge, eparams, kvectors, eikar, eikbr, eikcr)
         end
     end
     return ϕ::Float64

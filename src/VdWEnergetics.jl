@@ -21,6 +21,25 @@ function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
 	return 4.0 * ϵ * (ratio ^ 2 - ratio)
 end
 
+# note this assumes the molecule is inside the box... i.e. fractional coords in [1,1,1]
+function vdw_energy(u::LJSphere, v::LJSphere, ljff::LJForceField, box::Box)
+    # distance in Cartesian space
+    dx = u.x - v.x
+    # convert to fractional so nearest image convention can be applied
+    dx = box.c_to_f * dx
+    # apply nearest image convention for PBCs
+    nearest_image!(dx)
+    # convert back to Cartesian
+    dx = box.f_to_c * dx
+    @inbounds r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
+    if r² < R_OVERLAP_squared # overlapping atoms
+        return Inf
+    elseif r² < ljff.cutoffradius_squared # within cutoff radius; not overlapping
+        return lennard_jones(r², ljff.σ²[u.species][v.species], ljff.ϵ[u.species][v.species])
+    else # outside cutoff radius
+        return 0.0
+    end
+end
 
 """
     energy = vdw_energy(framework, molecule, ljforcefield)
@@ -34,50 +53,18 @@ image convention can be applied. See [`replicate`](@ref).
 # Arguments
 - `framework::Framework`: Crystal structure
 - `molecule::Molecule`: adsorbate (includes position/orientation/atoms)
-- `ljforcefield::LennardJonesForceField`: Lennard Jones force field
+- `ljforcefield::LJForceField`: Lennard Jones force field
 
 # Returns
 - `energy::Float64`: Van der Waals interaction energy
 """
-function vdw_energy(framework::Framework, molecule::Molecule,
-                    ljforcefield::LennardJonesForceField)
+function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
 	energy = 0.0
-    for ljsphere in molecule.ljspheres
-        energy += vdw_energy(framework, ljsphere, ljforcefield)
+    for matom in molecule.atoms
+        for fatom in framework.atoms
+            energy += vdw_energy(matom, fatom, ljff, framework.box)
+        end
     end
-	return energy
-end
-
-function vdw_energy(framework::Framework, ljsphere::LennardJonesSphere,
-                    ljforcefield::LennardJonesForceField)
-	energy = 0.0
-    # compute fractional coordinate of the Lennard-Jones sphere and apply PBC to bring it into the
-    #  home unit cell of the crystal
-    xf_molecule = mod.(framework.box.c_to_f * ljsphere.x, 1.0)
-
-    # loop over replications of the home unit cell to build the supercell
-    # distance in fractional coordinate space.
-    dxf = broadcast(-, xf_molecule, framework.xf)
-
-    nearest_image!(dxf)
-
-    # Distance in cartesian coordinate space
-    dx = framework.box.f_to_c * dxf
-
-    # loop over atoms of the framework and compute its contribution to the vdW energy.
-    for i = 1:framework.n_atoms
-        @inbounds r² = dx[1, i] * dx[1, i] + dx[2, i] * dx[2, i] + dx[3, i] * dx[3, i]
-
-        if r² < R_OVERLAP_squared
-            # if adsorbate atom overlaps with an atom, return Inf (R_OVERLAP is defined as 0.01 Angstrom, or `R_OVERLAP_squared = 0.0001 Angstrom²)
-            return Inf
-        elseif r² < ljforcefield.cutoffradius_squared
-            # add pairwise contribution to potential energy
-            @inbounds energy += lennard_jones(r²,
-                ljforcefield.σ²[framework.atoms[i]][ljsphere.atom],
-                ljforcefield.ϵ[framework.atoms[i]][ljsphere.atom])
-        end # if-elseif-end
-    end # framework atoms end
 	return energy
 end
 
@@ -91,45 +78,28 @@ using the nearest image convention.
 # Arguments
 - `molecule_id::Int`: Molecule ID used to determine which molecule in `molecules` we wish to calculate the guest-guest interactions
 - `molecules::Array{Molecule, 1}`: An array of Molecule data structures
-- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
+- `ljforcefield::LJForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
 - `simulation_box::Box`: The simulation box for the computation.
 
 # Returns
 - `gg_energy::Float64`: The guest-guest interaction energy of `molecules[molecule_id]` with the other molecules in `molecules`
 """
-function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljforcefield::LennardJonesForceField, simulation_box::Box)
-    energy = 0.0 # energy is pair-wise additive
-    # Look at interaction with all other molecules in the system
-    for this_ljsphere in molecules[molecule_id].ljspheres
-        # Loop over all atoms in the given molecule
-        for other_molecule_id = 1:length(molecules)
+function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
+    energy = 0.0
+    # Loop over all atoms in molecules[molecule_id]
+    for this_matom in molecules[molecule_id].atoms
+        # look at its interaction with all other molecules
+        for (other_molecule_id, other_molecule) in enumerate(molecules)
             # molecule cannot interact with itself
             if other_molecule_id == molecule_id
                 continue
             end
-            # loop over every ljsphere (atom) in the other molecule
-            for other_ljsphere in molecules[other_molecule_id].ljspheres
-                # compute vector between molecules in fractional coordinates
-                dxf = simulation_box.c_to_f * (this_ljsphere.x - other_ljsphere.x)
-
-                # simulation box has fractional coords [0, 1] by construction
-                nearest_image!(dxf)
-
-                # converts fractional distance to cartesian distance
-                dx = simulation_box.f_to_c * dxf
-
-                r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
-
-                if r² < R_OVERLAP_squared
-                    return Inf
-                elseif r² < ljforcefield.cutoffradius_squared
-                    energy += lennard_jones(r²,
-                        ljforcefield.σ²[this_ljsphere.atom][other_ljsphere.atom],
-                        ljforcefield.ϵ[this_ljsphere.atom][other_ljsphere.atom])
-                end
-            end # loop over all ljspheres in other molecule
-        end # loop over all other molecules
-    end # loop over all ljspheres in this molecule
+            # loop over every atom in the other molecule
+            for other_matom in other_molecule.atoms
+                energy += vdw_energy(this_matom, other_matom, ljff, box)
+            end
+        end
+    end
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
@@ -146,7 +116,7 @@ image convention can be applied. See [`replicate`](@ref).
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
 - `molecules::Array{Molecule, 1}`: An array of Molecule data structures
-- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
+- `ljforcefield::LJForceField`: A Lennard Jones forcefield data structure describing the interactions between different atoms
 - `simulation_box::Box`: The simulation box for application of PBCs.
 
 # Returns
@@ -154,7 +124,7 @@ image convention can be applied. See [`replicate`](@ref).
 """
 function total_vdw_energy(framework::Framework,
                           molecules::Array{Molecule, 1},
-                          ljforcefield::LennardJonesForceField)
+                          ljff::LJForceField)
     total_energy = 0.0
     for molecule in molecules
         total_energy += vdw_energy(framework, molecule, ljforcefield)
@@ -162,40 +132,36 @@ function total_vdw_energy(framework::Framework,
     return total_energy
 end
 
-function total_vdw_energy(molecules::Array{Molecule, 1},
-                         ljforcefield::LennardJonesForceField,
-                         simulation_box::Box)
+function total_vdw_energy(molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
     total_energy = 0.0
-    for molecule_id = 1:length(molecules)
-        total_energy += vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
+    for i = 1:length(molecules)
+        total_energy += vdw_energy(i, molecules, ljff, box)
     end
     return total_energy / 2.0 # avoid double-counting pairs
 end
 
 """
-    energy = vdw_energy_no_PBC(molecule, atoms, x, ljff)
+    energy = vdw_energy_no_PBC(molecule, atoms, ljff)
 
 Calculates the van der Waals interaction energy between a molecule and a list of `atoms`
-at Cartesian positions `x` using a lennard jones force field `ljff`
-No periodic boundary conditions are applied.
+without applying periodic boundary conditions.
 """
-function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{Symbol, 1}, x::Array{Float64, 2},
-                           ljforcefield::LennardJonesForceField)
+function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{LJSphere, 1}, ljff::LJForceField)
 	energy = 0.0
     # loop over lennard-jones spheres in the molecule
-    for ljs in molecule.ljspheres
+    for ljs in molecule.atoms
         # loop over atoms
-        for i = 1:length(atoms)
-            dx = x[:, i] - ljs.x
+        for atom in atoms
+            dx = atom.x - ljs.x
             r² = dx[1] ^ 2 + dx[2] ^ 2 + dx[3] ^ 2
 
             if r² < R_OVERLAP_squared
                 return Inf
-            elseif r² < ljforcefield.cutoffradius_squared
+            elseif r² < ljff.cutoffradius_squared
                 # add pairwise contribution to potential energy
                 energy += lennard_jones(r²,
-                    ljforcefield.σ²[atoms[i]][ljs.atom],
-                    ljforcefield.ϵ[atoms[i]][ljs.atom])
+                    ljff.σ²[atom.species][ljs.species],
+                     ljff.ϵ[atom.species][ljs.species])
             end
         end # loop over atoms
     end # loop over ljspheres

@@ -1,7 +1,7 @@
 using PorousMaterials
 using Base.Test
 using BenchmarkTools, Compat
-framework = read_crystal_structure_file("NU-1000_Greg.cif")
+framework = Framework("NU-1000_Greg.cif")
 
  # kreps = (11, 11, 9)
  # α = 0.265058
@@ -51,7 +51,7 @@ x = [4.269654927228, 23.137319129548, 28.352847101096]
 pc = PointCharge(q_test, x)
 m = Molecule(:pt_charge, LennardJonesSphere[], [pc], x)
 ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
-@btime electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
+@btime electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr) # 6.3 ms on cory's computer
 @profile electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
 Profile.print()
 
