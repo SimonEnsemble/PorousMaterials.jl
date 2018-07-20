@@ -1,11 +1,10 @@
-using ProgressMeter
-
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
 const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
 
 """
    result = henry_coefficient(framework, molecule, temperature, ljforcefield,
-                             nb_insertions=1e6, verbose=true, ewald_precision=1e-6)
+                             nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
+                             autosave=true)
 
 Conduct Widom insertions to compute the Henry coefficient Kₕ of a molecule in a framework.
 Also, for free, the heat of adsorption and ensemble average energy of adsorption is computed.
@@ -25,14 +24,17 @@ Returns a dictionary of results.
     in the porous material. units: Kelvin (K)
 - `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
-- `nb_insertions::Int`: number of Widom insertions to perform for computing the average.
+- `insertions_per_volume::Int`: number of Widom insertions to perform for computing the 
+average, per unit cell volume (Å³)
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
 the replication factors in reciprocal space.
+- `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
-                           ljforcefield::LennardJonesForceField; nb_insertions::Int=1e6,
-                           verbose::Bool=true, ewald_precision::Float64=1e-6)
+                           ljforcefield::LennardJonesForceField; insertions_per_volume::Int=200,
+                           verbose::Bool=true, ewald_precision::Float64=1e-6, 
+                           autosave::Bool=true)
     if verbose
         print("Simulating Henry coefficient of ")
         print_with_color(:green, molecule.species)
@@ -43,8 +45,8 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         print(" K, using ")
         print_with_color(:green, ljforcefield.name)
         print(" force field with ")
-        print_with_color(:green, nb_insertions)
-        println(" insertions.")
+        print_with_color(:green, insertions_per_volume)
+        println(" insertions per Å³.")
     end
 
     # replication factors for applying nearest image convention for short-range interactions
@@ -62,6 +64,12 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
 
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
+
+    # determine the number of insertions based on the unit cell volume of the crystal
+    nb_insertions = insertions_per_volume * framework.box.Ω
+    if verbose
+        @printf("\t%d total Widom insertions\n", nb_insertions)
+    end
     
     # partition total insertions among blocks.
     if nprocs() > N_BLOCKS
@@ -125,6 +133,18 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     result["Qst (kJ/mol)"] = -result["⟨U⟩ (kJ/mol)"] + temperature * K_to_kJ_mol
     result["err Qst (kJ/mol)"] = sum(err_energy) * K_to_kJ_mol
 
+    if autosave
+        if ! isdir(PATH_TO_DATA * "henry_sims")
+            mkdir(PATH_TO_DATA * "henry_sims")
+        end
+        savename = PATH_TO_DATA * "henry_sims/" * henry_result_savename(framework, molecule, temperature,
+                               ljforcefield, insertions_per_volume)
+        JLD.save(savename, "result", result)
+        if verbose
+            println("\tResults saved in: ", savename)
+        end
+    end
+
     if verbose
         print_with_color(:green, "\t----- final results ----\n")
         for key in ["henry coefficient [mmol/(g-bar)]", "⟨U, vdw⟩ (kJ/mol)", "⟨U, Coulomb⟩ (kJ/mol)", "Qst (kJ/mol)"]
@@ -183,4 +203,11 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         # else add 0.0 b/c lim E --> ∞ E exp(-E) is zero.
     end
     return boltzmann_factor_sum, wtd_energy_sum
+end
+
+function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
+                               ljforcefield::LennardJonesForceField, insertions_per_volume::Int)
+    return @sprintf("henry_sim_%s_in_%s_%fK_%s_ff_%d_insertions_per_volume.jld",
+                    molecule.species, framework.name, temperature, ljforcefield.name,
+                    insertions_per_volume)
 end
