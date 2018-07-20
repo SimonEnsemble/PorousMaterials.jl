@@ -122,7 +122,7 @@ end
 end
 
 """
-    results = stepwise_adsorption_isotherm(framework, temperature, pressures, molecule,
+    results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=10,
                                   verbose=true, molecules=Molecule[],
@@ -138,16 +138,15 @@ differ significantly from the previous pressure), we can reduce the number of bu
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
-function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
-                                      pressures::Array{Float64, 1}, molecule::Molecule,
-                                      ljforcefield::LJForceField;
-                                      n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                                      sample_frequency::Int=10, verbose::Bool=true,
-                                      ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
+function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule, 
+    temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
+    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5, 
+    verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
+
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
-        result, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
+        result, molecules = gcmc_simulation(framework, molecule, temperature, pressure, 
                                             ljforcefield, 
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
@@ -161,7 +160,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
 end
 
 """
-    results = adsorption_isotherm(framework, temperature, pressures, molecule,
+    results = adsorption_isotherm(framework, molecule, temperature, pressures,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=25,
                                   verbose=false, molecules=Molecule[],
@@ -173,15 +172,13 @@ The only exception is that we pass an array of pressures. To give Julia access t
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
-function adsorption_isotherm(framework::Framework, temperature::Float64,
-                             pressures::Array{Float64, 1}, molecule::Molecule,
-                             ljforcefield::LJForceField;
-                             n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                             sample_frequency::Int=25, verbose::Bool=true,
-                             ewald_precision::Float64=1e-6, eos=:ideal)
+function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
+    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
+    n_sample_cycles::Int=5000, sample_frequency::Int=5, verbose::Bool=true,
+    ewald_precision::Float64=1e-6, eos=:ideal)
     # make a function of pressure only to facilitate uses of `pmap`
-    run_pressure(pressure::Float64) = gcmc_simulation(framework, temperature, pressure,
-                                                      molecule, ljforcefield,
+    run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
+                                                      pressure, ljforcefield,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
                                                       sample_frequency=sample_frequency,
@@ -202,9 +199,9 @@ end
 
 
 """
-    results, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
-                                         ljforcefield; n_sample_cycles=100000,
-                                         n_burn_cycles=10000, sample_frequency=25,
+    results, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
+                                         ljforcefield; n_sample_cycles=5000,
+                                         n_burn_cycles=5000, sample_frequency=5,
                                          verbose=false, molecules=Molecule[],
                                          eos=:ideal)
 
@@ -237,13 +234,12 @@ Note that we assume these coordinates are Cartesian, i.e. corresponding to a uni
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
 """
-function gcmc_simulation(framework::Framework, temperature::Float64, pressure::Float64,
-                         molecule_::Molecule, ljforcefield::LJForceField;
-                         n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
-                         sample_frequency::Int=5, verbose::Bool=true,
-                         molecules::Array{Molecule, 1}=Molecule[],
-                         ewald_precision::Float64=1e-6, eos::Symbol=:ideal, 
-                         autosave::Bool=true)
+function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
+    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
+    n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
+    molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
+    eos::Symbol=:ideal, autosave::Bool=true)
+
     tic()
     # to avoid changing the outside object `molecule_` inside this function, we make
     #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
