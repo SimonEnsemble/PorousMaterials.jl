@@ -1,5 +1,6 @@
 import Base: +, /
 using StatsBase
+using JLD
 
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
@@ -142,7 +143,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
                                       n_initial_burn_cycles::Int=10000, 
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                                       sample_frequency::Int=10, verbose::Bool=true,
-                                      ewald_precision::Float64=1e-6, eos=:ideal)
+                                      ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
@@ -240,7 +241,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
                          n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
                          sample_frequency::Int=5, verbose::Bool=true,
                          molecules::Array{Molecule, 1}=Molecule[],
-                         ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
+                         ewald_precision::Float64=1e-6, eos::Symbol=:ideal, 
+                         autosave::Bool=true)
     tic()
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
@@ -592,6 +594,21 @@ e
 
     if verbose
         print_results(results, print_title=false)
+    end
+
+    if autosave
+        if ! isdir(PATH_TO_DATA * "gcmc_sims")
+            mkdir(PATH_TO_DATA * "gcmc_sims")
+        end
+
+        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework, 
+            molecule, ljforcefield, temperature, pressure, n_burn_cycles, 
+            n_sample_cycles) * ".jld"
+
+        JLD.save(save_results_filename, "results", results)
+        if verbose
+            println("\tResults dictionary saved in ", save_results_filename)
+        end
     end
 
     return results, molecules # summary of statistics and ending configuration of molecules
