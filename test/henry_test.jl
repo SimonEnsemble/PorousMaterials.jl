@@ -9,7 +9,7 @@ nb_insertions = 1000000
     ###
     framework = Framework("SBMOF-1.cif")
     ljff = LJForceField("Dreiding.csv", cutoffradius=12.5)
-    molecule = Molecule("Xe")
+    molecule = Molecule("Xe", framework.box)
     temperature = 298.0
 
     result = henry_coefficient(framework, molecule, temperature, ljff, 
@@ -22,7 +22,7 @@ nb_insertions = 1000000
     ###
     framework = Framework("CAXVII_clean.cif")
     ljff = LJForceField("Dreiding.csv", cutoffradius=12.5)
-    molecule = Molecule("CO2")
+    molecule = Molecule("CO2", framework.box)
     temperature = 298.0
 
     result = henry_coefficient(framework, molecule, temperature, ljff, 

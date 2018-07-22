@@ -15,7 +15,8 @@ coordinates to cartesian coordinates. The columns of this matrix define the unit
 axes. units: Angstrom
 - `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian
 coordinates to fractional coordinates. units: inverse Angstrom
-- `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
+- `reciprocal_lattice::Array{Float64, 2}`: the *rows* are the reciprocal lattice vectors.
+This choice was made (instead of columns) for speed of Ewald Sums.
 """
 struct Box
     a::Float64
@@ -37,7 +38,8 @@ end
 """
     r = reciprocal_lattice(a₁, a₂, a₃)
 
-Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the reciprocal lattice vectors.
+Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the 
+reciprocal lattice vectors, which are the corresponding rows of `r`.
 
 # Arguments
 - `a₁::Array{Float64, 1}`: The first unit cell vector of a Bravais lattice
@@ -45,13 +47,14 @@ Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, comp
 - `a₃::Array{Float64, 1}`: The third unit cell vector of a Bravais lattice
 
 # Returns
-- `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the columns are the reciprocal lattice vectors.
+- `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the rows 
+are the reciprocal lattice vectors.
 """
 function reciprocal_lattice(a₁::Array{Float64, 1}, a₂::Array{Float64, 1}, a₃::Array{Float64, 1})
     r = zeros(Float64, 3, 3)
-    r[:, 1] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
-    r[:, 2] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
-    r[:, 3] = 2 * π * cross(a₁, a₂) / dot(a₃, cross(a₁, a₂))
+    r[1, :] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
+    r[2, :] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
+    r[3, :] = 2 * π * cross(a₁, a₂) / dot(a₃, cross(a₁, a₂))
     return r
 end
 
@@ -67,7 +70,7 @@ function Box(a::Float64, b::Float64, c::Float64,
     r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
 
     @assert f_to_c * c_to_f ≈ eye(3)
-    @assert isapprox(transpose(r), 2.0 * π * inv(f_to_c))
+    @assert isapprox(r, 2.0 * π * inv(f_to_c))
 
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end

@@ -12,7 +12,7 @@ using OffsetArrays
     framework = Framework("SBMOF-1.cif")
     @test isapprox(framework.box, Box(framework.box.f_to_c))
     @test framework.box.f_to_c * framework.box.c_to_f ≈ eye(3)
-    @test isapprox(transpose(framework.box.reciprocal_lattice), 2 * π * inv(framework.box.f_to_c))
+    @test isapprox(framework.box.reciprocal_lattice, 2 * π * inv(framework.box.f_to_c))
     @test isapprox(framework.box, Box(framework.box.a, framework.box.b, framework.box.c,
                                       framework.box.α, framework.box.β, framework.box.γ))
     @test isapprox(replicate(framework.box, (1, 1, 1)), framework.box)
@@ -59,14 +59,14 @@ end
     replicated_sbmof = replicate(sbmof, repfactors)
     @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
     @test isapprox(sbmof.atoms[1].xf ./ repfactors, replicated_sbmof.atoms[1].xf)
-    @test isapprox(transpose(replicated_sbmof.box.reciprocal_lattice), 2 * π * inv(replicated_sbmof.box.f_to_c))
+    @test isapprox(replicated_sbmof.box.reciprocal_lattice, 2 * π * inv(replicated_sbmof.box.f_to_c))
     @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
     @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
 
     # more xtal tests
     sbmof1 = Framework("SBMOF-1.cif")
     @test !charged(sbmof1)
-    @test isapprox(transpose(sbmof1.box.reciprocal_lattice), 2 * π * inv(sbmof1.box.f_to_c))
+    @test isapprox(sbmof1.box.reciprocal_lattice, 2 * π * inv(sbmof1.box.f_to_c))
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
     

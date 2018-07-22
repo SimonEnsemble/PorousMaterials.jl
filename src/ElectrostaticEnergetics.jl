@@ -120,8 +120,8 @@ function required_kreps(box::Box, max_mag_k_sqrd::Float64)
         n = [0, 0, 0]
         while true
             n[abc] += 1
-            # compute reciprocal vector, k
-            k = box.reciprocal_lattice * n
+            # compute reciprocal vector, k. rows are the reciprocal lattice vectors
+            k = transpose(box.reciprocal_lattice) * n
             # if we reached a k-vector with sq. mag. g.t. max_mag_k_sqrd...
             #   we have enough kreps
             if dot(k, k) > max_mag_k_sqrd
@@ -172,8 +172,8 @@ function precompute_kvec_wts(eparams::EwaldParams, max_mag_k_sqrd::Float64=Inf)
             continue
         end
 
-        # compute reciprocal vector, k
-        k = eparams.box.reciprocal_lattice * [ka, kb, kc]
+        # compute reciprocal vector, k; rows are the reciprocal lattice vectors
+        k = transpose(eparams.box.reciprocal_lattice) * [ka, kb, kc]
         # |k|²
         mag_k_sqrd = dot(k, k)
 
@@ -319,8 +319,8 @@ function _ϕ_lr(charge_a::PtCharge, charge_b::PtCharge, eparams::EwaldParams,
     ϕ_lr = 0.0
     # vector from pt charge to pt charge
     @inbounds dx = eparams.box.f_to_c * (charge_a.xf - charge_b.xf)
-    # reciprocal lattice vectors ⋅ dx # TODO store as transpose
-    @inbounds k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
+    # reciprocal lattice vectors ⋅ dx; recall rows of reciprocal_lattice hv the recip vectors
+    @inbounds k_dot_dx = eparams.box.reciprocal_lattice * dx
 
     # compute e^{ i * n * k * (x - charge.x)} for n = -krep:krep
     fill_eikr!(eikar, k_dot_dx[1], eparams.kreps[1], false) # via symmetry only need +ve
