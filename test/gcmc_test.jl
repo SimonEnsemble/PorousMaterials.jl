@@ -6,7 +6,7 @@ using DataFrames
 using JLD
 
 ig_tests = false
-xe_in_sbmof1_tests = true
+xe_in_sbmof1_tests = false
 co2_tests = true
 
 #
@@ -93,7 +93,7 @@ if co2_tests
     zif71 = Framework("zif71_bogus_charges.cif")
     strip_numbers_from_atom_labels!(zif71)
     ff = LJForceField("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
-    co2 = Molecule("CO2EPM2")
+    co2 = Molecule("CO2EPM2", zif71.box)
 
     # load in test data
     df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")

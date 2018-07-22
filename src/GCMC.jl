@@ -414,7 +414,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
             old_molecule = deepcopy(molecules[molecule_id])
 
             # conduct a random rotation
-            rotate!(molecules[molecule_id])
+            rotate!(molecules[molecule_id], framework.box)
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,

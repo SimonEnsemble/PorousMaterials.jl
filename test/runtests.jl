@@ -118,7 +118,7 @@ end;
     end
     @test norm(m2.charges[1].xf - m2.charges[2].xf) ≈ norm(m1.charges[1].xf - m1.charges[2].xf)
     @test norm(m2.atoms[1].xf - m2.atoms[2].xf) ≈ norm(m1.atoms[1].xf - m1.atoms[2].xf)
-    test again
+    # test again
     ms = [Molecule("CO2", box) for i = 1:2]
     translate_to!(ms[1], [0.1, 0.2, 1.4])
     translate_to!(ms[2], box.f_to_c * [0.1, 0.2, 1.4], box)

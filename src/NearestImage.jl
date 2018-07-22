@@ -23,9 +23,9 @@ end
     # apply nearest image convention for periodic boundary conditions
     nearest_image!(dxf)
     # convert to cartesian
-    @inbounds dxf .= box.f_to_c * dxf
+    @inbounds dx = box.f_to_c * dxf
     # return r²
-    @inbounds return dxf[1] * dxf[1] + dxf[2] * dxf[2] + dxf[3] * dxf[3]
+    @inbounds return dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
 end
 
 @inline function nearest_r(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
