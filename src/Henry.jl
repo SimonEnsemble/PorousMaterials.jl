@@ -155,12 +155,12 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
 
     for i = 1:nb_insertions
         # determine uniform random center of mass
-        x = framework.box.f_to_c * [rand(), rand(), rand()]
+        xf = [rand(), rand(), rand()]
         # translate molecule to the new center of mass
-        translate_to!(molecule, x)
+        translate_to!(molecule, xf)
         # rotate randomly
         if rotatable(molecule)
-            rotate!(molecule)
+            rotate!(molecule, framework.box)
         end
 
         # calculate potential energy of molecule at that position and orientation
