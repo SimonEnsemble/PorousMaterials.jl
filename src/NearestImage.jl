@@ -8,12 +8,13 @@ space; modifies `dxf` for nearest image convention. Fractional coordinates here 
 # Arguments
 - `dxf::Array{Float64, 1}`: A vector between two atoms in fractional coordinates
 """
-function nearest_image!(dxf::Array{Float64, 1})
+@inline function nearest_image!(dxf::Array{Float64, 1})
     for k = 1:3 # loop over components
         @inbounds if abs(dxf[k]) > 0.5
             @inbounds dxf[k] -= sign(dxf[k])
         end
     end
+    return nothing
 end
 
 @inline function nearest_r²(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
