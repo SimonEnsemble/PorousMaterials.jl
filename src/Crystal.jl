@@ -8,13 +8,13 @@ Data structure for a 3D crystal structure.
 - `name::String`: name of crystal structure
 - `box::Box`: unit cell (Bravais Lattice)
 - `atoms::Array{LJSphere, 1}`: list of Lennard-Jones spheres in crystal unit cell
-- `charges::Array{PointCharge, 1}`: list of point charges in crystal unit cell
+- `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
 """
 struct Framework
     name::String
     box::Box
     atoms::Array{LJSphere, 1}
-    charges::Array{PointCharge, 1}
+    charges::Array{PtCharge, 1}
 end
 
 """
@@ -186,12 +186,12 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     box = Box(a, b, c, α, β, γ)
 
     atoms = LJSphere[]
-    charges = PointCharge[]
+    charges = PtCharge[]
     for a = 1:length(species)
-        x = box.f_to_c * [xf[a], yf[a], zf[a]]
-        push!(atoms, LJSphere(species[a], x))
+        frac_coord = [xf[a], yf[a], zf[a]]
+        push!(atoms, LJSphere(species[a], frac_coord))
         if abs(charge_values[a]) > 0.0
-            push!(charges, PointCharge(charge_values[a], x))
+            push!(charges, PtCharge(charge_values[a], frac_coord))
         end
     end
 
@@ -240,16 +240,20 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
     new_box = replicate(framework.box, repfactors)
 
     # replicate atoms and charges
-    new_charges = PointCharge[]
+    new_charges = PtCharge[]
     new_atoms = LJSphere[]
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
         for atom in framework.atoms
-            xf = framework.box.c_to_f * atom.x + 1.0 * [ra, rb, rc]
-            push!(new_atoms, LJSphere(atom.species, framework.box.f_to_c * xf))
+            xf = atom.xf + 1.0 * [ra, rb, rc]
+            # scale fractional coords
+            xf = xf ./ repfactors
+            push!(new_atoms, LJSphere(atom.species, xf))
         end
         for charge in framework.charges
-            xf = framework.box.c_to_f * charge.x + 1.0 * [ra, rb, rc]
-            push!(new_charges, PointCharge(charge.q, framework.box.f_to_c * xf))
+            xf = charge.xf + 1.0 * [ra, rb, rc]
+            # scale fractional coords
+            xf = xf ./ repfactors
+            push!(new_charges, PtCharge(charge.q, xf))
         end
     end
     @assert(length(new_charges) == length(framework.charges) * prod(repfactors))
@@ -301,7 +305,7 @@ function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractStrin
 
     for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
         for atom in framework.atoms
-            xf = framework.box.c_to_f * atom.x + [i - 1.0, j - 1.0, k - 1.0]
+            xf = atom.xf + [i - 1.0, j - 1.0, k - 1.0]
             x = framework.box.f_to_c * xf
 			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(atom.species), x[1], x[2], x[3])
         end
@@ -335,7 +339,7 @@ function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose:
             if j >= i
                 continue
             end
-            dxf = framework.box.c_to_f * (atom_i.x - atom_j.x)
+            dxf = atom_i.xf - atom_j.xf
             nearest_image!(dxf)
             r = norm(framework.box.f_to_c * dxf)
             if r < hard_diameter
@@ -384,7 +388,7 @@ function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0
                 continue
             end
 
-            dxf = framework.box.c_to_f * (atom_i.x - atom_j.x)
+            dxf = atom_i.xf - atom_j.xf
             nearest_image!(dxf)
             r = norm(framework.box.f_to_c * dxf)
 
@@ -396,7 +400,7 @@ function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0
 
     new_framework = Framework(framework.name, framework.box,
                               framework.atoms[atoms_to_keep],
-                              charged(framework) ? framework.charges[atoms_to_keep] : PointCharge[])
+                              charged(framework) ? framework.charges[atoms_to_keep] : PtCharge[])
     
     @assert (! atom_overlap(new_framework))
     return new_framework
@@ -452,7 +456,7 @@ function strip_numbers_from_atom_labels!(framework::Framework)
 		species = string(atom.species)
 		for j = 1:length(species)
 			if ! isalpha(species[j])
-                framework.atoms[a] = LJSphere(species[1:j-1], atom.x)
+                framework.atoms[a] = LJSphere(species[1:j-1], atom.xf)
 				break
 			end
 		end
@@ -651,16 +655,15 @@ function write_cif(framework::Framework, filename::String)
     @printf(cif_file, "_atom_site_charge\n")
 
     for (a, atom) in enumerate(framework.atoms)
-        xf = framework.box.c_to_f * atom.x
         q = 0.0
         if charged(framework)
             charge = framework.charges[a]
             q = charge.q
-            if ! isapprox(charge.x, atom.x)
+            if ! isapprox(charge.xf, atom.xf)
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
-        @printf(cif_file, "%s %f %f %f %f\n", atom.species, xf..., q)
+        @printf(cif_file, "%s %f %f %f %f\n", atom.species, atom.xf..., q)
      end
      close(cif_file)
 end

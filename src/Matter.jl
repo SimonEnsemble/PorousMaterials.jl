@@ -1,33 +1,40 @@
 # Matter is composed of Lennard-Jones spheres and point charges.
 
 """
-Lennard-Jones sphere data structure indicates its species and its Cartesian coordinates.
+Data structure for a Lennard-Jones sphere, containing its species and position in 
+fractional coordinates.
+
+# Example use
+    ljs = LJSphere(:C, [0.0, 0.0, 0.0])
 
 # Attributes
 - `species::Symbol`: atom species name, e.g. `:C`
-- `x::Array{Float64, 1}`: Cartesian coordinates (units: Angstrom), e.g. `[1.0, 0.0, 4.0]`.
+- `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
 """
 struct LJSphere
     species::Symbol
-    x::Array{Float64, 1}
+    xf::Array{Float64, 1}
 end
 
 function Base.isapprox(ljs1::LJSphere, ljs2::LJSphere)
-    return ((ljs1.species == ljs2.species) && isapprox(ljs1.x, ljs2.x))
+    return ((ljs1.species == ljs2.species) && isapprox(ljs1.xf, ljs2.xf))
 end
 
 """
-Point charge data structure indicates its charge and its position in Cartesian coordinates.
+Point charge data structure indicates its charge and position in fractional coordinates.
+
+# Example use
+    ptc = PtCharge(-0.2, [0.0, 0.0, 0.0])
 
 # Attributes
-- `q::Float64`: signed magnitude of charge (units: electrons)
-- `x::Array{Float64, 1}`: Cartesian coordinates (units: Angstrom), e.g. `[1.0, 0.0, 4.0]`.
+- `q::Float64`: signed magnitude of charge (units: electrons), e.g. `1.0`
+- `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
 """
-struct PointCharge
+struct PtCharge
     q::Float64
-    x::Array{Float64, 1}
+    xf::Array{Float64, 1}
 end
 
-function Base.isapprox(c1::PointCharge, c2::PointCharge)
-    return (isapprox(c1.q, c2.q) && isapprox(c1.x, c2.x))
+function Base.isapprox(c1::PtCharge, c2::PtCharge)
+    return (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))
 end

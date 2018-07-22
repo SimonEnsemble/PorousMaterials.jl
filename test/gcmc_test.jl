@@ -6,7 +6,7 @@ using DataFrames
 using JLD
 
 ig_tests = false
-xe_in_sbmof1_tests = false
+xe_in_sbmof1_tests = true
 co2_tests = true
 
 #
@@ -17,7 +17,7 @@ co2_tests = true
 #
 if ig_tests
     empty_space = Framework("empty_box.cssr") # zero atoms!
-    ideal_gas = Molecule("IG")
+    ideal_gas = Molecule("IG", empty_space.box)
     @assert(empty_space.n_atoms == 0)
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
@@ -37,7 +37,7 @@ end
 if xe_in_sbmof1_tests
     sbmof1 = Framework("SBMOF-1.cif")
     dreiding_forcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)
-    molecule = Molecule("Xe")
+    molecule = Molecule("Xe", sbmof1.box)
 
     test_fugacities = [20.0, 200.0, 2000.0]
     test_mmol_g = [0.18650, 1.00235, 1.39812]

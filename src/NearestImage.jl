@@ -16,22 +16,19 @@ function nearest_image!(dxf::Array{Float64, 1})
     end
 end
 
-@inline function nearest_r²(x::Array{Float64, 1}, y::Array{Float64, 1}, box::Box)
-    # vector from y to x
-    @inbounds dx = x - y
-    # convert to fractional coordinates
-    @inbounds dx = box.c_to_f * dx
-    # apply nearest image convention
-    nearest_image!(dx)
-    # convert back to cartesian
-    @inbounds dx = box.f_to_c * dx
+@inline function nearest_r²(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
+    # vector from y to x in fractional coordinate space
+    @inbounds dxf = xf - yf
+    # apply nearest image convention for periodic boundary conditions
+    nearest_image!(dxf)
+    # convert to cartesian
+    @inbounds dxf .= box.f_to_c * dxf
     # return r²
-    @inbounds r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
-    return r²
+    @inbounds return dxf[1] * dxf[1] + dxf[2] * dxf[2] + dxf[3] * dxf[3]
 end
 
-@inline function nearest_r(x::Array{Float64, 1}, y::Array{Float64, 1}, box::Box)
-    return sqrt(nearest_r²(x, y, box))
+@inline function nearest_r(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
+    return sqrt(nearest_r²(xf, yf, box))
 end
 
 # Arni's notes on Nearest image convention.

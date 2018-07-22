@@ -111,11 +111,11 @@ masses in amu.
 - `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
 """
 function read_atomic_masses()
-    if ! isfile("data/atomicmasses.csv")
+    if ! isfile(PATH_TO_DATA * "atomicmasses.csv")
         error("Cannot find atomicmasses.csv file in your data folder\n")
     end
 
-    df_am = CSV.read("data/atomicmasses.csv")
+    df_am = CSV.read(PATH_TO_DATA * "atomicmasses.csv")
 
     atomic_masses = Dict{Symbol, Float64}()
 

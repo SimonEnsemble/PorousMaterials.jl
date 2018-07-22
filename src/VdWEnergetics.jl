@@ -16,14 +16,14 @@ the potential energy in units Kelvin (well, whatever the units of ϵ are).
 # Returns
 - `energy::Float64`: Lennard Jones potential energy
 """
-function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
+@inline function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
 	ratio = (σ² / r²) ^ 3
 	return 4.0 * ϵ * (ratio ^ 2 - ratio)
 end
 
 # note this assumes the molecule is inside the box... i.e. fractional coords in [1,1,1]
-function vdw_energy(u::LJSphere, v::LJSphere, ljff::LJForceField, box::Box)
-    r² = nearest_r²(u.x, v.x, box)
+@inline function vdw_energy(u::LJSphere, v::LJSphere, ljff::LJForceField, box::Box)
+    r² = nearest_r²(u.xf, v.xf, box)
     if r² < R_OVERLAP_squared # overlapping atoms
         return Inf
     elseif r² < ljff.cutoffradius_squared # within cutoff radius; not overlapping
@@ -53,7 +53,7 @@ image convention can be applied. See [`replicate`](@ref).
 function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
 	energy = 0.0
     for matom in molecule.atoms
-        for fatom in framework.atoms
+        @simd for fatom in framework.atoms
             energy += vdw_energy(matom, fatom, ljff, framework.box)
         end
     end
@@ -130,32 +130,4 @@ function total_vdw_energy(molecules::Array{Molecule, 1}, ljff::LJForceField, box
         total_energy += vdw_energy(i, molecules, ljff, box)
     end
     return total_energy / 2.0 # avoid double-counting pairs
-end
-
-"""
-    energy = vdw_energy_no_PBC(molecule, atoms, ljff)
-
-Calculates the van der Waals interaction energy between a molecule and a list of `atoms`
-without applying periodic boundary conditions.
-"""
-function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{LJSphere, 1}, ljff::LJForceField)
-	energy = 0.0
-    # loop over lennard-jones spheres in the molecule
-    for ljs in molecule.atoms
-        # loop over atoms
-        for atom in atoms
-            dx = atom.x - ljs.x
-            r² = dx[1] ^ 2 + dx[2] ^ 2 + dx[3] ^ 2
-
-            if r² < R_OVERLAP_squared
-                return Inf
-            elseif r² < ljff.cutoffradius_squared
-                # add pairwise contribution to potential energy
-                energy += lennard_jones(r²,
-                    ljff.σ²[atom.species][ljs.species],
-                     ljff.ϵ[atom.species][ljs.species])
-            end
-        end # loop over atoms
-    end # loop over ljspheres
-	return energy
 end

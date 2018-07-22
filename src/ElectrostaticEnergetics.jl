@@ -240,23 +240,23 @@ end
 Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
 `eikr`. If `include_neg_reps` is true, also compute n=-krep:-1.
 """
-@unsafe function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
+function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
                             krep::Int, include_neg_reps::Bool)
     # explicitly compute for k = 1, k = 0
-    eikr[0] = exp(0.0 * im)
-    @fastmath eikr[1] = exp(im * k_dot_r)
+    @unsafe eikr[0] = exp(0.0 * im)
+    @unsafe eikr[1] = exp(im * k_dot_r)
 
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
     for k = 2:krep
-        eikr[k] = eikr[k - 1] * eikr[1]
+        @unsafe eikr[k] = eikr[k - 1] * eikr[1]
     end
 
     # negative kreps are complex conjugate of positive ones.
     #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
     if include_neg_reps
         for k = -krep:-1
-            eikr[k] = conj(eikr[-k])
+            @unsafe eikr[k] = conj(eikr[-k])
         end
     end
 end
@@ -301,10 +301,10 @@ function electrostatic_potential_energy(framework::Framework,
                                         eikbr::OffsetArray{Complex{Float64}},
                                         eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
-    for fcharge in framework.charges
+    for mcharge in molecule.charges
         # construct a point charge for this framework atom
         # look at interaction of framework charge with molecule charge
-        for mcharge in molecule.charges
+        for fcharge in framework.charges
             ϕ += _ϕ_sr(fcharge, mcharge, eparams)
             ϕ += _ϕ_lr(fcharge, mcharge, eparams, kvectors, eikar, eikbr, eikcr)
         end
@@ -313,14 +313,14 @@ function electrostatic_potential_energy(framework::Framework,
 end
 
 # long-range contribution to Ewald sum
-function _ϕ_lr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldParams,
+function _ϕ_lr(charge_a::PtCharge, charge_b::PtCharge, eparams::EwaldParams,
                kvectors::Array{Kvector, 1}, eikar::OffsetArray{Complex{Float64}},
                eikbr::OffsetArray{Complex{Float64}}, eikcr::OffsetArray{Complex{Float64}})
     ϕ_lr = 0.0
     # vector from pt charge to pt charge
-    dx = charge_a.x - charge_b.x
-    # reciprocal lattice vectors ⋅ dx
-    k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
+    @inbounds dx = eparams.box.f_to_c * (charge_a.xf - charge_b.xf)
+    # reciprocal lattice vectors ⋅ dx # TODO store as transpose
+    @inbounds k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
 
     # compute e^{ i * n * k * (x - charge.x)} for n = -krep:krep
     fill_eikr!(eikar, k_dot_dx[1], eparams.kreps[1], false) # via symmetry only need +ve
@@ -328,13 +328,13 @@ function _ϕ_lr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldPara
     fill_eikr!(eikcr, k_dot_dx[3], eparams.kreps[3], true)
 
     # loop over kevectors
-    for kvector in kvectors
+    @simd for kvector in kvectors
         # cos( i * this_k * r) = real part of:
         #     e^{i ka r * vec(ka)} *
         #     e^{i kb r * vec(kb)} *
         #     e^{i kb r * vec(kc)} where r = x - xᵢ
         #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-        @unsafe @inbounds ϕ_lr += kvector.wt * real(
+        @unsafe ϕ_lr += kvector.wt * real(
                 eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
     end
     return ϕ_lr * charge_a.q * charge_b.q
@@ -342,8 +342,8 @@ end
 
 # short-range contribution to Ewald sum (must divide by 4 π ϵ₀ though)
 #   use only for molecules where repfactors=(1,1,1)
-function _ϕ_sr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldParams)
-    r = nearest_r(charge_a.x, charge_b.x, eparams.box)
+function _ϕ_sr(charge_a::PtCharge, charge_b::PtCharge, eparams::EwaldParams)
+    r = nearest_r(charge_a.xf, charge_b.xf, eparams.box)
 
     if r < eparams.sr_cutoff_r
         return charge_a.q * charge_b.q / r * erfc(r * eparams.α) / FOUR_π_ϵ₀
@@ -367,7 +367,7 @@ function _intramolecular_energy(molecule::Molecule, eparams::EwaldParams)
     ϕ_intra = 0.0
     for i = 1:length(molecule.charges)
         for j = (i + 1):length(molecule.charges)
-            r = nearest_r(molecule.charges[i].x, molecule.charges[j].x, eparams.box)
+            r = nearest_r(molecule.charges[i].xf, molecule.charges[j].xf, eparams.box)
             ϕ_intra -= molecule.charges[i].q * molecule.charges[j].q * erf(eparams.α * r) / r
         end
     end

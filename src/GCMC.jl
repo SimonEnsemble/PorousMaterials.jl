@@ -464,7 +464,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, fugacity::F
 
         # TODO remove after testing.
         for molecule in molecules
-            @assert(! outside_box(molecule, framework.box), "molecule outside box!")
+            @assert(! outside_box(molecule), "molecule outside box!")
         end
 
         # if we're in the production MC cycles. i.e. we've done all burn cycles...

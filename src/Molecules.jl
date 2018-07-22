@@ -2,36 +2,32 @@
 Data structure for a molecule/adsorbate.
 
 # Attributes
-- `species::Symbol`: Species of molecule, e.g. `CO2` or `ethane`
+- `species::Symbol`: Species of molecule, e.g. `:CO2`
 - `atoms::Array{LJSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
-- `charges::Array{PointCharges, 1}`: array of point charges comprising the molecule
-- `x_com::Array{Float64, 1}`: center of mass of the molecule in Cartesian coordinates
+- `charges::Array{PtCharge, 1}`: array of point charges comprising the molecule
+- `xf_com::Array{Float64, 1}`: center of mass of the molecule in fractional coordinates
 """
 struct Molecule
     species::Symbol
     atoms::Array{LJSphere, 1}
-    charges::Array{PointCharge, 1}
-    x_com::Array{Float64, 1}
+    charges::Array{PtCharge, 1}
+    xf_com::Array{Float64, 1}
 end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
-    species = m1.species == m2.species
-    centers_of_mass = isapprox(m1.x_com, m2.x_com)
-    ljs_counts = length(m1.atoms) == length(m2.atoms)
-    pc_counts = length(m1.charges) == length(m2.charges)
-    if (species & centers_of_mass & ljs_counts & pc_counts)
-        atoms = all([isapprox(m1.atoms[i], m2.atoms[i]) for i = 1:length(m1.atoms)])
-        charges = all([isapprox(m1.charges[i], m2.charges[i]) for i = 1:length(m1.charges)])
-    else
-        return false
-    end
+    return (m1.species == m2.species) && isapprox(m1.xf_com, m2.xf_com) &&
+        (length(m1.atoms) == length(m2.atoms)) && 
+        (length(m1.charges) == length(m2.charges)) && 
+        all([isapprox(m1.atoms[i], m2.atoms[i]) for i = 1:length(m1.atoms)]) &&
+        all([isapprox(m1.charges[i], m2.charges[i]) for i = 1:length(m1.charges)])
 end
 
 """
-    molecule = Molecule("Xe", assert_charge_neutrality=true)
+    molecule = Molecule("Xe", box, assert_charge_neutrality=true)
 
 Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
-Center of mass assigned using atomic masses from `read_atomic_masses()`
+Center of mass assigned using atomic masses from `read_atomic_masses()`. The `box` determines
+the fractional coordinates of the molecule, which we use for speed in our energy computations.
 
 # Arguments
 - `species::AbstractString`: Name of the molecule
@@ -40,33 +36,30 @@ Center of mass assigned using atomic masses from `read_atomic_masses()`
 # Returns
 - `molecule::Molecule`: A fully constructed molecule data structure
 """
-function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
+function Molecule(species::AbstractString, box::Box; assert_charge_neutrality::Bool=true)
     if ! isdir(PATH_TO_DATA * "molecules/" * species)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
-
-    # Read in atomic masses
-    if ! isfile(PATH_TO_DATA * "atomicmasses.csv")
-        error(@sprintf("No file 'atomicmasses.csv' exists. This file is needed to calculate the center of mass"))
-    end
-    atomic_masses = read_atomic_masses()
     
     # Read in Lennard Jones spheres
     atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
     if ! isfile(atomsfilename)
-        error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in your molecule, include a .csv file with the proper headers but no rows.",
-                       atomsfilename))
+        error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in 
+        %s, include a .csv file with the proper headers but no rows.", species, atomsfilename))
     end
     df_lj = CSV.read(atomsfilename)
     
+    atomic_masses = read_atomic_masses() # for center-of-mass calcs
+
     x_com = [0.0, 0.0, 0.0]
     total_mass = 0.0
+
     atoms = LJSphere[]
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
-        push!(atoms, LJSphere(atom, x))
+        push!(atoms, LJSphere(atom, box.c_to_f * x))
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
@@ -78,81 +71,74 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     # Read in point charges
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
     if ! isfile(chargesfilename)
-        error(@sprintf("No file %s exists. Even if there are no point charges in your molecule, include a .csv file with the proper headers but no rows.",
+        error(@sprintf("No file %s exists. Even if there are no point charges in %s, 
+        include a .csv file with the proper headers but no rows.", species,
                        chargesfilename))
     end
     df_c = CSV.read(chargesfilename)
 
-    charges = PointCharge[]
+    charges = PtCharge[]
     for row in eachrow(df_c)
-        x = [row[:x], row[:y], row[:z]]
-        push!(charges, PointCharge(row[:q], x))
+        xf = box.c_to_f * [row[:x], row[:y], row[:z]]
+        push!(charges, PtCharge(row[:q], xf))
     end
 
-    molecule = Molecule(Symbol(species), atoms, charges, x_com)
+    molecule = Molecule(Symbol(species), atoms, charges, box.c_to_f * x_com)
 
     # check for charge neutrality
-    if length(charges) > 0
-        if ! (total_charge(molecule) ≈ 0.0)
-            if assert_charge_neutrality
-                error(@sprintf("Molecule %s is not charge neutral! Pass `assert_charge_neutrality=false` to ignore this error message.", species))
-            end
+    if (length(charges) > 0) && (! (total_charge(molecule) ≈ 0.0))
+        if assert_charge_neutrality
+            error(@sprintf("Molecule %s is not charge neutral! Pass 
+            `assert_charge_neutrality=false` to ignore this error message.", species))
         end
     end
 
     return molecule
 end
 
-"""
-    translate!(molecule, dx)
-
-Translate a molecule by Cartesian vector `dx`. Adds `dx` to the coordinates of each `LJSphere` and `Charge` in the `Molecule` and shifts the center of mass as well.
-This function does *not* account for periodic boundary conditions applied in the context of a `Box`.
-
-# Arguments
-- `molecule::Molecule`: the molecule to translate
-- `dx::Array{Float64, 1}`: A 1-D array with 3 elements, corresponding to the Cartesian x-, y- and z- directions, that dictate by how much the molecule is perturbed in that coordinate.
-"""
-function translate_by!(molecule::Molecule, dx::Array{Float64, 1})
+function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
+    # move LJSphere's
     for ljsphere in molecule.atoms
-        ljsphere.x[:] += dx
+        ljsphere.xf[:] += dxf
     end
-
+    # move PtCharge's
     for charge in molecule.charges
-        charge.x[:] += dx
+        charge.xf[:] += dxf
     end
-    molecule.x_com[:] += dx
+    # adjust center of mass
+    molecule.xf_com[:] += dxf
 end
 
-"""
-    translate_to!(molecule, x)
+function translate_by!(molecule::Molecule, dx::Array{Float64, 1}, box::Box)
+    # determine shift in fractional coordinate space
+    dxf = box.c_to_f * dx
+    translate_by!(molecule, dxf)
+end
 
-Translate a molecule so that its center of mass is at Cartesian vector `x`. Charges the coordinates of each `LJSphere` and `Charge` in the `Molecule` and its center of mass as well.
-This function does *not* account for periodic boundary conditions applied in the context of a `Box`.
+function translate_to!(molecule::Molecule, xf::Array{Float64, 1})
+    dxf = xf - molecule.xf_com
+    translate_by!(molecule, dxf)
+end
 
-# Arguments
-- `molecule::Molecule`: the molecule to translate
-- `x::Array{Float64, 1}`: A 1-D array with 3 elements, corresponding to the Cartesian x-, y- and z- directions, that dictates where its new center of mass will be.
-"""
-function translate_to!(molecule::Molecule, x::Array{Float64, 1})
-    translate_by!(molecule, x - molecule.x_com)
+function translate_to!(molecule::Molecule, x::Array{Float64, 1}, box::Box)
+    translate_to!(molecule, box.c_to_f * x)
 end
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
-    println(io, "Center of mass: ", molecule.x_com)
+    println(io, "Center of mass (fractional coords): ", molecule.xf_com)
     if length(molecule.atoms) > 0
         print(io, "Lennard-Jones spheres: ")
         for ljsphere in molecule.atoms
-            @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", ljsphere.species,
-                    ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
+            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", ljsphere.species,
+                    ljsphere.xf[1], ljsphere.xf[2], ljsphere.xf[3])
         end
     end
     if length(molecule.charges) > 0
         print(io, "\nPoint charges: ")
         for charge in molecule.charges
-            @printf(io, "\n\tq = %f, x = [%.3f, %.3f, %.3f]", charge.q, 
-                    charge.x[1], charge.x[2], charge.x[3])
+            @printf(io, "\n\tq = %f, xf = [%.3f, %.3f, %.3f]", charge.q, 
+                    charge.xf[1], charge.xf[2], charge.xf[3])
         end
     end
 end
@@ -198,36 +184,22 @@ function rotation_matrix()
     return - h * r
 end
 
-"""
-    rotate!(molecule)
-
-Conduct a uniform random rotation of a molecule about its center of mass.
-
-# Arguments
-- `molecule::Molecule`: The molecule which will be rotated
-"""
-function rotate!(molecule::Molecule)
+function rotate!(molecule::Molecule, box::Box)
     # generate a random rotation matrix
+    #    but use c_to_f, f_to_c for fractional
     r = rotation_matrix()
-    # store the center of mass
-    x_com = deepcopy(molecule.x_com)
-    # move the molecule to the origin
-    translate_by!(molecule, -x_com)
+    r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
     for ljsphere in molecule.atoms
-        ljsphere.x[:] = r * ljsphere.x
+        ljsphere.xf[:] = molecule.xf_com + r * (ljsphere.xf - molecule.xf_com)
     end
-
     for charge in molecule.charges
-        charge.x[:] = r * charge.x
+        charge.xf[:] = molecule.xf_com + r * (charge.xf - molecule.xf_com)
     end
-    # no need to rotate center of mass since it is now the origin.
-    # translate back to the center of mass.
-    translate_by!(molecule, x_com)
 end
 
 """
-    outside_box = completely_outside_box(molecule, box)
+    outside_box = completely_outside_box(molecule)
 
 Checks if a Molecule object is within the boundaries of a Box unitcell.
 
@@ -238,10 +210,9 @@ Checks if a Molecule object is within the boundaries of a Box unitcell.
 # Returns
 - `outside_box::Bool`: True if the center of mass of `molecule` is outisde of `box`. False otherwise
 """
-function outside_box(molecule::Molecule, box::Box)
-    xf = box.c_to_f * molecule.x_com
+function outside_box(molecule::Molecule)
     for k = 1:3
-        if (xf[k] > 1.0) | (xf[k] < 0.0)
+        if (molecule.xf_com[k] > 1.0) || (molecule.xf_com[k] < 0.0)
             return true
         end
     end
@@ -258,7 +229,7 @@ Write an array of molecules to an .xyz file. Write only the Lennard-Jones sphere
 - `filename::AbstractString`: Name of the output file
 - `comment::AbstractString`: A comment that will be printed in the xyz file
 """
-function write_to_xyz(molecules::Array{Molecule, 1}, filename::AbstractString; comment::AbstractString="")
+function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; comment::AbstractString="")
     if ! contains(filename, ".xyz")
         filename *= ".xyz"
     end
@@ -269,7 +240,8 @@ function write_to_xyz(molecules::Array{Molecule, 1}, filename::AbstractString; c
     @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
     for molecule in molecules
         for ljsphere in molecule.atoms
-			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(ljsphere.species), ljsphere.x[1], ljsphere.x[2], ljsphere.x[3])
+            x = box.f_to_c * ljsphere.xf
+			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(ljsphere.species), x...)
         end
     end
     close(xyzfile)
