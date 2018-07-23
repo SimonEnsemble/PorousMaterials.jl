@@ -356,17 +356,22 @@ end;
         energy = PorousMaterials.total_vdw_energy(ms, ljff, box)
         @test isapprox(energy, energies_should_be[c], atol=0.1)
     end
- #     # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
- #     #  The following "framework" is a cage floating in space so no atoms are near the boundary
- #     #   of the unit cell box. So with cutoff should get same with or without PBCs.
- #     box = Box(100.0, 100.0, 100.0, π/2, π/2, π/2)
- #     co2 = Molecule("CO2", box)
- #     translate_to!(co2, [50.0, 50.0, 50.0], box)
- #     atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
- #     f = Framework("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
- #     ljff = LJForceField("UFF.csv")
- #     ljspheres = [LJSphere(atoms[i], box.c_to_f * (x[:, i] + [50.0, 50.0, 50.0])) for i = 1:length(atoms)] # cage as LJSphere array
- #     @test isapprox(vdw_energy(f, co2, ljff), vdw_energy_no_PBC(co2, ljspheres, ljff))
+    # test vdw_energy_no_PBC, which is the vdw_energy function when no PBCs are applied.
+    #  The following "framework" is a cage floating in space so no atoms are near the boundary
+    #   of the unit cell box. So with cutoff should get same with or without PBCs.
+    box = Box(100.0, 100.0, 100.0, π/2, π/2, π/2)
+    co2 = Molecule("CO2")
+    set_fractional_coords!(co2, box)
+    translate_to!(co2, [50.0, 50.0, 50.0], box)
+    f = Framework("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
+    ljff = LJForceField("UFF.csv")
+    # energy with PBC but padded so effetive periodic interactions are zero, bc beyond cutoff
+    energy = vdw_energy(f, co2, ljff)
+    atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
+    ljspheres = [LJSphere(atoms[i], x[:, i] + [50.0, 50.0, 50.0]) for i = 1:length(atoms)] # cage as LJSphere array
+    co2 = Molecule("CO2")
+    translate_to!(co2, [50.0, 50.0, 50.0])
+    @test isapprox(energy, vdw_energy_no_PBC(co2, ljspheres, ljff))
 end
 
 @testset "Energetics_Until Tests" begin

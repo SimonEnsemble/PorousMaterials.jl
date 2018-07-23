@@ -131,3 +131,20 @@ function total_vdw_energy(molecules::Array{Molecule, 1}, ljff::LJForceField, box
     end
     return total_energy / 2.0 # avoid double-counting pairs
 end
+
+"""
+Assumes unit cell box is a unit cube and no periodic boundary conditions
+are applied.
+"""
+function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{LJSphere, 1}, ljff::LJForceField)
+    energy = 0.0 
+    for matom in molecule.atoms
+        for atom in atoms
+            dx = matom.xf - atom.xf
+            r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
+            energy += lennard_jones(r², ljff.σ²[matom.species][atom.species], 
+                ljff.ϵ[matom.species][atom.species])
+        end
+    end
+    return energy
+end
