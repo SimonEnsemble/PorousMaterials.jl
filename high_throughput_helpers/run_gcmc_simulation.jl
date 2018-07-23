@@ -20,7 +20,7 @@ n_sample_cycles = jobs_to_run[structurename]["n_sample_cycles"]
 
 xtal = Framework(structurename * ".cif")
 strip_numbers_from_atom_labels!(xtal)
-adsorbate = Molecule(gasname, xtal.box)
+adsorbate = Molecule(gasname)
 
 # run the simulation
 results = gcmc_simulation(xtal, temperature, pressure, adsorbate, ljff, 
