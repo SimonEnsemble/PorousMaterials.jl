@@ -746,11 +746,11 @@ end
 
     #Van der Waals EOS test for Hydrogen
     gas = VDWGasGas(:Hydrogen)
-    props = calculate_properties(gas, 293.0, 50.0)
-    @test isapprox(props["compressibility factor"], , atol=1e-4)
-    @test isapprox(props["fugacity coefficient"], , atol=1e-4)
-    @test isapprox(props["fugacity (bar)"], 50.0 * , atol=1e-4)
-    @test isapprox(props["density (mol/m³)"], , atol=0.2)
-    @test isapprox(props["molar volume (L/mol)"], , atol=1e-4)
+    props = calculate_properties(gas, 298.0, 65.0)
+    @test isapprox(props["compressibility factor"], 1.0462045 , atol=0.001)
+    @test isapprox(props["fugacity coefficient"], 67.98166172 / 65 , atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 67.98166172 , atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], 2.490815 , atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], 0.401475 , atol=1e-4)
 end
 >>>>>>> FIxed naming and others
