@@ -23,11 +23,12 @@ function Base.isapprox(m1::Molecule, m2::Molecule)
 end
 
 """
-    molecule = Molecule("Xe", box, assert_charge_neutrality=true)
+    molecule = Molecule(species, assert_charge_neutrality=true)
 
 Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
-Center of mass assigned using atomic masses from `read_atomic_masses()`. The `box` determines
-the fractional coordinates of the molecule, which we use for speed in our energy computations.
+Center of mass assigned using atomic masses from `read_atomic_masses()`. The fractional
+coordinates are determined assuming a unit cube box. These must be adjusted later for
+simulations using `set_fractional_coords!(molecule, box)`.
 
 # Arguments
 - `species::AbstractString`: Name of the molecule
@@ -36,7 +37,7 @@ the fractional coordinates of the molecule, which we use for speed in our energy
 # Returns
 - `molecule::Molecule`: A fully constructed molecule data structure
 """
-function Molecule(species::AbstractString, box::Box; assert_charge_neutrality::Bool=true)
+function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     if ! isdir(PATH_TO_DATA * "molecules/" * species)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
@@ -59,7 +60,8 @@ function Molecule(species::AbstractString, box::Box; assert_charge_neutrality::B
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
-        push!(atoms, LJSphere(atom, box.c_to_f * x))
+        # assume a unit cube as a box for now.
+        push!(atoms, LJSphere(atom, x))
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
@@ -79,11 +81,12 @@ function Molecule(species::AbstractString, box::Box; assert_charge_neutrality::B
 
     charges = PtCharge[]
     for row in eachrow(df_c)
-        xf = box.c_to_f * [row[:x], row[:y], row[:z]]
-        push!(charges, PtCharge(row[:q], xf))
+        # assume unit cube as box for now.
+        x = [row[:x], row[:y], row[:z]]
+        push!(charges, PtCharge(row[:q], x))
     end
 
-    molecule = Molecule(Symbol(species), atoms, charges, box.c_to_f * x_com)
+    molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
     # check for charge neutrality
     if (length(charges) > 0) && (! (total_charge(molecule) ≈ 0.0))
@@ -96,6 +99,31 @@ function Molecule(species::AbstractString, box::Box; assert_charge_neutrality::B
     return molecule
 end
 
+"""
+    set_fractional_coords!(molecule, box)
+
+After a molecule is freshly constructed, its fractional coords are assumed to correspond
+to a unit cell box that is a unit cube. This function adjusts the fractional coordinates
+of the molecule to be consistent with a different box.
+"""
+function set_fractional_coords!(molecule::Molecule, box::Box)
+    for ljsphere in molecule.atoms
+        ljsphere.xf[:] = box.c_to_f * ljsphere.xf
+    end
+    for charge in molecule.charges
+        charge.xf[:] = box.c_to_f * charge.xf
+    end
+    molecule.xf_com[:] = box.c_to_f * molecule.xf_com
+    return nothing
+end
+
+"""
+    translate_by!(molecule, dxf)
+    translate_by!(molecule, dx, box)
+
+Translate a molecule by vector `dxf` in fractional coordinate space or by vector `dx` in
+Cartesian coordinate space. For the latter, a unit cell box is required for context.
+"""
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
     # move LJSphere's
     for ljsphere in molecule.atoms
@@ -115,6 +143,14 @@ function translate_by!(molecule::Molecule, dx::Array{Float64, 1}, box::Box)
     translate_by!(molecule, dxf)
 end
 
+"""
+    translate_to!(molecule, xf)
+    translate_to!(molecule, x, box)
+
+Translate a molecule a molecule to point `xf` in fractional coordinate space or to `x` in
+Cartesian coordinate space. For the latter, a unit cell box is required for context. The
+molecule is translated such that its center of mass is at `xf`/x`.
+"""
 function translate_to!(molecule::Molecule, xf::Array{Float64, 1})
     dxf = xf - molecule.xf_com
     translate_by!(molecule, dxf)
@@ -184,6 +220,12 @@ function rotation_matrix()
     return - h * r
 end
 
+"""
+    rotate!(molecule, box)
+
+Conduct a random rotation of the molecule about its center of mass. 
+The box is needed because the molecule contains only its fractional coordinates.
+"""
 function rotate!(molecule::Molecule, box::Box)
     # generate a random rotation matrix
     #    but use c_to_f, f_to_c for fractional

@@ -4,7 +4,7 @@ const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
 const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
 
 """
-   result = henry_coefficient(framework, adsorbate, temperature, ljforcefield,
+   result = henry_coefficient(framework, molecule, temperature, ljforcefield,
                              nb_insertions=1e6, verbose=true, ewald_precision=1e-6)
 
 Conduct Widom insertions to compute the Henry coefficient Kₕ of a molecule in a framework.
@@ -19,7 +19,7 @@ Returns a dictionary of results.
 
 # Arguments
 - `framework::Framework`: the porous crystal in which we seek to simulate adsorption
-- `adsorbate::AbstractString`: name of adsorbate molecule
+- `molecule::molecule`: the adsorbate molecule
 - `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
     in the porous material. units: Kelvin (K)
 - `ljforcefield::LJForceField`: the molecular model used to describe the
@@ -29,7 +29,7 @@ Returns a dictionary of results.
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
 the replication factors in reciprocal space.
 """
-function henry_coefficient(framework::Framework, adsorbate::AbstractString, temperature::Float64,
+function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; nb_insertions::Int=1e6,
                            verbose::Bool=true, ewald_precision::Float64=1e-6)
     if verbose
@@ -54,8 +54,8 @@ function henry_coefficient(framework::Framework, adsorbate::AbstractString, temp
     end
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
-    # construct molecule *after* replicated framework so its fractional coords are consistent with the new replicated box.
-    molecule = Molecule(adsorbate, framework.box)
+    # adjust molecule's fractional coordinates according to the replicated framework box.
+    set_fractional_coords!(molecule, framework.box)
     
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!

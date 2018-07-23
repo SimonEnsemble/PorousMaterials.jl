@@ -17,7 +17,7 @@ co2_tests = true
 #
 if ig_tests
     empty_space = Framework("empty_box.cssr") # zero atoms!
-    ideal_gas = Molecule("IG", empty_space.box)
+    ideal_gas = Molecule("IG")
     @assert(empty_space.n_atoms == 0)
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
@@ -37,7 +37,7 @@ end
 if xe_in_sbmof1_tests
     sbmof1 = Framework("SBMOF-1.cif")
     dreiding_forcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)
-    molecule = Molecule("Xe", sbmof1.box)
+    molecule = Molecule("Xe")
 
     test_fugacities = [20.0, 200.0, 2000.0] / 100000.0 # bar
     test_mmol_g = [0.18650, 1.00235, 1.39812]
@@ -60,7 +60,7 @@ if co2_tests
     #  Test isotherm 1: by greg chung. co2 at 313 k
     ###
  #     f = Framework("ZnCo-ZIF-71_atom_relax_RESP.cif")
- #     co2 = Molecule("CO2", f.box)
+ #     co2 = Molecule("CO2")
  #     strip_numbers_from_atom_labels!(f)
  #     ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
  # 
@@ -93,7 +93,7 @@ if co2_tests
     zif71 = Framework("zif71_bogus_charges.cif")
     strip_numbers_from_atom_labels!(zif71)
     ff = LJForceField("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
-    co2 = Molecule("CO2EPM2", zif71.box)
+    co2 = Molecule("CO2EPM2")
 
     # load in test data
     df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")
