@@ -332,3 +332,14 @@ function charged(molecule::Molecule; verbose::Bool=false)
     end
     return charged_flag
 end
+
+function bond_lengths(molecule::Molecule, box::Box)
+    bond_lengths = Float64[]
+    for i = 1:length(molecule.atoms)
+        for j = (i+1):length(molecule.atoms)
+            dx = box.f_to_c * (molecule.atoms[i].xf - molecule.atoms[j].xf)
+            push!(bond_lengths, norm(dx))
+        end
+    end
+    return bond_lengths
+end

@@ -141,7 +141,6 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
                                       pressures::Array{Float64, 1}, molecule::Molecule,
                                       ljforcefield::LJForceField;
-                                      n_initial_burn_cycles::Int=10000, 
                                       n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
                                       sample_frequency::Int=10, verbose::Bool=true,
                                       ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
@@ -150,7 +149,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
     for (i, pressure) in enumerate(pressures)
         result, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
                                             ljforcefield, 
-                                            n_burn_cycles=(i==1) ? n_initial_burn_cycles : n_burn_cycles,
+                                            n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
                                             verbose=verbose, molecules=molecules,
@@ -239,13 +238,17 @@ Note that we assume these coordinates are Cartesian, i.e. corresponding to a uni
 is ideal gas, where fugacity = pressure.
 """
 function gcmc_simulation(framework::Framework, temperature::Float64, pressure::Float64,
-                         molecule::Molecule, ljforcefield::LJForceField;
+                         molecule_::Molecule, ljforcefield::LJForceField;
                          n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
                          sample_frequency::Int=5, verbose::Bool=true,
                          molecules::Array{Molecule, 1}=Molecule[],
                          ewald_precision::Float64=1e-6, eos::Symbol=:ideal, 
                          autosave::Bool=true)
     tic()
+    # to avoid changing the outside object `molecule_` inside this function, we make
+    #  a deep copy of it here.
+    molecule = deepcopy(molecule_)
+
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
     end
@@ -310,9 +313,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
         # assert that the bond lengths are equal between the template and array to make
         # sure the right fractional coords were used
         if length(molecule.atoms) > 1
-            template_bond_length = framework.box.f_to_c * (molecule.atoms[1].xf - molecule.atoms[2].xf)
+            template_bond_length = norm(framework.box.f_to_c * (molecule.atoms[1].xf - molecule.atoms[2].xf))
             for m in molecules
-                bond_length = framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf)
+                bond_length = norm(framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf))
                 if ! isapprox(bond_length, template_bond_length, atol=1e-6)
                     error("A bond length between atoms in a molecule in `molecules` passed 
                     in as an initial configuration is not equal to the molecule template

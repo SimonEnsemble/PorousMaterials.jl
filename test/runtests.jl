@@ -16,7 +16,7 @@ using OffsetArrays
     @test isapprox(framework.box, Box(framework.box.a, framework.box.b, framework.box.c,
                                       framework.box.α, framework.box.β, framework.box.γ))
     @test isapprox(replicate(framework.box, (1, 1, 1)), framework.box)
-    box = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
+    box = UnitCube()
     @test box.Ω ≈ 1.0
     @test isapprox(replicate(box, (3, 5, 4)), Box(3.0, 5.0, 4.0, π/2, π/2, π/2))
     @test framework.box.Ω ≈ det(framework.box.f_to_c)
@@ -100,6 +100,28 @@ end;
     for i = 1:3
         @test all(molecule.charges[i].xf ≈ molecule.atoms[i].xf)
     end
+    
+    m = Molecule("CO2")
+    box = Framework("SBMOF-1.cif").box
+    set_fractional_coords!.(m, box)
+    set_fractional_coords_to_unit_cube!.(m, box)
+    @test isapprox(m, Molecule("CO2")) # should restore.
+    set_fractional_coords!(m, box)
+    for i = 1:200
+        translate_by!(m, [randn(), randn(), randn()])
+        translate_by!(m, [randn(), randn(), randn()], box)
+        translate_to!(m, [randn(), randn(), randn()])
+        translate_to!(m, [randn(), randn(), randn()], box)
+    end
+    set_fractional_coords_to_unit_cube!.(m, box)
+    fresh_m = Molecule("CO2")
+    translate_to!(fresh_m, m.xf_com)
+    @test isapprox(m, fresh_m) # should restore.
+
+    box = UnitCube()
+    m = Molecule("CO2")
+    set_fractional_coords!(m, box)
+    @test isapprox(m, Molecule("CO2"))
 
     # test translate_to, translate_by
     box = Box(1.23, 0.4, 6.0, π/2, π/2, π/2)
@@ -274,7 +296,7 @@ end
     nearest_image!(dxf)
     @test isapprox(dxf, [-0.3, -0.1, 0.1])
 
-    box = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
+    box = UnitCube()
     x = [0.9, 0.1, 0.1]
     y = [0.0, 0.0, 0.0]
     @test nearest_r(x, y, box) ≈ norm([-0.1, 0.1, 0.1])
