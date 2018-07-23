@@ -610,8 +610,8 @@ e
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
 
-        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework, 
-            molecule, ljforcefield, temperature, pressure, n_burn_cycles, 
+        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework.name, 
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, 
             n_sample_cycles) * ".jld"
 
         JLD.save(save_results_filename, "results", results)
@@ -626,17 +626,17 @@ end # gcmc_simulation
 """
 Determine the name of files saved during the GCMC simulation, be molecule positions or results.
 """
-function root_save_filename(framework::Framework,
-                            molecule::Molecule,
-                            ljforcefield::LJForceField,
+function root_save_filename(framework_name::AbstractString,
+                            molecule_species::Symbol,
+                            ljforcefield_name::AbstractString,
                             temperature::Float64,
                             pressure::Float64,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int)
-        frameworkname = split(framework.name, ".")[1] # remove file extension
-        forcefieldname = split(ljforcefield.name, ".")[1] # remove file extension
-        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample", frameworkname,
-                    molecule.species, temperature, pressure, forcefieldname,
+        framework_name = split(framework_name, ".")[1] # remove file extension
+        ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample", framework_name,
+                    molecule_species, temperature, pressure, ljforcefield_name,
                     n_burn_cycles, n_sample_cycles)
 end
 
