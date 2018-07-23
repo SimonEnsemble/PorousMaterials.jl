@@ -118,6 +118,23 @@ function set_fractional_coords!(molecule::Molecule, box::Box)
 end
 
 """
+    set_fractional_coords_to_unit_cube!(molecule, box)
+
+Change fractional coordinates of a molecule in the context of a given box to Cartesian, 
+i.e. to correspond to fractional coords in a unit cube box.
+"""
+function set_fractional_coords_to_unit_cube!(molecule::Molecule, box::Box)
+    for ljsphere in molecule.atoms
+        ljsphere.xf[:] = box.f_to_c * ljsphere.xf
+    end
+    for charge in molecule.charges
+        charge.xf[:] = box.f_to_c * charge.xf
+    end
+    molecule.xf_com[:] = box.f_to_c * molecule.xf_com
+    return nothing
+end
+
+"""
     translate_by!(molecule, dxf)
     translate_by!(molecule, dx, box)
 

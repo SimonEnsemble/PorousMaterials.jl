@@ -100,6 +100,8 @@ function Box(f_to_c::Array{Float64, 2})
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
 
+UnitCube() = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
+
 """
     new_box = replicate(original_box, repfactors)
 

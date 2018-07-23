@@ -233,7 +233,8 @@ translation.
 - `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
     gas molecules every this number of Markov proposals.
 - `verbose::Bool`: whether or not to print off information during the simulation.
-- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework
+- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework.
+Note that we assume these coordinates are Cartesian, i.e. corresponding to a unit box.
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
 """
@@ -302,6 +303,23 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
     if length(molecules) != 0
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
+        
+        # set fractional coords of these molecules 
+        set_fractional_coords!.(molecules, framework.box)
+
+        # assert that the bond lengths are equal between the template and array to make
+        # sure the right fractional coords were used
+        if length(molecule.atoms) > 1
+            template_bond_length = framework.box.f_to_c * (molecule.atoms[1].xf - molecule.atoms[2].xf)
+            for m in molecules
+                bond_length = framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf)
+                if ! isapprox(bond_length, template_bond_length, atol=1e-6)
+                    error("A bond length between atoms in a molecule in `molecules` passed 
+                    in as an initial configuration is not equal to the molecule template
+                    passed.")
+                end
+            end
+        end
 
         system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
         system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
@@ -604,6 +622,9 @@ e
     if verbose
         print_results(results, print_title=false)
     end
+
+    # before returning molecules, convert coords back to Cartesian.
+    set_fractional_coords_to_unit_cube!.(molecules, framework.box)
 
     if autosave
         if ! isdir(PATH_TO_DATA * "gcmc_sims")
