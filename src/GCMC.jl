@@ -268,6 +268,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
     repfactors = replication_factors(framework.box, ljforcefield)
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
+    warn("must replicate before passing")
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
     # create a template to copy when we insert a new molecule.
