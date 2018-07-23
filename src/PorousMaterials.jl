@@ -13,6 +13,7 @@ include("Misc.jl")
 include("Grid.jl")
 include("MChelpers.jl")
 include("EOS.jl")
+include("Henry.jl")
 include("GCMC.jl")
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
@@ -22,13 +23,14 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_ove
        Molecule, PointCharge, LennardJonesSphere, read_molecule_file, translate_by!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged, # Molecules.jl
        outside_box, write_to_xyz,
-       nearest_image!, PotentialEnergy, # Energetics_Util.jl
+       nearest_image!, PotentialEnergy, SystemPotentialEnergy, # Energetics_Util.jl
        lennard_jones, vdw_energy, vdw_energy_no_PBC, # VdWEnergetics.jl
        read_xyz, read_cpk_colors, read_atomic_radii, # Misc.jl
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
-       insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, # MChelpers.jl
+       insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable, # MChelpers.jl
        apply_periodic_boundary_condition!,
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
        electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, # ElectrostaticEnergetics.jl
-       calculate_properties, PengRobinsonGas, VDWGas #EOS.jl
+       calculate_properties, PengRobinsonGas, VDWGas # EOS.jl
+       henry_coefficient # Henry.jl
 end
