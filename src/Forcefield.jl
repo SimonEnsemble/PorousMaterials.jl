@@ -30,6 +30,9 @@ end
 
 Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LennardJonesForceField object.
 
+Kong mixing rules: DOI 10.1063/1.1680358
+Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelot_rules
+
 # Arguments
 - `forcefieldfile::AbstractString`: Name of the forcefield file
 - `cutoffradius::Float64`: Cutoff radius beyond which we define the potential energy to be zero (units: Angstrom)
@@ -39,7 +42,7 @@ Read a .csv file containing Lennard Jones parameters (with the following columns
 - `ljforcefield::LennardJonesForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
 function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
-    if ! (mixing_rules in ["Lorentz-Berthelot"])
+    if ! (mixing_rules in ["Lorentz-Berthelot", "Kong"])
         # TODO add other mixing rules with corresponding tests
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
@@ -62,8 +65,24 @@ function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Floa
         ljff.ϵ[atom] = Dict{Symbol, Float64}()
         ljff.σ²[atom] = Dict{Symbol, Float64}()
 		for other_atom in [Symbol(other_atom) for other_atom in keys(ljff.pure_σ)]
-			ljff.ϵ[atom][other_atom] = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
-			ljff.σ²[atom][other_atom] = ((ljff.pure_σ[atom] + ljff.pure_σ[other_atom]) / 2.0) ^ 2
+            if mixing_rules == "Lorentz-Berthelot"
+                ϵ_ij = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
+                σ_ij² = ((ljff.pure_σ[atom] + ljff.pure_σ[other_atom]) / 2.0) ^ 2
+            elseif mixing_rules == "Kong"
+                ϵ_iiσ_ii⁶ = ljff.pure_ϵ[atom]       * ljff.pure_σ[atom] ^ 6
+                ϵ_jjσ_jj⁶ = ljff.pure_ϵ[other_atom] * ljff.pure_σ[other_atom] ^ 6
+
+                ϵ_iiσ_ii¹² = ϵ_iiσ_ii⁶ * ljff.pure_σ[atom] ^ 6
+                ϵ_jjσ_jj¹² = ϵ_jjσ_jj⁶ * ljff.pure_σ[other_atom] ^ 6
+
+                ϵ_ijσ_ij⁶ = sqrt(ϵ_iiσ_ii⁶ * ϵ_jjσ_jj⁶)
+                ϵ_ijσ_ij¹² = ((ϵ_iiσ_ii¹² ^ (1/13) + ϵ_jjσ_jj¹² ^ (1/13)) / 2) ^ 13
+
+                ϵ_ij = ϵ_ijσ_ij⁶ ^ 2 / ϵ_ijσ_ij¹²
+                σ_ij² = (ϵ_ijσ_ij¹² / ϵ_ijσ_ij⁶) ^ (1/3)
+            end
+            ljff.ϵ[atom][other_atom] = ϵ_ij
+            ljff.σ²[atom][other_atom] = σ_ij²
 		end
 	end
 
