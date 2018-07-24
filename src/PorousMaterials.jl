@@ -18,7 +18,7 @@ include("GCMC.jl")
 
 export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
-       convert_cif_to_P1_symmetry, construct_box, replicate, read_atomic_masses, charged, write_cif, # Crystal.jl
+       convert_cif_to_P1_symmetry, construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges_to_zeolites!, # Crystal.jl
        LennardJonesForceField, read_forcefield_file, replication_factors, check_forcefield_coverage, # Forcefield.jl
        Molecule, PointCharge, LennardJonesSphere, read_molecule_file, translate_by!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged, # Molecules.jl
@@ -29,7 +29,7 @@ export Box, Framework, read_crystal_structure_file, replicate_to_xyz, remove_ove
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, # MChelpers.jl
        apply_periodic_boundary_condition!,
-       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
+       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm, root_save_filename,  # GCMC.jl
        electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, # ElectrostaticEnergetics.jl
        calculate_properties, PengRobinsonGas, # EOS.jl
        henry_coefficient # henry.jl

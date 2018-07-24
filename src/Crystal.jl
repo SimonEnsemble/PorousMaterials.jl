@@ -785,6 +785,18 @@ function crystal_density(framework::Framework)
     return mw / framework.box.Ω * 1660.53892  # --> kg/m3
 end
 
+
+"""
+
+"""
+function assign_charges_to_zeolites!(framework::Framework)
+    framework.charges[framework.atoms .== :O] = -0.75
+    framework.charges[framework.atoms .== :Si] = 1.50
+    if ! charge_neutral(framework::Framework, net_charge_tol::Float64)
+        error(@sprintf("Framework %s is not charge neutral; sum of charges is : %f e\n", framework.name, sum(framework.charges)))
+    end
+end
+
 """
     write_cif(framework, filename)
 
