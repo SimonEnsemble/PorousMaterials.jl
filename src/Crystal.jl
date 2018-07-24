@@ -1,5 +1,4 @@
 using Base.Test
-using PyCall # see pyimport, requires ASE
 
 """
 Data structure for a 3D crystal structure.
@@ -546,41 +545,6 @@ function chemical_formula(framework::Framework; verbose::Bool=false)
     end
 
     return atom_counts
-end
-
-"""
-    convert_cif_to_P1_symmetry(filename, outputfilename; verbose=true)
-
-Use Atomic Simulation Environment (ASE) Python package to convert .cif file in non-P1
-symmetry to P1 symmetry. Writes .cif with P1 symmetry to `outputfilename1`.
-Filenames correspond to files in `PATH_TO_DATA/crystals`.
-# TODO add to README that ase is required. Later look at Crystals.jl
-
-# Arguments
-- `filename::AbstractString`: The name of the input file
-- `outputfilename::AbstractString`: The name of the output file
-- `verbose::Bool`: Will print updates as the function's running if true.
-"""
-function convert_cif_to_P1_symmetry(filename::AbstractString, outputfilename::AbstractString; verbose::Bool=true)
-    # Import Atomic Simulation Environment Python package
-    @pyimport ase
-    @pyimport ase.io as aseio
-    @pyimport ase.build as asebuild
-
-    non_p1_cif_location = PATH_TO_DATA * "crystals/" * filename
-    println(non_p1_cif_location)
-    non_p1_cif = aseio.read(non_p1_cif_location, format="cif")
-
-    p1_cif = asebuild.make_supercell(non_p1_cif, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-
-    p1_cif_location = PATH_TO_DATA * "crystals/" * outputfilename
-    aseio.write(p1_cif_location, p1_cif, format="cif")
-
-    if verbose
-        @printf("Converting to P1 symmetry using ASE.\n\t%s\n\t\t--->\n\t%s\n\n", non_p1_cif_location, p1_cif_location)
-    end
-
-    return
 end
 
 """
