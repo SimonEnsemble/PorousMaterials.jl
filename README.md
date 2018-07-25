@@ -10,7 +10,7 @@ A pure-[Julia](https://julialang.org/) package for classical molecular modeling 
 
 :hammer: Run grand-canonical Monte Carlo simulations of gas adsorption in a porous crystal
 
-Designed for high-throughput computations to minimize input files and querying results from output files. User-friendly. Well-documented (eventually). Easy to install (eventually).
+Designed for high-throughput computations to minimize input files and querying results from output files. User-friendly. Instructive error messages thrown when they should be. Well-documented (eventually). Easy to install (eventually).
 
 *In development, please contribute, post issues :bug:, and improve!*
 
@@ -18,7 +18,7 @@ Designed for high-throughput computations to minimize input files and querying r
 
 ### Henry coefficients
 
-Compute the Henry coefficient of CO2 in CAXVII\_clean at 298 K using the Dreiding force field:
+Compute the Henry coefficient of CO<sub>2</sub> in CAXVII\_clean at 298 K using the Dreiding force field:
 
 ```julia
 using PorousMaterials
@@ -47,7 +47,7 @@ result["henry coefficient [mol/(kg-Pa)]"] # 2.88e-05
 
 ### Grand-canonical Monte Carlo simulations
 
-Simulate the adsorption isotherm of CO2 in ZIF-71 at 298 K from 0 to 1 bar using the Dreiding force field:
+Simulate the adsorption of CO<sub>2</sub> in ZIF-71 at 298 K at 1 bar using the Dreiding force field:
 
 ```julia
 using PorousMaterials
@@ -64,10 +64,53 @@ forcefield = LJForceField("Dreiding.csv", cutoffradius=12.8)
 molecule = Molecule("CO2")
 
 temperature = 298.0 # K
+pressure = 1.0 # bar
+
+# conduct grand-canonical Monte Carlo simulation
+results = gcmc_simulation(framework, temperature, pressure, molecule, forcefield,
+            n_burn_cycles=5000, n_sample_cycles=5000)
+
+# ... prints stuff
+# results automatically saved to .jld load later in one line of code
+
+# returns dictionary for easy querying
+results["⟨N⟩ (molecules/unit cell)"]
+results["Q_st (K)"]
+```
+
+Or, compute the entire adsorption isotherm at once, parallelized across many cores:
+```julia
 pressures = [0.2, 0.6, 0.8, 1.0] # bar
 
+# loop over all pressures and compute entire adsorption isotherm in parallel
 results = adsorption_isotherm(framework, temperature, pressures, molecule, forcefield,
             n_burn_cycles=5000, n_sample_cycles=5000)
+```
+
+Or, compute the adsorption isotherm in a step-wise manner, loading the molecules from the previous simulation to save on burn cycles:
+```julia
+# loop over all pressures and compute entire adsorption isotherm in parallel
+results = stepwise_adsorption_isotherm(framework, temperature, pressures, molecule, forcefield,
+            n_burn_cycles=5000, n_sample_cycles=5000)
+```
+
+### Potential Energy Grid
+
+Superimpose a grid of points about the unit cell of SBMOF-1. Compute the potential energy of xenon at each point and store as a grid.
+
+```julia
+using PorousMaterials
+
+framework = Framework("SBMOF-1.cif")
+molecule = Molecule("Xe")
+forcefield = LJForceField("UFF.csv")
+
+grid = energy_grid(framework, molecule, forcefield, n_pts=(50, 50, 50), units=:kJ_mol) # Grid data structure
+```
+
+Write to a .cube volume file to visualize the potential energy contours.
+```julia
+write_cube(grid, "CH4_in_SBMOF1.cube")
 ```
 
 ## Building blocks
@@ -111,7 +154,7 @@ box.c_to_f # Cartesian to fractional coordinate transformation matrix
 box.reciprocal_lattice # rows are reciprocal lattice vectors
 ```
 
-You can replicate a box as follows:
+Replicate a box as follows:
 ```julia
 box = replicate(box, (2, 2, 2)) # new box replicated 2 by 2 by 2
 box.a # 20 Å
@@ -125,8 +168,10 @@ using PorousMaterials
 # read in xtal structure file
 framework = Framework("SBMOF-1.cif")
 
-# access unit cell, atoms, and charges
+# access unit cell box
 framework.box
+
+# access Lennard-Jones spheres and point charges comprising the crystal
 framework.atoms
 framework.charges
 
@@ -149,6 +194,7 @@ forcefield = LJForceField("UFF.csv", cutoffradius=14.0, mixing_rules="Lorentz-Be
 # access the Lennard-Jones epsilon & sigma for Xe
 forcefield.pure_ϵ[:Xe] # K
 forcefield.pure_σ[:Xe] # Å
+
 # access the Lennard-Jones epsilon & sigma for Xe-C interactions
 forcefield.ϵ[:Xe][:C] # K                                                                 
 forcefield.σ²[:Xe][:C] # Å 
@@ -207,7 +253,7 @@ energy = vdw_energy(framework, molecule, forcefield) # K
 
 #### Electrostatics
 
-What is the electrostatic potential energy of a CO2 adsorbate inside CAXVII\_clean at `[0.0, 1.0, 0.0]` Cartesian coordinate?
+What is the electrostatic potential energy of a CO<sub>2</sub> adsorbate inside CAXVII\_clean at `[0.0, 1.0, 0.0]` Cartesian coordinate?
 
 ```julia
 using PorousMaterials
@@ -227,17 +273,28 @@ eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)
 energy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)
 ```
 
+#### Equations of state
+
+Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:
+```julia
+gas = PengRobinsonGas(:CH4)
+props = calculate_properties(gas, 298.0, 65.0) # dictionary of properties
+props["fugacity coefficient"] # 0.8729
+```
+
+Pass `eos=:PengRobinson` to `gcmc_simulation` to automatically convert pressure to fugacity using the Peng-Robinson equation of state.
+
 ## Input files to describe crystals, molecules, and forcefields
 
 All data is stored in the variable `PorousMaterials.PATH_TO_DATA * "data/"` (type into Julia). By default, the input files are read from your present working directory (type `pwd()` into Julia) in a folder `data/`. Go inside `PorousMaterials.jl/test/data` to see example input files.
 
 #### Crystals
 
-Put your .cif and .cssr crystal structure files in `data/crystals`. `PorousMaterials.jl` only takes crystals in P1 symmetry.
+Place `.cif` and `.cssr` crystal structure files in `data/crystals`. `PorousMaterials.jl` currently takes crystals in P1 symmetry only.
 
 #### Molecules/Adsorbates
 
-Molecule input files are stored in `data/molecules`. Each molecule possesses its own directory and contains two files: `point_charges.csv` and `lennard_jones_spheres.csv`. Both are .csv files of the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom here. Charges are in units of electrons.
+Molecule input files are stored in `data/molecules`. Each molecule possesses its own directory and contains two files: `point_charges.csv` and `lennard_jones_spheres.csv`. Both are `.csv` files of the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom here. Charges are in units of electrons.
 
 #### Force field parameters
 
@@ -248,6 +305,10 @@ Interaction of an adsorbate with the framework is modeled as pair-wise additive 
 `V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ]`, where `x = sigma / r`
 
 The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in `PorousMaterials.jl`.
+
+#### Atomic masses
+
+Add fancy pseudo-atoms to `data/atomic_masses.csv`.
 
 ## Installation
 
@@ -261,7 +322,7 @@ The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure
 ```julia
 push!(LOAD_PATH, homedir() * "/PorousMaterials.jl/src/")
 ```
-If you put the above line in your `~/.juliarc` file, the command will run silently every time you run Julia!
+Add the above line to your `~/.juliarc` file to avoid typing this command every time you `using PorousMaterials`.
 
 5. Finally, in Julia, load all functions in `PorousMaterials.jl` into the namespace:
 
@@ -269,28 +330,37 @@ If you put the above line in your `~/.juliarc` file, the command will run silent
 using PorousMaterials # that's it
 ```
 
-Note: This package is in development. After stabilized and fully documented, installation will be as easy `Pkg.add("PorousMaterials")`.
+Note: This package is in development. After stabilized and fully documented, installation will be as easy as `Pkg.add("PorousMaterials")`.
 
 ## Tests
-Please run the test script in `tests/runtests.jl`.
+Run the unit-ish tests in the script `tests/runtests.jl`.
 
 Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and are found in `tests/henry_test.jl` and `tests/gcmc_test.jl`.
 
 ## Help wanted
-* geometric-based pore size calculations (largest free and included spheres), surface area, and porosity calculations that take `Framework`'s as input
-* the speed of a GCMC or Henry simulation is determined primarily by how fast `PorousMaterials.jl` can compute the energy. Some core functions that can speed up this are:
+* the speed of a GCMC or Henry simulation is determined primarily by how fast `PorousMaterials.jl` can compute the electrostatic and vdw potential energy. Some core functions that can speed up this are:
     * `nearest_image!`, `nearest_r` in `src/NearestImage.jl`
-    * electrostatics take the longest... Ewald sums in `src/Electrostatics.jl`.
-    * consolidate `eikar`, `eikbr`, `eikcr` somehow without slowing down the Ewald sum
-    The scripts `test/vdw_timing.jl` and `test/ewald_timing.jl` time the functions so you can check if you are speeding it up.
-* extend GCMC to mixtures
+    * Ewald sums in `src/Electrostatics.jl`. (electrostatics are a huge bottleneck.)
+    * `src/VdWEnergetics.jl`
+    The scripts `test/vdw_timing.jl` and `test/ewald_timing.jl` time the functions for benchmarking.
+* consolidate `eikar`, `eikbr`, `eikcr` somehow without slowing down the Ewald sum.
+* more tests added to `tests/runtests.jl`, `tests/henry_tests.jl`, `tests/gcmc_tests.jl`
+* code coverage badge
+* how to hook up to Travis CI to automatically run tests upon a pull request?
+* geometric-based pore size calculations (largest free and included spheres), surface area, and porosity calculations that take `Framework`'s as input
+* handle .cif's without P1 symmetry. i.e. convert any .cif to P1 symmetry
+* generate a docs website
+* extend `gcmc_simulation` to handle mixtures
+* better default rules for choosing Ewald sum parameters? alpha, kvectors required...
 
-# Contribution guidelines
+## Contribution guidelines
 
-To avoid breaking PorousMaterials.jl upon pushing changes, please copy the `pre-commit` script to the `.git/hooks/` directory inside `PorousMaterials.jl`. Then `chmod +x .git/hooks/pre-commit` to make it executable. Now, when you `git commit`, `tests/runtests.jl` will automatically run to make sure the tests run before you commit a change that could break PorousMaterials.jl.
+Please run `tests/runtests.jl` and assert that the tests run before you submit a pull request.
+For substantial changes aside from performance optimizations/bug fixes, please check with us before moving forward. And it's best if you post an issue stating your intentions to implement a feature in case someone else already is.
 
 * keep with spacing and naming conventions used throughout the code. only lower case for variables, upper case for types etc.
-* include many comments. include doc strings for your functions
+* always have type assertions in the function arguments
+* include doc strings for your functions that are exposed to the user or comments for internal functions
 * modularize the code as much as possible by breaking it into small functions
 * before you implement a function, check if it already exists; we want to minimize the repeating of code. Less is more!
-* no new functions without tests added to `tests/runtests.jl`
+* ensure your new function has tests added to `tests/runtests.jl`

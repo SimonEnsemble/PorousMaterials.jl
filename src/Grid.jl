@@ -165,18 +165,19 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
 
-    # TODO electrostatics
-    if length(molecule.charges) != 0
-        error("Electrostatics not implemented yet.")
-    end
-
-    const rotations_required = ((length(molecule.ljspheres) > 1) | (length(molecule.charges) > 1))
+    const rotations_required = rotatable(molecule)
+    const charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
     if rotations_required & isnan(temperature)
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
+    
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
+                                                          framework.box,
+                                                          verbose=verbose & charged_system)
 
-    const repfactors = replication_factors(framework.box, ljforcefield)
-    framework = replicate(framework)
+
+    repfactors = replication_factors(framework.box, ljforcefield)
+    framework = replicate(framework, repfactors)
     
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
@@ -199,8 +200,14 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
             boltzmann_factor_sum = 0.0
             for r = 1:n_rotations
                 rotate!(molecule, framework.box)
-                energy = vdw_energy(framework, molecule, ljforcefield)
-                boltzmann_factor_sum += exp(-energy / temperature)
+
+                energy = PotentialEnergy(0.0, 0.0)
+                energy.vdw = vdw_energy(framework, molecule, ljforcefield)
+                if charged_system
+                    energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams,
+                                                                    kvecs, eikar, eikbr, eikcr)
+                end
+                boltzmann_factor_sum += exp(-sum(energy) / temperature)
             end
             ensemble_average_energy = -temperature * log(boltzmann_factor_sum / n_rotations)
         end
