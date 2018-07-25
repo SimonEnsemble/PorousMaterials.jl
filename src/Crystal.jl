@@ -1,14 +1,6 @@
 using Base.Test
 
-"""
-Data structure for a 3D crystal structure.
-
-# Attributes
-- `name::String`: name of crystal structure
-- `box::Box`: unit cell (Bravais Lattice)
-- `atoms::Array{LJSphere, 1}`: list of Lennard-Jones spheres in crystal unit cell
-- `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
-"""
+# Data structure for a framework; user-friendly constructor below
 struct Framework
     name::String
     box::Box
@@ -17,20 +9,29 @@ struct Framework
 end
 
 """
-    framework = Framework("filename.cssr"; run_checks=true, 
-                          net_charge_tol=0.001, remove_overlap = false)
+    framework = Framework(filename, check_charge_neutrality=true,
+                          net_charge_tol=0.001, check_atom_overlap=true,
+                          remove_overlap=false)
+    framework = Framework(name, box, atoms, charges)
 
-Read a crystal structure file (.cif or .cssr) and construct a Framework object.
-If `run_checks=True`, checks for atom overlap and charge neutrality. `net_charge_tol` is the tolerance for net charge.
+Read a crystal structure file (.cif or .cssr) and populate a `Framework` data structure,
+or construct a `Framework` data structure directly.
 
 # Arguments
-- `filename::AbstractString`: the name of the crystal structure file
+- `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `PorousMaterials.PATH_TO_DATA * "structures/"`.
 - `check_charge_neutrality::Bool`: check for charge neutrality
-- `net_charge_tol::Float64`: Charge tolerance for charge neutrality check
-- `remove_overlap::Bool`: Will remove "identical" atoms if true. Identical atoms are of the same element, occupying the same space.
+- `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
+- `check_atom_overlap::Bool`: throw an error if overlapping atoms are detected.
+- `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element and overlap.
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
+
+# Attributes
+- `name::String`: name of crystal structure
+- `box::Box`: unit cell (Bravais Lattice)
+- `atoms::Array{LJSphere, 1}`: list of Lennard-Jones spheres in crystal unit cell
+- `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_overlap::Bool=true,
@@ -69,13 +70,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 if length(line) == 3
                     @assert(contains(line[2] * line[3], "P1") ||
                             contains(line[2] * line[3], "P 1") ||
-                            contains(line[2] * line[3], "P-1") ||
                             contains(line[2] * line[3], "-P1"),
                             "cif must have P1 symmetry.\n")
                 elseif length(line) == 2
                     @assert(contains(line[2], "P1") ||
                             contains(line[2], "P 1") ||
-                            contains(line[2], "P -1") ||
                             contains(line[2], "-P1"),
                             "cif must have P1 symmetry.\n")
                 else
@@ -354,16 +353,15 @@ function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose:
     return overlap
 end
 
+#TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms(framework; hard_diameter=0.1, verbose=false, run_checks = true, net_charge_tol=0.001)
+    new_framework = remove_overlapping_atoms(framework; hard_diameter=0.1)
 
 Takes in a framework and checks to see if there are any "identical" atoms and promptly removes them. Identical atoms are two atoms of the same element, occupying the same space.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
 - `hard_diameter::Float64`: The minimum distance between two atoms without them overlapping
-- `run_checks::Bool`: Will run overlap check and charge neutrality check if `true` on new framework
-- `net_charge_tol::Float64`: Charge tolerance for charge neutrality check
 
 # Returns
 - `new_framework::Framework`: A new framework where identical atoms have been removed.
@@ -392,7 +390,11 @@ function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0
             r = norm(framework.box.f_to_c * dxf)
 
             if r < hard_diameter
-                atoms_to_keep[i] = false
+                if atom_i.species != atom_j.species
+                    error(@sprintf("Atom %d, %s and atom %d, %s overlap but are not the same element so cannot automatically remove.\n", i, atom_i.species, j, atom_j.species))
+                else
+                    atoms_to_keep[i] = false
+                end
             end
         end
     end
