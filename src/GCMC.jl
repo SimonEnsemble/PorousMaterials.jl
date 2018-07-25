@@ -125,7 +125,7 @@ end
     results = stepwise_adsorption_isotherm(framework, temperature, pressures, molecule,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=10,
-                                  verbose=false, molecules=Molecule[],
+                                  verbose=true, molecules=Molecule[],
                                   ewald_precision=1e-6, eos=:ideal)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
@@ -246,7 +246,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
                          autosave::Bool=true)
     tic()
     # to avoid changing the outside object `molecule_` inside this function, we make
-    #  a deep copy of it here.
+    #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
     molecule = deepcopy(molecule_)
 
     if verbose
@@ -274,22 +274,29 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
     framework = replicate(framework, repfactors)
     # adjust fractional coords of molecule according to *replicated* framework
     set_fractional_coords!(molecule, framework.box)
-
-    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
-    # create a template to copy when we insert a new molecule.
-    const molecule_template = deepcopy(molecule)
-    if ! (total_charge(molecule_template) ≈ 0.0)
-        error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
+    if verbose
+        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\.\n",
+            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+        println("\tFramework crystal density: ", crystal_density(framework))
+        println("\tFramework chemical formula: ", chemical_formula(framework))
+        println("\tTotal number of LJ Spheres: ", length(framework.atoms))
+        println("\tTotal number of point charges: ", length(framework.charges))
     end
 
-    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
+    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
+    const molecule_template = deepcopy(molecule)
+    if ! (total_charge(molecule_template) ≈ 0.0)
+        error(@sprintf("Molecule %s is not charge neutral!\n", molecule_template.species))
+    end
+
+    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule_template, ljforcefield))
         error("Missing atoms from forcefield.")
     end
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
     const charged_framework = charged(framework, verbose=verbose)
-    const charged_molecules = charged(molecule, verbose=verbose)
+    const charged_molecules = charged(molecule_template, verbose=verbose)
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
@@ -313,7 +320,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
         # assert that the bond lengths are equal between the template and array to make
         # sure the right fractional coords were used
         if length(molecule.atoms) > 1
-            template_bond_length = norm(framework.box.f_to_c * (molecule.atoms[1].xf - molecule.atoms[2].xf))
+            template_bond_length = norm(framework.box.f_to_c * (molecule_template.atoms[1].xf - molecule_template.atoms[2].xf))
             for m in molecules
                 bond_length = norm(framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf))
                 if ! isapprox(bond_length, template_bond_length, atol=1e-6)
@@ -507,8 +514,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
         end # which move the code executes
 
         # TODO remove after testing.
-        for molecule in molecules
-            @assert(! outside_box(molecule), "molecule outside box!")
+        for m in molecules
+            @assert(! outside_box(m), "molecule outside box!")
         end
 
         # if we're in the production MC cycles. i.e. we've done all burn cycles...
