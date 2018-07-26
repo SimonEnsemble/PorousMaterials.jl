@@ -260,60 +260,17 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
     return Framework(framework.name, new_box, new_atoms, new_charges)
 end
 
-"""
-    replicate_to_xyz(framework, xyzfilename=nothing; comment="", repfactors=(0, 0, 0),
-                     negative_replications=false)
-
-Write a .xyz file representation of a crystal structure from a `Framework` type.
-Write an optional `comment` to the .xyz file if desired.
-Replicate the structure in the x-,y- and/or z-direction by changing the tuple `repfactors`.
-A value of 1 replicates the structure once in the desired direction, so
-`repfactors=(0, 0, 0)` includes only the "home" unit cell. Pass `negative_replications=true`
-if home unit cell should be replicated in the negative directions too.
-
-# Arguments
-- `framework::Framework`: The framework containing the crystal structure information
-- `xyzfilename::Union{AbstractString, Void}`: Name of the output file. If left blank, it will be named using the framework's name
-- `comment::AbstractString`: An optional comment for the xyz file
-- `repfactors::Tuple{Int, Int, Int}`: How many times to replicate the framework in each direction.
-- `negative_replications::Bool`: If true, the function will replicate the framework in both directions
-"""
-function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractString, Void}=nothing;
-                          comment::AbstractString="", repfactors::Tuple{Int, Int, Int}=(1, 1, 1),
-                          negative_replications::Bool=false)
-    # pre-calculate # of total atoms in .xyz
-    if negative_replications
-        n_atoms = 2 ^ 3 * length(framework.atoms) * repfactors[1] * repfactors[2] * repfactors[3]
-        neg_repfactors = (-repfactors[1] + 1, -repfactors[2] + 1, -repfactors[3] + 1)
-    else
-        n_atoms = length(framework.atoms) * repfactors[1] * repfactors[2] * repfactors[3]
-        neg_repfactors = (1, 1, 1)
+# doc string in Misc.jl
+function write_to_xyz(framework::Framework, filename::AbstractString;
+                      comment::AbstractString="")
+    atoms = [atom.species for atom in framework.atoms]
+    x = zeros(Float64, 3, length(framework.atoms))
+    for (a, atom) in enumerate(framework.atoms)
+        x[:, a] = framework.box.f_to_c * atom.xf
     end
 
-    # if no filename given, use framework's name
-    if xyzfilename == nothing
-        xyzfilename = split(framework.name, ".")[1] * ".xyz"
-    end
-
-    if ! contains(xyzfilename, ".xyz")
-        xyzfilename *= ".xyz"
-    end
-
-    xyzfile = open(xyzfilename, "w")
-    @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
-
-    for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
-        for atom in framework.atoms
-            xf = atom.xf + [i - 1.0, j - 1.0, k - 1.0]
-            x = framework.box.f_to_c * xf
-			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(atom.species), x[1], x[2], x[3])
-        end
-    end
-    close(xyzfile)
-
-    println("See ", xyzfilename)
-    return
-end # replicate_to_xyz end
+    write_to_xyz(atoms, x, filename, comment=comment)
+end 
 
 
 """

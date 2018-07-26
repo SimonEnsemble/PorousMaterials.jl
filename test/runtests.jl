@@ -1,5 +1,3 @@
-#!/usr/bin/env julia
-
 #TODO split these into different files for different tests so e.g. framework in one suite is not used in another suite so it's clear what's goign on.
 
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
@@ -343,6 +341,7 @@ end;
     sbmof1 = Framework("SBMOF-1.cif")
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
     sbmof1 = replicate(sbmof1, rep_factors_sbmof1)
+    write_to_xyz(sbmof1, "replicated_sbmof1")
     xenon = Molecule("Xe")
     set_fractional_coords!(xenon, sbmof1.box)
     @test ! charged(xenon)

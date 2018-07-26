@@ -278,32 +278,25 @@ function outside_box(molecule::Molecule)
     return false
 end
 
-"""
-    write_to_xyz(molecules, filename; comment="")
+# docstring in Misc.jl
+function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; 
+    comment::AbstractString="")
 
-Write an array of molecules to an .xyz file. Write only the Lennard-Jones spheres to file (not charges).
+    n_atoms = sum([length(molecule.atoms) for molecule in molecules])
+    atoms = Array{Symbol}(n_atoms)
+    x = zeros(Float64, 3, n_atoms)
 
-# Arguments
-- `molecules::Array{Molecule, 1}`: An array of molecules
-- `filename::AbstractString`: Name of the output file
-- `comment::AbstractString`: A comment that will be printed in the xyz file
-"""
-function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; comment::AbstractString="")
-    if ! contains(filename, ".xyz")
-        filename *= ".xyz"
-    end
-
-    n_atoms = sum([length(molecules[i].atoms) for i = 1:length(molecules)])
-
-    xyzfile = open(filename, "w")
-    @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
+    atom_counter = 0
     for molecule in molecules
-        for ljsphere in molecule.atoms
-            x = box.f_to_c * ljsphere.xf
-			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(ljsphere.species), x...)
+        for atom in molecule.atoms
+            atom_counter += 1
+            x[:, atom_counter] = box.f_to_c * atom.xf
+            atoms[atom_counter] = atom.species
         end
     end
-    close(xyzfile)
+    @assert(atom_counter == n_atoms)
+    
+    write_to_xyz(atoms, x, filename, comment=comment) # Misc.jl
 end
 
 """

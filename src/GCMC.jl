@@ -326,7 +326,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
         # assert that the molecules are inside the simulation box
         for m in molecules
-            if outside_box(m, framework.box)
+            if outside_box(m)
                 error("A molecule in `molecules` passed to `gcmc_simulation` as a starting
                 configuation of molecules is outside of the framework box!")
             end

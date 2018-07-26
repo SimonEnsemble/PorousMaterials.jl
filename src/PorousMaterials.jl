@@ -33,7 +33,7 @@ export Box, replicate, UnitCube, # Box.jl
        LJSphere, PtCharge, # Matter.jl 
        nearest_image!, nearest_r², nearest_r, # NearestImage.jl
        read_xyz, read_cpk_colors, read_atomic_radii, write_to_xyz, # Misc.jl
-       Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
+       Framework, read_crystal_structure_file, remove_overlapping_atoms,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
        construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges, # Crystal.jl
        Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
