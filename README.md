@@ -290,7 +290,7 @@ Pass `eos=:PengRobinson` to `gcmc_simulation` to automatically convert pressure 
 
 ## Input files to describe crystals, molecules, and forcefields
 
-All input files are stored in the path `PorousMaterials.PATH_TO_DATA * "data/"` (type into Julia). By default, this path is set to be in the present working directory (type `pwd()` into Julia) in a folder `data/`. Go inside `PorousMaterials.jl/test/data` to see example input files for each case below.
+All input files are stored in the path `PorousMaterials.PATH_TO_DATA` (type into Julia). By default, this path is set to be in the present working directory (type `pwd()` into Julia) in a folder `data/`. Go inside `PorousMaterials.jl/test/data` to see example input files for each case below.
 
 #### Crystals
 
