@@ -119,7 +119,9 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
 
 ## Building blocks
 
-All of the commands below should run if you're in the `PorousMaterials.jl/test` directory. Just fire up Julia and type in:
+All of the commands below (and above) should run if you're in the `PorousMaterials.jl/test` directory so that `PorousMaterials.jl` can find the right input files. By default, if you `Pkg.clone()`'d `PorousMaterials.jl`, the `test` directory is in `~/.julia/v0.6/PorousMaterials`.
+Just fire up Julia and type in:
+
 ```julia
 using PorousMaterials
 ```
@@ -152,7 +154,7 @@ box = Box(10.0, 10.0, 10.0, π/2, π/2, π/2)
 
 box.a, box.b, box.c # unit cell dimensions (10.0 Å)
 box.α, box.β, box.γ # unit cell angles (1.57... radians)
-box.Ω # volume (100 cubic Å)
+box.Ω # volume (1000.0 Å³)
 box.f_to_c # fractional to Cartesian coordinate transformation matrix
 box.c_to_f # Cartesian to fractional coordinate transformation matrix
 box.reciprocal_lattice # rows are reciprocal lattice vectors
@@ -209,7 +211,7 @@ forcefield.pure_σ[:Xe] # Å
 
 # access the Lennard-Jones epsilon & sigma for Xe-C interactions
 forcefield.ϵ[:Xe][:C] # K                                                                 
-forcefield.σ²[:Xe][:C] # Å 
+forcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
 ```
 
 ### Molecules 
@@ -341,7 +343,7 @@ using PorousMaterials # that's it
 Note: This package is in development. After stabilized and fully documented, installation will be as easy as `Pkg.add("PorousMaterials")`.
 
 ## Tests
-Run the unit-ish tests in the script `tests/runtests.jl`.
+Run the unit-ish tests in the script `tests/runtests.jl` manually or type `Pkg.test("PorousMaterials")` into Julia.
 
 Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and are found in `tests/henry_test.jl` and `tests/gcmc_test.jl`.
 
@@ -378,6 +380,7 @@ Yes! See [here](https://github.com/JuliaLang/IJulia.jl).
 * Henry coefficient code prints off Ewald sum params 5 times if run with one core...
 * set good defaults for `gcmc_simulation` probabilities (as now) but also allow user to change through default arguments to the function
 * automatically adjust the translation step `δ` in `gcmc_simulation` during burn cycles to have 50% acceptance of translation moves (online gradient descent?)
+* EQEq or other charge equilibration schemes for assinging charges, taking a `Framework` as input.
 
 ## Contribution guidelines
 
