@@ -61,6 +61,7 @@ if co2_tests
     ###
  #     f = Framework("ZnCo-ZIF-71_atom_relax_RESP.cif")
  #     co2 = Molecule("CO2")
+
  #     strip_numbers_from_atom_labels!(f)
  #     ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
  # 
@@ -69,7 +70,8 @@ if co2_tests
  #     
  #     # simulate with PorousMaterials.jl in parallel
  #     if run_sims
- #         results = adsorption_isotherm(f, co2,313.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff, n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
+ #         results = adsorption_isotherm(f, co2, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff, 
+ #             n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
  #         JLD.save("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld", "results", results)
  #     else
  #         results = JLD.load("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld")["results"]

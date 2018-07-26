@@ -236,7 +236,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true)
-
+  
     tic()
     # to avoid changing the outside object `molecule_` inside this function, we make
     #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
@@ -622,7 +622,6 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (mmol/g)"] = results["err ⟨N⟩ (molecules/unit cell)"] * 1000 /
         (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
-e
 
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
@@ -641,10 +640,9 @@ e
         if ! isdir(PATH_TO_DATA * "gcmc_sims")
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
-
+    
         save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework.name, 
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, 
-            n_sample_cycles) * ".jld"
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles) * ".jld"
 
         JLD.save(save_results_filename, "results", results)
         if verbose
