@@ -1,7 +1,7 @@
 using PorousMaterials
 using Base.Test
 
-insertions_per_volume = 30
+insertions_per_volume = 500
 
 @testset "Henry coefficient tests" begin
     ###
