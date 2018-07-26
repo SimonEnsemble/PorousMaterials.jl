@@ -2,6 +2,13 @@ module PorousMaterials
 
 using CSV
 using DataFrames
+using Roots # for fzero
+using OffsetArrays # used for Ewald sum
+using SpecialFunctions # for erfc
+using StatsBase
+using ProgressMeter
+using JLD
+using Polynomials
 
 # this is the directory where crystal structures, forcefields, and molecules data is stored
 global PATH_TO_DATA = pwd() * "/data/"
@@ -28,7 +35,7 @@ export Box, replicate, UnitCube, # Box.jl
        read_xyz, read_cpk_colors, read_atomic_radii, write_to_xyz, # Misc.jl
        Framework, read_crystal_structure_file, replicate_to_xyz, remove_overlapping_atoms,
        strip_numbers_from_atom_labels!, write_unitcell_boundary_vtk, chemical_formula, molecular_weight, crystal_density,
-       construct_box, replicate, read_atomic_masses, charged, write_cif, # Crystal.jl
+       construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges, # Crystal.jl
        Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged, # Molecules.jl
        LJForceField, replication_factors, check_forcefield_coverage, # Forcefield.jl

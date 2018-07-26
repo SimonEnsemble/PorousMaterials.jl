@@ -383,7 +383,7 @@ end
 
 #TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1)
+    new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1, verbose=true)
 
 Takes in a framework and returns a new framework with where overlapping atoms and overlapping
 charges were removed. i.e. if there is an overlapping pair, one in the pair is removed. 
@@ -399,7 +399,7 @@ must be identical.
 - `new_framework::Framework`: A new framework where identical atoms have been removed.
 """
 function remove_overlapping_atoms_and_charges(framework::Framework; 
-    atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1)
+    atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1, verbose::Bool=true)
 
     atoms_to_keep = trues(length(framework.atoms))
     charges_to_keep = trues(length(framework.atoms))
@@ -420,7 +420,9 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
             end
         end
     end
-    println("# atoms removed: ", sum(.! atoms_to_keep))
+    if verbose
+        println("# atoms removed: ", sum(.! atoms_to_keep))
+    end
 
     for (i, charge_i) in enumerate(framework.charges)
         for (j, charge_j) in enumerate(framework.charges)
@@ -438,7 +440,9 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
             end
         end
     end
-    println("# charges removed: ", sum(.! charges_to_keep))
+    if verbose
+        println("# charges removed: ", sum(.! charges_to_keep))
+    end
 
     new_framework = Framework(framework.name, framework.box, 
         framework.atoms[atoms_to_keep],
@@ -674,6 +678,81 @@ function write_cif(framework::Framework, filename::String)
         @printf(cif_file, "%s %f %f %f %f\n", atom.species, atom.xf..., q)
      end
      close(cif_file)
+end
+
+"""
+    new_framework = assign_charges(framework, charges, net_charge_tol=1e-5)
+
+Assign charges to the atoms (represented by `LJSphere`s in `framework.atoms`) present in 
+the framework. Pass a dictionary of charges that place charges according to the species
+of the atoms or pass an array of charges to assign to each atom, with the order of the 
+array consistent with the order of `framework.atoms`.
+
+If the framework already has charges, the charges are removed and new charges are added
+accordingly so that `length(framework.atoms) == length(framework.charges)`.
+
+# Examples
+```
+charges = Dict(:Ca => 2.0, :C => 1.0, :H => -1.0)
+new_framework = assign_charges(framework, charges)
+```
+
+```
+charges = [4.0, 2.0, -6.0] # framework.atoms is length 3
+new_framework = assign_charges(framework, charges)
+```
+
+# Arguments
+- `framework::Framework`: the framework to which we should add charges (not modified in 
+this function)
+- `charges::Union{Dict{Symbol, Float64}, Array{Float64, 1}}`: a dictionary that returns the
+charge assigned to the species of atom or an array of charges to assign, with order
+consistent with the order in `framework.atoms` (units: electrons).
+- `net_charge_tol::Float64`: the net charge tolerated when asserting charge neutrality of
+the resulting framework
+
+# Returns
+- `new_framework::Framework`: a new framework identical to the one passed except charges 
+are assigned.
+"""
+function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float64}, Array{Float64, 1}},
+    net_charge_tol::Float64=1e-5)
+    # if charges are already present, may make little sense to assign charges to atoms again
+    if length(framework.charges) != 0
+        warn(@sprintf("Charges are already present in %s. Removing the current charges on the
+        framework and adding new ones...\n", framework.name))
+    end
+    
+    # build the array of point charges according to atom species
+    pt_charges = PtCharge[]
+    for (a, atom) in enumerate(framework.atoms)
+        if isa(charges, Dict{Symbol, Float64})
+            if ! (atom.species in keys(charges))
+                error(@sprintf("Atom %s is not present in the charge dictionary passed to 
+                `assign_charges` for %s\n", atom.species, framework.name))
+            end
+            push!(pt_charges, PtCharge(charges[atom.species], atom.xf))
+        else
+            if length(charges) != length(framework.atoms)
+                error(@sprintf("Length of `charges` array passed to `assign_charges` is not
+                equal to the number of atoms in %s = %d\n", framework.name, 
+                length(framework.atoms)))
+            end
+            push!(pt_charges, PtCharge(charges[a], atom.xf))
+        end
+    end
+
+    # construct new framework
+    new_framework = Framework(framework.name, framework.box, framework.atoms, pt_charges)
+
+    # check for charge neutrality
+    if abs(total_charge(new_framework)) > net_charge_tol
+        error(@sprintf("Net charge of framework %s = %f > net charge tolerance %f. If
+        charge neutrality is not a problem, pass `net_charge_tol=Inf`\n", framework.name,
+        total_charge(new_framework), net_charge_tol))
+    end
+
+    return new_framework
 end
 
 function Base.show(io::IO, framework::Framework)

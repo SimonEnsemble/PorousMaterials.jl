@@ -34,6 +34,12 @@ end
     @test isapprox(framework.atoms[2], LJSphere(:O, [0.6, 0.3, 0.1]))
     @test isapprox(framework.charges[1], PtCharge(1.0, [0.2, 0.5, 0.7]))
     @test isapprox(framework.charges[2], PtCharge(-1.0, [0.6, 0.3, 0.1]))
+    new_frame = assign_charges(framework, Dict(:Ca => -2.0, :O => 2.0))
+    @test isapprox(new_frame.charges[1], PtCharge(-2.0, [0.2, 0.5, 0.7]))
+    @test isapprox(new_frame.charges[2], PtCharge(2.0, [0.6, 0.3, 0.1]))
+    new_frame = assign_charges(framework, [4.0, -4.0])
+    @test isapprox(new_frame.charges[1], PtCharge(4.0, [0.2, 0.5, 0.7]))
+    @test isapprox(new_frame.charges[2], PtCharge(-4.0, [0.6, 0.3, 0.1]))
     @test charged(framework)
     @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
     @test molecular_weight(framework) ≈ 15.9994 + 40.078

@@ -1,6 +1,3 @@
-using DataFrames
-using CSV
-
 """
 Data structure for a Lennard Jones forcefield.
 
@@ -131,16 +128,7 @@ replication_factors(unitcell::Box, ljforcefield::LJForceField) = replication_fac
 replication_factors(framework::Framework, cutoff_radius::Float64) = replication_factors(framework.box, cutoff_radius)
 replication_factors(framework::Framework, ljforcefield::LJForceField) = replication_factors(framework.box, sqrt(ljforcefield.cutoffradius_squared))
 
-"""
-    missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
-
-# Arguments
-- `atoms::Array{Symbol, 1}`: An array of atoms
-- `ljforcefield::LJForceField`: A Lennard Jones forcefield object containing information on atom interactions
-
-# Returns
-- `missing_atoms::Array{Symbol, 1}`: An array of atoms, represented by Symbols, that are present in `atoms` but missing from the forcefield `ljforcefield`
-"""
+# to facilitate user-exposed function check_forcefield_coverage
 function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljforcefield::LJForceField)
     missing_atoms = Array{Symbol, 1}()
     for atom in atoms
