@@ -1,248 +1,58 @@
 using Base.Test
-using PyCall # see pyimport, requires ASE
 
-"""
-Data structure to describe a unit cell box (Bravais lattice) and convert between
-fractional and Cartesian coordinates.
-
-# Attributes
-- `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
-- `α,β,γ::Float64`: unit cell angles (units: radians)
-- `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
-- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional
-coordinates to cartesian coordinates. The columns of this matrix define the unit cell
-axes.
-- `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian
-coordinates to fractional coordinates
-- `reciprocal_lattice::Array{Float64, 2}`: the columns are the reciprocal lattice vectors
-"""
-struct Box
-    a::Float64
-    b::Float64
-    c::Float64
-
-    α::Float64
-    β::Float64
-    γ::Float64
-
-    Ω::Float64
-
-    f_to_c::Array{Float64, 2}
-    c_to_f::Array{Float64, 2}
-
-    reciprocal_lattice::Array{Float64, 2}
-end
-
-"""
-    r = reciprocal_lattice(a₁, a₂, a₃)
-
-Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the reciprocal lattice vectors.
-
-# Arguments
-- `a₁::Array{Float64, 1}`: The first unit cell vector of a Bravais lattice
-- `a₂::Array{Float64, 1}`: The second unit cell vector of a Bravais lattice
-- `a₃::Array{Float64, 1}`: The third unit cell vector of a Bravais lattice
-
-# Returns
-- `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the columns are the reciprocal lattice vectors.
-"""
-function reciprocal_lattice(a₁::Array{Float64, 1}, a₂::Array{Float64, 1}, a₃::Array{Float64, 1})
-    r = zeros(Float64, 3, 3)
-    r[:, 1] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
-    r[:, 2] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
-    r[:, 3] = 2 * π * cross(a₁, a₂) / dot(a₃, cross(a₁, a₂))
-    return r
-end
-
-"""
-    box = construct_box(a, b, c, α, β, γ)
-
-Constructs a `Box` with unit cell dimensions a, b, and c and angles α, β, and γ.
-Automatically calculates Ω, f_to_c, and c_to_f for `Box` data structure and returns a `Box`.
-
-# Arguments
-- `a,b,c::Float64`: unit cell dimensions (units: Angstroms)
-- `α,β,γ::Float64`: unit cell angles (units: radians)
-
-# Returns
-- `box::Box`: Fully formed Box object
-"""
-function construct_box(a::Float64, b::Float64, c::Float64,
-                       α::Float64, β::Float64, γ::Float64)
-    # unit cell volume (A³)
-    Ω = a * b * c * sqrt(1 - cos(α) ^ 2 - cos(β) ^ 2 - cos(γ) ^ 2 + 2 * cos(α) * cos(β) * cos(γ))
-    # matrices to map fractional coords <--> Cartesian coords
-    f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
-    c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
-    # the columns of f_to_c are the unit cell axes
-    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
-
-    @test f_to_c * c_to_f ≈ eye(3)
-    @test isapprox(transpose(r), 2.0 * π * inv(f_to_c))
-
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
-end
-
-"""
-    box = construct_box(f_to_c)
-
-Reconstructs a `Box` from the fractional to Cartesian coordinate transformation matrix.
-The columns of this matrix are the unit cell axes. Units must be in Å.
-
-# Arguments
-- `f_to_c::Array{Float64, 2}`: fractional to Cartesian coordinate transformation matrix.
-
-# Returns
-- `box::Box`: Fully formed Box object
-"""
-function construct_box(f_to_c::Array{Float64, 2})
-    # unit cell volume (A³) is the determinant of the matrix
-    Ω = det(f_to_c)
-
-    # unit cell dimensions are lengths of the unit cell axes (Å)
-    a = norm(f_to_c[:, 1])
-    b = norm(f_to_c[:, 2])
-    c = norm(f_to_c[:, 3])
-
-    # c_to_f is the inverse
-    c_to_f = inv(f_to_c)
-
-    # angles (radians)
-    α = acos(dot(f_to_c[:, 2], f_to_c[:, 3]) / (b * c))
-    β = acos(dot(f_to_c[:, 1], f_to_c[:, 3]) / (a * c))
-    γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
-
-    # the columns of f_to_c are the unit cell axes
-    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
-
-    return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
-end
-
-"""
-    new_box = replicate(original_box, repfactors)
-
-Replicates a `Box` in positive directions to construct a new `Box` representing a supercell.
-The `original_box` is replicated according to the factors in `repfactors`.
-Note `replicate(original_box, repfactors=(1, 1, 1))` returns same `Box`.
-The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
-
-# Arguments
-- `original_box::Box`: The box that you want to replicate
-- `repfactors::Tuple{Int, Int, Int}`: The factor you want to replicate the box by
-
-# Returns
-- `box::Box`: Fully formed Box object
-"""
-function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
-    #because this uses construct_box, its fractional coords still go 0 - 1
-    return construct_box(box.a * repfactors[1], box.b * repfactors[2], box.c * repfactors[3],
-                         box.α, box.β, box.γ)
-end
-
-"""
-Data structure for a 3D crystal structure.
-
-# Attributes
-- `name::String`: corresponds to crystal structure filename from which it was read.
-- `box::Box`: description of unit cell (Bravais Lattice); see `Box` struct.
-- `n_atoms::Int64`: number of atoms in the unit cell
-- `atoms::Array{Symbol,1}`: list of (pseudo)atoms (e.g. elements) composing crystal unit cell, in strict order.
-- `xf::Array{Float64,2}`: fractional coordinates of the atoms, in strict order corresponding to `atoms`, stored column-wise so that `xf[:, i]` possesses the fractional coordinates of atom `i`.
-- `charges::Array{Float64,1}`: the point charges of the atoms in corresponding order as `atoms`.
-"""
+# Data structure for a framework; user-friendly constructor below
 struct Framework
     name::String
-
     box::Box
-
-    n_atoms::Int64
-    atoms::Array{Symbol, 1}
-    xf::Array{Float64, 2}
-    charges::Array{Float64, 1}
+    atoms::Array{LJSphere, 1}
+    charges::Array{PtCharge, 1}
 end
 
 """
-    replicated_frame = replicate(framework, repfactors)
+    framework = Framework(filename, check_charge_neutrality=true,
+                          net_charge_tol=0.001, check_atom_and_charge_overlap=true,
+                          remove_overlap=false)
+    framework = Framework(name, box, atoms, charges)
 
-Replicates a `Framework` in positive directions to construct a new `Framework`.
-Note `replicate(framework, (1, 1, 1))` returns the same `Framework`.
-The new fractional coordinates as described by `f_to_c` and `c_to_f` still ∈ [0, 1].
-
-# Arguments
-- `framework::Framework`: The framework to replicate
-- `repfactors::Tuple{Int, Int, Int}`: The factor you want to replicate the framework by.
-
-# Returns
-- `replicated_frame::Framework`: Replicated framework
-"""
-function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
-    # determine number of atoms in replicated framework
-    n_atoms = framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
-
-    # replicate box
-    box = replicate(framework.box, repfactors)
-
-    # replicate atoms (coordinates, charges, identities)
-    xf = zeros(Float64, 3, n_atoms)
-    charges = zeros(Float64, n_atoms)
-    atoms = Array{Symbol, 1}(n_atoms)
-    atom_counter = 0
-    for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
-        for i = 1:framework.n_atoms
-            atom_counter += 1
-            xf[:, atom_counter] = framework.xf[:, i] + 1.0 * [ra, rb, rc]
-            charges[atom_counter] = framework.charges[i]
-            atoms[atom_counter] = framework.atoms[i]
-        end
-    end
-    @assert(atom_counter == n_atoms)
-    # scale fractional coordinates so run between 0 and 1
-    for k = 1:3
-        xf[k, :] /= 1.0 * repfactors[k]
-    end
-    return Framework(framework.name, box, n_atoms, atoms, xf, charges)
-end
-
-"""
-    framework = read_crystal_structure_file("filename.cssr"; run_checks=true, net_charge_tol=0.001, remove_overlap = false)
-
-Read a crystal structure file (.cif or .cssr) and construct a Framework object.
-If `run_checks=True`, checks for atom overlap and charge neutrality. `net_charge_tol` is the tolerance for net charge.
+Read a crystal structure file (.cif or .cssr) and populate a `Framework` data structure,
+or construct a `Framework` data structure directly.
 
 # Arguments
-- `filename::AbstractString`: the name of the crystal structure file
-- `run_checks::Bool`: Will run overlap check and charge neutrality check if `true`
-- `net_charge_tol::Float64`: Charge tolerance for charge neutrality check
-- `remove_overlap::Bool`: Will remove "identical" atoms if true. Identical atoms are of the same element, occupying the same space.
+- `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `PorousMaterials.PATH_TO_DATA * "structures/"`.
+- `check_charge_neutrality::Bool`: check for charge neutrality
+- `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
+- `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
+- `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element and overlap.
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
+
+# Attributes
+- `name::String`: name of crystal structure
+- `box::Box`: unit cell (Bravais Lattice)
+- `atoms::Array{LJSphere, 1}`: list of Lennard-Jones spheres in crystal unit cell
+- `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
 """
-function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=true, net_charge_tol::Float64=0.001, remove_overlap = false)
+function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
+                   net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
+                   remove_overlap::Bool=false)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
         error("PorousMaterials.jl can only read .cif or .cssr crystal structure files.")
     end
 
-    path_to_file = PATH_TO_DATA * "crystals/" * filename
-    # Read in crystal structure file
-    if ! isfile(path_to_file)
-        error(@sprintf("Could not open crystal structure file %s\n",
-                       path_to_file))
-    end
-
-    f = open(path_to_file, "r")
+    # read file
+    f = open(PATH_TO_DATA * "crystals/" * filename, "r")
     lines = readlines(f)
     close(f)
 
     # Initialize arrays. We'll populate them when reading through the crystal structure file.
-    charges = Array{Float64, 1}()
+    charge_values = Array{Float64, 1}()
     xf = Array{Float64, 1}()
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
-    atoms = Array{Symbol, 1}()
-
+    species = Array{Symbol, 1}()
 
     # Start of .cif reader
     if extension == "cif"
@@ -260,13 +70,11 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
                 if length(line) == 3
                     @assert(contains(line[2] * line[3], "P1") ||
                             contains(line[2] * line[3], "P 1") ||
-                            contains(line[2] * line[3], "P-1") ||
                             contains(line[2] * line[3], "-P1"),
                             "cif must have P1 symmetry.\n")
                 elseif length(line) == 2
                     @assert(contains(line[2], "P1") ||
                             contains(line[2], "P 1") ||
-                            contains(line[2], "P -1") ||
                             contains(line[2], "-P1"),
                             "cif must have P1 symmetry.\n")
                 else
@@ -274,13 +82,15 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
                     error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
                 end
             end
-
+            
+            # pick up unit cell lengths
             for axis in ["a", "b", "c"]
                 if line[1] == @sprintf("_cell_length_%s", axis)
                     data[axis] = parse(Float64, split(line[2],'(')[1])
                 end
             end
-
+            
+            # pick up unit cell angles
             for angle in ["alpha", "beta", "gamma"]
                 if line[1] == @sprintf("_cell_angle_%s", angle)
                     data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
@@ -296,13 +106,11 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
                     break
                 end
             end
-
         end # End loop over lines
 
         if loop_starts == -1
             error("Could not find _atom_site* after loop_ in .cif file\n")
         end
-
 
         atom_column_name = ""
         # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
@@ -318,28 +126,24 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
             i += 1
         end
 
-
         for i = loop_starts+length(name_to_column):length(lines)
-            # Skip identical atoms if they're present
-
             line = split(lines[i])
             if length(line) != length(name_to_column)
                 break
             end
 
-            push!(atoms, line[name_to_column[atom_column_name]])
+            push!(species, line[name_to_column[atom_column_name]])
             push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
             push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
             push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
             # If charges present, import them
             if haskey(name_to_column, "_atom_site_charge")
-                push!(charges, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
             else
-                push!(charges, 0.0)
+                push!(charge_values, 0.0)
             end
         end
 
-        n_atoms = length(xf)
         a = data["a"]
         b = data["b"]
         c = data["c"]
@@ -366,126 +170,136 @@ function read_crystal_structure_file(filename::AbstractString; run_checks::Bool=
         # Read in atoms and fractional coordinates
         for i = 1:n_atoms
             line = split(lines[4 + i])
-            push!(atoms, line[2])
+            push!(species, line[2])
 
             push!(xf, mod(parse(Float64, line[3]), 1.0)) # Wrap to [0,1]
             push!(yf, mod(parse(Float64, line[4]), 1.0)) # Wrap to [0,1]
             push!(zf, mod(parse(Float64, line[5]), 1.0)) # Wrap to [0,1]
 
-            push!(charges, parse(Float64, line[14]))
+            push!(charge_values, parse(Float64, line[14]))
         end
     end
 
     # Construct the unit cell box
-    box = construct_box(a, b, c, α, β, γ)
+    box = Box(a, b, c, α, β, γ)
 
-    fractional_coords = Array{Float64, 2}(3, n_atoms)
-    fractional_coords[1, :] = xf[:]; fractional_coords[2,:] = yf[:]; fractional_coords[3,:] = zf[:]
-
-    # And finally construct the framework
-    framework = Framework(filename, box, n_atoms, atoms, fractional_coords, charges)
-
-    if run_checks && !remove_overlap
-        if atom_overlap(framework)
-            error(@sprintf("At least one pair of atoms overlap in %s\nConsider calling this function again with `remove_overlap = true`\n", framework.name))
+    atoms = LJSphere[]
+    charges = PtCharge[]
+    for a = 1:length(species)
+        frac_coord = [xf[a], yf[a], zf[a]]
+        push!(atoms, LJSphere(species[a], frac_coord))
+        if abs(charge_values[a]) > 0.0
+            push!(charges, PtCharge(charge_values[a], frac_coord))
         end
+    end
+
+    framework = Framework(filename, box, atoms, charges)
+
+    if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
-            error(@sprintf("Framework %s is not charge neutral; sum of charges is : %f e\n", framework.name, sum(framework.charges)))
+            error(@sprintf("Framework %s is not charge neutral; net charge is %f e. Ignore 
+            this error message by passing check_charge_neutrality=false or increasing the
+            net charge tolerance `net_charge_tol`\n", 
+                            framework.name, total_charge(framework)))
         end
     end
 
     if remove_overlap
-        framework = remove_overlapping_atoms(framework, run_checks = run_checks)
+        return remove_overlapping_atoms_and_charges(framework)
+    end
+
+    if check_atom_and_charge_overlap
+        if atom_overlap(framework) | charge_overlap(framework)
+            error(@sprintf("At least one pair of atoms/charges overlap in %s.
+            Consider passing `remove_overlap=true`\n", framework.name))
+        end
     end
 
     return framework
 end
 
-
 """
-    replicate_to_xyz(framework, xyzfilename=nothing; comment="", repfactors=(0, 0, 0),
-                     negative_replications=false)
+    replicated_frame = replicate(framework, repfactors)
 
-Write a .xyz file representation of a crystal structure from a `Framework` type.
-Write an optional `comment` to the .xyz file if desired.
-Replicate the structure in the x-,y- and/or z-direction by changing the tuple `repfactors`.
-A value of 1 replicates the structure once in the desired direction, so
-`repfactors=(0, 0, 0)` includes only the "home" unit cell. Pass `negative_replications=true`
-if home unit cell should be replicated in the negative directions too.
+Replicates the atoms and charges in a `Framework` in positive directions to 
+construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the same `Framework`.
 
 # Arguments
-- `framework::Framework`: The framework containing the crystal structure information
-- `xyzfilename::Union{AbstractString, Void}`: Name of the output file. If left blank, it will be named using the framework's name
-- `comment::AbstractString`: An optional comment for the xyz file
-- `repfactors::Tuple{Int, Int, Int}`: How many times to replicate the framework in each direction.
-- `negative_replications::Bool`: If true, the function will replicate the framework in both directions
+- `framework::Framework`: The framework to replicate
+- `repfactors::Tuple{Int, Int, Int}`: The factors by which to replicate the crystal structure in each direction.
+
+# Returns
+- `replicated_frame::Framework`: Replicated framework
 """
-function replicate_to_xyz(framework::Framework, xyzfilename::Union{AbstractString, Void}=nothing;
-                          comment::AbstractString="", repfactors::Tuple{Int, Int, Int}=(1, 1, 1),
-                          negative_replications::Bool=false)
-    # pre-calculate # of total atoms in .xyz
-    if negative_replications
-        n_atoms = 2 ^ 3 * framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
-        neg_repfactors = (-repfactors[1] + 1, -repfactors[2] + 1, -repfactors[3] + 1)
-    else
-        n_atoms = framework.n_atoms * repfactors[1] * repfactors[2] * repfactors[3]
-        neg_repfactors = (1, 1, 1)
-    end
+function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
+    # determine number of atoms in replicated framework
+    n_atoms = length(framework.atoms) * repfactors[1] * repfactors[2] * repfactors[3]
 
-    # if no filename given, use framework's name
-    if xyzfilename == nothing
-        xyzfilename = split(framework.name, ".")[1] * ".xyz"
-    end
+    # replicate box
+    new_box = replicate(framework.box, repfactors)
 
-    if ! contains(xyzfilename, ".xyz")
-        xyzfilename *= ".xyz"
-    end
-
-    xyzfile = open(xyzfilename, "w")
-    @printf(xyzfile, "%d\n%s\n", n_atoms, comment)
-
-    for i = neg_repfactors[1]:repfactors[1], j = neg_repfactors[2]:repfactors[2], k = neg_repfactors[3]:repfactors[3]
-        for a = 1:framework.n_atoms
-            xf = framework.xf[:, a] + [i - 1.0, j - 1.0, k - 1.0]
-            x = framework.box.f_to_c * xf
-			@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", string(framework.atoms[a]), x[1], x[2], x[3])
+    # replicate atoms and charges
+    new_charges = PtCharge[]
+    new_atoms = LJSphere[]
+    for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
+        for atom in framework.atoms
+            xf = atom.xf + 1.0 * [ra, rb, rc]
+            # scale fractional coords
+            xf = xf ./ repfactors
+            push!(new_atoms, LJSphere(atom.species, xf))
+        end
+        for charge in framework.charges
+            xf = charge.xf + 1.0 * [ra, rb, rc]
+            # scale fractional coords
+            xf = xf ./ repfactors
+            push!(new_charges, PtCharge(charge.q, xf))
         end
     end
-    close(xyzfile)
+    @assert(length(new_charges) == length(framework.charges) * prod(repfactors))
+    @assert(length(new_atoms) == length(framework.atoms) * prod(repfactors))
+    return Framework(framework.name, new_box, new_atoms, new_charges)
+end
 
-    println("See ", xyzfilename)
-    return
-end # replicate_to_xyz end
+# doc string in Misc.jl
+function write_to_xyz(framework::Framework, filename::AbstractString;
+                      comment::AbstractString="")
+    atoms = [atom.species for atom in framework.atoms]
+    x = zeros(Float64, 3, length(framework.atoms))
+    for (a, atom) in enumerate(framework.atoms)
+        x[:, a] = framework.box.f_to_c * atom.xf
+    end
+
+    write_to_xyz(atoms, x, filename, comment=comment)
+end 
 
 
 """
-    is_overlap = atom_overlap(framework; hard_diameter=0.1, verbose=false)
+    is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
 
-Return true iff any two atoms in the crystal overlap by calculating the distance
+Return true iff any two `LJSphere`'s in the crystal overlap by calculating the distance
 between every pair of atoms and ensuring distance is greater than
-`hard_diameter`. If verbose, print the pair of atoms which are culprits.
-# TODO include different radii for different atoms?
+`overlap_tol`. If verbose, print the pair of atoms which are culprits.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
-- `hard_diameter::Float64`: The minimum distance between two atoms without them overlapping
+- `overlap_tol::Float64`: The minimum distance between two atoms without them overlapping
 - `verbose:Bool`: If true, will print out extra information as it's running
 
 # Returns
-- `is_overlap::Bool`: A Boolean telling us if any two atoms in the framework are overlapping
+- `overlap::Bool`: A Boolean telling us if any two atoms in the framework are overlapping
 """
-function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose::Bool=false)
+function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
     overlap = false
-    # loop over pairs of atoms
-    for i = 1:framework.n_atoms
-        for j = (i + 1):framework.n_atoms
-            dxf = framework.xf[:, i] - framework.xf[:, j]
-            # vector pointing from atom j to atom i in cartesian coords
-            dx = framework.box.f_to_c * dxf
-            if norm(dx) < hard_diameter
+    for (i, atom_i) in enumerate(framework.atoms)
+        for (j, atom_j) in enumerate(framework.atoms)
+            if j >= i
+                continue
+            end
+            if _overlap(atom_i, atom_j, framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @sprintf("atoms %d and %d are too close, distance %f Å < %f Å threshold\n", i, j, norm(dx), hard_diameter)
+                    warn(@sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol))
                 end
             end
         end
@@ -493,87 +307,135 @@ function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose:
     return overlap
 end
 
+function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
+    overlap = false
+    for (i, charge_i) in enumerate(framework.charges)
+        for (j, charge_j) in enumerate(framework.charges)
+            if j >= i
+                continue
+            end
+            if _overlap(charge_i, charge_j, framework.box, overlap_tol)
+                overlap = true
+                if verbose
+                    warn(@sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol))
+                end
+            end
+        end
+    end
+    return overlap
+end
 
+# determine if two lennard-jones spheres overlap
+function _overlap(a1::Union{PtCharge, LJSphere}, a2::Union{PtCharge, LJSphere}, box::Box, 
+                  overlap_tol::Float64)
+    dxf = a1.xf - a2.xf
+    nearest_image!(dxf)
+    if norm(box.f_to_c * dxf) < overlap_tol
+        return true
+    else
+        return false
+    end
+end
+
+#TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms(framework; hard_diameter=0.1, verbose=false, run_checks = true, net_charge_tol=0.001)
+    new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1, verbose=true)
 
-Takes in a framework and checks to see if there are any "identical" atoms and promptly removes them. Identical atoms are two atoms of the same element, occupying the same space.
+Takes in a framework and returns a new framework with where overlapping atoms and overlapping
+charges were removed. i.e. if there is an overlapping pair, one in the pair is removed. 
+For any atoms or charges to be removed, the species and charge, respectively,
+must be identical.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
-- `hard_diameter::Float64`: The minimum distance between two atoms without them overlapping
-- `run_checks::Bool`: Will run overlap check and charge neutrality check if `true` on new framework
-- `net_charge_tol::Float64`: Charge tolerance for charge neutrality check
+- `atom_overlap_tol::Float64`: The minimum distance between two atoms that is tolerated
+- `charge_overlap_tol::Float64`: The minimum distance between two charges that is tolerated
 
 # Returns
 - `new_framework::Framework`: A new framework where identical atoms have been removed.
 """
-function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0.1, run_checks = true, net_charge_tol::Float64=0.001)
-    if !atom_overlap(framework)
-        @printf("No atoms were overlapping.\nReturning original framework...\n")
-        return framework
-    end
-    atoms_to_keep = trues(framework.n_atoms)
+function remove_overlapping_atoms_and_charges(framework::Framework; 
+    atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1, verbose::Bool=true)
 
-    for i = 1:framework.n_atoms
-        for j = (i + 1):framework.n_atoms
-            dxf = framework.xf[:, i] - framework.xf[:, j]
-            dx = framework.box.f_to_c * dxf
+    atoms_to_keep = trues(length(framework.atoms))
+    charges_to_keep = trues(length(framework.atoms))
 
-            if norm(dx) < hard_diameter && framework.atoms[i] == framework.atoms[j]
-                atoms_to_keep[j] = false
+    for (i, atom_i) in enumerate(framework.atoms)
+        for (j, atom_j) in enumerate(framework.atoms)
+            if j >= i
+                continue
+            end
+            if _overlap(atom_i, atom_j, framework.box, atom_overlap_tol)
+                if atom_i.species != atom_j.species
+                    error(@sprintf("Atom %d, %s and atom %d, %s overlap but are not the 
+                    same element so we will not automatically remove one in the pair.\n", 
+                    i, atom_i.species, j, atom_j.species))
+                else
+                    atoms_to_keep[i] = false
+                end
             end
         end
     end
-    n_atoms = sum(atoms_to_keep)
+    if verbose
+        println("# atoms removed: ", sum(.! atoms_to_keep))
+    end
 
-    new_framework = Framework(framework.name, framework.box,
-                          n_atoms, framework.atoms[atoms_to_keep],
-                          framework.xf[:,atoms_to_keep], framework.charges[atoms_to_keep])
-
-    if run_checks
-        if atom_overlap(new_framework)
-            error(@sprintf("At least one pair of atoms still overlaps in %s after we removed identical atoms. Consider checking if different elements are overlapping.\n", new_framework.name))
-        end
-        if ! charge_neutral(new_framework, net_charge_tol)
-            error(@sprintf("Framework %s is not charge neutral; sum of charges is : %f e\n For comparison, the sum of charges for the old framework was : %f e\n", new_framework.name, sum(new_framework.charges), sum(framework.charges)))
+    for (i, charge_i) in enumerate(framework.charges)
+        for (j, charge_j) in enumerate(framework.charges)
+            if j >= i
+                continue
+            end
+            if _overlap(charge_i, charge_j, framework.box, charge_overlap_tol)
+                if ! isapprox(charge_i.q, charge_j.q)
+                    error(@sprintf("charge %d of %f and charge %d of %f overlap but are 
+                    not the same charge so we will not automatically remove one in the pair.\n", 
+                    i, charge_i.q, j, charge_j.q))
+                else
+                    charges_to_keep[i] = false
+                end
+            end
         end
     end
+    if verbose
+        println("# charges removed: ", sum(.! charges_to_keep))
+    end
+
+    new_framework = Framework(framework.name, framework.box, 
+        framework.atoms[atoms_to_keep],
+        charged(framework) ? framework.charges[charges_to_keep] : PtCharge[])
+
+    @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
+    @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
+    
     return new_framework
 end
 
-
-"""
-    cn = charge_neutral(framework, net_charge_tol)
-
-# Arguments
-- `framework::Framework`: The framework containing the crystal structure information
-- `net_charge_tol::Float64`: Charge tolerance for charge neutrality check
-
-# Returns
-- `cn::Bool`: True iff the framework is charge neutral, i.e. if the absolute value of the sum of the point charges assigned to its atoms is less than `net_charge_tol`. False otherwise.
-"""
-function charge_neutral(framework::Framework, net_charge_tol::Float64)
-    sum_of_charges = sum(framework.charges)
-    if abs(sum_of_charges) > net_charge_tol
-        return false
-    else
-        return true
+function total_charge(framework::Framework)
+    q = 0.0
+    for charge in framework.charges
+        q += charge.q
     end
+    return q
 end
 
 """
-    charged_flag = charged(framework, verbose=false)
+    charge_neutral_flag = charge_neutral(framework, net_charge_tol) # true or false
 
-# Arguments
-- `framework::Framework`: The framework containing the crystal structure information
+Determine if the absolute value of the net charge in `framework` is less than `net_charge_tol`.
+"""
+function charge_neutral(framework::Framework, net_charge_tol::Float64)
+    q = total_charge(framework)
+    return abs(q) < net_charge_tol
+end
 
-# Returns
-- `charged_flag::Bool`: True iff any of the atoms of the framework are assigned nonzero point charge. False otherwise.
+"""
+    charged_flag = charged(framework, verbose=false) # true or false
+
+Determine if a framework has point charges
 """
 function charged(framework::Framework; verbose::Bool=false)
-    zero_charge_flags = isapprox.(abs.(framework.charges), 0.0)
-    charged_flag = ! all(zero_charge_flags)
+    charged_flag = length(framework.charges) > 0
     if verbose
         @printf("\tFramework atoms of %s have charges? %s\n", framework.name, charged_flag)
     end
@@ -584,7 +446,8 @@ end
     strip_numbers_from_atom_labels!(framework)
 
 Strip numbers from labels for `framework.atoms`.
-Precisely, for `atom` in `framework.atoms`, find the first number that appears in `atom`. Remove this number and all following characters from `atom`.
+Precisely, for `atom` in `framework.atoms`, find the first number that appears in `atom`. 
+Remove this number and all following characters from `atom`.
 e.g. C12 --> C
 	 Ba12A_3 --> Ba
 
@@ -592,30 +455,31 @@ e.g. C12 --> C
 - `framework::Framework`: The framework containing the crystal structure information
 """
 function strip_numbers_from_atom_labels!(framework::Framework)
-	for i = 1:framework.n_atoms
-		atom_string = string(framework.atoms[i])
-		for j = 1:length(atom_string)
-			if !isalpha(atom_string[j])
-				atom_string = atom_string[1:j-1]
+    for (a, atom) in enumerate(framework.atoms)
+        # atom species in string format
+		species = string(atom.species)
+		for j = 1:length(species)
+			if ! isalpha(species[j])
+                framework.atoms[a] = LJSphere(species[1:j-1], atom.xf)
 				break
 			end
 		end
-		framework.atoms[i] = Symbol(atom_string)
 	end
-	return
+    return
 end
 
 """
-    write_unitcell_boundary_vtk(box, filename)
+    write_unitcell_boundary_vtk(box, filename, verbose=true)
 
 Write unit cell boundary as a .vtk file for visualizing the unit cell boundary.
-#TODO Is this function working properly?
+
+Appends ".vtk" extension to `filename` automatically if not passed.
 
 # Arguments
-- `box::Box`: The data structure describing the unit cell box (Bravais lattice)
-- `filename::AbstractString`: The filename of the .vtk file
+- `box::Box`: the unit cell box (Bravais lattice)
+- `filename::AbstractString`: filename of the .vtk file output (absolute path)
 """
-function write_unitcell_boundary_vtk(box::Box, filename::AbstractString)
+function write_unitcell_boundary_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
     # if no filename given, use framework's name
     if filename == nothing
         filename = split(framework.name, ".")[1] * ".vtk"
@@ -641,11 +505,13 @@ function write_unitcell_boundary_vtk(box::Box, filename::AbstractString)
     # define connections
     @printf(vtk_file, "LINES 12 36\n2 0 1\n2 0 2\n2 1 3\n2 2 3\n2 4 5\n2 4 6\n2 5 7\n2 6 7\n2 0 4\n2 1 5\n2 2 6\n2 3 7\n")
     close(vtk_file)
-    println("See ", filename)
+    if verbose
+        println("See ", filename)
+    end
     return
 end
 
-write_unitcell_boundary_vtk(framework::Framework) = write_unitcell_boundary_vtk(framework.box, split(framework.name, ".")[1] * ".vtk")
+write_unitcell_boundary_vtk(framework::Framework) = write_unitcell_boundary_vtk(framework.box, split(framework.name, ".")[1])
 
 """
     formula = chemical_formula(framework)
@@ -659,10 +525,11 @@ Find the irreducible chemical formula of a crystal structure.
 - `formula::Dict{Symbol, Int}`: A dictionary with the irreducible chemical formula of a crystal structure
 """
 function chemical_formula(framework::Framework; verbose::Bool=false)
+    unique_atoms = unique([atom.species for atom in framework.atoms])
     # use dictionary to count atom types
-    atom_counts = Dict(zip(unique(framework.atoms), zeros(Int, length(unique(framework.atoms)))))
-    for i = 1:framework.n_atoms
-        atom_counts[framework.atoms[i]] += 1
+    atom_counts = Dict{Symbol, Int}([a => 0 for a in unique_atoms])
+    for atom in framework.atoms
+        atom_counts[atom.species] += 1
     end
 
     # get greatest common divisor
@@ -686,67 +553,6 @@ function chemical_formula(framework::Framework; verbose::Bool=false)
 end
 
 """
-    convert_cif_to_P1_symmetry(filename, outputfilename; verbose=true)
-
-Use Atomic Simulation Environment (ASE) Python package to convert .cif file in non-P1
-symmetry to P1 symmetry. Writes .cif with P1 symmetry to `outputfilename1`.
-Filenames correspond to files in `PATH_TO_DATA/crystals`.
-# TODO add to README that ase is required. Later look at Crystals.jl
-
-# Arguments
-- `filename::AbstractString`: The name of the input file
-- `outputfilename::AbstractString`: The name of the output file
-- `verbose::Bool`: Will print updates as the function's running if true.
-"""
-function convert_cif_to_P1_symmetry(filename::AbstractString, outputfilename::AbstractString; verbose::Bool=true)
-    # Import Atomic Simulation Environment Python package
-    @pyimport ase
-    @pyimport ase.io as aseio
-    @pyimport ase.build as asebuild
-
-    non_p1_cif_location = PATH_TO_DATA * "crystals/" * filename
-    println(non_p1_cif_location)
-    non_p1_cif = aseio.read(non_p1_cif_location, format="cif")
-
-    p1_cif = asebuild.make_supercell(non_p1_cif, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-
-    p1_cif_location = PATH_TO_DATA * "crystals/" * outputfilename
-    aseio.write(p1_cif_location, p1_cif, format="cif")
-
-    if verbose
-        @printf("Converting to P1 symmetry using ASE.\n\t%s\n\t\t--->\n\t%s\n\n", non_p1_cif_location, p1_cif_location)
-    end
-
-    return
-end
-
-
-"""
-    atomic_masses = read_atomic_masses()
-
-Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and their atomic
-masses in amu.
-
-# Returns
-- `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
-"""
-function read_atomic_masses()
-    if ! isfile("data/atomicmasses.csv")
-        error("Cannot find atomicmasses.csv file in your data folder\n")
-    end
-
-    df_am = CSV.read("data/atomicmasses.csv")
-
-    atomic_masses = Dict{Symbol, Float64}()
-
-    for row in eachrow(df_am)
-		atomic_masses[Symbol(row[:atom])] = row[:mass]
-    end
-
-    return atomic_masses
-end
-
-"""
 
     mass_of_framework = molecular_weight(framework)
 
@@ -759,20 +565,20 @@ Calculates the molecular weight of a unit cell of the framework in amu using inf
 - `mass_of_framework::Float64`: The molecular weight of a unit cell of the framework in amu
 """
 function molecular_weight(framework::Framework)
-    mass = 0.0
     atomic_masses = read_atomic_masses()
 
+    mass = 0.0
 	for atom in framework.atoms
-        mass += atomic_masses[atom]
+        mass += atomic_masses[atom.species]
     end
 
-    return mass #amu
+    return mass # amu
 end
 
 """
-    ρ = crystal_density(framework) # kg / m3
+    ρ = crystal_density(framework) # kg/m²
 
-Compute the crystal density of a framework in units kg/m3.
+Compute the crystal density of a framework. Pulls atomic masses from [`read_atomic_masses`](@ref).
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
@@ -804,6 +610,9 @@ Write a `framework::Framework` to a .cif file with `filename::String`. If `filen
 not include the .cif extension, it will automatically be added.
 """
 function write_cif(framework::Framework, filename::String)
+    if charged(framework) && (length(framework.atoms) != length(framework.charges))
+        error("write_cif assumes equal numbers of Charges and LJSpheres (or zero charges)")
+    end
     # append ".cif" to filename if it doesn't already have the extension
     if ! contains(filename, ".cif")
         filename *= ".cif"
@@ -826,60 +635,116 @@ function write_cif(framework::Framework, filename::String)
     @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
     @printf(cif_file, "_atom_site_charge\n")
 
-    for i = 1:framework.n_atoms
-        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms[i],
-                    framework.xf[1, i],
-                    framework.xf[2, i],
-                    framework.xf[3, i],
-                    framework.charges[i])
+    for (a, atom) in enumerate(framework.atoms)
+        q = 0.0
+        if charged(framework)
+            charge = framework.charges[a]
+            q = charge.q
+            if ! isapprox(charge.xf, atom.xf)
+                error("write_cif assumes charges correspond to LJspheres")
+            end
+        end
+        @printf(cif_file, "%s %f %f %f %f\n", atom.species, atom.xf..., q)
      end
      close(cif_file)
 end
 
+"""
+    new_framework = assign_charges(framework, charges, net_charge_tol=1e-5)
+
+Assign charges to the atoms (represented by `LJSphere`s in `framework.atoms`) present in 
+the framework. Pass a dictionary of charges that place charges according to the species
+of the atoms or pass an array of charges to assign to each atom, with the order of the 
+array consistent with the order of `framework.atoms`.
+
+If the framework already has charges, the charges are removed and new charges are added
+accordingly so that `length(framework.atoms) == length(framework.charges)`.
+
+# Examples
+```
+charges = Dict(:Ca => 2.0, :C => 1.0, :H => -1.0)
+new_framework = assign_charges(framework, charges)
+```
+
+```
+charges = [4.0, 2.0, -6.0] # framework.atoms is length 3
+new_framework = assign_charges(framework, charges)
+```
+
+# Arguments
+- `framework::Framework`: the framework to which we should add charges (not modified in 
+this function)
+- `charges::Union{Dict{Symbol, Float64}, Array{Float64, 1}}`: a dictionary that returns the
+charge assigned to the species of atom or an array of charges to assign, with order
+consistent with the order in `framework.atoms` (units: electrons).
+- `net_charge_tol::Float64`: the net charge tolerated when asserting charge neutrality of
+the resulting framework
+
+# Returns
+- `new_framework::Framework`: a new framework identical to the one passed except charges 
+are assigned.
+"""
+function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float64}, Array{Float64, 1}},
+    net_charge_tol::Float64=1e-5)
+    # if charges are already present, may make little sense to assign charges to atoms again
+    if length(framework.charges) != 0
+        warn(@sprintf("Charges are already present in %s. Removing the current charges on the
+        framework and adding new ones...\n", framework.name))
+    end
+    
+    # build the array of point charges according to atom species
+    pt_charges = PtCharge[]
+    for (a, atom) in enumerate(framework.atoms)
+        if isa(charges, Dict{Symbol, Float64})
+            if ! (atom.species in keys(charges))
+                error(@sprintf("Atom %s is not present in the charge dictionary passed to 
+                `assign_charges` for %s\n", atom.species, framework.name))
+            end
+            push!(pt_charges, PtCharge(charges[atom.species], atom.xf))
+        else
+            if length(charges) != length(framework.atoms)
+                error(@sprintf("Length of `charges` array passed to `assign_charges` is not
+                equal to the number of atoms in %s = %d\n", framework.name, 
+                length(framework.atoms)))
+            end
+            push!(pt_charges, PtCharge(charges[a], atom.xf))
+        end
+    end
+
+    # construct new framework
+    new_framework = Framework(framework.name, framework.box, framework.atoms, pt_charges)
+
+    # check for charge neutrality
+    if abs(total_charge(new_framework)) > net_charge_tol
+        error(@sprintf("Net charge of framework %s = %f > net charge tolerance %f. If
+        charge neutrality is not a problem, pass `net_charge_tol=Inf`\n", framework.name,
+        total_charge(new_framework), net_charge_tol))
+    end
+
+    return new_framework
+end
+
 function Base.show(io::IO, framework::Framework)
-	@printf(io, "a = %.3f Angstrom\n", framework.box.a)
-	@printf(io, "b = %.3f Angstrom\n", framework.box.b)
-	@printf(io, "c = %.3f Angstrom\n", framework.box.c)
-
-	@printf(io, "α = %.3f radians\n", framework.box.α)
-	@printf(io, "β = %.3f radians\n", framework.box.β)
-	@printf(io, "γ = %.3f radians\n", framework.box.γ)
-
-	@printf(io, "Ω = %.3f Angstrom³\n", framework.box.Ω)
-
-	@printf(io, "Number of atoms = %d", framework.n_atoms)
-end
-
-
-function Base.show(io::IO, box::Box)
-    println(io, "Bravais unit cell of a crystal.")
-    @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
-        box.α * 180.0 / π, box.β * 180.0 / π, box.γ * 180.0 / π)
-    @printf(io, "\tUnit cell dimensions a = %f Å. b = %f Å, c = %f Å\n",
-        box.a, box.b, box.c)
-    @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
-end
-
-function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
-    return (isapprox(box1.a, box2.a, rtol=rtol) &&
-            isapprox(box1.b, box2.b, rtol=rtol) &&
-            isapprox(box1.c, box2.c, rtol=rtol) &&
-            isapprox(box1.α, box2.α, rtol=rtol) &&
-            isapprox(box1.β, box2.β, rtol=rtol) &&
-            isapprox(box1.γ, box2.γ, rtol=rtol) &&
-            isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
-            isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
-            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol) &&
-            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, rtol=rtol))
+    println(io, "Name: ", framework.name)
+    println(io, framework.box)
+	@printf(io, "Number of atoms = %d\n", length(framework.atoms))
+	@printf(io, "Number of charges = %d\n", length(framework.charges))
+    println(io, "Chemical formula: ", chemical_formula(framework))
 end
 
 function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
-    names = f1.name == f2.name
-    box = isapprox(f1.box, f2.box)
-    n_atoms = f1.n_atoms == f2.n_atoms
-    if checknames && n_atoms
-        return names && box && n_atoms && (f1.atoms == f2.atoms) && isapprox(f1.xf, f2.xf) && isapprox(f1.charges, f2.charges)
-    else
-        return box && n_atoms && (f1.atoms == f2.atoms) && isapprox(f1.xf, f2.xf) && isapprox(f1.charges, f2.charges)
+    names_flag = f1.name == f2.name
+    if checknames && (! names_flag)
+        return false
     end
+    box_flag = isapprox(f1.box, f2.box)
+    if length(f1.charges) != length(f2.charges)
+        return false
+    end
+    if length(f1.atoms) != length(f2.atoms)
+        return false
+    end
+    charges_flag = all(isapprox.(f1.charges, f2.charges))
+    atoms_flag = all(isapprox.(f1.atoms, f2.atoms))
+    return box_flag && charges_flag && atoms_flag
 end

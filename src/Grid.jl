@@ -148,7 +148,7 @@ The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻�
 # Arguments
 - `framework::Framework`: crystal in which we seek to compute an energy grid for a molecule. `grid.box` will be `framework.box`.
 - `molecule::Molecule`: molecule for which we seek an energy grid
-- `ljforcefield::LennardJonesForceField`: molecular model for computing molecule-framework interactions
+- `ljforcefield::LJForceField`: molecular model for computing molecule-framework interactions
 - `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
 - `n_rotations::Int`: number of random rotations to conduct in a Monte Carlo simulation for finding the free energy of a molecule centered at a given grid point.
 This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
@@ -159,24 +159,25 @@ This is only relevant for molecules that are comprised of more than one Lennard 
 # Returns
 - `grid::Grid`: A grid data structure containing the potential energy of the system
 """
-function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField;
+function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJForceField;
                      n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
 
-    # TODO electrostatics
-    if length(molecule.charges) != 0
-        error("Electrostatics not implemented yet.")
-    end
-
-    const rotations_required = ((length(molecule.ljspheres) > 1) | (length(molecule.charges) > 1))
+    const rotations_required = rotatable(molecule)
+    const charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
     if rotations_required & isnan(temperature)
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
+    
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
+                                                          framework.box,
+                                                          verbose=verbose & charged_system)
 
-    const repfactors = replication_factors(framework.box, ljforcefield)
-    framework = replicate(framework)
+
+    repfactors = replication_factors(framework.box, ljforcefield)
+    framework = replicate(framework, repfactors)
     
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
@@ -192,15 +193,21 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
     end
 
 	for (i, xf) in enumerate(grid_pts[1]), (j, yf) in enumerate(grid_pts[2]), (k, zf) in enumerate(grid_pts[3])
-        translate_to!(molecule, framework.box.f_to_c * [xf, yf, zf])
+        translate_to!(molecule, [xf, yf, zf])
         if ! rotations_required
             ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
             for r = 1:n_rotations
-                rotate!(molecule)
-                energy = vdw_energy(framework, molecule, ljforcefield)
-                boltzmann_factor_sum += exp(-energy / temperature)
+                rotate!(molecule, framework.box)
+
+                energy = PotentialEnergy(0.0, 0.0)
+                energy.vdw = vdw_energy(framework, molecule, ljforcefield)
+                if charged_system
+                    energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams,
+                                                                    kvecs, eikar, eikbr, eikcr)
+                end
+                boltzmann_factor_sum += exp(-sum(energy) / temperature)
             end
             ensemble_average_energy = -temperature * log(boltzmann_factor_sum / n_rotations)
         end
