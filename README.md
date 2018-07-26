@@ -187,6 +187,14 @@ strip_numbers_from_atom_labels!(framework)
 
 # compute the chemical formula
 cf = chemical_formula(framework)
+
+# assign charges according to atom type
+charges = Dict(:Ca => 3.0, :O => 2.0, :C => -1.0, :S => 7.0, :H => -1.0)
+charged_framework = assign_charges(framework, charges)
+
+# replicate & visualize
+framework = replicate(framework, (3, 3, 3))
+write_to_xyz(framework, "SBMOF-1.xyz")
 ```
 
 ### Lennard-Jones forcefields
