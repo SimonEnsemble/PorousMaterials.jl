@@ -17,5 +17,5 @@ loop_
  _atom_site_fract_y
  _atom_site_fract_z
  _atom_site_charge
- Ca2 0.2 0.5 0.7   1.0
+ Ca23 0.2 0.5 0.7   1.0
  O3 0.6 0.3 0.1   -1.0

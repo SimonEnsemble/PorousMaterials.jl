@@ -1,6 +1,4 @@
 import Base: +, /
-using StatsBase
-using JLD
 
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
@@ -100,7 +98,7 @@ end
 @inline function potential_energy(molecule_id::Int,
                                   molecules::Array{Molecule, 1},
                                   framework::Framework,
-                                  ljforcefield::LennardJonesForceField,
+                                  ljforcefield::LJForceField,
                                   eparams::EwaldParams,
                                   kvectors::Array{Kvector, 1},
                                   eikar::OffsetArray{Complex{Float64}},
@@ -121,10 +119,10 @@ end
 end
 
 """
-    results = stepwise_adsorption_isotherm(framework, temperature, pressures, molecule,
+    results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=10,
-                                  verbose=false, molecules=Molecule[],
+                                  verbose=true, molecules=Molecule[],
                                   ewald_precision=1e-6, eos=:ideal)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
@@ -137,19 +135,17 @@ differ significantly from the previous pressure), we can reduce the number of bu
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
-function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64,
-                                      pressures::Array{Float64, 1}, molecule::Molecule,
-                                      ljforcefield::LennardJonesForceField;
-                                      n_initial_burn_cycles::Int=10000, 
-                                      n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                                      sample_frequency::Int=10, verbose::Bool=true,
-                                      ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
+function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule, 
+    temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
+    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5, 
+    verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
+
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
-        result, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
+        result, molecules = gcmc_simulation(framework, molecule, temperature, pressure, 
                                             ljforcefield, 
-                                            n_burn_cycles=(i==1) ? n_initial_burn_cycles : n_burn_cycles,
+                                            n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
                                             verbose=verbose, molecules=molecules,
@@ -161,7 +157,7 @@ function stepwise_adsorption_isotherm(framework::Framework, temperature::Float64
 end
 
 """
-    results = adsorption_isotherm(framework, temperature, pressures, molecule,
+    results = adsorption_isotherm(framework, molecule, temperature, pressures,
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=25,
                                   verbose=false, molecules=Molecule[],
@@ -173,15 +169,13 @@ The only exception is that we pass an array of pressures. To give Julia access t
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
-function adsorption_isotherm(framework::Framework, temperature::Float64,
-                             pressures::Array{Float64, 1}, molecule::Molecule,
-                             ljforcefield::LennardJonesForceField;
-                             n_burn_cycles::Int=10000, n_sample_cycles::Int=100000,
-                             sample_frequency::Int=25, verbose::Bool=true,
-                             ewald_precision::Float64=1e-6, eos=:ideal)
+function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
+    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
+    n_sample_cycles::Int=5000, sample_frequency::Int=5, verbose::Bool=true,
+    ewald_precision::Float64=1e-6, eos=:ideal)
     # make a function of pressure only to facilitate uses of `pmap`
-    run_pressure(pressure::Float64) = gcmc_simulation(framework, temperature, pressure,
-                                                      molecule, ljforcefield,
+    run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
+                                                      pressure, ljforcefield,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
                                                       sample_frequency=sample_frequency,
@@ -202,9 +196,9 @@ end
 
 
 """
-    results, molecules = gcmc_simulation(framework, temperature, pressure, molecule,
-                                         ljforcefield; n_sample_cycles=100000,
-                                         n_burn_cycles=10000, sample_frequency=25,
+    results, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
+                                         ljforcefield; n_sample_cycles=5000,
+                                         n_burn_cycles=5000, sample_frequency=5,
                                          verbose=false, molecules=Molecule[],
                                          eos=:ideal)
 
@@ -224,7 +218,7 @@ translation.
     porous material. units: bar
 - `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
     the adsorption
-- `ljforcefield::LennardJonesForceField`: the molecular model used to describe the
+- `ljforcefield::LJForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before
     sampling.
@@ -232,18 +226,22 @@ translation.
 - `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
     gas molecules every this number of Markov proposals.
 - `verbose::Bool`: whether or not to print off information during the simulation.
-- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework
+- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework.
+Note that we assume these coordinates are Cartesian, i.e. corresponding to a unit box.
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
 """
-function gcmc_simulation(framework::Framework, temperature::Float64, pressure::Float64,
-                         molecule::Molecule, ljforcefield::LennardJonesForceField;
-                         n_burn_cycles::Int=25000, n_sample_cycles::Int=25000,
-                         sample_frequency::Int=5, verbose::Bool=true,
-                         molecules::Array{Molecule, 1}=Molecule[],
-                         ewald_precision::Float64=1e-6, eos::Symbol=:ideal, 
-                         autosave::Bool=true)
+function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
+    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
+    n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
+    molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
+    eos::Symbol=:ideal, autosave::Bool=true)
+  
     tic()
+    # to avoid changing the outside object `molecule_` inside this function, we make
+    #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
+    molecule = deepcopy(molecule_)
+
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
     end
@@ -267,22 +265,31 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
     repfactors = replication_factors(framework.box, ljforcefield)
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
-
-    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
-    # create a template to copy when we insert a new molecule.
-    const molecule_template = deepcopy(molecule)
-    if ! (total_charge(molecule_template) ≈ 0.0)
-        error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
+    # adjust fractional coords of molecule according to *replicated* framework
+    set_fractional_coords!(molecule, framework.box)
+    if verbose
+        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\.\n",
+            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+        println("\tFramework crystal density: ", crystal_density(framework))
+        println("\tFramework chemical formula: ", chemical_formula(framework))
+        println("\tTotal number of LJ Spheres: ", length(framework.atoms))
+        println("\tTotal number of point charges: ", length(framework.charges))
     end
 
-    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
+    # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
+    const molecule_template = deepcopy(molecule)
+    if ! (total_charge(molecule_template) ≈ 0.0)
+        error(@sprintf("Molecule %s is not charge neutral!\n", molecule_template.species))
+    end
+
+    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule_template, ljforcefield))
         error("Missing atoms from forcefield.")
     end
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
     const charged_framework = charged(framework, verbose=verbose)
-    const charged_molecules = charged(molecule, verbose=verbose)
+    const charged_molecules = charged(molecule_template, verbose=verbose)
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
@@ -299,6 +306,31 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
     if length(molecules) != 0
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
+        
+        # set fractional coords of these molecules 
+        set_fractional_coords!.(molecules, framework.box)
+
+        # assert that the bond lengths are equal between the template and array to make
+        # sure the right fractional coords were used
+        if length(molecule.atoms) > 1
+            template_bond_length = norm(framework.box.f_to_c * (molecule_template.atoms[1].xf - molecule_template.atoms[2].xf))
+            for m in molecules
+                bond_length = norm(framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf))
+                if ! isapprox(bond_length, template_bond_length, atol=1e-6)
+                    error("A bond length between atoms in a molecule in `molecules` passed 
+                    in as an initial configuration is not equal to the molecule template
+                    passed.")
+                end
+            end
+        end
+
+        # assert that the molecules are inside the simulation box
+        for m in molecules
+            if outside_box(m)
+                error("A molecule in `molecules` passed to `gcmc_simulation` as a starting
+                configuation of molecules is outside of the framework box!")
+            end
+        end
 
         system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
         system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
@@ -307,6 +339,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
         system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
                                             eparams, kvectors, eikar, eikbr, eikcr))
     end
+
+    progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
 
     # define probabilty of proposing each type of MC move here.
     mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
@@ -347,7 +381,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
     markov_chain_time = 0
-    for outer_cycle = 1:(n_burn_cycles + n_sample_cycles), inner_cycle = 1:max(20, length(molecules))
+    for outer_cycle = 1:(n_burn_cycles + n_sample_cycles)
+        next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
+    for inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
 
         # choose proposed move randomly; keep track of proposals
@@ -430,7 +466,7 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
             old_molecule = deepcopy(molecules[molecule_id])
 
             # conduct a random rotation
-            rotate!(molecules[molecule_id])
+            rotate!(molecules[molecule_id], framework.box)
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
@@ -479,8 +515,8 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
         end # which move the code executes
 
         # TODO remove after testing.
-        for molecule in molecules
-            @assert(! outside_box(molecule, framework.box), "molecule outside box!")
+        for m in molecules
+            @assert(! outside_box(m), "molecule outside box!")
         end
 
         # if we're in the production MC cycles. i.e. we've done all burn cycles...
@@ -513,7 +549,9 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
                 end
             end
         end # end sampling code
-    end # finished markov chain proposal moves
+    end # inner
+    end # outer cycles
+    # finished MC moves at this point.
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     system_energy_end = SystemPotentialEnergy()
@@ -584,7 +622,6 @@ function gcmc_simulation(framework::Framework, temperature::Float64, pressure::F
         (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (mmol/g)"] = results["err ⟨N⟩ (molecules/unit cell)"] * 1000 /
         (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
-e
 
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
@@ -596,14 +633,16 @@ e
         print_results(results, print_title=false)
     end
 
+    # before returning molecules, convert coords back to Cartesian.
+    set_fractional_coords_to_unit_cube!.(molecules, framework.box)
+
     if autosave
         if ! isdir(PATH_TO_DATA * "gcmc_sims")
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
-
-        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework, 
-            molecule, ljforcefield, temperature, pressure, n_burn_cycles, 
-            n_sample_cycles) * ".jld"
+    
+        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework.name, 
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles) * ".jld"
 
         JLD.save(save_results_filename, "results", results)
         if verbose
@@ -617,17 +656,17 @@ end # gcmc_simulation
 """
 Determine the name of files saved during the GCMC simulation, be molecule positions or results.
 """
-function root_save_filename(framework::Framework,
-                            molecule::Molecule,
-                            ljforcefield::LennardJonesForceField,
+function root_save_filename(framework_name::AbstractString,
+                            molecule_species::Symbol,
+                            ljforcefield_name::AbstractString,
                             temperature::Float64,
                             pressure::Float64,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int)
-        frameworkname = split(framework.name, ".")[1] # remove file extension
-        forcefieldname = split(ljforcefield.name, ".")[1] # remove file extension
-        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample", frameworkname,
-                    molecule.species, temperature, pressure, forcefieldname,
+        framework_name = split(framework_name, ".")[1] # remove file extension
+        ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample", framework_name,
+                    molecule_species, temperature, pressure, ljforcefield_name,
                     n_burn_cycles, n_sample_cycles)
 end
 
@@ -673,7 +712,7 @@ function print_results(results::Dict; print_title::Bool=true)
 end
 
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, 
-                      pressure::Float64, ljff::LennardJonesForceField)
+                      pressure::Float64, ljff::LJForceField)
     print("Simulating ")
     print_with_color(:yellow, "(μVT)")
     print(" adsorption of ")

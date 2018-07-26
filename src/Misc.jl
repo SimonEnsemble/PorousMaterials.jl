@@ -34,20 +34,24 @@ end
 
 """
     write_to_xyz(atoms, x, filename; comment="")
+    write_to_xyz(molecules, box, filename; comment="")
+    write_to_xyz(framework, filename; comment="")
 
-Write a list of `atoms` (Array{Symbol, 1}) and their Cartesian coordinates
-`x::Array{Float64, 2}` to an .xyz file. `x[:, k]` has Cartesian coords of the kth atom.
+Write a molecule, framework, or array of atoms & positions to an .xyz file.
 
 # Arguments
 - `atoms::Array{Symbol, 1}`: An array of atoms stored as symbols e.g. [:H, :H, :O]
 - `x::Array{Float64, 2}`: The Cartesian coordinates of the atoms.
  `x[:, k]` contains Cartesian coordinates of the k-th atom
+- `molecules::Array{Molecule, 1}`: an array of molecules whose atoms to write to .xyz
+- `framework::Framework`: a crystal structure whose atoms to write to .xyz
 - `filename::AbstractString`: The filename of the .xyz file. (".xyz" appended automatically
-if the extension is not provided.)
+if the extension is not provided.) (absolute path)
 - `comment::AbstractString`: comment if you'd like to write to the file.
 """
-function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
-                      filename::AbstractString; comment::AbstractString="")
+function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2}, 
+    filename::AbstractString; comment::AbstractString="")
+
     if ! contains(filename, ".xyz")
         filename *= ".xyz"
     end
@@ -58,6 +62,7 @@ function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
 		@printf(xyzfile, "%s\t%.4f\t%.4f\t%.4f\n", atoms[i], x[1, i], x[2, i], x[3, i])
     end
     close(xyzfile)
+    return nothing
 end
 
 """
@@ -97,4 +102,29 @@ function read_atomic_radii()
         end
     end
     return atomic_radii
+end
+
+"""
+    atomic_masses = read_atomic_masses()
+
+Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and their atomic
+masses in amu.
+
+# Returns
+- `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
+"""
+function read_atomic_masses()
+    if ! isfile(PATH_TO_DATA * "atomicmasses.csv")
+        error("Cannot find atomicmasses.csv file in your data folder\n")
+    end
+
+    df_am = CSV.read(PATH_TO_DATA * "atomicmasses.csv")
+
+    atomic_masses = Dict{Symbol, Float64}()
+
+    for row in eachrow(df_am)
+		atomic_masses[Symbol(row[:atom])] = row[:mass]
+    end
+
+    return atomic_masses
 end

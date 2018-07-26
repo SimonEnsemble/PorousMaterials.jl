@@ -1,7 +1,4 @@
-using SpecialFunctions # for erfc
 import Base: +
-using OffsetArrays
-using Roots # for fzero
 
 # Vacuum permittivity eps0 = 8.854187817e-12 # C^2/(J-m)
 # 1 m = 1e10 A, 1 e = 1.602176e-19 C, kb = 1.3806488e-23 J/K
@@ -120,8 +117,8 @@ function required_kreps(box::Box, max_mag_k_sqrd::Float64)
         n = [0, 0, 0]
         while true
             n[abc] += 1
-            # compute reciprocal vector, k
-            k = box.reciprocal_lattice * n
+            # compute reciprocal vector, k. rows are the reciprocal lattice vectors
+            k = transpose(box.reciprocal_lattice) * n
             # if we reached a k-vector with sq. mag. g.t. max_mag_k_sqrd...
             #   we have enough kreps
             if dot(k, k) > max_mag_k_sqrd
@@ -172,8 +169,8 @@ function precompute_kvec_wts(eparams::EwaldParams, max_mag_k_sqrd::Float64=Inf)
             continue
         end
 
-        # compute reciprocal vector, k
-        k = eparams.box.reciprocal_lattice * [ka, kb, kc]
+        # compute reciprocal vector, k; rows are the reciprocal lattice vectors
+        k = transpose(eparams.box.reciprocal_lattice) * [ka, kb, kc]
         # |k|²
         mag_k_sqrd = dot(k, k)
 
@@ -240,23 +237,23 @@ end
 Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fill the OffsetArray
 `eikr`. If `include_neg_reps` is true, also compute n=-krep:-1.
 """
-@unsafe function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
+function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
                             krep::Int, include_neg_reps::Bool)
-    # explicitly compute for k = 0 and k = 1
-    eikr[0] = exp(0.0 * im)
-    @fastmath eikr[1] = exp(im * k_dot_r)
+    # explicitly compute for k = 1, k = 0
+    @unsafe eikr[0] = exp(0.0 * im)
+    @unsafe @fastmath eikr[1] = exp(im * k_dot_r)
 
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
     for k = 2:krep
-        eikr[k] = eikr[k - 1] * eikr[1]
+        @unsafe eikr[k] = eikr[k - 1] * eikr[1]
     end
 
     # negative kreps are complex conjugate of positive ones.
     #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
     if include_neg_reps
         for k = -krep:-1
-            eikr[k] = conj(eikr[-k])
+            @unsafe eikr[k] = conj(eikr[-k])
         end
     end
 end
@@ -293,7 +290,7 @@ corresponding weights indicating the contribution to the Fourier sum.
 # Returns
 electrostatic potential inside `framework` at point `x` (units: K)
 """
-function electrostatic_potential_energy(frame::Framework,
+function electrostatic_potential_energy(framework::Framework,
                                         molecule::Molecule,
                                         eparams::EwaldParams,
                                         kvectors::Array{Kvector, 1},
@@ -301,27 +298,26 @@ function electrostatic_potential_energy(frame::Framework,
                                         eikbr::OffsetArray{Complex{Float64}},
                                         eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
-    for i = 1:frame.n_atoms
+    for mcharge in molecule.charges
         # construct a point charge for this framework atom
-        frame_charge = PointCharge(frame.charges[i], frame.box.f_to_c * frame.xf[:, i])
         # look at interaction of framework charge with molecule charge
-        for charge in molecule.charges
-            ϕ += _ϕ_sr(frame_charge, charge, eparams) / FOUR_π_ϵ₀
-            ϕ += _ϕ_lr(frame_charge, charge, eparams, kvectors, eikar, eikbr, eikcr)
+        for fcharge in framework.charges
+            ϕ += _ϕ_sr(fcharge, mcharge, eparams)
+            ϕ += _ϕ_lr(fcharge, mcharge, eparams, kvectors, eikar, eikbr, eikcr)
         end
     end
     return ϕ::Float64
 end
 
 # long-range contribution to Ewald sum
-function _ϕ_lr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldParams,
+function _ϕ_lr(charge_a::PtCharge, charge_b::PtCharge, eparams::EwaldParams,
                kvectors::Array{Kvector, 1}, eikar::OffsetArray{Complex{Float64}},
                eikbr::OffsetArray{Complex{Float64}}, eikcr::OffsetArray{Complex{Float64}})
     ϕ_lr = 0.0
     # vector from pt charge to pt charge
-    dx = charge_a.x - charge_b.x
-    # reciprocal lattice vectors ⋅ dx
-    k_dot_dx = transpose(eparams.box.reciprocal_lattice) * dx
+    @inbounds dx = eparams.box.f_to_c * (charge_a.xf - charge_b.xf)
+    # reciprocal lattice vectors ⋅ dx; recall rows of reciprocal_lattice hv the recip vectors
+    @inbounds k_dot_dx = eparams.box.reciprocal_lattice * dx
 
     # compute e^{ i * n * k * (x - charge.x)} for n = -krep:krep
     fill_eikr!(eikar, k_dot_dx[1], eparams.kreps[1], false) # via symmetry only need +ve
@@ -329,36 +325,28 @@ function _ϕ_lr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldPara
     fill_eikr!(eikcr, k_dot_dx[3], eparams.kreps[3], true)
 
     # loop over kevectors
-    for kvector in kvectors
+    @simd for kvector in kvectors
         # cos( i * this_k * r) = real part of:
         #     e^{i ka r * vec(ka)} *
         #     e^{i kb r * vec(kb)} *
         #     e^{i kb r * vec(kc)} where r = x - xᵢ
         #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-        @unsafe @inbounds ϕ_lr += charge_a.q * charge_b.q * kvector.wt * real(
+        @unsafe ϕ_lr += kvector.wt * real(
                 eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
     end
-    return ϕ_lr
+    return ϕ_lr * charge_a.q * charge_b.q
 end
 
 # short-range contribution to Ewald sum (must divide by 4 π ϵ₀ though)
 #   use only for molecules where repfactors=(1,1,1)
-function _ϕ_sr(charge_a::PointCharge, charge_b::PointCharge, eparams::EwaldParams)
-    ϕ_sr = 0.0
-    # vector from pt charge to pt charge
-    dx = charge_a.x - charge_b.x
-    dxf = eparams.box.c_to_f * dx
-    # apply nearest image convention for periodic BCs
-    nearest_image!(dxf)
+function _ϕ_sr(charge_a::PtCharge, charge_b::PtCharge, eparams::EwaldParams)
+    r = nearest_r(charge_a.xf, charge_b.xf, eparams.box)
 
-    # convert distance vector to Cartesian coordinates
-    dx = eparams.box.f_to_c * dxf
-
-    @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
     if r < eparams.sr_cutoff_r
-        @inbounds @fastmath ϕ_sr += charge_a.q * charge_b.q / r * erfc(r * eparams.α)
+        return charge_a.q * charge_b.q / r * erfc(r * eparams.α) / FOUR_π_ϵ₀
+    else
+        return 0.0
     end
-    return ϕ_sr # well, ϕ_sr * 4 * π * ϵ₀
 end
 
 # spurious self-interaction in EWald sum
@@ -376,18 +364,7 @@ function _intramolecular_energy(molecule::Molecule, eparams::EwaldParams)
     ϕ_intra = 0.0
     for i = 1:length(molecule.charges)
         for j = (i + 1):length(molecule.charges)
-            dx = molecule.charges[i].x - molecule.charges[j].x
-            
-            # allowing molecule to be split across the periodic boundary, apply PBC
-            dxf = eparams.box.c_to_f * dx
-
-            # apply nearest image convention for periodic BCs
-            nearest_image!(dxf)
-
-            # convert distance vector to Cartesian coordinates
-            dx = eparams.box.f_to_c * dxf
-
-            @inbounds @fastmath r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
+            r = nearest_r(molecule.charges[i].xf, molecule.charges[j].xf, eparams.box)
             ϕ_intra -= molecule.charges[i].q * molecule.charges[j].q * erf(eparams.α * r) / r
         end
     end
@@ -449,7 +426,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
             end # molecule j
         end # charge i
     end # molecule i
-    ϕ.sr /= FOUR_π_ϵ₀ * 2.0 # two to avoid double-counting
+    ϕ.sr /= 2.0 # two to avoid double-counting
     ϕ.lr /= 2.0
     ϕ.lr_own_images /= 2.0
 
@@ -492,7 +469,6 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
             end
         end
     end
-    ϕ.sr /= FOUR_π_ϵ₀
 
     # for insertions, need to include spurious self-interaction and intramolecular interaction
     #   as well as interactio with own periodic images
