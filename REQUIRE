@@ -1,10 +1,10 @@
 julia 0.6.4
+SpecialFunctions
+OffsetArrays
+Roots
+Polynomials
 DataFrames
 CSV
-NPZ
-OffsetArrays
-SpecialFunctions
-Roots
 StatsBase
+ProgressMeter
 JLD
-Polynomials

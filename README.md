@@ -376,6 +376,8 @@ Yes! See [here](https://github.com/JuliaLang/IJulia.jl).
 * extend `gcmc_simulation` to handle mixtures
 * better default rules for choosing Ewald sum parameters? alpha, kvectors required...
 * Henry coefficient code prints off Ewald sum params 5 times if run with one core...
+* set good defaults for `gcmc_simulation` probabilities (as now) but also allow user to change through default arguments to the function
+* automatically adjust the translation step `δ` in `gcmc_simulation` during burn cycles to have 50% acceptance of translation moves (online gradient descent?)
 
 ## Contribution guidelines
 

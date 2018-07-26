@@ -1,7 +1,4 @@
 import Base: +, /
-using StatsBase
-using ProgressMeter
-using JLD
 
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
@@ -324,6 +321,14 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
                     in as an initial configuration is not equal to the molecule template
                     passed.")
                 end
+            end
+        end
+
+        # assert that the molecules are inside the simulation box
+        for m in molecules
+            if outside_box(m, framework.box)
+                error("A molecule in `molecules` passed to `gcmc_simulation` as a starting
+                configuation of molecules is outside of the framework box!")
             end
         end
 

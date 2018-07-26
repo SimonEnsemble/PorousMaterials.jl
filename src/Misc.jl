@@ -1,5 +1,3 @@
-using CSV
-
 """
     atoms, x = read_xyz(filename)
 

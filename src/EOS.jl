@@ -1,8 +1,3 @@
-using Polynomials
-using DataFrames
-using CSV
-using Roots
-
 """
 Calculates the properties of a real gas, such as the compressibility factor, fugacity,
 and molar volume.

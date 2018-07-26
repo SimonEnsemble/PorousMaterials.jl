@@ -55,6 +55,7 @@ for (structure, conditions) in jobs_to_run
                 write_gcmc_submit_script(structure, gas, temperature, pressure)
                 run(`qsub gcmc_submit.sh`)
                 sleep(1)
+                run(`rm gcmc_submit.sh`)
             end
         end
     end
