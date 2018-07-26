@@ -322,17 +322,9 @@ Critical temperatures and pressures and acentric factors are stored in `data/Pen
 
 1. Download and install the [Julia programming language](https://julialang.org/), v0.6.4.
 
-2. Clone `PorousMaterials.jl` from this repo. Remember the directory where you save it.
+2. In Julia, type `Pkg.clone("https://github.com/SimonEnsemble/PorousMaterials.jl.git")` to clone this repository and install Julia package dependencies in `REQUIRE`.
 
-3. The package dependencies of `PorousMaterials.jl` are found in the `REQUIRE` file in the `PorousMaterials.jl` directory. Install these package requirements in Julia via e.g. `Pkg.install("CSV")`.
-
-4. For Julia to find the `PorousMaterials.jl` source code, add the directory where you place the cloned Github repo to the `LOAD_PATH` variable in Julia. For example:
-```julia
-push!(LOAD_PATH, homedir() * "/PorousMaterials.jl/src/")
-```
-Add the above line to your `~/.juliarc` file to avoid typing this command every time you `using PorousMaterials`.
-
-5. Finally, in Julia, load all functions in `PorousMaterials.jl` into the namespace:
+3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
 
 ```julia
 using PorousMaterials # that's it
