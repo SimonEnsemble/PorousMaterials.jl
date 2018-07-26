@@ -12,7 +12,7 @@ fractional and Cartesian coordinates.
 - `Ω::Float64`: volume of the unit cell (units: cubic Angtroms)
 - `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional
 coordinates to cartesian coordinates. The columns of this matrix define the unit cell
-axes. units: Angstrom
+axes. Columns are the vectors defining the unit cell box. units: Angstrom
 - `c_to_f::Array{Float64,2}`: the 3x3 transformation matrix used to map Cartesian
 coordinates to fractional coordinates. units: inverse Angstrom
 - `reciprocal_lattice::Array{Float64, 2}`: the *rows* are the reciprocal lattice vectors.
@@ -36,21 +36,26 @@ struct Box
 end
 
 """
-    r = reciprocal_lattice(a₁, a₂, a₃)
+    r = reciprocal_lattice(f_to_c)
 
-Given the unit cell vectors defining the Bravais lattice, a₁, a₂, a₃, compute the 
-reciprocal lattice vectors, which are the corresponding rows of `r`.
+Given the fractional to Cartesian transformation matrix, compute the reciprocal lattice 
+vectors, which are the rows of the returned matrix `r`.
 
 # Arguments
-- `a₁::Array{Float64, 1}`: The first unit cell vector of a Bravais lattice
-- `a₂::Array{Float64, 1}`: The second unit cell vector of a Bravais lattice
-- `a₃::Array{Float64, 1}`: The third unit cell vector of a Bravais lattice
+- `f_to_c::Array{Float64,2}`: the 3x3 transformation matrix used to map fractional
+coordinates to cartesian coordinates. The columns of this matrix define the unit cell
+axes. units: Angstrom
 
 # Returns
 - `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the rows 
 are the reciprocal lattice vectors.
 """
-function reciprocal_lattice(a₁::Array{Float64, 1}, a₂::Array{Float64, 1}, a₃::Array{Float64, 1})
+function reciprocal_lattice(f_to_c::Array{Float64, 2})
+    # the unit cell vectors are the columns of f_to_c
+    a₁ = f_to_c[:, 1]
+    a₂ = f_to_c[:, 2]
+    a₃ = f_to_c[:, 3]
+
     r = zeros(Float64, 3, 3)
     r[1, :] = 2 * π * cross(a₂, a₃) / dot(a₁, cross(a₂, a₃))
     r[2, :] = 2 * π * cross(a₃, a₁) / dot(a₂, cross(a₃, a₁))
@@ -67,7 +72,7 @@ function Box(a::Float64, b::Float64, c::Float64,
     f_to_c = [[a, 0, 0] [b * cos(γ), b * sin(γ), 0] [c * cos(β), c * (cos(α) - cos(β) * cos(γ)) / sin(γ), Ω / (a * b * sin(γ))]]
     c_to_f = [[1/a, 0, 0] [-cos(γ) / (a * sin(γ)), 1 / (b * sin(γ)), 0] [b * c * (cos(α) * cos(γ) - cos(β)) / (Ω * sin(γ)), a * c * (cos(β) * cos(γ) - cos(α)) / (Ω * sin(γ)), a * b * sin(γ) / Ω]]
     # the columns of f_to_c are the unit cell axes
-    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
+    r = reciprocal_lattice(f_to_c)
 
     @assert f_to_c * c_to_f ≈ eye(3)
     @assert isapprox(r, 2.0 * π * inv(f_to_c))
@@ -95,7 +100,7 @@ function Box(f_to_c::Array{Float64, 2})
     γ = acos(dot(f_to_c[:, 1], f_to_c[:, 2]) / (a * b))
 
     # the columns of f_to_c are the unit cell axes
-    r = reciprocal_lattice(f_to_c[:, 1], f_to_c[:, 2], f_to_c[:, 3])
+    r = reciprocal_lattice(f_to_c)
 
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end

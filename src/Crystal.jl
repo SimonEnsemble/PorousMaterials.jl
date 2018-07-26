@@ -10,7 +10,7 @@ end
 
 """
     framework = Framework(filename, check_charge_neutrality=true,
-                          net_charge_tol=0.001, check_atom_overlap=true,
+                          net_charge_tol=0.001, check_atom_and_charge_overlap=true,
                           remove_overlap=false)
     framework = Framework(name, box, atoms, charges)
 
@@ -21,7 +21,7 @@ or construct a `Framework` data structure directly.
 - `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `PorousMaterials.PATH_TO_DATA * "structures/"`.
 - `check_charge_neutrality::Bool`: check for charge neutrality
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
-- `check_atom_overlap::Bool`: throw an error if overlapping atoms are detected.
+- `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element and overlap.
 
 # Returns
@@ -34,7 +34,7 @@ or construct a `Framework` data structure directly.
 - `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
-                   net_charge_tol::Float64=0.001, check_atom_overlap::Bool=true,
+                   net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
                    remove_overlap::Bool=false)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
@@ -205,12 +205,13 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     if remove_overlap
-        return remove_overlapping_atoms(framework)
+        return remove_overlapping_atoms_and_charges(framework)
     end
 
-    if check_atom_overlap
-        if atom_overlap(framework)
-            error(@sprintf("At least one pair of atoms overlap in %s\nConsider passing `remove_overlap=true`\n", framework.name))
+    if check_atom_and_charge_overlap
+        if atom_overlap(framework) | charge_overlap(framework)
+            error(@sprintf("At least one pair of atoms/charges overlap in %s.
+            Consider passing `remove_overlap=true`\n", framework.name))
         end
     end
 
@@ -316,36 +317,32 @@ end # replicate_to_xyz end
 
 
 """
-    is_overlap = atom_overlap(framework; hard_diameter=0.1, verbose=false)
+    is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
 
 Return true iff any two `LJSphere`'s in the crystal overlap by calculating the distance
 between every pair of atoms and ensuring distance is greater than
-`hard_diameter`. If verbose, print the pair of atoms which are culprits.
+`overlap_tol`. If verbose, print the pair of atoms which are culprits.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
-- `hard_diameter::Float64`: The minimum distance between two atoms without them overlapping
+- `overlap_tol::Float64`: The minimum distance between two atoms without them overlapping
 - `verbose:Bool`: If true, will print out extra information as it's running
 
 # Returns
 - `overlap::Bool`: A Boolean telling us if any two atoms in the framework are overlapping
 """
-function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose::Bool=false)
+function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
     overlap = false
     for (i, atom_i) in enumerate(framework.atoms)
         for (j, atom_j) in enumerate(framework.atoms)
             if j >= i
                 continue
             end
-            dxf = atom_i.xf - atom_j.xf
-            nearest_image!(dxf)
-            r = norm(framework.box.f_to_c * dxf)
-            if r < hard_diameter
+            if _overlap(atom_i, atom_j, framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @sprintf("The distance between atom %d and atom %d in %s are too close.
-                              Distance %f Å < %f Å threshold\n", i, j, framework.name, r, 
-                              hard_diameter)
+                    warn(@sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol))
                 end
             end
         end
@@ -353,60 +350,105 @@ function atom_overlap(framework::Framework; hard_diameter::Float64=0.1, verbose:
     return overlap
 end
 
+function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
+    overlap = false
+    for (i, charge_i) in enumerate(framework.charges)
+        for (j, charge_j) in enumerate(framework.charges)
+            if j >= i
+                continue
+            end
+            if _overlap(charge_i, charge_j, framework.box, overlap_tol)
+                overlap = true
+                if verbose
+                    warn(@sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol))
+                end
+            end
+        end
+    end
+    return overlap
+end
+
+# determine if two lennard-jones spheres overlap
+function _overlap(a1::Union{PtCharge, LJSphere}, a2::Union{PtCharge, LJSphere}, box::Box, 
+                  overlap_tol::Float64)
+    dxf = a1.xf - a2.xf
+    nearest_image!(dxf)
+    if norm(box.f_to_c * dxf) < overlap_tol
+        return true
+    else
+        return false
+    end
+end
+
 #TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms(framework; hard_diameter=0.1)
+    new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1)
 
-Takes in a framework and checks to see if there are any "identical" atoms and promptly removes them. Identical atoms are two atoms of the same element, occupying the same space.
+Takes in a framework and returns a new framework with where overlapping atoms and overlapping
+charges were removed. i.e. if there is an overlapping pair, one in the pair is removed. 
+For any atoms or charges to be removed, the species and charge, respectively,
+must be identical.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
-- `hard_diameter::Float64`: The minimum distance between two atoms without them overlapping
+- `atom_overlap_tol::Float64`: The minimum distance between two atoms that is tolerated
+- `charge_overlap_tol::Float64`: The minimum distance between two charges that is tolerated
 
 # Returns
 - `new_framework::Framework`: A new framework where identical atoms have been removed.
 """
-function remove_overlapping_atoms(framework::Framework; hard_diameter::Float64=0.1)
-    if !atom_overlap(framework)
-        @printf("No atoms were overlapping.\nReturning original framework...\n")
-        return framework
-    end
-    atoms_to_keep = trues(length(framework.atoms))
+function remove_overlapping_atoms_and_charges(framework::Framework; 
+    atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1)
 
-    if charged(framework) && (length(framework.atoms) != length(framework.charges))
-        # TODO hv option to read in zero charges?
-        error("length of charges not equal to length of atoms; must remove overlapping
-        atoms manually. (some charges are zero...)")
-    end
-    
+    atoms_to_keep = trues(length(framework.atoms))
+    charges_to_keep = trues(length(framework.atoms))
+
     for (i, atom_i) in enumerate(framework.atoms)
         for (j, atom_j) in enumerate(framework.atoms)
             if j >= i
                 continue
             end
-
-            dxf = atom_i.xf - atom_j.xf
-            nearest_image!(dxf)
-            r = norm(framework.box.f_to_c * dxf)
-
-            if r < hard_diameter
+            if _overlap(atom_i, atom_j, framework.box, atom_overlap_tol)
                 if atom_i.species != atom_j.species
-                    error(@sprintf("Atom %d, %s and atom %d, %s overlap but are not the same element so cannot automatically remove.\n", i, atom_i.species, j, atom_j.species))
+                    error(@sprintf("Atom %d, %s and atom %d, %s overlap but are not the 
+                    same element so we will not automatically remove one in the pair.\n", 
+                    i, atom_i.species, j, atom_j.species))
                 else
                     atoms_to_keep[i] = false
                 end
             end
         end
     end
+    println("# atoms removed: ", sum(.! atoms_to_keep))
 
-    new_framework = Framework(framework.name, framework.box,
-                              framework.atoms[atoms_to_keep],
-                              charged(framework) ? framework.charges[atoms_to_keep] : PtCharge[])
+    for (i, charge_i) in enumerate(framework.charges)
+        for (j, charge_j) in enumerate(framework.charges)
+            if j >= i
+                continue
+            end
+            if _overlap(charge_i, charge_j, framework.box, charge_overlap_tol)
+                if ! isapprox(charge_i.q, charge_j.q)
+                    error(@sprintf("charge %d of %f and charge %d of %f overlap but are 
+                    not the same charge so we will not automatically remove one in the pair.\n", 
+                    i, charge_i.q, j, charge_j.q))
+                else
+                    charges_to_keep[i] = false
+                end
+            end
+        end
+    end
+    println("# charges removed: ", sum(.! charges_to_keep))
+
+    new_framework = Framework(framework.name, framework.box, 
+        framework.atoms[atoms_to_keep],
+        charged(framework) ? framework.charges[charges_to_keep] : PtCharge[])
+
+    @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
+    @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
     
-    @assert (! atom_overlap(new_framework))
     return new_framework
 end
- #
 
 function total_charge(framework::Framework)
     q = 0.0
