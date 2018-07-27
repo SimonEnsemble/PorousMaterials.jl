@@ -606,6 +606,14 @@ function write_cif(framework::Framework, filename::String)
         filename *= ".cif"
     end
     cif_file = open(filename, "w")
+    # first line should be data_xtalname_PM
+    if framework.name == ""
+        @printf(cif_file, "data_PM\n")
+    else
+        # don't include file extension!
+        @printf(cif_file, "data_%s_PM\n", split(framework.name, ".")[1])
+    end
+
     @printf(cif_file, "_symmetry_space_group_name_H-M   'P 1'\n")
 
     @printf(cif_file, "_cell_length_a %f\n", framework.box.a)
