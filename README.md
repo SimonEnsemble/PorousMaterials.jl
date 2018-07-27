@@ -362,6 +362,11 @@ It is instructive to first run an example in the Julia REPL so you can print out
 
 Yes! See [here](https://github.com/JuliaLang/IJulia.jl).
 
+**How can I convert my `.cif` into P1 symmetry for `PorousMaterials.jl`?**
+
+We hope someone will contribute this feature to `PorousMaterials.jl` eventually. For now, you can use [OpenBabel](http://openbabel.org/wiki/Main_Page):
+```obabel -icif non-P1.cif -ocif -O P1.cif --fillUC strict`.
+
 ## Help wanted and needed
 * the speed of a GCMC or Henry simulation is determined primarily by how fast `PorousMaterials.jl` can compute the electrostatic and vdw potential energy. Some core functions that can speed up this are:
     * `nearest_image!`, `nearest_r` in `src/NearestImage.jl`
