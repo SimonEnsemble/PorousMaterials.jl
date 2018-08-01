@@ -468,50 +468,7 @@ function strip_numbers_from_atom_labels!(framework::Framework)
     return
 end
 
-"""
-    write_unitcell_boundary_vtk(box, filename, verbose=true)
-
-Write unit cell boundary as a .vtk file for visualizing the unit cell boundary.
-
-Appends ".vtk" extension to `filename` automatically if not passed.
-
-# Arguments
-- `box::Box`: the unit cell box (Bravais lattice)
-- `filename::AbstractString`: filename of the .vtk file output (absolute path)
-"""
-function write_unitcell_boundary_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
-    # if no filename given, use framework's name
-    if filename == nothing
-        filename = split(framework.name, ".")[1] * ".vtk"
-    end
-
-    vtk_file = open(filename, "w")
-
-    @printf(vtk_file, "# vtk DataFile Version 2.0\nunit cell boundary\n
-                       ASCII\nDATASET POLYDATA\nPOINTS 8 double\n")
-
-    # write points on boundary of unit cell
-    for i = 0:1
-        for j = 0:1
-            for k = 0:1
-                xf = [i, j, k] # fractional coordinates of corner
-                cornerpoint = box.f_to_c * xf
-                @printf(vtk_file, "%.3f %.3f %.3f\n",
-                        cornerpoint[1], cornerpoint[2], cornerpoint[3])
-            end
-        end
-    end
-
-    # define connections
-    @printf(vtk_file, "LINES 12 36\n2 0 1\n2 0 2\n2 1 3\n2 2 3\n2 4 5\n2 4 6\n2 5 7\n2 6 7\n2 0 4\n2 1 5\n2 2 6\n2 3 7\n")
-    close(vtk_file)
-    if verbose
-        println("See ", filename)
-    end
-    return
-end
-
-write_unitcell_boundary_vtk(framework::Framework) = write_unitcell_boundary_vtk(framework.box, split(framework.name, ".")[1])
+write_vtk(framework::Framework) = write_vtk(framework.box, split(framework.name, ".")[1])
 
 """
     formula = chemical_formula(framework)
