@@ -642,7 +642,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
     
         save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name, 
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles) * ".jld"
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles)
 
         JLD.save(save_results_filename, "results", results)
         if verbose
@@ -665,7 +665,7 @@ function gcmc_result_savename(framework_name::AbstractString,
                             n_sample_cycles::Int)
         framework_name = split(framework_name, ".")[1] # remove file extension
         ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
-        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample", framework_name,
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample.jld", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
                     n_burn_cycles, n_sample_cycles)
 end
