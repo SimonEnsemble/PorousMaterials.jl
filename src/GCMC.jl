@@ -641,7 +641,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
     
-        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * root_save_filename(framework.name, 
+        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name, 
             molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles) * ".jld"
 
         JLD.save(save_results_filename, "results", results)
@@ -656,7 +656,7 @@ end # gcmc_simulation
 """
 Determine the name of files saved during the GCMC simulation, be molecule positions or results.
 """
-function root_save_filename(framework_name::AbstractString,
+function gcmc_result_savename(framework_name::AbstractString,
                             molecule_species::Symbol,
                             ljforcefield_name::AbstractString,
                             temperature::Float64,

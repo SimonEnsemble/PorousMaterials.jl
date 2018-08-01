@@ -46,6 +46,7 @@ export Box, replicate, UnitCube, # Box.jl
        apply_periodic_boundary_condition!,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        calculate_properties, PengRobinsonGas, # EOS.jl
-       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
-       henry_coefficient # Henry.jl
+       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm, 
+       gcmc_result_savename, # GCMC.jl
+       henry_coefficient, henry_result_savename # Henry.jl
 end
