@@ -48,9 +48,6 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
     forcefield_file_path = PATH_TO_DATA * "forcefields/" * forcefieldfile
 
     df = CSV.read(forcefield_file_path) # from DataFrames
-    # assert that all atoms in the force field are unique (i.e. no duplicates)
-    @assert(length(unique(df[:atom])) == size(df, 1),
-        @sprintf("Duplicate atoms found in force field file %s\n", forcefieldfile))
 
     ljff = LJForceField(forcefieldfile, Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
 
