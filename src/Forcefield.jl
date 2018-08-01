@@ -39,12 +39,15 @@ Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelo
 - `ljforcefield::LJForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
 
-function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
-    if ! (mixing_rules in ["Lorentz-Berthelot", "Kong"])
+function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, 
+                      mixing_rules::AbstractString="Lorentz-Berthelot")
+    if ! (lowercase(mixing_rules) in ["lorentz-berthelot", "kong", "geometric"])
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    df = CSV.read(PATH_TO_DATA * "forcefields/" * forcefieldfile) # from DataFrames
+    forcefield_file_path = PATH_TO_DATA * "forcefields/" * forcefieldfile
+
+    df = CSV.read(forcefield_file_path) # from DataFrames
     # assert that all atoms in the force field are unique (i.e. no duplicates)
     @assert(length(unique(df[:atom])) == size(df, 1),
         @sprintf("Duplicate atoms found in force field file %s\n", forcefieldfile))
@@ -53,8 +56,14 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
 
     # pure X-X interactions (X = (pseudo)atom)
     for row in eachrow(df)
-		ljff.pure_σ[Symbol(row[:atom])] = row[Symbol("sigma(A)")]
-		ljff.pure_ϵ[Symbol(row[:atom])] = row[Symbol("epsilon(K)")]
+        atom_species = Symbol(row[:atom])
+        # if atom already recorded, we have a duplicate. this is dangerous to overwrite.
+        if atom_species in keys(ljff.pure_σ)
+            error(@sprintf("Atom %s listed at least twice in %s.\n", atom_species,
+                forcefield_file_path))
+        end
+		ljff.pure_σ[atom_species] = row[Symbol("sigma(A)")]
+		ljff.pure_ϵ[atom_species] = row[Symbol("epsilon(K)")]
     end
 
     # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
@@ -62,10 +71,10 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
         ljff.ϵ[atom] = Dict{Symbol, Float64}()
         ljff.σ²[atom] = Dict{Symbol, Float64}()
 		for other_atom in [Symbol(other_atom) for other_atom in keys(ljff.pure_σ)]
-            if mixing_rules == "Lorentz-Berthelot"
+            if lowercase(mixing_rules) == "lorentz-berthelot"
                 ϵ_ij = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
                 σ_ij² = ((ljff.pure_σ[atom] + ljff.pure_σ[other_atom]) / 2.0) ^ 2
-            elseif mixing_rules == "Kong"
+            elseif lowercase(mixing_rules) == "kong"
                 ϵ_iiσ_ii⁶ = ljff.pure_ϵ[atom]       * ljff.pure_σ[atom] ^ 6
                 ϵ_jjσ_jj⁶ = ljff.pure_ϵ[other_atom] * ljff.pure_σ[other_atom] ^ 6
 
@@ -77,6 +86,9 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
 
                 ϵ_ij = ϵ_ijσ_ij⁶ ^ 2 / ϵ_ijσ_ij¹²
                 σ_ij² = (ϵ_ijσ_ij¹² / ϵ_ijσ_ij⁶) ^ (1/3)
+            elseif lowercase(mixing_rules) == "geometric"
+                ϵ_ij = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
+                σ_ij² = ljff.pure_σ[atom] * ljff.pure_σ[other_atom] # √(σ_i σ_j)²
             end
             ljff.ϵ[atom][other_atom] = ϵ_ij
             ljff.σ²[atom][other_atom] = σ_ij²
