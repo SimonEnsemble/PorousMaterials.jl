@@ -1,4 +1,10 @@
 #!/bin/bash
 cd test
-julia runtests.jl
-cd ..
+if [ julia runtests.jl ];
+then
+    cd ..
+    exit 0
+else
+    cd ..
+    exit 1
+fi
