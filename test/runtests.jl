@@ -2,7 +2,6 @@
 
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
 # Start Test Script
-;brew install hdf5
 Pkg.build("HDF5")
 using PorousMaterials
 using Base.Test
