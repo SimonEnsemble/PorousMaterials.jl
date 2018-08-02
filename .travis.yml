@@ -1,3 +1,3 @@
 language: julia
-script:
-    ./travis_build_script.sh
+#script:
+#    ./travis_build_script.sh
