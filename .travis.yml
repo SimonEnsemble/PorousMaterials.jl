@@ -1,6 +1,7 @@
 language: julia
-julia -e 'Pkg.clone(pwd())'
-julia -e 'Pkg.build("PorousMaterials")'
-if [ -f test/runtests.jl ]; then
-    julia --check-bounds=yes -e 'Pkg.test("PorousMaterials", coverage=true)'
-fi
+script:
+        julia -e 'Pkg.clone(pwd())'
+        julia -e 'Pkg.build("PorousMaterials")'
+        if [ -f test/runtests.jl ]; then
+            julia --check-bounds=yes -e 'Pkg.test("PorousMaterials", coverage=true)'
+        fi
