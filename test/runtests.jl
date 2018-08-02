@@ -2,11 +2,10 @@
 
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
 # Start Test Script
+Pkg.build("HDF5")
 using PorousMaterials
 using Base.Test
 using OffsetArrays
-
-Pkg.build("HDF5")
 
 @testset "Box Tests" begin
     framework = Framework("SBMOF-1_cory.cif")
