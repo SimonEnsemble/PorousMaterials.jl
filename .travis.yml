@@ -1,7 +1,3 @@
 language: julia
 script:
-        julia  'Pkg.clone(pwd())'
-        julia  'Pkg.build("PorousMaterials")'
-        if [ -f test/runtests.jl ]; then
-            cd test; julia 'Pkg.build("HDF5")'; julia 'runtests.jl'
-        fi
+    ./travis_build_script.sh
