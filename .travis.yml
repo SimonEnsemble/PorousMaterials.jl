@@ -1,4 +1,4 @@
 language: julia
 script:
-    echo "in .travis.yml"
+    echo in .travis.yml"
 #    ./travis_build_script.sh
