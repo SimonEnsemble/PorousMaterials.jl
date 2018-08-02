@@ -127,6 +127,49 @@ function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
                box.α, box.β, box.γ)
 end
 
+"""
+    write_vtk(box, "box.vtk"; verbose=true)
+    write_vtk(framework)
+
+Write a `Box` to a .vtk file for visualizing e.g. the unit cell boundary of a crystal.
+If a `Framework` is passed, the `Box` of that framework is written to a file that is the 
+same as the crystal structure filename but with a .vtk extension.
+
+Appends ".vtk" extension to `filename` automatically if not passed.
+
+# Arguments
+- `box::Box`: a Bravais lattice
+- `filename::AbstractString`: filename of the .vtk file output (absolute path)
+"""
+function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
+    if ! contains(filename, ".vtk")
+        filename *= ".vtk"
+    end
+    vtk_file = open(filename, "w")
+
+    @printf(vtk_file, "# vtk DataFile Version 2.0\nunit cell boundary\n
+                       ASCII\nDATASET POLYDATA\nPOINTS 8 double\n")
+
+    # write points on boundary of unit cell
+    for i = 0:1
+        for j = 0:1
+            for k = 0:1
+                xf = [i, j, k] # fractional coordinates of corner
+                cornerpoint = box.f_to_c * xf
+                @printf(vtk_file, "%.3f %.3f %.3f\n",
+                        cornerpoint[1], cornerpoint[2], cornerpoint[3])
+            end
+        end
+    end
+
+    # define connections
+    @printf(vtk_file, "LINES 12 36\n2 0 1\n2 0 2\n2 1 3\n2 2 3\n2 4 5\n2 4 6\n2 5 7\n2 6 7\n2 0 4\n2 1 5\n2 2 6\n2 3 7\n")
+    close(vtk_file)
+    if verbose
+        println("See ", filename)
+    end
+end
+
 function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
     @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
