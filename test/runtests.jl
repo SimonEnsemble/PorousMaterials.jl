@@ -6,6 +6,8 @@ using PorousMaterials
 using Base.Test
 using OffsetArrays
 
+Pkg.build("HDF5")
+
 @testset "Box Tests" begin
     framework = Framework("SBMOF-1_cory.cif")
     @test isapprox(framework.box, Box(framework.box.f_to_c))
