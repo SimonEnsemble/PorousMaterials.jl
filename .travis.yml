@@ -1,4 +1,5 @@
 language: julia
 script:
-    echo in .travis.yml"
+    cd test
+    julia runtests.jl
 #    ./travis_build_script.sh
