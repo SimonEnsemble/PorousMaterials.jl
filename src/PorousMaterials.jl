@@ -48,6 +48,7 @@ export Box, replicate, UnitCube, # Box.jl
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm, root_save_filename,  # GCMC.jl
        electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, # ElectrostaticEnergetics.jl
        calculate_properties, PengRobinsonGas, # EOS.jl
-       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,  # GCMC.jl
-       henry_coefficient # Henry.jl
+       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm, 
+       gcmc_result_savename, # GCMC.jl
+       henry_coefficient, henry_result_savename # Henry.jl
 end
