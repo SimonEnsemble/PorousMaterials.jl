@@ -1,5 +1,4 @@
 language: julia
-script:
-    cd test
-    julia runtests.jl
-#    ./travis_build_script.sh
+julia:
+    -0.6.4
+sudo: enabled
