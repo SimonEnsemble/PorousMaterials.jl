@@ -7,4 +7,4 @@ addons:
             - libhdf5-serial-dev
 sudo: enabled
 after_success:
-    - julia -e 'cd(Pkg.dir("MyPkg")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
+    - julia -e 'cd(Pkg.dir("PorousMaterials")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
