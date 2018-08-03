@@ -1,4 +1,8 @@
 language: julia
 julia:
     - 0.6.4
+addons:
+    apt:
+        packages:
+            - libhdf5-serial-dev
 sudo: enabled

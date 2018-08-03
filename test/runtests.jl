@@ -2,13 +2,12 @@
 
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
 # Start Test Script
-Pkg.build("HDF5")
 using PorousMaterials
 using Base.Test
 using OffsetArrays
 
 @testset "Box Tests" begin
-    framework = Framework("SBMOF-1_cory.cif")
+    framework = Framework("SBMOF-1.cif")
     @test isapprox(framework.box, Box(framework.box.f_to_c))
     @test framework.box.f_to_c * framework.box.c_to_f ≈ eye(3)
     @test isapprox(framework.box.reciprocal_lattice, 2 * π * inv(framework.box.f_to_c))
