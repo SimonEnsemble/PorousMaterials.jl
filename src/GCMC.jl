@@ -239,11 +239,11 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true,
-    checkpoint::Bool=false, checkpoint_interval::Int = 50)
+    checkpoint::Bool=false, checkpoint_interval::Int = 50, troubleshoot_checkpoint::Bool=false)
   
     if checkpoint
         checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(framework.name, 
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
+            molecule_.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
         if isfile(checkpoint_path)
             @printf("Restarting simulation from a previous job\n")
             mccheckpoint = load(checkpoint_path, "checkpoint")
@@ -350,12 +350,14 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             end
         end
 
-        system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
-        system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
-        system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
-                                                    eparams, kvectors, eikar, eikbr, eikcr)
-        system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
-                                            eparams, kvectors, eikar, eikbr, eikcr))
+        if !(checkpoint && restarted)
+            system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
+            system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
+            system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
+                                                        eparams, kvectors, eikar, eikbr, eikcr)
+            system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
+                                                eparams, kvectors, eikar, eikbr, eikcr))
+        end
     end
 
     progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
@@ -382,8 +384,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
     end
 
-    # initiate GCMC statistics for each block
-    # break simulation into `N_BLOCKS` blocks to gauge convergence
+    # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
     gcmc_stats = checkpoint && restarted ? mccheckpoint.blocks : [GCMCstats() for block_no = 1:N_BLOCKS]
     current_block = checkpoint && restarted ? mccheckpoint.current_block : 1
     # make sure the number of sample cycles is at least equal to N_BLOCKS
@@ -398,9 +399,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
-    markov_chain_time = 0
-    outer_start = checkpoint && restarted ? mccheckpoint.n_cycle : 1
-    for outer_cycle = 1:(n_burn_cycles + n_sample_cycles)
+    markov_chain_time = checkpoint && restarted ? mccheckpoint.markov_chain_time : 0
+    outer_start = checkpoint && restarted ? mccheckpoint.n_cycle + 1 : 1
+    for outer_cycle = outer_start:(n_burn_cycles + n_sample_cycles)
         next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
     for inner_cycle = 1:max(20, length(molecules))
         markov_chain_time += 1
@@ -569,14 +570,19 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             end
         end # end sampling code
     end # inner
+
+    if troubleshoot_checkpoint && outer_cycle == n_burn_cycles + 10
+        error("Intentional")
+    end
     
     if checkpoint && outer_cycle % checkpoint_interval == 0
         mccheckpoint.n_cycle = outer_cycle
         mccheckpoint.current_block = current_block
         mccheckpoint.blocks = gcmc_stats
-        mccheckpoint.molecules = molecules
+        mccheckpoint.molecules = get_fractional_coords_to_unit_cube.(molecules, framework.box)
         mccheckpoint.system_energy = system_energy
         mccheckpoint.markov_counts = markov_counts
+        mccheckpoint.markov_chain_time = markov_chain_time
         JLD.save(checkpoint_path, "checkpoint", mccheckpoint)
     end
 
@@ -769,4 +775,19 @@ mutable struct MCCheckpoint
     molecules::Array{Molecule, 1}
     system_energy::SystemPotentialEnergy
     markov_counts::MarkovCounts
+    markov_chain_time::Int
+end
+
+MCCheckpoint() = MCCheckpoint(0, 0, Array{GCMCstats, 1}(), Array{Molecule, 1}(), SystemPotentialEnergy(), MarkovCounts(zeros(Int, 1), zeros(Int, 1)), 0) 
+
+function get_fractional_coords_to_unit_cube(molecule::Molecule, box::Box)
+    new_mol = deepcopy(molecule)
+    for ljsphere in new_mol.atoms
+        ljsphere.xf[:] = box.f_to_c * ljsphere.xf
+    end
+    for charge in new_mol.charges
+        charge.xf[:] = box.f_to_c * charge.xf
+    end
+    new_mol.xf_com[:] = box.f_to_c * new_mol.xf_com
+    return new_mol
 end
