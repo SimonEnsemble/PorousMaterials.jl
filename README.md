@@ -1,6 +1,6 @@
 ![PorousMaterials.jl](PMlogo.png)
 
-[![Build Status](https://travis-ci.org/SimonEnsemble/PorousMaterials.jl.svg?branch=master)](https://travis-ci.org/SimonEnsemble/PorousMaterials.jl)[![Coverage Status](https://coveralls.io/repos/github/SimonEnsemble/PorousMaterials.jl/badge.svg?branch=master)](https://coveralls.io/github/SimonEnsemble/PorousMaterials.jl?branch=master)
+[![Build Status](https://travis-ci.org/SimonEnsemble/PorousMaterials.jl.svg?branch=master)](https://travis-ci.org/SimonEnsemble/PorousMaterials.jl)    [![Coverage Status](https://coveralls.io/repos/github/SimonEnsemble/PorousMaterials.jl/badge.svg?branch=master)](https://coveralls.io/github/SimonEnsemble/PorousMaterials.jl?branch=master)
 
 A pure-[Julia](https://julialang.org/) package for classical molecular modeling of adsorption in porous crystals such as metal-organic frameworks (MOFs).
 
