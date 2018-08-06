@@ -1,5 +1,7 @@
 ![PorousMaterials.jl](PMlogo.png)
 
+[![Coverage Status](https://coveralls.io/repos/github/SimonEnsemble/PorousMaterials.jl/badge.svg?branch=master)](https://coveralls.io/github/SimonEnsemble/PorousMaterials.jl?branch=master)
+
 A pure-[Julia](https://julialang.org/) package for classical molecular modeling of adsorption in porous crystals such as metal-organic frameworks (MOFs).
 
 :hammer: Compute the potential energy of a molecule at particular position and orientation inside of a porous crystal
@@ -91,7 +93,7 @@ results = adsorption_isotherm(framework, molecule, temperature, pressures, force
 
 Or, compute the adsorption isotherm in a step-wise manner, loading the molecules from the previous simulation to save on burn cycles:
 ```julia
-# loop over all pressures and run GCMC simulations in series. 
+# loop over all pressures and run GCMC simulations in series.
 # load in the configurations of the molecules from the previous pressure.
 results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,
             n_burn_cycles=1000, n_sample_cycles=5000)
@@ -108,7 +110,7 @@ framework = Framework("SBMOF-1.cif")
 molecule = Molecule("Xe")
 forcefield = LJForceField("UFF.csv")
 
-grid = energy_grid(framework, molecule, forcefield, 
+grid = energy_grid(framework, molecule, forcefield,
     n_pts=(50, 50, 50), units=:kJ_mol) # Grid data structure
 ```
 
@@ -214,7 +216,7 @@ forcefield.ϵ[:Xe][:C] # K
 forcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
 ```
 
-### Molecules 
+### Molecules
 
 ```julia
 molecule = Molecule("CO2") # fractional coords in terms of unit cube box
@@ -351,7 +353,7 @@ Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations 
 
 **How do I type out the math symbols? e.g. `box.α`?**
 
-Julia supports [unicode input](https://docs.julialang.org/en/release-0.4/manual/unicode-input/)! Type `box.\alpha`, then hit tab. Voilà. There is a vim extension for Julia [here](https://github.com/JuliaEditorSupport/julia-vim). 
+Julia supports [unicode input](https://docs.julialang.org/en/release-0.4/manual/unicode-input/)! Type `box.\alpha`, then hit tab. Voilà. There is a vim extension for Julia [here](https://github.com/JuliaEditorSupport/julia-vim).
 
 
 **How do I run as a script in the command line?**
