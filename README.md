@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/SimonEnsemble/PorousMaterials.jl.svg?branch=master)](https://travis-ci.org/SimonEnsemble/PorousMaterials.jl) [![Coverage Status](https://coveralls.io/repos/github/SimonEnsemble/PorousMaterials.jl/badge.svg?branch=master)](https://coveralls.io/github/SimonEnsemble/PorousMaterials.jl?branch=master)
 [![Github All Releases](https://img.shields.io/github/downloads/atom/atom/total.svg)](https://github.com/SimonEnsemble/PorousMaterials.jl)
-[![Twitter URL](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)]( [![Github All Releases](https://img.shields.io/github/downloads/atom/atom/total.svg)](https://github.com/SimonEnsemble/PorousMaterials.jl)) [![Twitter Follow](https://img.shields.io/twitter/follow/espadrine.svg?style=social&label=Follow)](https://github.com/SimonEnsemble/PorousMaterials.jl)
+[![Twitter URL](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://github.com/SimonEnsemble/PorousMaterials.jl) [![Twitter Follow](https://img.shields.io/twitter/follow/espadrine.svg?style=social&label=Follow)](https://github.com/SimonEnsemble/PorousMaterials.jl)
 
 
 
