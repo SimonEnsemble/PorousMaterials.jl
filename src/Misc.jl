@@ -49,7 +49,7 @@ Write a molecule, framework, or array of atoms & positions to an .xyz file.
 if the extension is not provided.) (absolute path)
 - `comment::AbstractString`: comment if you'd like to write to the file.
 """
-function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2}, 
+function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
     filename::AbstractString; comment::AbstractString="")
 
     if ! contains(filename, ".xyz")
