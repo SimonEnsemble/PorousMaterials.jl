@@ -30,7 +30,7 @@ include("Henry.jl")
 include("GCMC.jl")
 
 export Box, replicate, UnitCube, write_vtk, # Box.jl
-       LJSphere, PtCharge, # Matter.jl 
+       LJSphere, PtCharge, # Matter.jl
        nearest_image!, nearest_r², nearest_r, # NearestImage.jl
        read_xyz, read_cpk_colors, read_atomic_radii, write_to_xyz, # Misc.jl
        Framework, read_crystal_structure_file, remove_overlapping_atoms,
@@ -46,7 +46,7 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        apply_periodic_boundary_condition!,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        calculate_properties, PengRobinsonGas, # EOS.jl
-       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm, 
+       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
        gcmc_result_savename, # GCMC.jl
        henry_coefficient, henry_result_savename # Henry.jl
 end
