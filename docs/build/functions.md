@@ -38,7 +38,7 @@ coordinates to fractional coordinates. units: inverse Angstrom
 This choice was made (instead of columns) for speed of Ewald Sums.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Box.jl#L1-L20' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Box.jl#L1-L20' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.replicate' href='#PorousMaterials.replicate'>#</a>
 **`PorousMaterials.replicate`** &mdash; *Function*.
@@ -61,7 +61,7 @@ Replicates a `Box` in positive directions to construct a new `Box` representing 
   * `box::Box`: Fully formed Box object
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Box.jl#L117-L131' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Box.jl#L117-L131' class='documenter-source'>source</a><br>
 
 
 ```
@@ -80,7 +80,7 @@ Replicates the atoms and charges in a `Framework` in positive directions to cons
   * `replicated_frame::Framework`: Replicated framework
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L221-L233' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L221-L233' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.UnitCube' href='#PorousMaterials.UnitCube'>#</a>
 **`PorousMaterials.UnitCube`** &mdash; *Function*.
@@ -94,7 +94,7 @@ unit_cube = UnitCube()
 This function generates a unit cube, each side is 1.0 Angstrom long, and all the corners are right angles.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Box.jl#L108-L113' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Box.jl#L108-L113' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_vtk' href='#PorousMaterials.write_vtk'>#</a>
 **`PorousMaterials.write_vtk`** &mdash; *Function*.
@@ -116,7 +116,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
   * `filename::AbstractString`: filename of the .vtk file output (absolute path)
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Box.jl#L137-L150' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Box.jl#L137-L150' class='documenter-source'>source</a><br>
 
 
 ##Crystal.jl
@@ -155,7 +155,7 @@ Read a crystal structure file (.cif or .cssr) and populate a `Framework` data st
   * `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L11-L35' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L11-L35' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.remove_overlapping_atoms_and_charges' href='#PorousMaterials.remove_overlapping_atoms_and_charges'>#</a>
 **`PorousMaterials.remove_overlapping_atoms_and_charges`** &mdash; *Function*.
@@ -179,7 +179,7 @@ Takes in a framework and returns a new framework with where overlapping atoms an
   * `new_framework::Framework`: A new framework where identical atoms have been removed.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L342-L357' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L342-L357' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.strip_numbers_from_atom_labels!' href='#PorousMaterials.strip_numbers_from_atom_labels!'>#</a>
 **`PorousMaterials.strip_numbers_from_atom_labels!`** &mdash; *Function*.
@@ -197,7 +197,7 @@ Strip numbers from labels for `framework.atoms`. Precisely, for `atom` in `frame
   * `framework::Framework`: The framework containing the crystal structure information
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L445-L456' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L445-L456' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.chemical_formula' href='#PorousMaterials.chemical_formula'>#</a>
 **`PorousMaterials.chemical_formula`** &mdash; *Function*.
@@ -219,7 +219,7 @@ Find the irreducible chemical formula of a crystal structure.
   * `formula::Dict{Symbol, Int}`: A dictionary with the irreducible chemical formula of a crystal structure
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L475-L485' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L475-L485' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.molecular_weight' href='#PorousMaterials.molecular_weight'>#</a>
 **`PorousMaterials.molecular_weight`** &mdash; *Function*.
@@ -241,7 +241,7 @@ Calculates the molecular weight of a unit cell of the framework in amu using inf
   * `mass_of_framework::Float64`: The molecular weight of a unit cell of the framework in amu
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L514-L525' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L514-L525' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.crystal_density' href='#PorousMaterials.crystal_density'>#</a>
 **`PorousMaterials.crystal_density`** &mdash; *Function*.
@@ -263,7 +263,7 @@ Compute the crystal density of a framework. Pulls atomic masses from [`read_atom
   * `ρ::Float64`: The crystal density of a framework in kg/m³
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L537-L547' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L537-L547' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.replicate-Tuple{PorousMaterials.Framework,Tuple{Int64,Int64,Int64}}' href='#PorousMaterials.replicate-Tuple{PorousMaterials.Framework,Tuple{Int64,Int64,Int64}}'>#</a>
 **`PorousMaterials.replicate`** &mdash; *Method*.
@@ -286,7 +286,7 @@ Replicates the atoms and charges in a `Framework` in positive directions to cons
   * `replicated_frame::Framework`: Replicated framework
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L221-L233' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L221-L233' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.charged-Tuple{PorousMaterials.Framework}' href='#PorousMaterials.charged-Tuple{PorousMaterials.Framework}'>#</a>
 **`PorousMaterials.charged`** &mdash; *Method*.
@@ -300,7 +300,7 @@ charged_flag = charged(framework, verbose=false) # true or false
 Determine if a framework has point charges
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L432-L436' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L432-L436' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_cif' href='#PorousMaterials.write_cif'>#</a>
 **`PorousMaterials.write_cif`** &mdash; *Function*.
@@ -314,7 +314,7 @@ write_cif(framework, filename)
 Write a `framework::Framework` to a .cif file with `filename::String`. If `filename` does not include the .cif extension, it will automatically be added.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L553-L558' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L553-L558' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.assign_charges' href='#PorousMaterials.assign_charges'>#</a>
 **`PorousMaterials.assign_charges`** &mdash; *Function*.
@@ -362,7 +362,7 @@ the resulting framework
 are assigned.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Crystal.jl#L607-L641' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Crystal.jl#L607-L641' class='documenter-source'>source</a><br>
 
 
 ##ElectrostaticsEnergetics.jl
@@ -401,7 +401,7 @@ corresponding weights indicating the contribution to the Fourier sum.
 electrostatic potential inside `framework` at point `x` (units: K)
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/ElectrostaticEnergetics.jl#L261-L292' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/ElectrostaticEnergetics.jl#L261-L292' class='documenter-source'>source</a><br>
 
 
 ```
@@ -429,7 +429,7 @@ corresponding weights indicating the contribution to the Fourier sum.
   * `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices   -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/ElectrostaticEnergetics.jl#L374-L399' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/ElectrostaticEnergetics.jl#L374-L399' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.precompute_kvec_wts' href='#PorousMaterials.precompute_kvec_wts'>#</a>
 **`PorousMaterials.precompute_kvec_wts`** &mdash; *Function*.
@@ -458,7 +458,7 @@ k-vectors with magnitude squared greater than this.
 corresponding weights indicating the contribution to the Fourier sum.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/ElectrostaticEnergetics.jl#L133-L151' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/ElectrostaticEnergetics.jl#L133-L151' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.setup_Ewald_sum' href='#PorousMaterials.setup_Ewald_sum'>#</a>
 **`PorousMaterials.setup_Ewald_sum`** &mdash; *Function*.
@@ -489,7 +489,7 @@ corresponding weights indicating the contribution to the Fourier sum.
   * `eikcr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices   -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/ElectrostaticEnergetics.jl#L187-L211' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/ElectrostaticEnergetics.jl#L187-L211' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.total_electrostatic_potential_energy' href='#PorousMaterials.total_electrostatic_potential_energy'>#</a>
 **`PorousMaterials.total_electrostatic_potential_energy`** &mdash; *Function*.
@@ -513,7 +513,7 @@ Explanation of total_electrostatic_potential_energy that doesn't use framework
   * `eikcr::OffsetArray{Complex{Float64}}`:
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/ElectrostaticEnergetics.jl#L481-L494' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/ElectrostaticEnergetics.jl#L481-L494' class='documenter-source'>source</a><br>
 
 
 ```
@@ -534,7 +534,7 @@ Explanation of total_electrostatic_potential_energy that uses framework
   * `eikcr::OffsetArray{Complex{Float64}}`:
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/ElectrostaticEnergetics.jl#L511-L525' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/ElectrostaticEnergetics.jl#L511-L525' class='documenter-source'>source</a><br>
 
 
 ##Energetics_Util.jl
@@ -566,7 +566,7 @@ pe = PotentialEnergy()
   * `coulomb::Float64`: The potential energy contributions from electrostatic interactions
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Energetics_Util.jl#L3-L19' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Energetics_Util.jl#L3-L19' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.SystemPotentialEnergy' href='#PorousMaterials.SystemPotentialEnergy'>#</a>
 **`PorousMaterials.SystemPotentialEnergy`** &mdash; *Type*.
@@ -595,7 +595,7 @@ system_potential_energy = SystemPotentialEnergy()
   * `guest_guest::PotentialEnergy`: The total potential energy from all guest-guest   interactions in the system
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Energetics_Util.jl#L50-L68' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Energetics_Util.jl#L50-L68' class='documenter-source'>source</a><br>
 
 
 ##EOS.jl
@@ -616,7 +616,7 @@ Reads in critical temperature, critical pressure, and acentric factor of the `ga
   * `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/EOS.jl#L97-L107' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/EOS.jl#L97-L107' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.calculate_properties' href='#PorousMaterials.calculate_properties'>#</a>
 **`PorousMaterials.calculate_properties`** &mdash; *Function*.
@@ -641,7 +641,7 @@ Use equation of state to calculate density, fugacity, and molar volume of a real
   * `prop_dict::Dict`: Dictionary of Peng-Robinson gas properties
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/EOS.jl#L58-L72' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/EOS.jl#L58-L72' class='documenter-source'>source</a><br>
 
 
 ##Forcefield.jl
@@ -663,7 +663,7 @@ Data structure for a Lennard Jones forcefield.
   * `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.replication_factors' href='#PorousMaterials.replication_factors'>#</a>
 **`PorousMaterials.replication_factors`** &mdash; *Function*.
@@ -688,7 +688,7 @@ A non-replicated supercell has 1 as the replication factor in each dimension (`r
   * `repfactors::Tuple{Int, Int, Int}`: The replication factors in the a, b, c directions
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Forcefield.jl#L98-L114' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Forcefield.jl#L98-L114' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.check_forcefield_coverage' href='#PorousMaterials.check_forcefield_coverage'>#</a>
 **`PorousMaterials.check_forcefield_coverage`** &mdash; *Function*.
@@ -713,7 +713,7 @@ Check that the force field contains parameters for every atom present in a frame
   * `check_forcefield_coverage::Bool`: Returns true if all atoms in the `framework` are also included in `ljforcefield`. False otherwise
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Forcefield.jl#L170-L184' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Forcefield.jl#L170-L184' class='documenter-source'>source</a><br>
 
 
 ##GCMC.jl
@@ -755,7 +755,7 @@ Note that we assume these coordinates are Cartesian, i.e. corresponding to a uni
 is ideal gas, where fugacity = pressure.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/GCMC.jl#L198-L233' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/GCMC.jl#L198-L233' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.adsorption_isotherm' href='#PorousMaterials.adsorption_isotherm'>#</a>
 **`PorousMaterials.adsorption_isotherm`** &mdash; *Function*.
@@ -773,7 +773,7 @@ results = adsorption_isotherm(framework, molecule, temperature, pressures,
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the same as [`gcmc_simulation`](functions.md#PorousMaterials.gcmc_simulation), as this is the function run in parallel behind the scenes. The only exception is that we pass an array of pressures. To give Julia access to multiple cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/GCMC.jl#L159-L171' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/GCMC.jl#L159-L171' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.stepwise_adsorption_isotherm' href='#PorousMaterials.stepwise_adsorption_isotherm'>#</a>
 **`PorousMaterials.stepwise_adsorption_isotherm`** &mdash; *Function*.
@@ -791,7 +791,7 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the same as [`gcmc_simulation`](functions.md#PorousMaterials.gcmc_simulation), as this is the function run behind the scenes. An exception is that we pass an array of pressures. The adsorption isotherm is computed step- wise, where the ending configuration from the previous simulation (array of molecules) is passed into the next simulation as a starting point. The ordering of `pressures` is honored. By giving each simulation a good starting point, (if the next pressure does not differ significantly from the previous pressure), we can reduce the number of burn cycles required to reach equilibrium in the Monte Carlo simulation. Also see [`adsorption_isotherm`](functions.md#PorousMaterials.adsorption_isotherm) which runs the μVT simulation at each pressure in parallel.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/GCMC.jl#L121-L137' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/GCMC.jl#L121-L137' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.gcmc_result_savename' href='#PorousMaterials.gcmc_result_savename'>#</a>
 **`PorousMaterials.gcmc_result_savename`** &mdash; *Function*.
@@ -817,7 +817,7 @@ Determine the name of files saved during the GCMC simulation, be molecule positi
   * `n_sample_cycles::Int`: The number of sample cycles used in this simulation
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/GCMC.jl#L656-L674' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/GCMC.jl#L656-L674' class='documenter-source'>source</a><br>
 
 
 ##Grid.jl
@@ -838,7 +838,7 @@ Data structure for a regular [equal spacing between points in each coordinate] g
   * `origin::Array{Float64, 1}`: the origin of the grid.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Grid.jl#L1-L11' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Grid.jl#L1-L11' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.apply_periodic_boundary_condition!' href='#PorousMaterials.apply_periodic_boundary_condition!'>#</a>
 **`PorousMaterials.apply_periodic_boundary_condition!`** &mdash; *Function*.
@@ -857,7 +857,7 @@ Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, appl
   * `simulation_box::Box`: The simulation box
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/MChelpers.jl#L50-L60' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/MChelpers.jl#L50-L60' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_cube' href='#PorousMaterials.write_cube'>#</a>
 **`PorousMaterials.write_cube`** &mdash; *Function*.
@@ -877,7 +877,7 @@ Write grid to a .cube file format. This format is described here: http://paulbou
   * `verbose::Bool`: print name of file after writing.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Grid.jl#L20-L31' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Grid.jl#L20-L31' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_cube' href='#PorousMaterials.read_cube'>#</a>
 **`PorousMaterials.read_cube`** &mdash; *Function*.
@@ -899,7 +899,7 @@ Read a .cube file and return a populated `Grid` data structure.
   * `grid::Grid`: A grid data structure
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Grid.jl#L73-L83' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Grid.jl#L73-L83' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.energy_grid' href='#PorousMaterials.energy_grid'>#</a>
 **`PorousMaterials.energy_grid`** &mdash; *Function*.
@@ -933,7 +933,7 @@ This is only relevant for molecules that are comprised of more than one Lennard 
   * `grid::Grid`: A grid data structure containing the potential energy of the system
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Grid.jl#L139-L161' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Grid.jl#L139-L161' class='documenter-source'>source</a><br>
 
 
 ##Henry.jl
@@ -969,7 +969,7 @@ the replication factors in reciprocal space.
   * `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Henry.jl#L4-L32' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Henry.jl#L4-L32' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.henry_result_savename' href='#PorousMaterials.henry_result_savename'>#</a>
 **`PorousMaterials.henry_result_savename`** &mdash; *Function*.
@@ -992,7 +992,7 @@ Determine the name of files saved while calculating the henry coefficient. It us
   * `insertions_per_volume::Int`:
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Henry.jl#L209-L224' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Henry.jl#L209-L224' class='documenter-source'>source</a><br>
 
 
 ##Matter.jl
@@ -1016,7 +1016,7 @@ ljs = LJSphere(:C, [0.0, 0.0, 0.0])
   * `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Matter.jl#L3-L13' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Matter.jl#L3-L13' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.PtCharge' href='#PorousMaterials.PtCharge'>#</a>
 **`PorousMaterials.PtCharge`** &mdash; *Type*.
@@ -1037,7 +1037,7 @@ ptc = PtCharge(-0.2, [0.0, 0.0, 0.0])
   * `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Matter.jl#L23-L32' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Matter.jl#L23-L32' class='documenter-source'>source</a><br>
 
 
 ##MChelpers.jl
@@ -1060,7 +1060,7 @@ Inserts an additional adsorbate molecule into the simulation box using the templ
   * `template::Molecule`: A template molecule used as reference when inserting molecules
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/MChelpers.jl#L8-L19' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/MChelpers.jl#L8-L19' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.delete_molecule!' href='#PorousMaterials.delete_molecule!'>#</a>
 **`PorousMaterials.delete_molecule!`** &mdash; *Function*.
@@ -1079,7 +1079,7 @@ Removes a random molecule from the current molecules in the framework. molecule_
   * `molecules::Array{Molecule, 1}`: An array of Molecule objects
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/MChelpers.jl#L35-L45' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/MChelpers.jl#L35-L45' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.translate_molecule!' href='#PorousMaterials.translate_molecule!'>#</a>
 **`PorousMaterials.translate_molecule!`** &mdash; *Function*.
@@ -1102,7 +1102,7 @@ Perturbs the Cartesian coordinates of a molecule about its center of mass by a r
   * `old_molecule::Molecule`: The old molecule in case the MC proposal is rejected
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/MChelpers.jl#L85-L99' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/MChelpers.jl#L85-L99' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.reinsert_molecule!' href='#PorousMaterials.reinsert_molecule!'>#</a>
 **`PorousMaterials.reinsert_molecule!`** &mdash; *Function*.
@@ -1116,7 +1116,7 @@ reinsert_molecule(molecule, simulation_box)
 Move molecule to a new center of mass randomly distrubted in the unit cell and choose a random orientation for it. Return a deep copy of the starting molecule for possible restoration. This MC move can be viewed as a more aggressive `translate_molecule!`.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/MChelpers.jl#L114-L120' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/MChelpers.jl#L114-L120' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.rotatable' href='#PorousMaterials.rotatable'>#</a>
 **`PorousMaterials.rotatable`** &mdash; *Function*.
@@ -1134,7 +1134,7 @@ Determines whether or not a given molecule needs to be rotated. For example, rot
   * `molecule::Molecule`: The molecule being tested. This function determines if a   rotation of this molecule will do anything.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/MChelpers.jl#L139-L148' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/MChelpers.jl#L139-L148' class='documenter-source'>source</a><br>
 
 
 ##Misc.jl
@@ -1163,7 +1163,7 @@ from the .xyz file.
   * `x::Array{Float64, 2}`: The Cartesian coordinates of the atoms. `x[:, k]` will return cartesian coordinates of the k-th atom
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_cpk_colors' href='#PorousMaterials.read_cpk_colors'>#</a>
 **`PorousMaterials.read_cpk_colors`** &mdash; *Function*.
@@ -1181,7 +1181,7 @@ Read in CPK color scheme for atoms. Return `atom_colors::Dict{Symbol, Tuple{Int,
   * `atom_colors::Dict{Symbol, Tuple{Int, Int, Int}}`: A dictionary linking an element symbol to its' corresponding CPK color in RGB
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Misc.jl#L68-L77' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Misc.jl#L68-L77' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_atomic_radii' href='#PorousMaterials.read_atomic_radii'>#</a>
 **`PorousMaterials.read_atomic_radii`** &mdash; *Function*.
@@ -1199,7 +1199,7 @@ Return `atomic_radii::Dict{Symbol, Float64}`, where `atom_masses[":C"]` gives th
   * `atomic_radii::Dict{Symbol, Float64}`: A dictionary linking an element symbol to its' corresponding atomic radius
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Misc.jl#L87-L95' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Misc.jl#L87-L95' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_atomic_masses' href='#PorousMaterials.read_atomic_masses'>#</a>
 **`PorousMaterials.read_atomic_masses`** &mdash; *Function*.
@@ -1217,7 +1217,7 @@ Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and the
   * `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Misc.jl#L107-L115' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Misc.jl#L107-L115' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_to_xyz' href='#PorousMaterials.write_to_xyz'>#</a>
 **`PorousMaterials.write_to_xyz`** &mdash; *Function*.
@@ -1248,29 +1248,154 @@ if the extension is not provided.) (absolute path)
   * `comment::AbstractString`: comment if you'd like to write to the file.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/Misc.jl#L35-L51' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Misc.jl#L35-L51' class='documenter-source'>source</a><br>
 
 
 ##Molecules.jl
 
+<a id='PorousMaterials.translate_to!' href='#PorousMaterials.translate_to!'>#</a>
+**`PorousMaterials.translate_to!`** &mdash; *Function*.
+
+
 
 ```
-    translate_to!
-    rotate!
-    rotation_matrix
-    rand_point_on_unit_sphere
-    charged(::Molecule; ::Bool)
+translate_to!(molecule, xf)
+translate_to!(molecule, x, box)
 ```
+
+Translate a molecule a molecule to point `xf` in fractional coordinate space or to `x` in Cartesian coordinate space. For the latter, a unit cell box is required for context. The molecule is translated such that its center of mass is at `xf`/x`.
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Molecules.jl#L163-L170' class='documenter-source'>source</a><br>
+
+<a id='PorousMaterials.rotate!' href='#PorousMaterials.rotate!'>#</a>
+**`PorousMaterials.rotate!`** &mdash; *Function*.
+
+
+
+```
+rotate!(molecule, box)
+```
+
+Conduct a random rotation of the molecule about its center of mass. The box is needed because the molecule contains only its fractional coordinates.
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Molecules.jl#L240-L245' class='documenter-source'>source</a><br>
+
+<a id='PorousMaterials.rotation_matrix' href='#PorousMaterials.rotation_matrix'>#</a>
+**`PorousMaterials.rotation_matrix`** &mdash; *Function*.
+
+
+
+```
+r = rotation_matrix()
+```
+
+Generate a 3x3 random rotation matrix `r` such that when a point `x` is rotated using this rotation matrix via `r * x`, this point `x` is placed at a uniform random distributed position on the surface of a sphere of radius `norm(x)`. See James Arvo. Fast Random Rotation Matrices.
+
+https://pdfs.semanticscholar.org/04f3/beeee1ce89b9adf17a6fabde1221a328dbad.pdf
+
+**Returns**
+
+  * `r::Array{Float64, 2}`: A 3x3 random rotation matrix
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Molecules.jl#L216-L226' class='documenter-source'>source</a><br>
+
+<a id='PorousMaterials.rand_point_on_unit_sphere' href='#PorousMaterials.rand_point_on_unit_sphere'>#</a>
+**`PorousMaterials.rand_point_on_unit_sphere`** &mdash; *Function*.
+
+
+
+```
+u = rand_point_on_unit_sphere()
+```
+
+Generate a unit vector with a random orientation.
+
+**Returns**
+
+  * `u::Array{Float64, 1}`: A unit vector with a random orientation
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Molecules.jl#L199-L206' class='documenter-source'>source</a><br>
+
+<a id='PorousMaterials.charged-Tuple{PorousMaterials.Molecule}' href='#PorousMaterials.charged-Tuple{PorousMaterials.Molecule}'>#</a>
+**`PorousMaterials.charged`** &mdash; *Method*.
+
+
+
+```
+charged_flag = charged(molecule, verbose=false) # true or false
+```
+
+Determine if a molecule has point charges
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/Molecules.jl#L321-L325' class='documenter-source'>source</a><br>
 
 
 ##NearestImage.jl
 
+<a id='PorousMaterials.nearest_image!' href='#PorousMaterials.nearest_image!'>#</a>
+**`PorousMaterials.nearest_image!`** &mdash; *Function*.
+
+
 
 ```
-    nearest_image!
-    nearest_r²
-    nearest_r
+nearest_image!(dxf)
 ```
+
+Applies the nearest image convention on a vector `dxf` between two atoms in fractional space; modifies `dxf` for nearest image convention. Fractional coordinates here fall in [0, 1] so that the box is [0, 1]^3 in fractional space.
+
+Warning: this assumes the two molecules are in the box described by fractional coords [0, 1]³.
+
+**Arguments**
+
+  * `dxf::Array{Float64, 1}`: A vector between two atoms in fractional space
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/NearestImage.jl#L1-L12' class='documenter-source'>source</a><br>
+
+<a id='PorousMaterials.nearest_r²' href='#PorousMaterials.nearest_r²'>#</a>
+**`PorousMaterials.nearest_r²`** &mdash; *Function*.
+
+
+
+```
+shortest_r² = nearest_r²(xf, yf, box)
+```
+
+Given two points in fractional space, this determines the square of the closest they can be if the nearest image convention is being used. If the nearest image is closer than the original it will return the distance between xf and image of yf.
+
+**Arguments**
+
+  * `xf::Array{Float64, 1}`: The fractional coordinates of point x in 3-space
+  * `yf::Array{Float64, 1}`: The fractional coordinates of point y in 3-space
+  * `box::Box`: The box these points are being compared in
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/NearestImage.jl#L22-L33' class='documenter-source'>source</a><br>
+
+<a id='PorousMaterials.nearest_r' href='#PorousMaterials.nearest_r'>#</a>
+**`PorousMaterials.nearest_r`** &mdash; *Function*.
+
+
+
+```
+shortest_r = nearest_r(xf, yf, box)
+```
+
+Given two points in fractional space, this determines the closest they can be if the nearest image convention is being used. If the nearest image is closer than the original it will return the distance between xf and image of yf.
+
+**Arguments**
+
+  * `xf::Array{Float64, 1}`: The fractional coordinates of point x in 3-space
+  * `yf::Array{Float64, 1}`: The fractional coordinates of point y in 3-space
+  * `box::Box`: The box these points are being compared in
+
+
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/NearestImage.jl#L45-L56' class='documenter-source'>source</a><br>
 
 
 ##VdWEnergetics.jl
@@ -1297,7 +1422,7 @@ Calculate the lennard jones potential energy given the square of the radius r be
   * `energy::Float64`: Lennard Jones potential energy
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.vdw_energy' href='#PorousMaterials.vdw_energy'>#</a>
 **`PorousMaterials.vdw_energy`** &mdash; *Function*.
@@ -1323,7 +1448,7 @@ WARNING: it is assumed that the framework is replicated sufficiently such that t
   * `energy::Float64`: Van der Waals interaction energy
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/VdWEnergetics.jl#L36-L52' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/VdWEnergetics.jl#L36-L52' class='documenter-source'>source</a><br>
 
 
 ```
@@ -1344,7 +1469,7 @@ Calculates van der Waals interaction energy of a single adsorbate `molecules[mol
   * `gg_energy::Float64`: The guest-guest interaction energy of `molecules[molecule_id]` with the other molecules in `molecules`
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/VdWEnergetics.jl#L63-L78' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/VdWEnergetics.jl#L63-L78' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.vdw_energy_no_PBC' href='#PorousMaterials.vdw_energy_no_PBC'>#</a>
 **`PorousMaterials.vdw_energy_no_PBC`** &mdash; *Function*.
@@ -1354,5 +1479,5 @@ Calculates van der Waals interaction energy of a single adsorbate `molecules[mol
 Assumes unit cell box is a unit cube and no periodic boundary conditions are applied.
 
 
-<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/fd9398edf3046aa23e68c3c91a571c20fd8cbaea/src/VdWEnergetics.jl#L135-L138' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/ahyork/PorousMaterials.jl/blob/75dc68c39271959fa416c9c8548e9a79f7afc570/src/VdWEnergetics.jl#L135-L138' class='documenter-source'>source</a><br>
 

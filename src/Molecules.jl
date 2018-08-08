@@ -16,8 +16,8 @@ end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
     return (m1.species == m2.species) && isapprox(m1.xf_com, m2.xf_com) &&
-        (length(m1.atoms) == length(m2.atoms)) && 
-        (length(m1.charges) == length(m2.charges)) && 
+        (length(m1.atoms) == length(m2.atoms)) &&
+        (length(m1.charges) == length(m2.charges)) &&
         all([isapprox(m1.atoms[i], m2.atoms[i]) for i = 1:length(m1.atoms)]) &&
         all([isapprox(m1.charges[i], m2.charges[i]) for i = 1:length(m1.charges)])
 end
@@ -42,15 +42,15 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
-    
+
     # Read in Lennard Jones spheres
     atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
     if ! isfile(atomsfilename)
-        error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in 
+        error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in
         %s, include a .csv file with the proper headers but no rows.", species, atomsfilename))
     end
     df_lj = CSV.read(atomsfilename)
-    
+
     atomic_masses = read_atomic_masses() # for center-of-mass calcs
 
     x_com = [0.0, 0.0, 0.0]
@@ -73,7 +73,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     # Read in point charges
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
     if ! isfile(chargesfilename)
-        error(@sprintf("No file %s exists. Even if there are no point charges in %s, 
+        error(@sprintf("No file %s exists. Even if there are no point charges in %s,
         include a .csv file with the proper headers but no rows.", species,
                        chargesfilename))
     end
@@ -91,7 +91,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     # check for charge neutrality
     if (length(charges) > 0) && (! (total_charge(molecule) ≈ 0.0))
         if assert_charge_neutrality
-            error(@sprintf("Molecule %s is not charge neutral! Pass 
+            error(@sprintf("Molecule %s is not charge neutral! Pass
             `assert_charge_neutrality=false` to ignore this error message.", species))
         end
     end
@@ -120,7 +120,7 @@ end
 """
     set_fractional_coords_to_unit_cube!(molecule, box)
 
-Change fractional coordinates of a molecule in the context of a given box to Cartesian, 
+Change fractional coordinates of a molecule in the context of a given box to Cartesian,
 i.e. to correspond to fractional coords in a unit cube box.
 """
 function set_fractional_coords_to_unit_cube!(molecule::Molecule, box::Box)
@@ -190,7 +190,7 @@ function Base.show(io::IO, molecule::Molecule)
     if length(molecule.charges) > 0
         print(io, "\nPoint charges: ")
         for charge in molecule.charges
-            @printf(io, "\n\tq = %f, xf = [%.3f, %.3f, %.3f]", charge.q, 
+            @printf(io, "\n\tq = %f, xf = [%.3f, %.3f, %.3f]", charge.q,
                     charge.xf[1], charge.xf[2], charge.xf[3])
         end
     end
@@ -198,7 +198,7 @@ end
 
 """
     u = rand_point_on_unit_sphere()
-    
+
 Generate a unit vector with a random orientation.
 
 # Returns
@@ -228,7 +228,7 @@ function rotation_matrix()
     # random rotation about the z-axis
     u₁ = rand() * 2.0 * π
     r = [cos(u₁) sin(u₁) 0.0; -sin(u₁) cos(u₁) 0.0; 0.0 0.0 1.0]
-    
+
     # househoulder matrix
     u₂ = 2.0 * π * rand()
     u₃ = rand()
@@ -240,7 +240,7 @@ end
 """
     rotate!(molecule, box)
 
-Conduct a random rotation of the molecule about its center of mass. 
+Conduct a random rotation of the molecule about its center of mass.
 The box is needed because the molecule contains only its fractional coordinates.
 """
 function rotate!(molecule::Molecule, box::Box)
@@ -279,7 +279,7 @@ function outside_box(molecule::Molecule)
 end
 
 # docstring in Misc.jl
-function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; 
+function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
     comment::AbstractString="")
 
     n_atoms = sum([length(molecule.atoms) for molecule in molecules])
@@ -295,7 +295,7 @@ function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::Abstrac
         end
     end
     @assert(atom_counter == n_atoms)
-    
+
     write_to_xyz(atoms, x, filename, comment=comment) # Misc.jl
 end
 
@@ -318,6 +318,11 @@ function total_charge(molecule::Molecule)
     return total_charge
 end
 
+"""
+    charged_flag = charged(molecule, verbose=false) # true or false
+
+Determine if a molecule has point charges
+"""
 function charged(molecule::Molecule; verbose::Bool=false)
     charged_flag = length(molecule.charges) > 0
     if verbose
