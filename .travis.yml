@@ -1,0 +1,10 @@
+language: julia
+julia:
+    - 0.6.4
+addons:
+    apt:
+        packages:
+            - libhdf5-serial-dev
+sudo: enabled
+after_success:
+    - julia -e 'cd(Pkg.dir("PorousMaterials")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'

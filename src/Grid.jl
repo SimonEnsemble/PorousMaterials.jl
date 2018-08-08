@@ -113,7 +113,7 @@ function read_cube(filename::AbstractString)
     end
     
     # reconstruct box from f_to_c matrix
-    box = construct_box(f_to_c)
+    box = Box(f_to_c)
 
     # read in data
     data = zeros(Float64, n_pts...)
