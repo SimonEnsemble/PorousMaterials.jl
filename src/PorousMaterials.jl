@@ -47,7 +47,7 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        PotentialEnergy, SystemPotentialEnergy, # Energetics_Util.jl
        lennard_jones, vdw_energy, vdw_energy_no_PBC, # VdWEnergetics.jl
        electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum,
-       total_electrostatic_potential_energy, # ElectrostaticEnergetics.jl
+       total_electrostatic_potential_energy, total, # ElectrostaticEnergetics.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable, # MChelpers.jl
        apply_periodic_boundary_condition!,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
