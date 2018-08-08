@@ -6,22 +6,19 @@ This page contains all of the functions exported by PorousMaterials. They are so
     Box
     replicate
     UnitCube
+    write_vtk
 ```
 
 ##Crystal.jl
 ```@docs
     Framework
-    read_crystal_structure_file
-    remove_overlapping_atoms
+    remove_overlapping_atoms_and_charges
     strip_numbers_from_atom_labels!
-    write_unitcell_boundary_vtk
     chemical_formula
     molecular_weight
     crystal_density
-    construct_box
-    replicate
-    read_atomic_masses
-    charged(::Framework, ::Bool)
+    replicate(::Framework, ::Tuple{Int, Int, Int})
+    charged(::Framework; ::Bool)
     write_cif
     assign_charges
 ```
@@ -97,6 +94,7 @@ This page contains all of the functions exported by PorousMaterials. They are so
     read_xyz
     read_cpk_colors
     read_atomic_radii
+    read_atomic_masses
     write_to_xyz
 ```
 
