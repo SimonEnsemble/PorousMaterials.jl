@@ -25,11 +25,10 @@ This page contains all of the functions exported by PorousMaterials. They are so
 
 ##ElectrostaticsEnergetics.jl
 ```@docs
-    electrostatic_potential
     electrostatic_potential_energy
     precompute_kvec_wts
     setup_Ewald_sum
-    total
+    total_electrostatic_potential_energy
 ```
 
 ##Energetics_Util.jl

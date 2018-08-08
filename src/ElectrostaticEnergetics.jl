@@ -15,10 +15,10 @@ mutable struct EwaldSum
     intra::Float64 # intramolecular interactions
 end
 total(ews::EwaldSum) = ews.sr + ews.lr + ews.lr_own_images + ews.self + ews.intra
-+(e1::EwaldSum, e2::EwaldSum) = EwaldSum(e1.sr            + e2.sr, 
-                                         e1.lr            + e2.lr, 
-                                         e1.lr_own_images + e2.lr_own_images, 
-                                         e1.self          + e2.self, 
++(e1::EwaldSum, e2::EwaldSum) = EwaldSum(e1.sr            + e2.sr,
+                                         e1.lr            + e2.lr,
+                                         e1.lr_own_images + e2.lr_own_images,
+                                         e1.self          + e2.self,
                                          e1.intra         + e2.intra)
 EwaldSum() = EwaldSum(0.0, 0.0, 0.0, 0.0, 0.0)
 
@@ -262,15 +262,15 @@ end
     ϕ = electrostatic_potential_energy(framework, molecule, eparams, kvectors,
                                        eikar, eikbr, eikcr)
 
-Compute the electrostatic potential energy of a molecule inside a framework. 
+Compute the electrostatic potential energy of a molecule inside a framework.
 
-The electrostatic potential is created by the point charges assigned to the framework 
-atoms in `framework.charges`. Periodic boundary conditions are applied through the Ewald 
-summation. The spurious self-interaction term is neglected here because we are looking at 
+The electrostatic potential is created by the point charges assigned to the framework
+atoms in `framework.charges`. Periodic boundary conditions are applied through the Ewald
+summation. The spurious self-interaction term is neglected here because we are looking at
 *differences* in energy in a Monte Carlo simulation.
 
 Warning: it is assumed that the framework is replicated enough such that the nearest
-image convention can be applied for the short-range cutoff radius supplied in 
+image convention can be applied for the short-range cutoff radius supplied in
 `eparams.sr_cutoff_r`.
 
 # Arguments
@@ -421,7 +421,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                     ###
                     if i != j
                         ϕ.sr += _ϕ_sr(charge_i, charge_j, eparams)
-                    end 
+                    end
                 end # charge j
             end # molecule j
         end # charge i
@@ -435,14 +435,14 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
         #  Spurious self-interaction of point charge with Gaussian charge
         ###
         ϕ.self += _spurious_self_interaction_energy(molecule, eparams)
-    
+
         ###
         #  Intramolecular interactions
         #    this function allows the molecule to be split apart across a periodic boundary
         ###
         ϕ.intra += _intramolecular_energy(molecule, eparams)
     end
-    
+
     return ϕ::EwaldSum
 end
 
@@ -478,6 +478,20 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
 end
 
 # incremented
+"""
+    total_ϕ = total_electrostatic_potential_energy(molecules, eparams, kvectors,
+                                                  eikar, eikbr, eikcr)
+
+Explanation of total_electrostatic_potential_energy that doesn't use framework
+
+# Arguments
+- `molecules::Array{Molecule, 1}`:
+- `eparams::EwaldParams`:
+- `kvectors::Array{Kvector, 1}`:
+- `eikar::OffsetArray{Complex{Float64}}`:
+- `eikbr::OffsetArray{Complex{Float64}}`:
+- `eikcr::OffsetArray{Complex{Float64}}`:
+"""
 function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                               eparams::EwaldParams,
                                               kvectors::Array{Kvector, 1},
@@ -494,6 +508,21 @@ function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
     return ϕ::EwaldSum
 end
 
+"""
+    total_ϕ = total_electrostatic_potential_energy(framework, molecules, eparams,
+                                                  kvectors, eikar, eikbr, eikcr)
+
+Explanation of total_electrostatic_potential_energy that uses framework
+
+# Arguments
+- `framework::Framework`:
+- `molecules::Array{Molecule, 1}`:
+- `eparams::EwaldParams`:
+- `kvectors::Array{Kvector, 1}`:
+- `eikar::OffsetArray{Complex{Float64}}`:
+- `eikbr::OffsetArray{Complex{Float64}}`:
+- `eikcr::OffsetArray{Complex{Float64}}`:
+"""
 function total_electrostatic_potential_energy(framework::Framework,
                                               molecules::Array{Molecule, 1},
                                               eparams::EwaldParams,
