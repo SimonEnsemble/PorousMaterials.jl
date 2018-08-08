@@ -136,4 +136,14 @@ function reinsert_molecule!(molecule::Molecule, box::Box)
 end
 
 # do we need to conduct a rotation or not? # TODO what if it is an ion? No need to rotate...
+"""
+    need_to_rotate = rotatable(molecule)
+
+Determines whether or not a given molecule needs to be rotated. For example,
+rotating a single atom isn't necessary.
+
+# Arguments
+- `molecule::Molecule`: The molecule being tested. This function determines if a
+    rotation of this molecule will do anything.
+"""
 rotatable(molecule::Molecule) = (length(molecule.atoms) + length(molecule.charges) > 1)::Bool
