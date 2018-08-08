@@ -2,7 +2,7 @@ using Documenter, PorousMaterials
 
     makedocs(
         modules = [PorousMaterials],
-        format = :html,
+        format = :md,
         sitename = "PorousMaterials.jl",
         pages = [
                 "Home" => "index.md"
