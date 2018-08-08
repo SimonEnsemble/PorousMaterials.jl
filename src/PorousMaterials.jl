@@ -1,3 +1,4 @@
+__precompile__()
 module PorousMaterials
 
 using CSV
@@ -10,8 +11,12 @@ using ProgressMeter
 using JLD
 using Polynomials
 
-# this is the directory where crystal structures, forcefields, and molecules data is stored
-global PATH_TO_DATA = pwd() * "/data/"
+# this runs everytime PorousMaterials is loaded, so if the user changes directory
+#   then the PATH_TO_DATA will change as well
+function __init__()
+    # this is the directory where crystal structures, forcefields, and molecules data is stored
+    global PATH_TO_DATA = pwd() * "/data/"
+end
 
 include("Box.jl")
 include("Matter.jl")
