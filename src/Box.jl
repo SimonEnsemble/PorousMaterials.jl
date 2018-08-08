@@ -38,7 +38,7 @@ end
 """
     r = reciprocal_lattice(f_to_c)
 
-Given the fractional to Cartesian transformation matrix, compute the reciprocal lattice 
+Given the fractional to Cartesian transformation matrix, compute the reciprocal lattice
 vectors, which are the rows of the returned matrix `r`.
 
 # Arguments
@@ -47,7 +47,7 @@ coordinates to cartesian coordinates. The columns of this matrix define the unit
 axes. units: Angstrom
 
 # Returns
-- `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the rows 
+- `r::Array{Float64, 2}`: Reciprocal lattice vectors in a matrix format, where the rows
 are the reciprocal lattice vectors.
 """
 function reciprocal_lattice(f_to_c::Array{Float64, 2})
@@ -105,6 +105,13 @@ function Box(f_to_c::Array{Float64, 2})
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
 
+"""
+    unit_cube = UnitCube()
+
+This function generates a unit cube, each side is 1.0 Angstrom long, and all the
+corners are right angles.
+"""
+
 UnitCube() = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
 
 """
@@ -132,7 +139,7 @@ end
     write_vtk(framework)
 
 Write a `Box` to a .vtk file for visualizing e.g. the unit cell boundary of a crystal.
-If a `Framework` is passed, the `Box` of that framework is written to a file that is the 
+If a `Framework` is passed, the `Box` of that framework is written to a file that is the
 same as the crystal structure filename but with a .vtk extension.
 
 Appends ".vtk" extension to `filename` automatically if not passed.
