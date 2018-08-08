@@ -39,13 +39,13 @@ This page contains all of the functions exported by PorousMaterials. They are so
 
 ##EOS.jl
 ```@docs
-    PengRobinsonsGas
+    PengRobinsonGas
     calculate_properties
 ```
 
 ##Forcefield.jl
 ```@docs
-    LJForcefield
+    LJForceField
     replication_factors
     check_forcefield_coverage
 ```
@@ -61,7 +61,7 @@ This page contains all of the functions exported by PorousMaterials. They are so
 ##Grid.jl
 ```@docs
     Grid
-    apply_periodic_boundary_condition
+    apply_periodic_boundary_condition!
     write_cube
     read_cube
     energy_grid
@@ -103,7 +103,7 @@ This page contains all of the functions exported by PorousMaterials. They are so
     rotate!
     rotation_matrix
     rand_point_on_unit_sphere
-    charged(::Molecule, ::Bool)
+    charged(::Molecule; ::Bool)
 ```
 
 ##NearestImage.jl
