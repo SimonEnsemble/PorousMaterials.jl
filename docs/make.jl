@@ -2,6 +2,7 @@ using Documenter, PorousMaterials
 
     makedocs(
         modules = [PorousMaterials],
+        format = :html,
         sitename = "PorousMaterials.jl",
         pages = [
                 "Home" => "index.md"
@@ -13,7 +14,9 @@ using Documenter, PorousMaterials
     deploydocs(
         repo = "https://github.com/SimonEnsemble/PorousMaterials.jl",
         # This is a link to the main repo and the master branch
+        target = "build",
         julia = "0.6",
         osname = "linux",
-        deps = nothing # These are dependencies for the site, not the package
+        deps = nothing, # These are dependencies for the site, not the package
+        make = nothing
     )
