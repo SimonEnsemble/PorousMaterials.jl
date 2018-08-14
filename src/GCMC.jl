@@ -238,25 +238,39 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
-    eos::Symbol=:ideal, autosave::Bool=true,
-    read_checkpoint::Bool=false, write_checkpoint::Bool=false, checkpoint_interval::Int = 50, troubleshoot::Bool=false)
+    eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
+    load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoint::Bool=false, checkpoint_interval::Int=50)
   
-    # Initialize relevant checkpoint data if we either want to read or write cheackpoints
-    if write_checkpoint || read_checkpoint
-        restarted = false
-        checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(framework.name, 
-                molecule_.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
-        if read_checkpoint
-            if isfile(checkpoint_path)
-                @printf("Restarting simulation from a previous job\n")
-                mccheckpoint = load(checkpoint_path, "checkpoint")
-                molecules = mccheckpoint.molecules
-                restarted = true
+    # Initialize relevant checkpoint data if we either want to load or write cheackpoints
+    restarted = false
+    checkpoint_path = ""
+    if load_checkpoint != false
+
+        if typeof(load_checkpoint) == Bool
+            checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(framework.name, 
+                    molecule_.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
+        elseif typeof(load_checkpoint) == AbstractString || typeof(load_checkpoint) == String
+            if contains(load_checkpoint, "gcmc_checkpoints/")
+                checkpoint_path = load_checkpoint
+            else
+                checkpoint_path = "data/gcmc_checkpoints/" * load_checkpoint
             end
         end
+
+        if isfile(checkpoint_path)
+            @printf("Restarting simulation from a previous job\n")
+            mccheckpoint = load(checkpoint_path, "checkpoint")
+            molecules = mccheckpoint.molecules
+            restarted = true
+        else
+            @printf("No checkpoint file found. Starting a new job\n")
+        end
+
     end
 
     if write_checkpoint && !restarted
+        checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(framework.name, 
+                        molecule_.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
         mccheckpoint = MCCheckpoint()
     end
 
@@ -323,7 +337,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
                         ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
-    system_energy = read_checkpoint && restarted ? mccheckpoint.system_energy : SystemPotentialEnergy()
+    system_energy = load_checkpoint != false && restarted ? mccheckpoint.system_energy : SystemPotentialEnergy()
     # if we don't start with an emtpy framework, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
@@ -355,7 +369,7 @@ a       end
             end
         end
 
-        if !(read_checkpoint && restarted)
+        if !(load_checkpoint != false && restarted)
             system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
             system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
             system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
@@ -365,7 +379,9 @@ a       end
         end
     end
 
-    #progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
+    if progressbar
+        progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
+    end
 
     # define probabilty of proposing each type of MC move here.
     mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
@@ -390,8 +406,8 @@ a       end
     end
 
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
-    gcmc_stats = read_checkpoint && restarted ? mccheckpoint.blocks : [GCMCstats() for block_no = 1:N_BLOCKS]
-    current_block = read_checkpoint && restarted ? mccheckpoint.current_block : 1
+    gcmc_stats = load_checkpoint != false && restarted ? mccheckpoint.blocks : [GCMCstats() for block_no = 1:N_BLOCKS]
+    current_block = load_checkpoint != false && restarted ? mccheckpoint.current_block : 1
     # make sure the number of sample cycles is at least equal to N_BLOCKS
     if n_sample_cycles < N_BLOCKS
         n_sample_cycles = N_BLOCKS
@@ -399,15 +415,17 @@ a       end
     end
     const N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
-    markov_counts = read_checkpoint && restarted ? mccheckpoint.markov_counts : MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
+    markov_counts = load_checkpoint != false && restarted ? mccheckpoint.markov_counts : MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
     #println(rand())
 
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
-    markov_chain_time = read_checkpoint && restarted ? mccheckpoint.markov_chain_time : 0
-    outer_start = read_checkpoint && restarted ? mccheckpoint.n_cycle : 1
+    markov_chain_time = load_checkpoint != false && restarted ? mccheckpoint.markov_chain_time : 0
+    outer_start = load_checkpoint != false && restarted ? mccheckpoint.n_cycle : 1
     for outer_cycle = outer_start:(n_burn_cycles + n_sample_cycles)
-        #next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
+        if progressbar
+            next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
+        end
         end_inner_cycle = max(20, length(molecules))
         for inner_cycle = 1:end_inner_cycle
             markov_chain_time += 1
@@ -591,11 +609,6 @@ a       end
         JLD.save(checkpoint_path, "checkpoint", mccheckpoint)
     end
 
-    if troubleshoot && outer_cycle == n_burn_cycles + 10
-        @printf("Simulation shut down intentionally\n")
-        error("Intentional")
-    end
-
     end # outer cycles
     # finished MC moves at this point.
 
@@ -614,7 +627,7 @@ a       end
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
-    @printf("Estimated elapsed time: %d seconds\n", read_checkpoint && restarted ? time() - start_time + mccheckpoint.time : time() - start_time)
+    @printf("Estimated elapsed time: %d seconds\n", load_checkpoint != false && restarted ? time() - start_time + mccheckpoint.time : time() - start_time)
 
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()
@@ -709,15 +722,15 @@ function gcmc_result_savename(framework_name::AbstractString,
                             pressure::Float64,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int,
-                            extra_comment::AbstractString="")
+                            comment::AbstractString="")
         framework_name = split(framework_name, ".")[1] # remove file extension
         ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
-        if extra_comment != "" && extra_comment[1] != '_'
-            extra_comment = "_" * extra_comment
+        if comment != "" && comment[1] != '_'
+            comment = "_" * comment
         end
         return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s.jld", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
-                    n_burn_cycles, n_sample_cycles, extra_comment)
+                    n_burn_cycles, n_sample_cycles, comment)
 end
 
 function print_results(results::Dict; print_title::Bool=true)

@@ -15,23 +15,24 @@ n_sample_cycles = 51
 temp = 298.0
 pressure = 0.5
 
+results = Dict()
+molecules = Array{Molecule, 1}()
 srand(1234)
 
-try
+for i = 1:3
+    @printf("i = %d\n",i)
+    checkpoint_file = i == 1 ? false : gcmc_result_savename(frame.name, co2.species, ljff.name, temp, pressure, 5, 5*(i-1), "_checkpoint")
     results, molecules = gcmc_simulation(frame, co2, temp, pressure, ljff,
-                              n_burn_cycles=51, n_sample_cycles = 51,
-                              verbose=true, sample_frequency=1, eos=:PengRobinson,
-                              autosave=false, write_checkpoint=true, read_checkpoint=false, checkpoint_interval=1, troubleshoot=true)
+                                         n_burn_cycles = 5, n_sample_cycles=5*i,
+                                         verbose=true, sample_frequency=1, eos=:PengRobinson,
+                                         autosave=false, write_checkpoint=true, load_checkpoint=checkpoint_file, checkpoint_interval=1)
 end
-results, molecules = gcmc_simulation(frame, co2, temp, pressure, ljff,
-                          n_burn_cycles=51, n_sample_cycles = 51,
-                          verbose=true, sample_frequency=1, eos=:PengRobinson,
-                          autosave=false, write_checkpoint=true, read_checkpoint=true, checkpoint_interval=1, troubleshoot=false)
+
 println("---------------------------------")
 
 srand(1234)
 
 results2, molecules2 = gcmc_simulation(frame, co2, temp, pressure, ljff,
-                          n_burn_cycles=n_burn_cycles, n_sample_cycles = n_sample_cycles,
+                          n_burn_cycles=5, n_sample_cycles = 25,
                           verbose=true, sample_frequency=1, eos=:PengRobinson,
-                          autosave=false, write_checkpoint=false, read_checkpoint=false, checkpoint_interval=1)
+                          autosave=false, write_checkpoint=false, load_checkpoint=false, checkpoint_interval=1, progressbar=true)
