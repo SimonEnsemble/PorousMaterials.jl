@@ -9,14 +9,12 @@ using JLD
 frame = Framework("FIQCEN_clean_min_charges.cif")
 strip_numbers_from_atom_labels!(frame)
 co2 = Molecule("CO2")
+co_bond_length = norm(co2.atoms[1].xf - co2.atoms[2].xf)
 ljff = LJForceField("UFF.csv")
-n_burn_cycles = 51
-n_sample_cycles = 51
 temp = 298.0
 pressure = 0.5
 
 results = Dict()
-molecules = Array{Molecule, 1}()
 srand(1234)
 
 for i = 1:3
@@ -26,6 +24,7 @@ for i = 1:3
                                          n_burn_cycles = 5, n_sample_cycles=5*i,
                                          verbose=true, sample_frequency=1, eos=:PengRobinson,
                                          autosave=false, write_checkpoint=true, load_checkpoint=checkpoint_file, checkpoint_frequency=1)
+    @test isapprox(norm(molecules[1].atoms[1].xf - molecules[1].atoms[2].xf), co_bond_length)
 end
 
 println("---------------------------------")
