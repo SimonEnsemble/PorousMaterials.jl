@@ -139,7 +139,7 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
     temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
     n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5, 
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    checkpoint::Bool=false, checkpoint_interval::Int=50)
+    checkpoint::Bool=false, checkpoint_frequency::Int=50)
 
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -175,7 +175,7 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
     pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
     n_sample_cycles::Int=5000, sample_frequency::Int=5, verbose::Bool=true,
     ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    checkpoint::Bool=false, checkpoint_interval::Int=50)
+    checkpoint::Bool=false, checkpoint_frequency::Int=50)
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
                                                       pressure, ljforcefield,
@@ -239,39 +239,31 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
-    load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoint::Bool=false, checkpoint_interval::Int=50)
+    load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoint::Bool=false, 
+    checkpoint_frequency::Int=50)
   
     # Initialize relevant checkpoint data if we either want to load or write cheackpoints
     restarted = false
-    checkpoint_path = ""
-    if load_checkpoint != false
-
-        if typeof(load_checkpoint) == Bool
-            checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(framework.name, 
-                    molecule_.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
-        elseif typeof(load_checkpoint) == AbstractString || typeof(load_checkpoint) == String
-            if contains(load_checkpoint, "gcmc_checkpoints/")
-                checkpoint_path = load_checkpoint
-            else
-                checkpoint_path = "data/gcmc_checkpoints/" * load_checkpoint
-            end
+    # default filename for checkpoint
+    checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
+        framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
+        n_burn_cycles, n_sample_cycles, "_checkpoint")
+    checkpoint = Dict() 
+    if load_checkpoint != false # true or a String (giving filename)
+        # path to checkpoint file given, overwrite.
+        if isa(load_checkpoint, AbstractString)
+            checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * load_checkpoint
         end
 
         if isfile(checkpoint_path)
             @printf("Restarting simulation from a previous job\n")
-            mccheckpoint = load(checkpoint_path, "checkpoint")
-            molecules = mccheckpoint.molecules
+            checkpoint = JLD.load(checkpoint_path, "checkpoint")
+            molecules = deepcopy(checkpoint["molecules"])
             restarted = true
         else
-            @printf("No checkpoint file found. Starting a new job\n")
+            warn(@sprintf("checkpoint file %s not found. starting a simulation without 
+            loading a checkpoint.\n", checkpoint_path))
         end
-
-    end
-
-    if write_checkpoint && !restarted
-        checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(framework.name, 
-                        molecule_.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, "_checkpoint")
-        mccheckpoint = MCCheckpoint()
     end
 
     start_time = time()
@@ -337,7 +329,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
                         ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
-    system_energy = load_checkpoint != false && restarted ? mccheckpoint.system_energy : SystemPotentialEnergy()
+    system_energy = SystemPotentialEnergy()
     # if we don't start with an emtpy framework, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
@@ -369,13 +361,18 @@ a       end
             end
         end
 
-        if !(load_checkpoint != false && restarted)
-            system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
-            system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
-            system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
-                                                        eparams, kvectors, eikar, eikbr, eikcr)
-            system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
-                                                eparams, kvectors, eikar, eikbr, eikcr))
+        system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
+        system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
+        system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
+                                                    eparams, kvectors, eikar, eikbr, eikcr)
+        system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
+                                            eparams, kvectors, eikar, eikbr, eikcr))
+        
+        # assert calculated system energy consistent with checkpoint
+        if restarted
+            if ! isapprox(system_energy, checkpoint["system_energy"])
+                error("system_energy from checkpoint not consistent with configuration of molecules!")
+            end
         end
     end
 
@@ -406,8 +403,8 @@ a       end
     end
 
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
-    gcmc_stats = load_checkpoint != false && restarted ? mccheckpoint.blocks : [GCMCstats() for block_no = 1:N_BLOCKS]
-    current_block = load_checkpoint != false && restarted ? mccheckpoint.current_block : 1
+    gcmc_stats = [GCMCstats() for block_no = 1:N_BLOCKS]
+    current_block = 1
     # make sure the number of sample cycles is at least equal to N_BLOCKS
     if n_sample_cycles < N_BLOCKS
         n_sample_cycles = N_BLOCKS
@@ -415,19 +412,24 @@ a       end
     end
     const N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
-    markov_counts = load_checkpoint != false && restarted ? mccheckpoint.markov_counts : MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
+    markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
+    if restarted
+        gcmc_stats = checkpoint["gcmc_stats"]
+        current_block = checkpoint["current_block"]
+        markov_counts = checkpoint["markov_counts"]
+    end
     #println(rand())
 
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
-    markov_chain_time = load_checkpoint != false && restarted ? mccheckpoint.markov_chain_time : 0
-    outer_start = load_checkpoint != false && restarted ? mccheckpoint.n_cycle : 1
+    markov_chain_time = restarted ? checkpoint["markov_chain_time"] : 0
+    outer_start = restarted ? checkpoint["outer_cycle"] + 1 : 1
+    println("outer start = ", outer_start)
     for outer_cycle = outer_start:(n_burn_cycles + n_sample_cycles)
         if progressbar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
         end
-        end_inner_cycle = max(20, length(molecules))
-        for inner_cycle = 1:end_inner_cycle
+        for inner_cycle = 1:max(20, length(molecules))
             markov_chain_time += 1
 
             # choose proposed move randomly; keep track of proposals
@@ -577,38 +579,51 @@ a       end
 
                     gcmc_stats[current_block].Un += sum(system_energy) * length(molecules)
                 end
+            end # end sampling
+        end # inner cycles
 
-                # print block statistics if last inner cycle of the right outer cycle.
-                if (inner_cycle == end_inner_cycle) && ((outer_cycle - n_burn_cycles) % N_CYCLES_PER_BLOCK == 0) &&
-                    (current_block != N_BLOCKS || (outer_cycle == (n_burn_cycles + n_sample_cycles)))
-                    # print statistics for this block
-                    if verbose 
-                        print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
-                        print(gcmc_stats[current_block])
-                    end
-                    # move onto new block unless current_block is N_BLOCKS;
-                    # then just keep adding stats to the last block.
-                    # this only occurs if sample_cycles not divisible by N_BLOCKS
-                    if current_block != N_BLOCKS
-                        current_block += 1
-                    end
-                end
-            end # end sampling code
-        end # inner
-    
+        # print block statistics / increment block
+        if (outer_cycle > n_burn_cycles) && ((outer_cycle - n_burn_cycles) % N_CYCLES_PER_BLOCK == 0)
+            if current_block == N_BLOCKS 
+                continue # print last cycle later
+            end
+            # print statistics for this block
+            if verbose 
+                print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+                print(gcmc_stats[current_block])
+            end
+            # move onto new block unless current_block is N_BLOCKS;
+            # then just keep adding stats to the last block.
+            # this only occurs if sample_cycles not divisible by N_BLOCKS
+            if current_block != N_BLOCKS
+                current_block += 1
+            end
+        end
+        # print the last cycle in the last block
+        if outer_cycle == (n_sample_cycles + n_burn_cycles)
+            if verbose 
+                print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+                print(gcmc_stats[current_block])
+            end
+        end
 
-    if write_checkpoint && outer_cycle % checkpoint_interval == 0
-        mccheckpoint.n_cycle = outer_cycle + 1
-        mccheckpoint.current_block = current_block
-        mccheckpoint.blocks = gcmc_stats
-        mccheckpoint.molecules = get_fractional_coords_to_unit_cube.(molecules, framework.box)
-        mccheckpoint.system_energy = system_energy
-        mccheckpoint.markov_counts = markov_counts
-        mccheckpoint.markov_chain_time = markov_chain_time
-        mccheckpoint.time = time() - start_time
-        JLD.save(checkpoint_path, "checkpoint", mccheckpoint)
-    end
-
+        if write_checkpoint && (outer_cycle % checkpoint_frequency == 0)
+            checkpoint = Dict("outer_cycle" => outer_cycle,
+                              "molecules" => deepcopy(molecules),
+                              "system_energy" => system_energy,
+                              "current_block" => current_block,
+                              "gcmc_stats" => gcmc_stats,
+                              "markov_counts" => markov_counts,
+                              "markov_chain_time" => markov_chain_time,
+                              "time" => time() - start_time # TODO not quite
+                              )
+            # bring back fractional coords to Cartesian.
+            set_fractional_coords_to_unit_cube!.(checkpoint["molecules"], framework.box)
+            if ! isdir(PATH_TO_DATA * "/gcmc_checkpoints")
+                mkdir(PATH_TO_DATA * "/gcmc_checkpoints")
+            end
+            JLD.save(checkpoint_path, "checkpoint", checkpoint)
+        end
     end # outer cycles
     # finished MC moves at this point.
 
@@ -627,7 +642,11 @@ a       end
     end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
-    @printf("Estimated elapsed time: %d seconds\n", load_checkpoint != false && restarted ? time() - start_time + mccheckpoint.time : time() - start_time)
+    elapsed_time = time() - start_time
+    if restarted
+        elapsed_time += checkpoint["time"]
+    end
+    @printf("\tEstimated elapsed time: %d seconds\n", elapsed_time)
 
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()
@@ -790,19 +809,6 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print_with_color(:green, split(ljff.name, ".")[1])
     println(" force field.")
 end
-
-mutable struct MCCheckpoint
-    n_cycle::Int
-    current_block::Int
-    blocks::Array{GCMCstats, 1}
-    molecules::Array{Molecule, 1}
-    system_energy::SystemPotentialEnergy
-    markov_counts::MarkovCounts
-    markov_chain_time::Int
-    time::Float64
-end
-
-MCCheckpoint() = MCCheckpoint(0, 0, Array{GCMCstats, 1}(), Array{Molecule, 1}(), SystemPotentialEnergy(), MarkovCounts(zeros(Int, 1), zeros(Int, 1)), 0, 0.0) 
 
 function get_fractional_coords_to_unit_cube(molecule::Molecule, box::Box)
     new_mol = deepcopy(molecule)
