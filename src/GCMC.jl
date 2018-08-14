@@ -242,19 +242,19 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoint::Bool=false, 
     checkpoint_frequency::Int=50)
   
-    # Initialize relevant checkpoint data if we either want to load or write cheackpoints
-    restarted = false
-    # default filename for checkpoint
+    ###
+    #  Address loading a checkpoint and restarting from a previous simulation
+    ###
+    restarted = false # whether or not the simulation is restarted
     checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
         n_burn_cycles, n_sample_cycles, "_checkpoint")
+    # if path to checkpoint file given, overwrite.
+    if isa(load_checkpoint, AbstractString)
+        checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * load_checkpoint
+    end
     checkpoint = Dict() 
     if load_checkpoint != false # true or a String (giving filename)
-        # path to checkpoint file given, overwrite.
-        if isa(load_checkpoint, AbstractString)
-            checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * load_checkpoint
-        end
-
         if isfile(checkpoint_path)
             @printf("Restarting simulation from a previous job\n")
             checkpoint = JLD.load(checkpoint_path, "checkpoint")
@@ -336,7 +336,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
         
-        # set fractional coords of these molecules 
+        # set fractional coords of these molecules consistent with framework box
         set_fractional_coords!.(molecules, framework.box)
 
         # assert that the bond lengths are equal between the template and array to make
@@ -565,9 +565,8 @@ a       end
                 @assert(! outside_box(m), "molecule outside box!")
             end
 
-            # if we're in the production MC cycles. i.e. we've done all burn cycles...
+            # if we've done all burn cycles, take samples for statistics
             if outer_cycle > n_burn_cycles
-                # take a sample.
                 if markov_chain_time % sample_frequency == 0
                     gcmc_stats[current_block].n_samples += 1
 
@@ -579,23 +578,21 @@ a       end
 
                     gcmc_stats[current_block].Un += sum(system_energy) * length(molecules)
                 end
-            end # end sampling
+            end # sampling
         end # inner cycles
 
         # print block statistics / increment block
         if (outer_cycle > n_burn_cycles) && ((outer_cycle - n_burn_cycles) % N_CYCLES_PER_BLOCK == 0)
-            if current_block == N_BLOCKS 
-                continue # print last cycle later
-            end
-            # print statistics for this block
-            if verbose 
-                print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
-                print(gcmc_stats[current_block])
-            end
             # move onto new block unless current_block is N_BLOCKS;
             # then just keep adding stats to the last block.
             # this only occurs if sample_cycles not divisible by N_BLOCKS
-            if current_block != N_BLOCKS
+            # print GCMC stats later and do not increment block if we are in last block.
+            if current_block != N_BLOCKS 
+                # print statistics for this block
+                if verbose 
+                    print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+                    print(gcmc_stats[current_block])
+                end
                 current_block += 1
             end
         end
