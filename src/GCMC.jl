@@ -241,6 +241,31 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
     load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoints::Bool=false, 
     checkpoint_frequency::Int=50)
+    
+    start_time = time()
+    # to avoid changing the outside object `molecule_` inside this function, we make
+    #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
+    molecule = deepcopy(molecule_)
+
+    if verbose
+        pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
+    end
+
+    # convert pressure to fugacity using an equation of state
+    fugacity = NaN
+    if eos == :ideal
+       fugacity = pressure * 100000.0 # bar --> Pa
+    elseif eos == :PengRobinson
+        prgas = PengRobinsonGas(molecule.species)
+        gas_props = calculate_properties(prgas, temperature, pressure, verbose=false)
+        fugacity = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
+    else
+        error("eos=:ideal and eos=:PengRobinson are only valid options for equation of state.")
+    end
+    if verbose
+        @printf("\t%s EOS fugacity = %f bar\n", eos, fugacity / 100000.0)
+    end
+
   
     ###
     #  Address loading a checkpoint and restarting from a previous simulation
@@ -265,30 +290,6 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             warn(@sprintf("checkpoint file %s not found. starting a simulation without 
             loading a checkpoint.\n", checkpoint_path))
         end
-    end
-
-    start_time = time()
-    # to avoid changing the outside object `molecule_` inside this function, we make
-    #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
-    molecule = deepcopy(molecule_)
-
-    if verbose
-        pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
-    end
-
-    # convert pressure to fugacity using an equation of state
-    fugacity = NaN
-    if eos == :ideal
-       fugacity = pressure * 100000.0 # bar --> Pa
-    elseif eos == :PengRobinson
-        prgas = PengRobinsonGas(molecule.species)
-        gas_props = calculate_properties(prgas, temperature, pressure, verbose=false)
-        fugacity = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
-    else
-        error("eos=:ideal and eos=:PengRobinson are only valid options for equation of state.")
-    end
-    if verbose
-        @printf("\t%s EOS fugacity = %f bar\n", eos, fugacity / 100000.0)
     end
 
     # replication factors for applying nearest image convention for short-range interactions
