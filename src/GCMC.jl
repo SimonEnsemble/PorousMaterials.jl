@@ -282,13 +282,13 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if load_checkpoint != false # true or a String (giving filename)
         if isfile(checkpoint_path)
             checkpoint = JLD.load(checkpoint_path, "checkpoint")
-            @printf("\tRestarting simulation from a previous job.\n
-                \touter cycle = %d\n", checkpoint["outer_cycle"])
+            print_with_color(:yellow, "\trestarting simulation from previous checkpoint.\n")
+            print_with_color(:yellow, "\tstarting at outer cycle ", checkpoint["outer_cycle"], "\n")
+            println("\tCheckpoint filename: ", checkpoint_path)
             molecules = deepcopy(checkpoint["molecules"])
             restarted = true
         else
-            warn(@sprintf("checkpoint file %s not found. starting a simulation without 
-            loading a checkpoint.\n", checkpoint_path))
+            error(@sprintf("checkpoint file %s not found.\n", checkpoint_path))
         end
     end
 
