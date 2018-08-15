@@ -279,10 +279,12 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             print_with_color(:yellow, "\trestarting simulation from previous checkpoint.\n")
             print_with_color(:yellow, "\tstarting at outer cycle ", checkpoint["outer_cycle"], "\n")
             println("\tCheckpoint filename: ", checkpoint_filename)
-            molecules = deepcopy(checkpoint["molecules"])
         else
             error(@sprintf("checkpoint file %s not found.\n", checkpoint_filename))
         end
+    end
+    if checkpoint != Dict()
+        molecules = deepcopy(checkpoint["molecules"])
     end
 
     # replication factors for applying nearest image convention for short-range interactions
@@ -638,6 +640,7 @@ a       end
         elapsed_time += checkpoint["time"]
     end
     @printf("\tEstimated elapsed time: %d seconds\n", elapsed_time)
+    println("\tTotal # MC steps: ", markov_chain_time)
 
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()
