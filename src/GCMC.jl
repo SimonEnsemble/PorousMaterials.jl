@@ -239,7 +239,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
-    load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoint::Bool=false, 
+    load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoints::Bool=false, 
     checkpoint_frequency::Int=50)
   
     ###
@@ -248,7 +248,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     restarted = false # whether or not the simulation is restarted
     checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
-        n_burn_cycles, n_sample_cycles, "_checkpoint")
+        n_burn_cycles, n_sample_cycles, "_checkpoint") # path to checkpoint file
     # if path to checkpoint file given, overwrite.
     if isa(load_checkpoint, AbstractString)
         checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * load_checkpoint
@@ -256,8 +256,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     checkpoint = Dict() 
     if load_checkpoint != false # true or a String (giving filename)
         if isfile(checkpoint_path)
-            @printf("Restarting simulation from a previous job\n")
             checkpoint = JLD.load(checkpoint_path, "checkpoint")
+            @printf("\tRestarting simulation from a previous job.\n
+                \touter cycle = %d\n", checkpoint["outer_cycle"])
             molecules = deepcopy(checkpoint["molecules"])
             restarted = true
         else
@@ -424,7 +425,6 @@ a       end
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
     markov_chain_time = restarted ? checkpoint["markov_chain_time"] : 0
     outer_start = restarted ? checkpoint["outer_cycle"] + 1 : 1
-    println("outer start = ", outer_start)
     for outer_cycle = outer_start:(n_burn_cycles + n_sample_cycles)
         if progressbar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
@@ -604,7 +604,7 @@ a       end
             end
         end
 
-        if write_checkpoint && (outer_cycle % checkpoint_frequency == 0)
+        if write_checkpoints && (outer_cycle % checkpoint_frequency == 0)
             checkpoint = Dict("outer_cycle" => outer_cycle,
                               "molecules" => deepcopy(molecules),
                               "system_energy" => system_energy,
