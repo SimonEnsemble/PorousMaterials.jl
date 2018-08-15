@@ -848,10 +848,10 @@ end
 @testset "GCMC Checkpoint Tests" begin
     framework = Framework("SBMOF-1.cif")
     co2 = Molecule("CO2")
-    co_bond_length = norm(co2.atom[1].xf - co2.atom[2].xf)
+    co_bond_length = norm(co2.atoms[1].xf - co2.atoms[2].xf)
     ljff = LJForceField("UFF.csv")
     temp = 298.0
-    pressures = 0.5
+    pressure = 0.5
     molecules = Array{Molecule, 1}
 
     results = Dict()
@@ -860,9 +860,9 @@ end
         if i == 1
             checkpoint = Dict()
         else
-            checkpoint = JLD.load(PorousMaterials.PATH_TO_DATA * "/gcmc_checkpoints/" * gcmc_results_savename(framework.name, co2.species, ljff.name, temp, pressure, 5, 5 * i, "_checkpoint"), "checkpoint")
+            checkpoint = JLD.load(PorousMaterials.PATH_TO_DATA * "/gcmc_checkpoints/" * gcmc_result_savename(framework.name, co2.species, ljff.name, temp, pressure, 5, 5 * i, "_checkpoint"), "checkpoint")
         end
-        results, molecules = gcmc_simulation(frame, deepcopy(co2), temp, pressure, ljff,
+        results, molecules = gcmc_simulation(framework, deepcopy(co2), temp, pressure, ljff,
                                              n_burn_cycles=5, n_sample_cycles=5 * (i + 1),
                                              verbose=true, sample_frequency=1, eos=:PengRobinson,
                                              autosave=false, write_checkpoints=true, 
@@ -871,7 +871,7 @@ end
     end
 
     srand(1234)
-    results2, molecules2 = gcmc_simulation(frame, deepcopy(co2), temp, pressure, ljff,
+    results2, molecules2 = gcmc_simulation(framework, deepcopy(co2), temp, pressure, ljff,
                                          n_burn_cycles=5, n_sample_cycles=20,
                                          verbose=true, sample_frequency=1, eos=:PengRobinson,
                                          autosave=false, write_checkpoints=false, 
