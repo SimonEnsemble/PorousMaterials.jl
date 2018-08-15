@@ -123,7 +123,7 @@ end
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=10,
                                   verbose=true, molecules=Molecule[],
-                                  ewald_precision=1e-6, eos=:ideal, checkpoint=false)
+                                  ewald_precision=1e-6, eos=:ideal)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
@@ -239,8 +239,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
-    load_checkpoint::Union{Bool, AbstractString}=false, write_checkpoints::Bool=false, 
-    checkpoint_frequency::Int=50)
+    load_checkpoint::Bool=false, checkpoint::Dict=Dict(), 
+    checkpoint_frequency::Int=50, write_checkpoints::Bool=false)
     
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -270,25 +270,18 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     ###
     #  Address loading a checkpoint and restarting from a previous simulation
     ###
-    restarted = false # whether or not the simulation is restarted
-    checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
+    checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
         n_burn_cycles, n_sample_cycles, "_checkpoint") # path to checkpoint file
-    # if path to checkpoint file given, overwrite.
-    if isa(load_checkpoint, AbstractString)
-        checkpoint_path = PATH_TO_DATA * "gcmc_checkpoints/" * load_checkpoint
-    end
-    checkpoint = Dict() 
-    if load_checkpoint != false # true or a String (giving filename)
-        if isfile(checkpoint_path)
-            checkpoint = JLD.load(checkpoint_path, "checkpoint")
+    if load_checkpoint
+        if isfile(checkpoint_filename)
+            checkpoint = JLD.load(checkpoint_filename, "checkpoint")
             print_with_color(:yellow, "\trestarting simulation from previous checkpoint.\n")
             print_with_color(:yellow, "\tstarting at outer cycle ", checkpoint["outer_cycle"], "\n")
-            println("\tCheckpoint filename: ", checkpoint_path)
+            println("\tCheckpoint filename: ", checkpoint_filename)
             molecules = deepcopy(checkpoint["molecules"])
-            restarted = true
         else
-            error(@sprintf("checkpoint file %s not found.\n", checkpoint_path))
+            error(@sprintf("checkpoint file %s not found.\n", checkpoint_filename))
         end
     end
 
@@ -371,7 +364,7 @@ a       end
                                             eparams, kvectors, eikar, eikbr, eikcr))
         
         # assert calculated system energy consistent with checkpoint
-        if restarted
+        if checkpoint != Dict()
             if ! isapprox(system_energy, checkpoint["system_energy"])
                 error("system_energy from checkpoint not consistent with configuration of molecules!")
             end
@@ -415,7 +408,7 @@ a       end
     const N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
     markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
-    if restarted
+    if checkpoint != Dict()
         gcmc_stats = checkpoint["gcmc_stats"]
         current_block = checkpoint["current_block"]
         markov_counts = checkpoint["markov_counts"]
@@ -424,8 +417,8 @@ a       end
 
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
-    markov_chain_time = restarted ? checkpoint["markov_chain_time"] : 0
-    outer_start = restarted ? checkpoint["outer_cycle"] + 1 : 1
+    markov_chain_time = (checkpoint != Dict()) ? checkpoint["markov_chain_time"] : 0
+    outer_start = (checkpoint != Dict()) ? checkpoint["outer_cycle"] + 1 : 1
     for outer_cycle = outer_start:(n_burn_cycles + n_sample_cycles)
         if progressbar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
@@ -620,7 +613,7 @@ a       end
             if ! isdir(PATH_TO_DATA * "/gcmc_checkpoints")
                 mkdir(PATH_TO_DATA * "/gcmc_checkpoints")
             end
-            JLD.save(checkpoint_path, "checkpoint", checkpoint)
+            JLD.save(checkpoint_filename, "checkpoint", checkpoint)
         end
     end # outer cycles
     # finished MC moves at this point.
@@ -641,7 +634,7 @@ a       end
 
     @assert(markov_chain_time == sum(markov_counts.n_proposed))
     elapsed_time = time() - start_time
-    if restarted
+    if checkpoint != Dict()
         elapsed_time += checkpoint["time"]
     end
     @printf("\tEstimated elapsed time: %d seconds\n", elapsed_time)
