@@ -30,6 +30,7 @@ for i = 1:3
 end
 
 println("---------------------------------")
+println(" a random no at end: ", rand())
 
 srand(1234)
 println(" a random no: ", rand())
@@ -40,3 +41,4 @@ results2, molecules2 = gcmc_simulation(frame, co2, temp, pressure, ljff,
                           autosave=false, write_checkpoints=false, load_checkpoint=false, checkpoint_frequency=1, progressbar=true)
 @assert isapprox(norm(molecules2[1].atoms[1].xf - molecules2[1].atoms[2].xf), co_bond_length)
  # @test all(isapprox.(molecules, molecules2))
+println(" a random no at end: ", rand())
