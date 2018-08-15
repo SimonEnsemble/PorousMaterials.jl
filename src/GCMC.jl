@@ -123,7 +123,9 @@ end
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=10,
                                   verbose=true, molecules=Molecule[],
-                                  ewald_precision=1e-6, eos=:ideal)
+                                  ewald_precision=1e-6, eos=:ideal,
+                                  load_checkpoint_file=false, checkpoint=Dict(),
+                                  write_checkpoints=false, checkpoint_frequency=50)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
@@ -139,7 +141,8 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
     temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
     n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5, 
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    checkpoint::Bool=false, checkpoint_frequency::Int=50)
+    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+    checkpoint_frequency::Int=50, write_checkpoints::Bool=false)
 
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -151,7 +154,9 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
                                             sample_frequency=sample_frequency,
                                             verbose=verbose, molecules=molecules,
                                             ewald_precision=ewald_precision, eos=eos,
-                                            checkpoint=checkpoint)
+                                            load_checkpoint_file=load_checkpoint_file,
+                                            checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
+                                            write_checkpoints=write_checkpoints)
         push!(results, result)
     end
 
@@ -163,7 +168,8 @@ end
                                   ljforcefield; n_sample_cycles=100000,
                                   n_burn_cycles=10000, sample_frequency=25,
                                   verbose=false, molecules=Molecule[],
-                                  ewald_precision=1e-6, eos=:ideal, checkpoint=false)
+                                  ewald_precision=1e-6, eos=:ideal, load_checkpoint_file=false,
+                                  checkpoint=Dict(), write_checkpoints=false, checkpoint_frequency=50)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
@@ -175,7 +181,8 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
     pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
     n_sample_cycles::Int=5000, sample_frequency::Int=5, verbose::Bool=true,
     ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    checkpoint::Bool=false, checkpoint_frequency::Int=50)
+    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
+   write_checkpoints::Bool=false)
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
                                                       pressure, ljforcefield,
@@ -184,7 +191,9 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       sample_frequency=sample_frequency,
                                                       verbose=verbose,
                                                       ewald_precision=ewald_precision,
-                                                      eos=eos, checkpoint = checkpoint)[1] # only return results
+                                                      eos=eos, load_checkpoint_file = load_checkpoint_file,
+                                                      checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
+                                                      write_checkpoints=write_checkpoints)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
     ids = sortperm(pressures, rev=true)
@@ -203,7 +212,9 @@ end
                                          ljforcefield; n_sample_cycles=5000,
                                          n_burn_cycles=5000, sample_frequency=5,
                                          verbose=false, molecules=Molecule[],
-                                         eos=:ideal, checkpoint=checkpoint)
+                                         eos=:ideal, load_checkpoint_file=false,
+                                         checkpoint=Dict(), write_checkpoints=false,
+                                         checkpoint_frequency=50)
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
 framework at a particular temperature and pressure using a
@@ -233,13 +244,19 @@ translation.
 Note that we assume these coordinates are Cartesian, i.e. corresponding to a unit box.
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
+- `load_checkpoint_file::Bool`: Will find a checkpoint file corresponding to the [`gcmc_result_savename`](@ref) if true.
+    If that file is not found, function will throw an error. 
+- `checkpoint::Dict`: A checkpoint dictionary that will work as a starting configuration for the run.
+    The dictionary has to have the following keys: `outer_cycle`, `molecules`, `system_energy`, `current_block`, `gcmc_stats`, `markov_counts`, `markov_chain_time` and `time`. If this argument is used, keep `load_checkpoint_file=false`.
+- `write_checkpoints::Bool`: Will save checkpoints in data/gcmc_checkpoints if this is true.
+- `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles. 
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
     pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
-    load_checkpoint::Bool=false, checkpoint::Dict=Dict(), 
+    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
     checkpoint_frequency::Int=50, write_checkpoints::Bool=false)
     
     start_time = time()
@@ -270,10 +287,13 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     ###
     #  Address loading a checkpoint and restarting from a previous simulation
     ###
+    if checkpoint != Dict() && load_checkpoint_file
+        error(@sprintf("A checkpoint dictionary was provided AND load_checkpoint_file = true.\n Unclear which checkpoint to load.\n"))
+    end
     checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
         n_burn_cycles, n_sample_cycles, "_checkpoint") # path to checkpoint file
-    if load_checkpoint
+    if load_checkpoint_file
         if isfile(checkpoint_filename)
             checkpoint = JLD.load(checkpoint_filename, "checkpoint")
             print_with_color(:yellow, "\trestarting simulation from previous checkpoint.\n")
@@ -415,7 +435,6 @@ a       end
         current_block = checkpoint["current_block"]
         markov_counts = checkpoint["markov_counts"]
     end
-    #println(rand())
 
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
@@ -802,16 +821,4 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
     print(" (bar) with ")
     print_with_color(:green, split(ljff.name, ".")[1])
     println(" force field.")
-end
-
-function get_fractional_coords_to_unit_cube(molecule::Molecule, box::Box)
-    new_mol = deepcopy(molecule)
-    for ljsphere in new_mol.atoms
-        ljsphere.xf[:] = box.f_to_c * ljsphere.xf
-    end
-    for charge in new_mol.charges
-        charge.xf[:] = box.f_to_c * charge.xf
-    end
-    new_mol.xf_com[:] = box.f_to_c * new_mol.xf_com
-    return new_mol
 end

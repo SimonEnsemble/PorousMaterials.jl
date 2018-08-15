@@ -826,6 +826,14 @@ end
     @test vdw_energy(2, molecules_co2, ljforcefield, sim_box_large) ≈ energy
 end
 
+@testset "Grid Tests" begin
+    grid = Grid(Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7), (3, 3, 3), rand((3, 3, 3)), 
+        :kJ_mol, [1., 2., 3.])
+    write_cube(grid, "test_grid.cube")
+    grid2 = read_cube("test_grid.cube")
+    @test isapprox(grid, grid2)
+end
+
 @testset "EOS Tests" begin
     # Peng-Robinsion EOS test for methane.
     gas = PengRobinsonGas(:CH4)
