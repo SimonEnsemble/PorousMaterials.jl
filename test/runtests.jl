@@ -846,6 +846,12 @@ end
 end
 
 @testset "GCMC Checkpoint Tests" begin
+    # idea here: run a simulation with 20 burn, 5 sample shld hv same result as 3 simulations:
+    #  (1)                    5 sample, 10 burn, dump checkpoint
+    #  (2)   load checkpoint, 5 sample, 15 burn, dump checkpoint
+    #  (3)   load checkpoint, 5 sample, 20 burn
+    # thus we set random number seed before each simulation to ensure exaclty same moves are
+    # conducted.
     framework = Framework("SBMOF-1.cif")
     co2 = Molecule("CO2")
     co_bond_length = norm(co2.atoms[1].xf - co2.atoms[2].xf)
@@ -879,4 +885,5 @@ end
     @test isapprox(norm(molecules2[1].atoms[1].xf - molecules2[1].atoms[2].xf), co_bond_length)
     @test all(isapprox.(molecules, molecules2))
     @test isapprox(results["Q_st (K)"], results2["Q_st (K)"])
+    @test isapprox(results["⟨N⟩ (mmol/g)"], results2["⟨N⟩ (mmol/g)"])
 end
