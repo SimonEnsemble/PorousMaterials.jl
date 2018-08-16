@@ -36,7 +36,7 @@ GCMCstats() = GCMCstats(0, 0, 0, SystemPotentialEnergy(), SystemPotentialEnergy(
                                             s1.n         + s2.n,
                                             s1.n²        + s2.n²,
                                             s1.U         + s2.U,
-                                            s1.U²        + s2.U², 
+                                            s1.U²        + s2.U²,
                                             s1.Un        + s2.Un)
 function Base.sum(gcmc_stats::Array{GCMCstats, 1})
     sum_stats = GCMCstats()
@@ -135,16 +135,16 @@ differ significantly from the previous pressure), we can reduce the number of bu
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
-function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule, 
+function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
     temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
-    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5, 
+    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5,
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal)
 
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
-        result, molecules = gcmc_simulation(framework, molecule, temperature, pressure, 
-                                            ljforcefield, 
+        result, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
+                                            ljforcefield,
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
@@ -170,11 +170,11 @@ cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
 function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
-    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
+    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000,
     n_sample_cycles::Int=5000, sample_frequency::Int=5, verbose::Bool=true,
     ewald_precision::Float64=1e-6, eos=:ideal)
     # make a function of pressure only to facilitate uses of `pmap`
-    run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
+    run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
                                                       pressure, ljforcefield,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
@@ -231,12 +231,12 @@ Note that we assume these coordinates are Cartesian, i.e. corresponding to a uni
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
 """
-function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
-    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
+function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
+    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000,
     n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
-    molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
+    molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6,
     eos::Symbol=:ideal, autosave::Bool=true)
-  
+
     tic()
     # to avoid changing the outside object `molecule_` inside this function, we make
     #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
@@ -268,8 +268,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # adjust fractional coords of molecule according to *replicated* framework
     set_fractional_coords!(molecule, framework.box)
     if verbose
-        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\.\n",
-            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+# TODO: These lines cause an `invalid escape sequence` when executing runtests.jl in julia 0.7.0 
+#        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\.\n",
+#            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
         println("\tFramework crystal density: ", crystal_density(framework))
         println("\tFramework chemical formula: ", chemical_formula(framework))
         println("\tTotal number of LJ Spheres: ", length(framework.atoms))
@@ -277,6 +278,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
+    # TODO cannot have const local variables in julia 0.7
     const molecule_template = deepcopy(molecule)
     if ! (total_charge(molecule_template) ≈ 0.0)
         error(@sprintf("Molecule %s is not charge neutral!\n", molecule_template.species))
@@ -296,7 +298,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
     eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), framework.box,
-                        verbose=verbose & (charged_framework || charged_molecules), 
+                        verbose=verbose & (charged_framework || charged_molecules),
                         ϵ=ewald_precision)
 
     # initiate system energy to which we increment when MC moves are accepted
@@ -306,8 +308,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if length(molecules) != 0
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
-        
-        # set fractional coords of these molecules 
+
+        # set fractional coords of these molecules
         set_fractional_coords!.(molecules, framework.box)
 
         # assert that the bond lengths are equal between the template and array to make
@@ -317,7 +319,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             for m in molecules
                 bond_length = norm(framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf))
                 if ! isapprox(bond_length, template_bond_length, atol=1e-6)
-                    error("A bond length between atoms in a molecule in `molecules` passed 
+                    error("A bond length between atoms in a molecule in `molecules` passed
                     in as an initial configuration is not equal to the molecule template
                     passed.")
                 end
@@ -393,8 +395,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         if which_move == INSERTION
             insert_molecule!(molecules, framework.box, molecule_template)
 
-            energy = potential_energy(length(molecules), molecules, framework, 
-                                            ljforcefield, eparams, kvectors, eikar, eikbr, 
+            energy = potential_energy(length(molecules), molecules, framework,
+                                            ljforcefield, eparams, kvectors, eikar, eikbr,
                                             eikcr, charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Insertion
@@ -414,7 +416,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
             # compute the potential energy of the molecule we propose to delete
             energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                      eparams, kvectors, eikar, eikbr, eikcr, 
+                                      eparams, kvectors, eikar, eikbr, eikcr,
                                       charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for Deletion
@@ -440,7 +442,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          eparams, kvectors, eikar, eikbr, eikcr,
                                           charged_molecules, charged_framework)
 
             # Metropolis Hastings Acceptance for translation
@@ -456,12 +458,12 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         elseif (which_move == ROTATION) && (length(molecules) != 0)
             # propose which molecule to rotate
             molecule_id = rand(1:length(molecules))
-            
+
             # energy of the molecule before we rotate it
             energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          eparams, kvectors, eikar, eikbr, eikcr,
                                           charged_molecules, charged_framework)
-            
+
             # store old molecule to restore old position in case move is rejected
             old_molecule = deepcopy(molecules[molecule_id])
 
@@ -470,10 +472,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
             # energy of the molecule after it is translated
             energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          eparams, kvectors, eikar, eikbr, eikcr,
                                           charged_molecules, charged_framework)
 
-            # Metropolis Hastings Acceptance for rotation 
+            # Metropolis Hastings Acceptance for rotation
             if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                 # accept the move, adjust current energy
                 markov_counts.n_accepted[which_move] += 1
@@ -640,8 +642,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         if ! isdir(PATH_TO_DATA * "gcmc_sims")
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
-    
-        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name, 
+
+        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name,
             molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles)
 
         JLD.save(save_results_filename, "results", results)
@@ -711,7 +713,7 @@ function print_results(results::Dict; print_title::Bool=true)
     return
 end
 
-function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64, 
+function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64,
                       pressure::Float64, ljff::LJForceField)
     print("Simulating ")
     print_with_color(:yellow, "(μVT)")

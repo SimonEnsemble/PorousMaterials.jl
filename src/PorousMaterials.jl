@@ -1,4 +1,3 @@
-__precompile__()
 module PorousMaterials
 
 using CSV
@@ -8,8 +7,15 @@ using OffsetArrays # used for Ewald sum
 using SpecialFunctions # for erfc
 using StatsBase
 using ProgressMeter
-using JLD
 using Polynomials
+# Packages form julia 0.6.4
+# using JLD
+
+# Packages added to fix deprecations in julia 0.7
+using JLD2
+using Printf
+using LinearAlgebra
+
 
 # this runs everytime PorousMaterials is loaded, so if the user changes directory
 #   then the PATH_TO_DATA will change as well
