@@ -33,7 +33,7 @@ the replication factors in reciprocal space.
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
-                           autosave::Bool=true)
+                           autosave::Bool=true, filename_comment::AbstractString="")
     tic()
     if verbose
         print("Simulating Henry coefficient of ")
@@ -143,7 +143,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
             mkdir(PATH_TO_DATA * "henry_sims")
         end
         savename = PATH_TO_DATA * "henry_sims/" * henry_result_savename(framework, molecule, temperature,
-                               ljforcefield, insertions_per_volume)
+                               ljforcefield, insertions_per_volume, comment=filename_comment)
         JLD.save(savename, "result", result)
         if verbose
             println("\tResults saved in: ", savename)
@@ -211,8 +211,11 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
 end
 
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
-                               ljforcefield::LJForceField, insertions_per_volume::Int)
-    return @sprintf("henry_sim_%s_in_%s_%fK_%s_ff_%d_insertions_per_volume.jld",
+                               ljforcefield::LJForceField, insertions_per_volume::Union{Int, Float64}; comment::AbstractString="")
+    if comment != "" && comment[1] != '_'
+        comment = "_" * comment
+    end
+    return @sprintf("henry_sim_%s_in_%s_%fK_%s_ff_%d_insertions_per_volume%s.jld",
                     molecule.species, framework.name, temperature, ljforcefield.name,
-                    insertions_per_volume)
+                    insertions_per_volume, comment)
 end
