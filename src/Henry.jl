@@ -29,6 +29,7 @@ average, per unit cell volume (Å³)
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
 the replication factors in reciprocal space.
 - `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
+- `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
