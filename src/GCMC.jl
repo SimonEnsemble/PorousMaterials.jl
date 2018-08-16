@@ -139,10 +139,10 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 """
 function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule, 
     temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
-    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=5, 
+    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=1, 
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
-    checkpoint_frequency::Int=50, write_checkpoints::Bool=false)
+    checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false)
 
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -156,7 +156,7 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
                                             ewald_precision=ewald_precision, eos=eos,
                                             load_checkpoint_file=load_checkpoint_file,
                                             checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
-                                            write_checkpoints=write_checkpoints)
+                                            write_checkpoints=write_checkpoints, show_progress_bar=show_progress_bar)
         push!(results, result)
     end
 
@@ -179,10 +179,10 @@ cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 """
 function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
     pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
-    n_sample_cycles::Int=5000, sample_frequency::Int=5, verbose::Bool=true,
+    n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
     ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
-   write_checkpoints::Bool=false)
+    write_checkpoints::Bool=false, show_progress_bar::Bool=false)
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
                                                       pressure, ljforcefield,
@@ -191,9 +191,10 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       sample_frequency=sample_frequency,
                                                       verbose=verbose,
                                                       ewald_precision=ewald_precision,
-                                                      eos=eos, load_checkpoint_file = load_checkpoint_file,
+                                                      eos=eos, load_checkpoint_file=load_checkpoint_file,
                                                       checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
-                                                      write_checkpoints=write_checkpoints)[1] # only return results
+                                                      write_checkpoints=write_checkpoints,
+                                                      show_progress_bar=show_progress_bar)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
     ids = sortperm(pressures, rev=true)
@@ -206,15 +207,15 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
     return results[[find(x -> x==i, ids)[1] for i = 1:length(ids)]]
 end
 
-
 """
     results, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
                                          ljforcefield; n_sample_cycles=5000,
                                          n_burn_cycles=5000, sample_frequency=5,
                                          verbose=false, molecules=Molecule[],
                                          eos=:ideal, load_checkpoint_file=false,
+                                         show_progress_bar=false,
                                          checkpoint=Dict(), write_checkpoints=false,
-                                         checkpoint_frequency=50)
+                                         checkpoint_frequency=100)
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
 framework at a particular temperature and pressure using a
@@ -253,11 +254,11 @@ is ideal gas, where fugacity = pressure.
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
     pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
-    n_sample_cycles::Int=25000, sample_frequency::Int=5, verbose::Bool=true,
+    n_sample_cycles::Int=25000, sample_frequency::Int=1, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
-    eos::Symbol=:ideal, autosave::Bool=true, progressbar::Bool=false,
+    eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
-    checkpoint_frequency::Int=50, write_checkpoints::Bool=false)
+    checkpoint_frequency::Int=100, write_checkpoints::Bool=false)
     
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -267,8 +268,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
     end
-
-    # convert pressure to fugacity using an equation of state
+    
+    ###
+    #  Convert pressure to fugacity using an equation of state
+    ###
     fugacity = NaN
     if eos == :ideal
        fugacity = pressure * 100000.0 # bar --> Pa
@@ -283,12 +286,12 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         @printf("\t%s EOS fugacity = %f bar\n", eos, fugacity / 100000.0)
     end
 
-  
     ###
     #  Address loading a checkpoint and restarting from a previous simulation
     ###
     if checkpoint != Dict() && load_checkpoint_file
-        error(@sprintf("A checkpoint dictionary was provided AND load_checkpoint_file = true.\n Unclear which checkpoint to load.\n"))
+        error("A checkpoint dictionary was provided AND load_checkpoint_file=true.\n 
+        Unclear which checkpoint to start with.\n")
     end
     checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
@@ -392,8 +395,8 @@ a       end
             end
         end
     end
-
-    if progressbar
+    
+    if show_progress_bar
         progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
     end
 
@@ -439,9 +442,9 @@ a       end
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
     markov_chain_time = (checkpoint != Dict()) ? checkpoint["markov_chain_time"] : 0
-    outer_start = (checkpoint != Dict()) ? checkpoint["outer_cycle"] + 1 : 1
-    for outer_cycle = outer_start:(n_burn_cycles + n_sample_cycles)
-        if progressbar
+    outer_cycle_start = (checkpoint != Dict()) ? checkpoint["outer_cycle"] + 1 : 1
+    for outer_cycle = outer_cycle_start:(n_burn_cycles + n_sample_cycles)
+        if show_progress_bar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
         end
         for inner_cycle = 1:max(20, length(molecules))
@@ -597,19 +600,18 @@ a       end
         end # inner cycles
 
         # print block statistics / increment block
-        if (outer_cycle > n_burn_cycles) && ((outer_cycle - n_burn_cycles) % N_CYCLES_PER_BLOCK == 0)
+        if (outer_cycle > n_burn_cycles) && (current_block != N_BLOCKS) && (
+            (outer_cycle - n_burn_cycles) % N_CYCLES_PER_BLOCK == 0)
             # move onto new block unless current_block is N_BLOCKS;
             # then just keep adding stats to the last block.
             # this only occurs if sample_cycles not divisible by N_BLOCKS
             # print GCMC stats later and do not increment block if we are in last block.
-            if current_block != N_BLOCKS 
-                # print statistics for this block
-                if verbose 
-                    print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
-                    print(gcmc_stats[current_block])
-                end
-                current_block += 1
+            # print statistics for this block
+            if verbose 
+                print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+                print(gcmc_stats[current_block])
             end
+            current_block += 1
         end
         # print the last cycle in the last block
         if outer_cycle == (n_sample_cycles + n_burn_cycles)
@@ -635,7 +637,7 @@ a       end
                 mkdir(PATH_TO_DATA * "/gcmc_checkpoints")
             end
             JLD.save(checkpoint_filename, "checkpoint", checkpoint)
-        end
+        end # write checkpoint
     end # outer cycles
     # finished MC moves at this point.
 
