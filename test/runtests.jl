@@ -866,7 +866,7 @@ end
         if i == 1
             checkpoint = Dict()
         else
-            checkpoint = JLD.load(PorousMaterials.PATH_TO_DATA * "/gcmc_checkpoints/" * gcmc_result_savename(framework.name, co2.species, ljff.name, temp, pressure, 5, 5 * i, "_checkpoint"), "checkpoint")
+            checkpoint = JLD.load(PorousMaterials.PATH_TO_DATA * "/gcmc_checkpoints/" * gcmc_result_savename(framework.name, co2.species, ljff.name, temp, pressure, 5, 5 * i, comment = "_checkpoint"), "checkpoint")
         end
         results, molecules = gcmc_simulation(framework, deepcopy(co2), temp, pressure, ljff,
                                              n_burn_cycles=5, n_sample_cycles=5 * (i + 1),
