@@ -1,7 +1,3 @@
-# julia 0.6.4
-# using Base.Test
-
-# julia 0.7.0
 using Test
 
 # Data structure for a framework; user-friendly constructor below

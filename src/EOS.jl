@@ -1,7 +1,5 @@
-"""
-Calculates the properties of a real gas, such as the compressibility factor, fugacity,
-and molar volume.
-"""
+# Calculates the properties of a real gas, such as the compressibility factor, fugacity,
+#   and molar volume.
 
 # Universal gas constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
@@ -97,14 +95,14 @@ end
 """
     gas = PengRobinsonGas(gas)
 
-Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol` 
-from the properties .csv file `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"` 
+Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol`
+from the properties .csv file `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
 and returns a complete `PengRobinsonGas` data structure.
 **NOTE: Do not delete the last three comment lines in PengRobinsonGasProps.csv
 
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
-""" 
+"""
 function PengRobinsonGas(gas::Symbol)
     df = CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv"; footerskip=3)
     if ! (string(gas) in df[:gas])

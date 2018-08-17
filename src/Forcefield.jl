@@ -38,8 +38,7 @@ Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelo
 # Returns
 - `ljforcefield::LJForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
-
-function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, 
+function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0,
                       mixing_rules::AbstractString="Lorentz-Berthelot")
     if ! (lowercase(mixing_rules) in ["lorentz-berthelot", "kong", "geometric"])
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))

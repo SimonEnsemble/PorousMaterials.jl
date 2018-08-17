@@ -4,10 +4,6 @@
 # Start Test Script
 using PorousMaterials
 using OffsetArrays
-# Julia 0.6.4
-# using Base.Test
-
-# Julia 0.7.0
 using LinearAlgebra
 using Test
 

@@ -62,7 +62,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
-    const charged_system = charged(framework, verbose=verbose) & charged(molecule, verbose=verbose)
+    charged_system = charged(framework, verbose=verbose) & charged(molecule, verbose=verbose)
 
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
