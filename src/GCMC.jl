@@ -125,7 +125,8 @@ end
                                   verbose=true, molecules=Molecule[],
                                   ewald_precision=1e-6, eos=:ideal,
                                   load_checkpoint_file=false, checkpoint=Dict(),
-                                  write_checkpoints=false, checkpoint_frequency=50)
+                                  write_checkpoints=false, checkpoint_frequency=50,
+                                  filename_comment="")
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
@@ -142,7 +143,8 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
     n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=1, 
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
-    checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false)
+    checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false,
+    filename_comment::AbstractString="")
 
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
@@ -156,7 +158,8 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
                                             ewald_precision=ewald_precision, eos=eos,
                                             load_checkpoint_file=load_checkpoint_file,
                                             checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
-                                            write_checkpoints=write_checkpoints, show_progress_bar=show_progress_bar)
+                                            write_checkpoints=write_checkpoints, show_progress_bar=show_progress_bar,
+                                            filename_comment=filename_comment)
         push!(results, result)
     end
 
@@ -169,7 +172,8 @@ end
                                   n_burn_cycles=10000, sample_frequency=25,
                                   verbose=false, molecules=Molecule[],
                                   ewald_precision=1e-6, eos=:ideal, load_checkpoint_file=false,
-                                  checkpoint=Dict(), write_checkpoints=false, checkpoint_frequency=50)
+                                  checkpoint=Dict(), write_checkpoints=false, checkpoint_frequency=50,
+                                  filename_comment="")
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
@@ -182,7 +186,8 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
     n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
     ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
-    write_checkpoints::Bool=false, show_progress_bar::Bool=false)
+    write_checkpoints::Bool=false, show_progress_bar::Bool=false,
+    filename_comment::AbstractString="")
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature, 
                                                       pressure, ljforcefield,
@@ -194,7 +199,8 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       eos=eos, load_checkpoint_file=load_checkpoint_file,
                                                       checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                                       write_checkpoints=write_checkpoints,
-                                                      show_progress_bar=show_progress_bar)[1] # only return results
+                                                      show_progress_bar=show_progress_bar,
+                                                      filename_comment=filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
     ids = sortperm(pressures, rev=true)
@@ -213,9 +219,9 @@ end
                                          n_burn_cycles=5000, sample_frequency=5,
                                          verbose=false, molecules=Molecule[],
                                          eos=:ideal, load_checkpoint_file=false,
-                                         show_progress_bar=false,
-                                         checkpoint=Dict(), write_checkpoints=false,
-                                         checkpoint_frequency=100)
+                                         show_progress_bar=false, checkpoint=Dict(),
+                                         write_checkpoints=false, checkpoint_frequency=100,
+                                         filename_comment="")
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
 framework at a particular temperature and pressure using a
@@ -251,6 +257,7 @@ is ideal gas, where fugacity = pressure.
     The dictionary has to have the following keys: `outer_cycle`, `molecules`, `system_energy`, `current_block`, `gcmc_stats`, `markov_counts`, `markov_chain_time` and `time`. If this argument is used, keep `load_checkpoint_file=false`.
 - `write_checkpoints::Bool`: Will save checkpoints in data/gcmc_checkpoints if this is true.
 - `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles. 
+- `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
     pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
@@ -258,7 +265,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
-    checkpoint_frequency::Int=100, write_checkpoints::Bool=false)
+    checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
+    filename_comment::AbstractString="")
     
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -295,7 +303,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
     checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
-        n_burn_cycles, n_sample_cycles, "_checkpoint") # path to checkpoint file
+        n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint") # path to checkpoint file
     if load_checkpoint_file
         if isfile(checkpoint_filename)
             checkpoint = JLD.load(checkpoint_filename, "checkpoint")
@@ -735,7 +743,7 @@ a       end
         end
     
         save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name, 
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles)
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, comment=filename_comment)
 
         JLD.save(save_results_filename, "results", results)
         if verbose
@@ -755,7 +763,7 @@ function gcmc_result_savename(framework_name::AbstractString,
                             temperature::Float64,
                             pressure::Float64,
                             n_burn_cycles::Int,
-                            n_sample_cycles::Int,
+                            n_sample_cycles::Int;
                             comment::AbstractString="")
         framework_name = split(framework_name, ".")[1] # remove file extension
         ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
