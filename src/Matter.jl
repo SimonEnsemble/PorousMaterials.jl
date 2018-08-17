@@ -1,7 +1,7 @@
 # Matter is composed of Lennard-Jones spheres and point charges.
 
 """
-Data structure for a Lennard-Jones sphere, containing its species and position in 
+Data structure for a Lennard-Jones sphere, containing its species and position in
 fractional coordinates.
 
 # Example use
@@ -14,6 +14,10 @@ fractional coordinates.
 struct LJSphere
     species::Symbol
     xf::Array{Float64, 1}
+end
+
+function LJSphere(species::AbstractString, xf::Array{Float64, 1})
+    return LJSphere(Symbol(species), xf)
 end
 
 function Base.isapprox(ljs1::LJSphere, ljs2::LJSphere)

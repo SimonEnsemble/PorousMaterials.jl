@@ -132,7 +132,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 break
             end
 
-            push!(species, line[name_to_column[atom_column_name]])
+            push!(species, Symbol(line[name_to_column[atom_column_name]]))
             push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
             push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
             push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
@@ -298,8 +298,8 @@ function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::B
             if _overlap(atom_i, atom_j, framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    warn(@sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
-                        framework.name, overlap_tol))
+                    @warn @sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol)
                 end
             end
         end
@@ -317,8 +317,8 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
             if _overlap(charge_i, charge_j, framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    warn(@sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
-                        framework.name, overlap_tol))
+                    @warn @sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol)
                 end
             end
         end
@@ -641,8 +641,8 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     net_charge_tol::Float64=1e-5)
     # if charges are already present, may make little sense to assign charges to atoms again
     if length(framework.charges) != 0
-        warn(@sprintf("Charges are already present in %s. Removing the current charges on the
-        framework and adding new ones...\n", framework.name))
+        @warn @sprintf("Charges are already present in %s. Removing the current charges on the
+        framework and adding new ones...\n", framework.name)
     end
 
     # build the array of point charges according to atom species

@@ -28,7 +28,7 @@ average, per unit cell volume (Å³)
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
 the replication factors in reciprocal space.
-- `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
+- `autosave::Bool`: save results file as a .jld2 in PATH_TO_DATA * `sims`
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
@@ -144,7 +144,8 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         end
         savename = PATH_TO_DATA * "henry_sims/" * henry_result_savename(framework, molecule, temperature,
                                ljforcefield, insertions_per_volume)
-        JLD.save(savename, "result", result)
+        #JLD.save(savename, "result", result)
+        @save savename result
         if verbose
             println("\tResults saved in: ", savename)
         end
@@ -212,7 +213,7 @@ end
 
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
                                ljforcefield::LJForceField, insertions_per_volume::Int)
-    return @sprintf("henry_sim_%s_in_%s_%fK_%s_ff_%d_insertions_per_volume.jld",
+    return @sprintf("henry_sim_%s_in_%s_%fK_%s_ff_%d_insertions_per_volume.jld2",
                     molecule.species, framework.name, temperature, ljforcefield.name,
                     insertions_per_volume)
 end

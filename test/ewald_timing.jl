@@ -1,6 +1,7 @@
 using PorousMaterials
-using Base.Test
+using Test
 using BenchmarkTools, Compat
+using Profile
 framework = Framework("NU-1000_Greg.cif")
 
  # kreps = (11, 11, 9)
@@ -56,6 +57,6 @@ Profile.print()
 
  # ϕ = ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
  # @btime ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
- # 
+ #
  # ϕ = ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
  # @btime ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)

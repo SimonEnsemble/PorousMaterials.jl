@@ -372,7 +372,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # make sure the number of sample cycles is at least equal to N_BLOCKS
     if n_sample_cycles < N_BLOCKS
         n_sample_cycles = N_BLOCKS
-        warn(@sprintf("# sample cycles set to minimum %d, which is number of blocks.", N_BLOCKS))
+        @warn @sprintf("# sample cycles set to minimum %d, which is number of blocks.", N_BLOCKS)
     end
     N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
@@ -645,7 +645,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name,
             molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles)
 
-        JLD.save(save_results_filename, "results", results)
+        #JLD.save(save_results_filename, "results", results)
+        @save save_results_filename results
         if verbose
             println("\tResults dictionary saved in ", save_results_filename)
         end
@@ -666,7 +667,7 @@ function gcmc_result_savename(framework_name::AbstractString,
                             n_sample_cycles::Int)
         framework_name = split(framework_name, ".")[1] # remove file extension
         ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
-        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample.jld", framework_name,
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample.jld2", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
                     n_burn_cycles, n_sample_cycles)
 end

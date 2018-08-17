@@ -8,10 +8,6 @@ using SpecialFunctions # for erfc
 using StatsBase
 using ProgressMeter
 using Polynomials
-# Packages form julia 0.6.4
-# using JLD
-
-# Packages added to fix deprecations in julia 0.7
 using JLD2
 using Printf
 using LinearAlgebra

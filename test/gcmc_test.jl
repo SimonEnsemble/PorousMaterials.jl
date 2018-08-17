@@ -1,13 +1,14 @@
+using Distributed
 @everywhere using PorousMaterials
-@everywhere using Base.Test
+@everywhere using Test
 using CSV
 using PyPlot
 using DataFrames
 using JLD
 
-ig_tests = false
+ig_tests = true
 xe_in_sbmof1_tests = true
-co2_tests = false
+co2_tests = true
 
 #
 # Ideal gas tests.
@@ -27,7 +28,8 @@ if ig_tests
     n_sim = similar(n_ig)
     for i = 1:length(fugacity)
         results, molecules = gcmc_simulation(empty_space, ideal_gas, temperature, fugacity[i], forcefield,
-                    n_burn_cycles=100000, n_sample_cycles=100000)
+                    n_burn_cycles=2500, n_sample_cycles=2500)
+#                    n_burn_cycles=100000, n_sample_cycles=100000)
         n_sim[i] = results["⟨N⟩ (molecules/unit cell)"]
         @printf("fugacity = %f Pa; n_ig = %e; n_sim = %e\n", fugacity[i], n_ig[i], n_sim[i])
     end
@@ -42,10 +44,11 @@ if xe_in_sbmof1_tests
     test_fugacities = [20.0, 200.0, 2000.0] / 100000.0 # bar
     test_mmol_g = [0.18650, 1.00235, 1.39812]
     test_molec_unit_cell = [0.2568, 1.3806, 1.9257]
-    
+
  #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
-    results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield, 
+    results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield,
                         n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=10)
+#                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=10)
 
     for i = 1:length(test_fugacities)
         @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)
@@ -54,7 +57,7 @@ if xe_in_sbmof1_tests
 end
 
 if co2_tests
-    plot_results = true
+    plot_results = false
     run_sims = true
     ###
     #  Test isotherm 1: by greg chung. co2 at 313 k
@@ -64,20 +67,20 @@ if co2_tests
 
  #     strip_numbers_from_atom_labels!(f)
  #     ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
- # 
+ #
  #     # load in test data
  #     df = CSV.read("greg_chung/ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.csv")
- #     
+ #
  #     # simulate with PorousMaterials.jl in parallel
  #     if run_sims
- #         results = adsorption_isotherm(f, co2, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff, 
+ #         results = adsorption_isotherm(f, co2, 313.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff,
  #             n_burn_cycles=10000, n_sample_cycles=10000, verbose=true, sample_frequency=5)
  #         JLD.save("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld", "results", results)
  #     else
  #         results = JLD.load("ZnCo-ZIF-71_atom_relax_RESP_co2_simulated_isotherm.jld")["results"]
  #     end
  #     n_sim = [result["⟨N⟩ (molecules/unit cell)"] for result in results]
- #     
+ #
  #     # plot comparison
  #     if plot_results
  #         figure()
@@ -88,7 +91,7 @@ if co2_tests
  #         legend()
  #         savefig("ZnCo-ZIF-71_atom_relax_RESP_CO2_adsorption_isotherm313K_test.png", format="png", dpi=300)
  #     end
-    
+
     ###
     #  Test isotherm 2: by greg chung. co2 at 298 K
     ###
@@ -96,10 +99,10 @@ if co2_tests
     strip_numbers_from_atom_labels!(zif71)
     ff = LJForceField("Greg_bogus_ZIF71.csv", cutoffradius=12.8)
     co2 = Molecule("CO2EPM2")
-    
+
     # make sure bond lenghts are preserved
     bls = PorousMaterials.bond_lengths(co2, UnitCube())
-    results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff, 
+    results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff,
                         n_burn_cycles=25, n_sample_cycles=25, verbose=false)
     @printf("Testing that bond lenghts are preserved for %d molecules.\n", length(molecules))
     for m in molecules
@@ -115,17 +118,17 @@ if co2_tests
 
     # load in test data
     df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")
-    
+
     # simulate with PorousMaterials.jl in parallel
     if run_sims
-        results = stepwise_adsorption_isotherm(zif71, co2, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff, 
+        results = stepwise_adsorption_isotherm(zif71, co2, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff,
             n_burn_cycles=2000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-6)
         JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
     else
         results = JLD.load("ZIF71_bogus_charges_co2_simulated_isotherm.jld")["results"]
     end
     n_sim = [result["⟨N⟩ (mmol/g)"] for result in results]
-    
+
     # plot comparison
     if plot_results
         figure()
@@ -137,12 +140,12 @@ if co2_tests
         savefig("Greg_bogus_ZIF71_298K_co2_isotherm_test.png", format="png", dpi=300)
     end
 end
-        
+
  # co2 = Molecule("CO2")
  # f = Framework("ZnCo-ZIF-71_atom_relax_RESP.cif")
  # strip_numbers_from_atom_labels!(f)
  # ff = LJForceField("Greg_CO2_GCMCtest_ff.csv", cutoffradius=12.5)
- # 
+ #
  # results = gcmc_simulation(f, 313.0, 20.0*100000, co2, ff,
  #             n_burn_cycles=1, n_sample_cycles=1, verbose=true)
  # @time results = gcmc_simulation(f, 313.0, 1816566.334, co2, ff,

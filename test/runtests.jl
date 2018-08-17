@@ -109,8 +109,8 @@ end;
 
     m = Molecule("CO2")
     box = Framework("SBMOF-1.cif").box
-    set_fractional_coords!.(m, box)
-    set_fractional_coords_to_unit_cube!.(m, box)
+    set_fractional_coords!(m, box)
+    set_fractional_coords_to_unit_cube!(m, box)
     @test isapprox(m, Molecule("CO2")) # should restore.
     set_fractional_coords!(m, box)
     for i = 1:200
@@ -119,7 +119,7 @@ end;
         translate_to!(m, [randn(), randn(), randn()])
         translate_to!(m, [randn(), randn(), randn()], box)
     end
-    set_fractional_coords_to_unit_cube!.(m, box)
+    set_fractional_coords_to_unit_cube!(m, box)
     fresh_m = Molecule("CO2")
     translate_to!(fresh_m, m.xf_com)
     @test isapprox(m, fresh_m) # should restore.
@@ -132,7 +132,9 @@ end;
     # test translate_to, translate_by
     box = Box(1.23, 0.4, 6.0, π/2, π/2, π/2)
     ms = [Molecule("CO2") for i = 1:2]
-    set_fractional_coords!.(ms, box)
+    for m in ms
+        set_fractional_coords!(m, box)
+    end
     @test isapprox(ms[1], ms[2])
     translate_by!(ms[2], [0.0, 0.0, 0.0])
     @test isapprox(ms[1], ms[2])
@@ -209,7 +211,9 @@ end;
     # test translate_by for fractional and cartesian
     box = Framework("SBMOF-1.cif").box
     ms = [Molecule("CO2") for i = 1:2]
-    set_fractional_coords!.(ms, box)
+    for m in ms
+        set_fractional_coords!(m, box)
+    end
     for i = 1:200
         translate_by!(ms[2], [randn(), randn(), randn()])
         translate_by!(ms[2], [randn(), randn(), randn()], box)
@@ -261,7 +265,9 @@ end;
     @test ! isapprox(m2_old, m2)
     # visually inspect
     ms = [Molecule("CO2") for i = 1:1000]
-    set_fractional_coords!.(ms, box)
+    for m in ms
+        set_fractional_coords!(m, box)
+    end
     for m in ms
        rotate!(m, box)
     end
@@ -676,7 +682,9 @@ end
     translation_coords_changed = true
     translation_inside_box = true
     molecules = [Molecule("He"), Molecule("He")]
-    set_fractional_coords!.(molecules, box)
+    for molecule in molecules
+        set_fractional_coords!(molecule, box)
+    end
     translate_to!(molecules[1], [0.99, 0.99, 0.01])
     translate_to!(molecules[2], box.f_to_c * [0.99, 0.99, 0.01], box)
     old_molecule = translate_molecule!(molecules[1], sim_box)
@@ -707,7 +715,9 @@ end
     #
     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     molecules = [Molecule("He"), Molecule("CO2"), Molecule("He"), Molecule("CO2")]
-    set_fractional_coords!.(molecules, box)
+    for molecule in molecules
+        set_fractional_coords!(molecule, box)
+    end
     old_he = reinsert_molecule!(molecules[1], box)
     old_co2 = reinsert_molecule!(molecules[2], box)
     @test ! (outside_box(molecules[1]) | outside_box(molecules[2]))
@@ -750,18 +760,24 @@ end
 
     # interaction energy between first and second should be same via PBC
     molecules_a = [Molecule("Xe"), Molecule("He")]
-    set_fractional_coords!.(molecules_a, sim_box)
+    for m in molecules_a
+        set_fractional_coords!(m, sim_box)
+    end
     translate_to!(molecules_a[1], [11.0, 1.0, 12.0], sim_box)
     translate_to!(molecules_a[2], [11.0, 4.0, 12.0], sim_box)
     molecules_b = [Molecule("Xe"), Molecule("He")]
-    set_fractional_coords!.(molecules_b, sim_box)
+    for m in molecules_b
+        set_fractional_coords!(m, sim_box)
+    end
     translate_to!(molecules_b[1], [11.0, 1.0, 12.0], sim_box)
     translate_to!(molecules_b[2], [11.0, 23.0, 12.0], sim_box)
     @test vdw_energy(1, molecules_a, ljforcefield, sim_box) ≈ vdw_energy(1, molecules_b, ljforcefield, sim_box)
 
     # another PBC one where three coords are different.
     molecules = [Molecule("Xe"), Molecule("He")]
-    set_fractional_coords!.(molecules, sim_box)
+    for m in molecules
+        set_fractional_coords!(m, sim_box)
+    end
     translate_to!(molecules[1], [24.0, 23.0, 11.0], sim_box)
     translate_to!(molecules[2], [22.0, 2.0, 12.0], sim_box)
     r² = 4.0^2 + 2.0^2 + 1.0^2
@@ -783,7 +799,9 @@ end
 
     # two CO2 molecules 6.0 units apart
     molecules_co2 = [Molecule("CO2"), Molecule("CO2")]
-    set_fractional_coords!.(molecules_co2, sim_box)
+    for m in molecules_co2
+        set_fractional_coords!(m, sim_box)
+    end
     translate_to!(molecules_co2[1], [12.0, 9.0, 12.0], sim_box)
     translate_to!(molecules_co2[2], [12.0, 15.0, 12.0], sim_box)
     # because the molecules have not been rotated, all corresponding beads are same
@@ -817,7 +835,9 @@ end
     # making a larger sim_box so that only a few.atoms from each CO2 will be able to interact
     sim_box_large = Box(50.0, 50.0, 50.0, π/2, π/2, π/2)
     molecules_co2 = [Molecule("CO2"), Molecule("CO2")]
-    set_fractional_coords!.(molecules_co2, sim_box_large)
+    for m in molecules_co2
+        set_fractional_coords!(m, sim_box_large)
+    end
     # placed 12.6 units apart so the C atoms will be outside the cutoff radius,
     #   but one O atom from each will be inside, so these will interact
     translate_to!(molecules_co2[1], [0.0, 0.0, 0.0], sim_box_large)
