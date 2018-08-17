@@ -20,7 +20,7 @@ simulation.
 * `g` refers to guest (the adsorbate molecule).
 * `h` refers to host (the crystalline framework).
 """
-type GCMCstats
+mutable struct GCMCstats
     n_samples::Int
 
     n::Int
@@ -88,7 +88,7 @@ end
 Keep track of Markov chain transitions (proposals and acceptances) during a grand-canonical
 Monte Carlo simulation. Entry `i` of these arrays corresponds to PROPOSAL_ENCODINGS[i].
 """
-type MarkovCounts
+mutable struct MarkovCounts
     n_proposed::Array{Int, 1}
     n_accepted::Array{Int, 1}
 end
@@ -268,7 +268,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # adjust fractional coords of molecule according to *replicated* framework
     set_fractional_coords!(molecule, framework.box)
     if verbose
-# TODO: These lines cause an `invalid escape sequence` when executing runtests.jl in julia 0.7.0 
+# TODO: These lines cause an `invalid escape sequence` when executing runtests.jl in julia 0.7.0
 #        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\.\n",
 #            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
         println("\tFramework crystal density: ", crystal_density(framework))
@@ -278,8 +278,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
-    # TODO cannot have const local variables in julia 0.7
-    const molecule_template = deepcopy(molecule)
+    molecule_template = deepcopy(molecule)
     if ! (total_charge(molecule_template) ≈ 0.0)
         error(@sprintf("Molecule %s is not charge neutral!\n", molecule_template.species))
     end
@@ -290,8 +289,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
-    const charged_framework = charged(framework, verbose=verbose)
-    const charged_molecules = charged(molecule_template, verbose=verbose)
+    charged_framework = charged(framework, verbose=verbose)
+    charged_molecules = charged(molecule_template, verbose=verbose)
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
@@ -375,7 +374,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         n_sample_cycles = N_BLOCKS
         warn(@sprintf("# sample cycles set to minimum %d, which is number of blocks.", N_BLOCKS))
     end
-    const N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
+    N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
     markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)),
                                  zeros(Int, length(PROPOSAL_ENCODINGS)))

@@ -34,7 +34,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
         mkdir(PATH_TO_DATA * "grids/")
     end
 
-    if ! contains(filename, ".cube")
+    if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
@@ -82,7 +82,7 @@ Read a .cube file and return a populated `Grid` data structure.
 - `grid::Grid`: A grid data structure
 """
 function read_cube(filename::AbstractString)
-    if ! contains(filename, ".cube")
+    if ! occursin(".cube", filename)
         filename *= ".cube"
     end
 

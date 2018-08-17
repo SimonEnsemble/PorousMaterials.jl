@@ -11,7 +11,7 @@ using Test
 @testset "Box Tests" begin
     framework = Framework("SBMOF-1_cory.cif")
     @test isapprox(framework.box, Box(framework.box.f_to_c))
-    @test framework.box.f_to_c * framework.box.c_to_f ≈ eye(3)
+    @test framework.box.f_to_c * framework.box.c_to_f ≈ Matrix{Float64}(I, 3, 3)
     @test isapprox(framework.box.reciprocal_lattice, 2 * π * inv(framework.box.f_to_c))
     @test isapprox(framework.box, Box(framework.box.a, framework.box.b, framework.box.c,
                                       framework.box.α, framework.box.β, framework.box.γ))
@@ -172,7 +172,7 @@ end;
 
     # Test to see if rotation_matrix() is random and uniform on sphere surface
     N = 1000000
-    points = Array{Float64, 2}(3,N)
+    points = Array{Float64, 2}(undef, 3, N)
     for i = 1:N
         points[:,i] = rotation_matrix() * [0., 0., 1.]
     end
@@ -196,7 +196,7 @@ end;
     r_det_1 = true
     for i = 1:300
         r = rotation_matrix()
-        if ! isapprox(r * transpose(r), eye(3))
+        if ! isapprox(r * transpose(r), Matrix{Float64}(I, 3, 3))
             r_orthogonal = false
         end
         if ! isapprox(det(r), 1.0)
@@ -535,9 +535,9 @@ end
         # only include kvecs with <27 acc to NIST website
         kvec_keep = [kvec.ka ^ 2 + kvec.kb ^2 + kvec.kc ^2 < 27 for kvec in kvecs]
         kvecs = kvecs[kvec_keep]
-        eikar = OffsetArray(Complex{Float64}, 0:kreps[1])
-        eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
-        eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
+        eikar = OffsetArray{Complex{Float64}}(undef, 0:kreps[1])
+        eikbr = OffsetArray{Complex{Float64}}(undef, -kreps[2]:kreps[2])
+        eikcr = OffsetArray{Complex{Float64}}(undef, -kreps[3]:kreps[3])
         ϕ = electrostatic_potential_energy(ms, eparams, kvecs, eikar, eikbr, eikcr)
         @test isapprox(ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
         @test isapprox(ϕ.sr, energies_should_be[c]["real"], rtol=0.00001)
@@ -625,7 +625,7 @@ end
     insertion_at_random_coords = true
     insertion_adds_molecule = true
 
-    molecules = Array{Molecule}(0)
+    molecules = Array{Molecule}(undef, 0)
 
     m = Molecule("He")
     set_fractional_coords!(m, sim_box)
@@ -832,7 +832,7 @@ end
 end
 
 @testset "Grid Tests" begin
-    grid = Grid(Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7), (3, 3, 3), rand((3, 3, 3)),
+    grid = Grid(Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7), (3, 3, 3), rand(Float64, (3, 3, 3)),
         :kJ_mol, [1., 2., 3.])
     write_cube(grid, "test_grid.cube")
     grid2 = read_cube("test_grid.cube")

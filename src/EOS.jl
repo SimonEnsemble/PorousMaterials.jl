@@ -39,7 +39,7 @@ function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     # select real roots only.
     z_factor = z_roots[isreal.(z_roots)]
     # find the index of the root that is closest to unity
-    id_closest_to_unity = indmin(abs.(z_factor - 1.0))
+    id_closest_to_unity = argmin(abs.(z_factor .- 1.0))
     # return root closest to unity.
     return real(z_factor[id_closest_to_unity])
 end

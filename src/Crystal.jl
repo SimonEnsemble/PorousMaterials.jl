@@ -68,14 +68,14 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # Make sure the space group is P1
             if line[1] == "_symmetry_space_group_name_H-M"
                 if length(line) == 3
-                    @assert(contains(line[2] * line[3], "P1") ||
-                            contains(line[2] * line[3], "P 1") ||
-                            contains(line[2] * line[3], "-P1"),
+                    @assert(occursin("P1", line[2] * line[3]) ||
+                            occursin("P 1", line[2] * line[3]) ||
+                            occursin("-P1", line[2] * line[3]),
                             "cif must have P1 symmetry.\n")
                 elseif length(line) == 2
-                    @assert(contains(line[2], "P1") ||
-                            contains(line[2], "P 1") ||
-                            contains(line[2], "-P1"),
+                    @assert(occursin("P1", line[2]) ||
+                            occursin("P 1", line[2]) ||
+                            occursin("-P1", line[2]),
                             "cif must have P1 symmetry.\n")
                 else
                     println(line)
@@ -101,7 +101,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # and replace it with a while-loop further down
             if line[1] == "loop_"
                 next_line = split(lines[i+1])
-                if contains(next_line[1], "_atom_site")
+                if occursin("_atom_site", next_line[1])
                     loop_starts = i + 1
                     break
                 end
@@ -459,7 +459,7 @@ function strip_numbers_from_atom_labels!(framework::Framework)
         # atom species in string format
 		species = string(atom.species)
 		for j = 1:length(species)
-			if ! isalpha(species[j])
+			if ! isletter(species[j])
                 framework.atoms[a] = LJSphere(species[1:j-1], atom.xf)
 				break
 			end
@@ -559,7 +559,7 @@ function write_cif(framework::Framework, filename::String)
         error("write_cif assumes equal numbers of Charges and LJSpheres (or zero charges)")
     end
     # append ".cif" to filename if it doesn't already have the extension
-    if ! contains(filename, ".cif")
+    if ! occursin(".cif", filename)
         filename *= ".cif"
     end
     cif_file = open(filename, "w")
