@@ -303,7 +303,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
     checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
-        n_burn_cycles, n_sample_cycles, comment = filename_comment * "_checkpoint") # path to checkpoint file
+        n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint") # path to checkpoint file
     if load_checkpoint_file
         if isfile(checkpoint_filename)
             checkpoint = JLD.load(checkpoint_filename, "checkpoint")
