@@ -272,7 +272,7 @@ end
     @test isapprox(u - v, PotentialEnergy(7.0, 26.0)) # -
     @test isapprox(2.0 * v, PotentialEnergy(6.0, 8.0)) # *
     @test isapprox(v * 2.0, PotentialEnergy(6.0, 8.0)) # *
-    @test isapprox(u / 2.0, PotentialEnergy(5.0, 15.0)) # / 
+    @test isapprox(u / 2.0, PotentialEnergy(5.0, 15.0)) # /
     @test isapprox(sqrt(PotentialEnergy(4.0, 16.0)), PotentialEnergy(2.0, 4.0)) # sqrt
     @test isapprox(PorousMaterials.square(PotentialEnergy(2.0, 4.0)), PotentialEnergy(4.0, 16.0)) # square
     t = PotentialEnergy(1.0, 2.0)
@@ -280,8 +280,8 @@ end
     us = SystemPotentialEnergy(u, v)
     vs = SystemPotentialEnergy(s, t)
     @test isapprox(sum(vs), 403.0) # sum
-    @test isapprox(us - vs, SystemPotentialEnergy(u - s, v - t)) # - 
-    @test isapprox(us + vs, SystemPotentialEnergy(u + s, v + t)) # - 
+    @test isapprox(us - vs, SystemPotentialEnergy(u - s, v - t)) # -
+    @test isapprox(us + vs, SystemPotentialEnergy(u + s, v + t)) # -
     @test isapprox(2.0 * us, SystemPotentialEnergy(2.0 * u, 2.0 * v)) # *
     @test isapprox(2.0 * us, SystemPotentialEnergy(2.0 * u, 2.0 * v)) # *
     @test isapprox(us * 2.0, SystemPotentialEnergy(2.0 * u, 2.0 * v)) # *
@@ -741,21 +741,21 @@ end
 @printf("------------------------------\n")
 @testset "Equation of State (EOS.jl) Tests" begin
     # Peng-Robinsion EOS test for methane.
-    gas = PengRobinsonGas(:CH4)
-    props = calculate_properties(gas, 298.0, 65.0)
-    @test isapprox(props["compressibility factor"], 0.874910311935475, atol=1e-4)
-    @test isapprox(props["fugacity coefficient"], 0.8732765620181274, atol=1e-4)
-    @test isapprox(props["fugacity (bar)"], 65.0 * 0.8732765620181274, atol=1e-4)
-    @test isapprox(props["density (mol/m³)"], 2998.634526, atol=0.2)
-    @test isapprox(props["molar volume (L/mol)"], 0.333485, atol=1e-4)
+    gas = PengRobinsonFluid(:CH4)
+    props = calculate_properties(gas, 298.0, 65.0, verbose=false)
+    @test isapprox(props["compressibility factor"], 0.874496226625811, atol=1e-4)
+    @test isapprox(props["fugacity coefficient"], 0.8729028157628362, atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 65.0 * 0.8729028157628362, atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], 3000.054418, atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], 0.333327, atol=1e-4)
 
     #Van der Waals EOS test for Hydrogen
-    gas = VDWGasGas(:Hydrogen)
+    gas = VDWFluid(:H2)
     props = calculate_properties(gas, 300.0, 65.0)
-    @test isapprox(props["compressibility factor"], 1.0462045 , atol=0.001)
-    @test isapprox(props["fugacity coefficient"], 67.98166172 / 65.0 , atol=1e-4)
-    @test isapprox(props["fugacity (bar)"], 67.98166172 , atol=1e-4)
-    @test isapprox(props["density (mol/m³)"], 2490.815 , atol=0.2)
-    @test isapprox(props["molar volume (L/mol)"], 0.401475 , atol=1e-4)
+    @test isapprox(props["Compressibility Factor"], 1.0462045 , atol=0.001)
+    @test isapprox(props["Fugacity Coefficient"], 67.98203133 / 65.0 , atol=1e-4)
+    @test isapprox(props["Fugacity (bar)"], 67.98203133 , atol=1e-4)
+    @test isapprox(props["Density (mol/m³)"], 2490.815 , atol=0.2)
+    @test isapprox(props["Molar Volume (L/mol)"], 0.401475 , atol=1e-4)
 
 end
