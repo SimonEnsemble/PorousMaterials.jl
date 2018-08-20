@@ -135,7 +135,7 @@ export
     Grid, write_cube, read_cube, energy_grid,
 
     # EOS.jl
-    calculate_properties, PengRobinsonGas, VDWGas,
+    calculate_properties, PengRobinsonFluid, VDWFluid,
 
     # GCMC.jl
     gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
