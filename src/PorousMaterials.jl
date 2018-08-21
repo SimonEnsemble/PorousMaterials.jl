@@ -9,6 +9,7 @@ using StatsBase
 using ProgressMeter
 using Polynomials
 using JLD2
+using Statistics
 using Printf
 using LinearAlgebra
 
@@ -54,6 +55,6 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        calculate_properties, PengRobinsonGas, # EOS.jl
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
-       gcmc_result_savename, # GCMC.jl
+       gcmc_result_savename, GCMCstats, MarkovCounts, # GCMC.jl
        henry_coefficient, henry_result_savename # Henry.jl
 end

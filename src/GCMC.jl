@@ -140,9 +140,9 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 """
 function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
     temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
-    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=1, 
+    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=1,
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false,
     filename_comment::AbstractString="")
 
@@ -182,7 +182,7 @@ cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
 function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
-    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000, 
+    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000,
     n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
     ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
@@ -252,22 +252,22 @@ Note that we assume these coordinates are Cartesian, i.e. corresponding to a uni
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
 - `load_checkpoint_file::Bool`: Will find a checkpoint file corresponding to the [`gcmc_result_savename`](@ref) if true.
-    If that file is not found, function will throw an error. 
+    If that file is not found, function will throw an error.
 - `checkpoint::Dict`: A checkpoint dictionary that will work as a starting configuration for the run.
     The dictionary has to have the following keys: `outer_cycle`, `molecules`, `system_energy`, `current_block`, `gcmc_stats`, `markov_counts`, `markov_chain_time` and `time`. If this argument is used, keep `load_checkpoint_file=false`.
 - `write_checkpoints::Bool`: Will save checkpoints in data/gcmc_checkpoints if this is true.
-- `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles. 
+- `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles.
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
-function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64, 
-    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000, 
+function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
+    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000,
     n_sample_cycles::Int=25000, sample_frequency::Int=1, verbose::Bool=true,
-    molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6, 
+    molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6,
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
-    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
     filename_comment::AbstractString="")
-    
+
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
     #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
@@ -276,7 +276,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
     end
-    
+
     ###
     #  Convert pressure to fugacity using an equation of state
     ###
@@ -298,17 +298,17 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     #  Address loading a checkpoint and restarting from a previous simulation
     ###
     if checkpoint != Dict() && load_checkpoint_file
-        error("A checkpoint dictionary was provided AND load_checkpoint_file=true.\n 
+        error("A checkpoint dictionary was provided AND load_checkpoint_file=true.\n
         Unclear which checkpoint to start with.\n")
     end
     checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
-        framework.name, molecule_.species, ljforcefield.name, temperature, pressure, 
+        framework.name, molecule_.species, ljforcefield.name, temperature, pressure,
         n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint") # path to checkpoint file
     if load_checkpoint_file
         if isfile(checkpoint_filename)
-            checkpoint = JLD.load(checkpoint_filename, "checkpoint")
-            print_with_color(:yellow, "\trestarting simulation from previous checkpoint.\n")
-            print_with_color(:yellow, "\tstarting at outer cycle ", checkpoint["outer_cycle"], "\n")
+            @load checkpoint_filename checkpoint
+            printstyled("\trestarting simulation from previous checkpoint.\n"; color=:yellow)
+            printstyled("\tstarting at outer cycle ", checkpoint["outer_cycle"], "\n"; color=:yellow)
             println("\tCheckpoint filename: ", checkpoint_filename)
         else
             error(@sprintf("checkpoint file %s not found.\n", checkpoint_filename))
@@ -364,7 +364,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if length(molecules) != 0
         # ensure molecule template matches species of starting molecules.
         assert(all([m.species == molecule_template.species for m in molecules]))
-        
+
         # set fractional coords of these molecules consistent with framework box
         set_fractional_coords!.(molecules, framework.box)
 
@@ -396,7 +396,7 @@ a       end
                                                     eparams, kvectors, eikar, eikbr, eikcr)
         system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
                                             eparams, kvectors, eikar, eikbr, eikcr))
-        
+
         # assert calculated system energy consistent with checkpoint
         if checkpoint != Dict()
             if ! isapprox(system_energy, checkpoint["system_energy"])
@@ -404,7 +404,7 @@ a       end
             end
         end
     end
-    
+
     if show_progress_bar
         progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
     end
@@ -466,8 +466,8 @@ a       end
             if which_move == INSERTION
                 insert_molecule!(molecules, framework.box, molecule_template)
 
-                energy = potential_energy(length(molecules), molecules, framework, 
-                                                ljforcefield, eparams, kvectors, eikar, eikbr, 
+                energy = potential_energy(length(molecules), molecules, framework,
+                                                ljforcefield, eparams, kvectors, eikar, eikbr,
                                                 eikcr, charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for Insertion
@@ -487,7 +487,7 @@ a       end
 
                 # compute the potential energy of the molecule we propose to delete
                 energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, kvectors, eikar, eikbr, eikcr, 
+                                          eparams, kvectors, eikar, eikbr, eikcr,
                                           charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for Deletion
@@ -513,7 +513,7 @@ a       end
 
                 # energy of the molecule after it is translated
                 energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, kvectors, eikar, eikbr, eikcr, 
+                                              eparams, kvectors, eikar, eikbr, eikcr,
                                               charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for translation
@@ -529,12 +529,12 @@ a       end
             elseif (which_move == ROTATION) && (length(molecules) != 0)
                 # propose which molecule to rotate
                 molecule_id = rand(1:length(molecules))
-                
+
                 # energy of the molecule before we rotate it
                 energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, kvectors, eikar, eikbr, eikcr, 
+                                              eparams, kvectors, eikar, eikbr, eikcr,
                                               charged_molecules, charged_framework)
-                
+
                 # store old molecule to restore old position in case move is rejected
                 old_molecule = deepcopy(molecules[molecule_id])
 
@@ -543,10 +543,10 @@ a       end
 
                 # energy of the molecule after it is translated
                 energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, kvectors, eikar, eikbr, eikcr, 
+                                              eparams, kvectors, eikar, eikbr, eikcr,
                                               charged_molecules, charged_framework)
 
-                # Metropolis Hastings Acceptance for rotation 
+                # Metropolis Hastings Acceptance for rotation
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                     # accept the move, adjust current energy
                     markov_counts.n_accepted[which_move] += 1
@@ -616,16 +616,16 @@ a       end
             # this only occurs if sample_cycles not divisible by N_BLOCKS
             # print GCMC stats later and do not increment block if we are in last block.
             # print statistics for this block
-            if verbose 
-                print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+            if verbose
+                printstyled(@sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS); color=:yellow)
                 print(gcmc_stats[current_block])
             end
             current_block += 1
         end
         # print the last cycle in the last block
         if outer_cycle == (n_sample_cycles + n_burn_cycles)
-            if verbose 
-                print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS))
+            if verbose
+                printstyled(@sprintf("\tBlock  %d/%d statistics:\n", current_block, N_BLOCKS); color=:yellow)
                 print(gcmc_stats[current_block])
             end
         end
@@ -645,7 +645,7 @@ a       end
             if ! isdir(PATH_TO_DATA * "/gcmc_checkpoints")
                 mkdir(PATH_TO_DATA * "/gcmc_checkpoints")
             end
-            JLD.save(checkpoint_filename, "checkpoint", checkpoint)
+            @save checkpoint_filename checkpoint
         end # write checkpoint
     end # outer cycles
     # finished MC moves at this point.
@@ -742,8 +742,8 @@ a       end
         if ! isdir(PATH_TO_DATA * "gcmc_sims")
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
-    
-        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name, 
+
+        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name,
             molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, comment=filename_comment)
 
         #JLD.save(save_results_filename, "results", results)
@@ -772,7 +772,7 @@ function gcmc_result_savename(framework_name::AbstractString,
         if comment != "" && comment[1] != '_'
             comment = "_" * comment
         end
-        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s.jld", framework_name,
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s.jld2", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
                     n_burn_cycles, n_sample_cycles, comment)
 end
@@ -798,7 +798,7 @@ function print_results(results::Dict; print_title::Bool=true)
         total_proposals = results[@sprintf("Total # %s proposals", proposal_description)]
         fraction_accepted = results[@sprintf("Fraction of %s proposals accepted", proposal_description)]
         if total_proposals > 0
-            print_with_color(:yellow, proposal_description)
+            printstyled(proposal_description; color=:yellow)
             @printf("\t%d total proposals.\n", total_proposals)
             @printf("\t%f %% proposals accepted.\n", 100.0 * fraction_accepted)
         end
@@ -821,16 +821,16 @@ end
 function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64,
                       pressure::Float64, ljff::LJForceField)
     print("Simulating ")
-    print_with_color(:yellow, "(μVT)")
+    printstyled("(μVT)"; color=:yellow)
     print(" adsorption of ")
-    print_with_color(:green, adsorbate)
+    printstyled(adsorbate; color=:green)
     print(" in ")
-    print_with_color(:green, frameworkname)
+    printstyled(frameworkname; color=:green)
     print(" at ")
-    print_with_color(:green, @sprintf("%f K", temperature))
+    printstyled(@sprintf("%f K", temperature); color=:green)
     print(" and ")
-    print_with_color(:green, @sprintf("%f bar", pressure))
+    printstyled(@sprintf("%f bar", pressure); color=:green)
     print(" (bar) with ")
-    print_with_color(:green, split(ljff.name, ".")[1])
+    printstyled(split(ljff.name, ".")[1]; color=:green)
     println(" force field.")
 end
