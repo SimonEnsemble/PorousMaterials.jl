@@ -49,6 +49,18 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         print_with_color(:green, insertions_per_volume)
         println(" insertions per Å³.")
     end
+    
+    # determine the number of insertions based on the unit cell volume of the crystal (BEFORE replication)
+    nb_insertions = ceil(Int, insertions_per_volume * framework.box.Ω)
+    if verbose
+        @printf("\t%d total # particle insertions\n", nb_insertions)
+    end
+
+    # partition total insertions among blocks.
+    if nprocs() > N_BLOCKS
+        error("Use $N_BLOCKS cores or less for Henry coefficient calculations to match the number of blocks")
+    end
+    nb_insertions_per_block = ceil(Int, nb_insertions / N_BLOCKS)
 
     # replication factors for applying nearest image convention for short-range interactions
     repfactors = replication_factors(framework.box, ljforcefield)
@@ -68,17 +80,6 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
 
-    # determine the number of insertions based on the unit cell volume of the crystal
-    nb_insertions = insertions_per_volume * framework.box.Ω
-    if verbose
-        @printf("\t%d total Widom insertions\n", nb_insertions)
-    end
-
-    # partition total insertions among blocks.
-    if nprocs() > N_BLOCKS
-        error("Use $N_BLOCKS cores or less for Henry coefficient calculations to match the number of blocks")
-    end
-    nb_insertions_per_block = ceil(Int, nb_insertions / N_BLOCKS)
 
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
     # set up function to take a tuple of arguments, the number of insertions to
@@ -181,7 +182,7 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
 
     for i = 1:nb_insertions
         # determine uniform random center of mass
-        xf = [rand(), rand(), rand()]
+        xf = rand(3)
         # translate molecule to the new center of mass
         translate_to!(molecule, xf)
         # rotate randomly
