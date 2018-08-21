@@ -37,16 +37,17 @@ include("GCMC.jl")
 export Box, replicate, UnitCube, write_vtk, # Box.jl
        LJSphere, PtCharge, # Matter.jl
        nearest_image!, nearest_r², nearest_r, # NearestImage.jl
-       read_xyz, read_cpk_colors, read_atomic_radii, write_to_xyz, # Misc.jl
-       Framework, read_crystal_structure_file, remove_overlapping_atoms,
+       read_xyz, read_cpk_colors, read_atomic_radii, read_atomic_masses, write_to_xyz, # Misc.jl
+       Framework, read_crystal_structure_file, remove_overlapping_atoms_and_charges,
        strip_numbers_from_atom_labels!, chemical_formula, molecular_weight, crystal_density,
-       construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges, # Crystal.jl
+       construct_box, replicate, charged, write_cif, assign_charges, # Crystal.jl
        Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged, # Molecules.jl
        LJForceField, replication_factors, check_forcefield_coverage, # Forcefield.jl
        PotentialEnergy, SystemPotentialEnergy, # Energetics_Util.jl
        lennard_jones, vdw_energy, vdw_energy_no_PBC, # VdWEnergetics.jl
-       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, # ElectrostaticEnergetics.jl
+       electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum,
+       total_electrostatic_potential_energy, total, # ElectrostaticEnergetics.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable, # MChelpers.jl
        apply_periodic_boundary_condition!,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl

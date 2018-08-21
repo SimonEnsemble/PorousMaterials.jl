@@ -23,7 +23,7 @@ Returns a dictionary of results.
     in the porous material. units: Kelvin (K)
 - `ljforcefield::LJForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
-- `insertions_per_volume::Int`: number of Widom insertions to perform for computing the 
+- `insertions_per_volume::Int`: number of Widom insertions to perform for computing the
 average, per unit cell volume (Å³)
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
@@ -32,7 +32,7 @@ the replication factors in reciprocal space.
 """
 function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
-                           verbose::Bool=true, ewald_precision::Float64=1e-6, 
+                           verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true)
     if verbose
         print("Simulating Henry coefficient of ")
@@ -58,7 +58,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     framework = replicate(framework, repfactors)
     # adjust molecule's fractional coordinates according to the replicated framework box.
     set_fractional_coords!(molecule, framework.box)
-    
+
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
     const charged_system = charged(framework, verbose=verbose) & charged(molecule, verbose=verbose)
@@ -71,7 +71,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     if verbose
         @printf("\t%d total Widom insertions\n", nb_insertions)
     end
-    
+
     # partition total insertions among blocks.
     if nprocs() > N_BLOCKS
         error("Use $N_BLOCKS cores or less for Henry coefficient calculations to match the number of blocks")
@@ -79,21 +79,21 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     nb_insertions_per_block = ceil(Int, nb_insertions / N_BLOCKS)
 
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
-    # set up function to take a tuple of arguments, the number of insertions to 
+    # set up function to take a tuple of arguments, the number of insertions to
     # perform and the molecule to move around/rotate. each core needs a different
     # molecule because it will change its attributes in the simulation
     # x = (nb_insertions, molecule) for that core
-    henry_loop(x::Tuple{Int, Molecule}) = _conduct_Widom_insertions(framework, x[2], 
-                                            temperature, ljforcefield, x[1], 
+    henry_loop(x::Tuple{Int, Molecule}) = _conduct_Widom_insertions(framework, x[2],
+                                            temperature, ljforcefield, x[1],
                                             charged_system, ewald_precision, verbose)
-    
+
     # parallelize insertions across the cores
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
 
     # unpack the boltzmann factor sum and weighted energy sum from each block
     boltzmann_factor_sums = [res[b][1] for b = 1:N_BLOCKS] # Σᵢ e^(-βEᵢ) for that core
     wtd_energy_sums = [res[b][2] for b = 1:N_BLOCKS] # Σᵢ Eᵢe^(-βEᵢ) for that core
-    
+
     # compute block ⟨U⟩, Kₕ
     #   ⟨U⟩ = Σ Uᵢ e ^(βUᵢ) / [ ∑ e^(βUᵢ) ]
     #   Kₕ = β Σ e ^(βUᵢ) / nb_insertions_per_block
@@ -120,7 +120,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     result["henry coefficient [mmol/(g-bar)]"] = result["henry coefficient [mol/(m³-bar)]"] / ρ
     result["err henry coefficient [mmol/(g-bar)]"] = err_kh / ρ
     result["henry coefficient [mol/(kg-Pa)]"] = result["henry coefficient [mmol/(g-bar)]"] / 100000.0
-    
+
     # note assumes same # insertions per core.
     result["⟨U, vdw⟩ (K)"] = mean([average_energies[b].vdw for b = 1:N_BLOCKS])
     result["⟨U, Coulomb⟩ (K)"] = mean([average_energies[b].coulomb for b = 1:N_BLOCKS])
@@ -157,7 +157,7 @@ end
 
 # assumed framework is already replicated sufficiently for short-range interactions
 # to facilitate parallelization
-function _conduct_Widom_insertions(framework::Framework, molecule::Molecule, 
+function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
                                    ewald_precision::Float64, verbose::Bool)
@@ -206,6 +206,22 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
     return boltzmann_factor_sum, wtd_energy_sum
 end
 
+"""
+    save_name = henry_result_savename(framework, molecule, temperature,
+                                   ljforcefield, insertions_per_volume)
+
+Determine the name of files saved while calculating the henry coefficient. It uses
+many pieces of information from the simulation to ensure the file name accurately
+describes what it holds.
+
+# Arguments
+- `framework::Framework`: The porous crystal being tested
+- `molecule::Molecule`: The molecule being tested inside the crystal
+- `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
+- `ljforcefield::LJForceField`: The molecular model being used in the simulation
+    to describe the intermolecular Van der Waals forces
+- `insertions_per_volume::Int`: 
+"""
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
                                ljforcefield::LJForceField, insertions_per_volume::Int)
     return @sprintf("henry_sim_%s_in_%s_%fK_%s_ff_%d_insertions_per_volume.jld",

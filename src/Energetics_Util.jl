@@ -1,8 +1,21 @@
 import Base: +, -, /, *
 
 """
-Data structure to store potential energy, partitioned into van der Waals (`energy.vdw`) 
+Data structure to store potential energy, partitioned into van der Waals (`energy.vdw`)
 and electrostatic (`energy.coulomb`) interactions, both `Float64`.
+
+# Default constructor
+    PotentialEnergy()
+
+This returns a PotentialEnergy data type where the vdw and coulomb attributes are
+set to 0.0
+
+# Example use
+    pe = PotentialEnergy()
+
+# Arguments
+- `vdw::Float64`: The potential energy contributions from Van der Waals interactions
+- `coulomb::Float64`: The potential energy contributions from electrostatic interactions
 """
 mutable struct PotentialEnergy
     vdw::Float64 # contribution from van der Waals interactions
@@ -34,17 +47,35 @@ function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=tru
     return true
 end
 
-# data structures to facilitate storing/partitioning potential energy of a system
+"""
+Data structure to facilitate storing/partitioning potential energy of a system. It
+stores the potential energy from guest-host and guest-guest interactions separately.
+
+# Default constructor
+    SystemPotentialEnergy()
+
+This initializes guest_host and guest_guest with PotentialEnergy(), so when it is
+created the total energy recorded is 0.0
+
+# Example use
+    system_potential_energy = SystemPotentialEnergy()
+
+# Attributes
+- `guest_host::PotentialEnergy`: The total potential energy from all guest-host
+    interactions in the system
+- `guest_guest::PotentialEnergy`: The total potential energy from all guest-guest
+    interactions in the system
+"""
 mutable struct SystemPotentialEnergy
     guest_host::PotentialEnergy
     guest_guest::PotentialEnergy
 end
 SystemPotentialEnergy() = SystemPotentialEnergy(PotentialEnergy(), PotentialEnergy()) # constructor
-Base.sum(v::SystemPotentialEnergy) = v.guest_guest.vdw + v.guest_guest.coulomb + 
+Base.sum(v::SystemPotentialEnergy) = v.guest_guest.vdw + v.guest_guest.coulomb +
                                      v.guest_host.vdw  + v.guest_host.coulomb
-+(u::SystemPotentialEnergy, v::SystemPotentialEnergy) = SystemPotentialEnergy(u.guest_host  + v.guest_host, 
++(u::SystemPotentialEnergy, v::SystemPotentialEnergy) = SystemPotentialEnergy(u.guest_host  + v.guest_host,
                                                                               u.guest_guest + v.guest_guest)
--(u::SystemPotentialEnergy, v::SystemPotentialEnergy) = SystemPotentialEnergy(u.guest_host  - v.guest_host, 
+-(u::SystemPotentialEnergy, v::SystemPotentialEnergy) = SystemPotentialEnergy(u.guest_host  - v.guest_host,
                                                                               u.guest_guest - v.guest_guest)
 *(u::SystemPotentialEnergy, a::Float64) = SystemPotentialEnergy(a * u.guest_host, a * u.guest_guest)
 *(a::Float64, u::SystemPotentialEnergy) = *(u::SystemPotentialEnergy, a::Float64)
@@ -52,7 +83,7 @@ Base.sum(v::SystemPotentialEnergy) = v.guest_guest.vdw + v.guest_guest.coulomb +
 Base.sqrt(u::SystemPotentialEnergy) = SystemPotentialEnergy(sqrt(u.guest_host), sqrt(u.guest_guest))
 square(u::SystemPotentialEnergy) = SystemPotentialEnergy(square(u.guest_host), square(u.guest_guest))
 
-function Base.isapprox(u::SystemPotentialEnergy, v::SystemPotentialEnergy; 
+function Base.isapprox(u::SystemPotentialEnergy, v::SystemPotentialEnergy;
                        verbose::Bool=true, atol::Float64=1e-6)
     if ! isapprox(u.guest_host, v.guest_host, verbose=verbose, atol=atol)
         warn("(guest-host mismatch)")
