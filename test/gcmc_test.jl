@@ -46,9 +46,14 @@ if xe_in_sbmof1_tests
     test_molec_unit_cell = [0.2568, 1.3806, 1.9257]
 
  #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
+<<<<<<< HEAD
     results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield,
                         n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=10)
 #                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=10)
+=======
+    results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield, 
+                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, progressbar=true)
+>>>>>>> 5fb6c23da4de07ce87965b23e70f99652d91a10a
 
     for i = 1:length(test_fugacities)
         @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)

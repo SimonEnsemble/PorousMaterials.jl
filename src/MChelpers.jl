@@ -137,3 +137,4 @@ end
 
 # do we need to conduct a rotation or not? # TODO what if it is an ion? No need to rotate...
 rotatable(molecule::Molecule) = (length(molecule.atoms) + length(molecule.charges) > 1)::Bool
+
