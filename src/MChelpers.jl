@@ -102,7 +102,7 @@ function translate_molecule!(molecule::Molecule, box::Box)
     old_molecule = deepcopy(molecule)
 
     # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3) - 0.5) # move every atom of the molecule by the same vector.
+    dx = δ * (rand(3) .- 0.5) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx, box)
 
     # done, unless the molecule has moved outside of the box, then apply PBC

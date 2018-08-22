@@ -24,11 +24,13 @@ end
 # note this assumes the molecule is inside the box... i.e. fractional coords in [1,1,1]
 @inline function vdw_energy(u::LJSphere, v::LJSphere, ljff::LJForceField, box::Box)
     r² = nearest_r²(u.xf, v.xf, box)
-    if r² < R_OVERLAP_squared # overlapping atoms
-        return Inf
-    elseif r² < ljff.cutoffradius_squared # within cutoff radius; not overlapping
-        return lennard_jones(r², ljff.σ²[u.species][v.species], ljff.ϵ[u.species][v.species])
-    else # outside cutoff radius
+    if r² < ljff.cutoffradius_squared # within cutoff radius
+        if r² < R_OVERLAP_squared # overlapping atoms
+            return Inf
+        else # not overlapping
+            return lennard_jones(r², ljff.σ²[u.species][v.species], ljff.ϵ[u.species][v.species])
+        end
+    else # outside cutoff radius and overlap radius
         return 0.0
     end
 end
@@ -137,12 +139,12 @@ Assumes unit cell box is a unit cube and no periodic boundary conditions
 are applied.
 """
 function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{LJSphere, 1}, ljff::LJForceField)
-    energy = 0.0 
+    energy = 0.0
     for matom in molecule.atoms
         for atom in atoms
             dx = matom.xf - atom.xf
             r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
-            energy += lennard_jones(r², ljff.σ²[matom.species][atom.species], 
+            energy += lennard_jones(r², ljff.σ²[matom.species][atom.species],
                 ljff.ϵ[matom.species][atom.species])
         end
     end

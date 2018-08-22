@@ -15,10 +15,10 @@ mutable struct EwaldSum
     intra::Float64 # intramolecular interactions
 end
 total(ews::EwaldSum) = ews.sr + ews.lr + ews.lr_own_images + ews.self + ews.intra
-+(e1::EwaldSum, e2::EwaldSum) = EwaldSum(e1.sr            + e2.sr, 
-                                         e1.lr            + e2.lr, 
-                                         e1.lr_own_images + e2.lr_own_images, 
-                                         e1.self          + e2.self, 
++(e1::EwaldSum, e2::EwaldSum) = EwaldSum(e1.sr            + e2.sr,
+                                         e1.lr            + e2.lr,
+                                         e1.lr_own_images + e2.lr_own_images,
+                                         e1.self          + e2.self,
                                          e1.intra         + e2.intra)
 EwaldSum() = EwaldSum(0.0, 0.0, 0.0, 0.0, 0.0)
 
@@ -225,9 +225,9 @@ function setup_Ewald_sum(sr_cutoff_r::Float64, sim_box::Box; ϵ::Float64=1e-6, v
     kvectors = precompute_kvec_wts(eparams, max_mag_k_sqrd)
     # pre-allocate memory for e^{i k vec(k) ⋅ r}. Don't put these in EwaldParams for speed,
     #  so they are passed as reference. These are OffsetArrays, which changes indexing scheme.
-    eikar = OffsetArray(Complex{Float64}, 0:kreps[1]) # remove negative kreps[1] and take advantage of symmetry
-    eikbr = OffsetArray(Complex{Float64}, -kreps[2]:kreps[2])
-    eikcr = OffsetArray(Complex{Float64}, -kreps[3]:kreps[3])
+    eikar = OffsetArray{Complex{Float64}}(undef, 0:kreps[1]) # remove negative kreps[1] and take advantage of symmetry
+    eikbr = OffsetArray{Complex{Float64}}(undef, -kreps[2]:kreps[2])
+    eikcr = OffsetArray{Complex{Float64}}(undef, -kreps[3]:kreps[3])
     return eparams, kvectors, eikar, eikbr, eikcr
 end
 
@@ -240,8 +240,8 @@ Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fil
 function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
                             krep::Int, include_neg_reps::Bool)
     # explicitly compute for k = 1, k = 0
-    @unsafe eikr[0] = exp(0.0 * im)
-    @unsafe @fastmath eikr[1] = exp(im * k_dot_r)
+    @inbounds eikr[0] = exp(0.0 * im)
+    @inbounds @fastmath eikr[1] = exp(im * k_dot_r)
 
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
@@ -253,7 +253,7 @@ function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
     #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
     if include_neg_reps
         for k = -krep:-1
-            @unsafe eikr[k] = conj(eikr[-k])
+            @inbounds eikr[k] = conj(eikr[-k])
         end
     end
 end
@@ -262,15 +262,15 @@ end
     ϕ = electrostatic_potential_energy(framework, molecule, eparams, kvectors,
                                        eikar, eikbr, eikcr)
 
-Compute the electrostatic potential energy of a molecule inside a framework. 
+Compute the electrostatic potential energy of a molecule inside a framework.
 
-The electrostatic potential is created by the point charges assigned to the framework 
-atoms in `framework.charges`. Periodic boundary conditions are applied through the Ewald 
-summation. The spurious self-interaction term is neglected here because we are looking at 
+The electrostatic potential is created by the point charges assigned to the framework
+atoms in `framework.charges`. Periodic boundary conditions are applied through the Ewald
+summation. The spurious self-interaction term is neglected here because we are looking at
 *differences* in energy in a Monte Carlo simulation.
 
 Warning: it is assumed that the framework is replicated enough such that the nearest
-image convention can be applied for the short-range cutoff radius supplied in 
+image convention can be applied for the short-range cutoff radius supplied in
 `eparams.sr_cutoff_r`.
 
 # Arguments
@@ -421,7 +421,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                     ###
                     if i != j
                         ϕ.sr += _ϕ_sr(charge_i, charge_j, eparams)
-                    end 
+                    end
                 end # charge j
             end # molecule j
         end # charge i
@@ -435,14 +435,14 @@ function electrostatic_potential_energy(molecules::Array{Molecule, 1},
         #  Spurious self-interaction of point charge with Gaussian charge
         ###
         ϕ.self += _spurious_self_interaction_energy(molecule, eparams)
-    
+
         ###
         #  Intramolecular interactions
         #    this function allows the molecule to be split apart across a periodic boundary
         ###
         ϕ.intra += _intramolecular_energy(molecule, eparams)
     end
-    
+
     return ϕ::EwaldSum
 end
 

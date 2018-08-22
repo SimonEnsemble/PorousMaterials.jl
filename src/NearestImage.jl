@@ -1,7 +1,7 @@
 """
     nearest_image!(dxf)
 
-Applies the nearest image convention on a vector `dxf` between two atoms in fractional 
+Applies the nearest image convention on a vector `dxf` between two atoms in fractional
 space; modifies `dxf` for nearest image convention. Fractional coordinates here fall in
 [0, 1] so that the box is [0, 1]^3 in fractional space.
 
@@ -21,7 +21,7 @@ end
 
 @inline function nearest_r²(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
     # vector from y to x in fractional coordinate space
-    @inbounds dxf = xf - yf
+    @inbounds dxf = xf .- yf
     # apply nearest image convention for periodic boundary conditions
     nearest_image!(dxf)
     # convert to cartesian

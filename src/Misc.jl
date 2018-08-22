@@ -52,7 +52,7 @@ if the extension is not provided.) (absolute path)
 function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
     filename::AbstractString; comment::AbstractString="")
 
-    if ! contains(filename, ".xyz")
+    if ! occursin(".xyz", filename)
         filename *= ".xyz"
     end
 

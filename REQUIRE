@@ -3,7 +3,7 @@ SpecialFunctions
 OffsetArrays
 Roots
 Polynomials
-DataFrames
+DataFrames 0.11
 CSV
 StatsBase
 ProgressMeter
