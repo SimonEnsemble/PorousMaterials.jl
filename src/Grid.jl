@@ -180,7 +180,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
     framework = replicate(framework, repfactors)
 
     # grid of voxel centers (each axis at least).
-    grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
+    grid_pts = [collect(range(0.0; stop=1.0, step=n_pts[i])) for i = 1:3]
 
     grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, [0.0, 0.0, 0.0])
 

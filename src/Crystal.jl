@@ -68,15 +68,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # Make sure the space group is P1
             if line[1] == "_symmetry_space_group_name_H-M"
                 if length(line) == 3
-                    @assert(occursin("P1", line[2] * line[3]) ||
+                    @assert (occursin("P1", line[2] * line[3]) ||
                             occursin("P 1", line[2] * line[3]) ||
-                            occursin("-P1", line[2] * line[3]),
-                            "cif must have P1 symmetry.\n")
+                            occursin("-P1", line[2] * line[3]))
+                            "cif must have P1 symmetry.\n"
                 elseif length(line) == 2
-                    @assert(occursin("P1", line[2]) ||
+                    @assert (occursin("P1", line[2]) ||
                             occursin("P 1", line[2]) ||
-                            occursin("-P1", line[2]),
-                            "cif must have P1 symmetry.\n")
+                            occursin("-P1", line[2]))
+                            "cif must have P1 symmetry.\n"
                 else
                     println(line)
                     error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
@@ -170,7 +170,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         # Read in atoms and fractional coordinates
         for i = 1:n_atoms
             line = split(lines[4 + i])
-            push!(species, line[2])
+            push!(species, Symbol(line[2]))
 
             push!(xf, mod(parse(Float64, line[3]), 1.0)) # Wrap to [0,1]
             push!(yf, mod(parse(Float64, line[4]), 1.0)) # Wrap to [0,1]
@@ -255,8 +255,8 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
             push!(new_charges, PtCharge(charge.q, xf))
         end
     end
-    @assert(length(new_charges) == length(framework.charges) * prod(repfactors))
-    @assert(length(new_atoms) == length(framework.atoms) * prod(repfactors))
+    @assert (length(new_charges) == length(framework.charges) * prod(repfactors))
+    @assert (length(new_atoms) == length(framework.atoms) * prod(repfactors))
     return Framework(framework.name, new_box, new_atoms, new_charges)
 end
 
@@ -490,7 +490,7 @@ function chemical_formula(framework::Framework; verbose::Bool=false)
     end
 
     # get greatest common divisor
-    gcd_ = gcd([k for k in values(atom_counts)]...)
+    gcd_ = gcd([k for k in values(atom_counts)])
 
     # turn into irreducible chemical formula
     for atom in keys(atom_counts)

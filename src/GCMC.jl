@@ -363,10 +363,12 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
         # ensure molecule template matches species of starting molecules.
-        assert(all([m.species == molecule_template.species for m in molecules]))
+        @assert (all([m.species == molecule_template.species for m in molecules]))
 
         # set fractional coords of these molecules consistent with framework box
-        set_fractional_coords!.(molecules, framework.box)
+        for m in molecules
+            set_fractional_coords!(m, framework.box)
+        end
 
         # assert that the bond lengths are equal between the template and array to make
         # sure the right fractional coords were used
@@ -589,7 +591,7 @@ a       end
 
             # TODO remove after testing.
             for m in molecules
-                @assert(! outside_box(m), "molecule outside box!")
+                @assert (! outside_box(m)) "molecule outside box!"
             end
 
             # if we've done all burn cycles, take samples for statistics
@@ -641,7 +643,9 @@ a       end
                               "time" => time() - start_time # TODO not quite
                               )
             # bring back fractional coords to Cartesian.
-            set_fractional_coords_to_unit_cube!.(checkpoint["molecules"], framework.box)
+            for m in checkpoint["molecules"]
+                set_fractional_coords_to_unit_cube!(m, framework.box)
+            end
             if ! isdir(PATH_TO_DATA * "/gcmc_checkpoints")
                 mkdir(PATH_TO_DATA * "/gcmc_checkpoints")
             end
@@ -664,7 +668,7 @@ a       end
         error("energy incremented improperly during simulation...")
     end
 
-    @assert(markov_chain_time == sum(markov_counts.n_proposed))
+    @assert (markov_chain_time == sum(markov_counts.n_proposed))
     elapsed_time = time() - start_time
     if checkpoint != Dict()
         elapsed_time += checkpoint["time"]
@@ -736,7 +740,9 @@ a       end
     end
 
     # before returning molecules, convert coords back to Cartesian.
-    set_fractional_coords_to_unit_cube!.(molecules, framework.box)
+    for m in molecules
+        set_fractional_coords_to_unit_cube!(m, framework.box)
+    end
 
     if autosave
         if ! isdir(PATH_TO_DATA * "gcmc_sims")

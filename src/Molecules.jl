@@ -294,7 +294,7 @@ function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::Abstrac
             atoms[atom_counter] = atom.species
         end
     end
-    @assert(atom_counter == n_atoms)
+    @assert (atom_counter == n_atoms)
 
     write_to_xyz(atoms, x, filename, comment=comment) # Misc.jl
 end

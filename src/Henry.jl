@@ -35,18 +35,18 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="")
-    tic()
+    time_start = time_ns()
     if verbose
         print("Simulating Henry coefficient of ")
-        print_with_color(:green, molecule.species)
+        printstyled(molecule.species; color=:green)
         print(" in ")
-        print_with_color(:green, framework.name)
+        printstyled(framework.name; color=:green)
         print(" at ")
-        print_with_color(:green, temperature)
+        printstyled(temperature; color=:green)
         print(" K, using ")
-        print_with_color(:green, ljforcefield.name)
+        printstyled(ljforcefield.name; color=:green)
         print(" force field with ")
-        print_with_color(:green, insertions_per_volume)
+        printstyled(insertions_per_volume; color=:green)
         println(" insertions per Å³.")
     end
 
@@ -104,13 +104,14 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     henry_coefficients = boltzmann_factor_sums / (universal_gas_constant * temperature * nb_insertions_per_block) # mol/(m³-bar)
     if verbose
         for b = 1:N_BLOCKS
-            print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", b, N_BLOCKS))
+            printstyled(@sprintf("\tBlock  %d/%d statistics:\n", b, N_BLOCKS); color=:yellow)
             println("\tHenry coeff. [mmol/(g-bar)]: ", henry_coefficients[b] / ρ)
             println("\t⟨U, vdw⟩ (K): ", average_energies[b].vdw)
             println("\t⟨U, Coulomb⟩ (K): ", average_energies[b].coulomb)
         end
     end
-    elapsed_time = toc() / 60
+    time_stop = time_ns()
+    elapsed_time = (time_stop - time_start) # seconds
 
     # compute error estimates
     err_kh = 2.0 * std(henry_coefficients) / sqrt(N_BLOCKS)
@@ -120,24 +121,38 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
 
     result = Dict{String, Float64}()
     result["henry coefficient [mol/(m³-bar)]"] = mean(henry_coefficients)
+    println("1")
     result["henry coefficient [mmol/(g-bar)]"] = result["henry coefficient [mol/(m³-bar)]"] / ρ
+    println("2")
     result["err henry coefficient [mmol/(g-bar)]"] = err_kh / ρ
+    println("3")
     result["henry coefficient [mol/(kg-Pa)]"] = result["henry coefficient [mmol/(g-bar)]"] / 100000.0
-
+    println("4")
     # note assumes same # insertions per core.
     result["⟨U, vdw⟩ (K)"] = mean([average_energies[b].vdw for b = 1:N_BLOCKS])
+    println("5")
     result["⟨U, Coulomb⟩ (K)"] = mean([average_energies[b].coulomb for b = 1:N_BLOCKS])
+    println("6")
     result["⟨U⟩ (K)"] = result["⟨U, vdw⟩ (K)"] + result["⟨U, Coulomb⟩ (K)"]
+    println("7")
 
     result["⟨U⟩ (kJ/mol)"] = result["⟨U⟩ (K)"] * K_to_kJ_mol
+    println("8")
     result["⟨U, vdw⟩ (kJ/mol)"] = result["⟨U, vdw⟩ (K)"] * K_to_kJ_mol
+    println("9")
     result["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * K_to_kJ_mol
+    println("10")
     result["⟨U, Coulomb⟩ (kJ/mol)"] = result["⟨U, Coulomb⟩ (K)"] * K_to_kJ_mol
+    println("11")
     result["err ⟨U, Coulomb⟩ (kJ/mol)"] = err_energy.coulomb * K_to_kJ_mol
+    println("12")
     result["Qst (kJ/mol)"] = -result["⟨U⟩ (kJ/mol)"] + temperature * K_to_kJ_mol
+    println("13")
     result["err Qst (kJ/mol)"] = sum(err_energy) * K_to_kJ_mol
+    println("14")
 
-    result["elapsed time (min)"] = elapsed_time
+    result["elapsed time (min)"] = elapsed_time / 60
+    println("15")
 
     if autosave
         if ! isdir(PATH_TO_DATA * "henry_sims")
@@ -152,7 +167,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     end
 
     if verbose
-        print_with_color(:green, "\t----- final results ----\n")
+        printstyled("\t----- final results ----\n"; color=:green)
         for key in ["henry coefficient [mmol/(g-bar)]", "⟨U, vdw⟩ (kJ/mol)", "⟨U, Coulomb⟩ (kJ/mol)", "Qst (kJ/mol)"]
             @printf("\t%s = %f +/- %f\n", key, result[key], result["err " * key])
         end

@@ -240,8 +240,8 @@ Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fil
 function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
                             krep::Int, include_neg_reps::Bool)
     # explicitly compute for k = 1, k = 0
-    @unsafe eikr[0] = exp(0.0 * im)
-    @unsafe @fastmath eikr[1] = exp(im * k_dot_r)
+    @inbounds eikr[0] = exp(0.0 * im)
+    @inbounds @fastmath eikr[1] = exp(im * k_dot_r)
 
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
@@ -253,7 +253,7 @@ function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
     #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
     if include_neg_reps
         for k = -krep:-1
-            @unsafe eikr[k] = conj(eikr[-k])
+            @inbounds eikr[k] = conj(eikr[-k])
         end
     end
 end
