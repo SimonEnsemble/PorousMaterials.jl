@@ -2,9 +2,9 @@ using Distributed
 @everywhere using PorousMaterials
 @everywhere using Test
 using CSV
-using PyPlot
 using DataFrames
 using JLD2
+using Printf
 
 ig_tests = true
 xe_in_sbmof1_tests = true
@@ -19,7 +19,7 @@ co2_tests = true
 if ig_tests
     empty_space = Framework("empty_box.cssr") # zero atoms!
     ideal_gas = Molecule("IG")
-    @assert(empty_space.n_atoms == 0)
+    @assert (length(empty_space.atoms) == 0)
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
     fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
@@ -47,7 +47,7 @@ if xe_in_sbmof1_tests
 
  #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
     results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield,
-                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, progressbar=true)
+                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, show_progress_bar=true)
 
     for i = 1:length(test_fugacities)
         @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)
@@ -122,14 +122,15 @@ if co2_tests
     if run_sims
         results = stepwise_adsorption_isotherm(zif71, co2, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff,
             n_burn_cycles=2000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-6)
-        JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
+        @save "ZIF71_bogus_charges_co2_simulated_isotherm.jld" results
     else
-        results = JLD.load("ZIF71_bogus_charges_co2_simulated_isotherm.jld")["results"]
+        @load "ZIF71_bogus_charges_co2_simulated_isotherm.jld" results
     end
     n_sim = [result["⟨N⟩ (mmol/g)"] for result in results]
 
     # plot comparison
     if plot_results
+        using PyPlot
         figure()
         xlabel("Fugacity (bar)")
         ylabel("Molecules/unit cell")

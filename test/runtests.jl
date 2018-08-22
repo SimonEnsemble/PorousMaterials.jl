@@ -10,6 +10,7 @@ using JLD2
 using Statistics
 using Random
 
+include("test_grid.jl")
 
 @testset "Box Tests" begin
     framework = Framework("SBMOF-1_cory.cif")
@@ -525,12 +526,12 @@ end
                 end
                 com /= 3
                 m = Molecule(:H2O, LJSphere[], qs, box.c_to_f * com)
-                @assert(PorousMaterials.total_charge(m) == 0.0)
+                @assert (PorousMaterials.total_charge(m) == 0.0)
                 push!(ms, m)
-                @assert(isapprox(PorousMaterials.total_charge(m), 0.0, rtol=0.001))
+                @assert (isapprox(PorousMaterials.total_charge(m), 0.0, rtol=0.001))
             end
         end
-        @assert(length(ms) == n/3)
+        @assert (length(ms) == n/3)
         close(posfile)
 
         # compute energy of the configuration
@@ -570,8 +571,8 @@ end
     set_fractional_coords!(co2, zif71.box)
 
     # test 1: guest-host
-    @assert(co2.atoms[1].species == :C_CO2) # assumed C is first in input file...
-    @assert(isapprox(co2.charges[1].q, 0.7)) # assumed C is first in input file...
+    @assert (co2.atoms[1].species == :C_CO2) # assumed C is first in input file...
+    @assert (isapprox(co2.charges[1].q, 0.7)) # assumed C is first in input file...
     # load in coordinates of CO2 at test location
     co2.atoms[1].xf[:] = [0.50543, 0.57349, 0.50788] # C
     co2.atoms[2].xf[:] = [0.46884, 0.57393, 0.52461] # O
@@ -911,6 +912,7 @@ end
                                          autosave=false, write_checkpoints=false,
                                          load_checkpoint_file=false, checkpoint_frequency=1)
     @test isapprox(norm(molecules2[1].atoms[1].xf - molecules2[1].atoms[2].xf), co_bond_length)
+    @test length(molecules) == length(molecules2)
     @test all(isapprox.(molecules, molecules2))
     @test isapprox(results["Q_st (K)"], results2["Q_st (K)"])
     @test isapprox(results["⟨N⟩ (mmol/g)"], results2["⟨N⟩ (mmol/g)"])

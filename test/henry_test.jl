@@ -1,5 +1,6 @@
 using PorousMaterials
 using Test
+using Distributed
 
 insertions_per_volume = 500
 
