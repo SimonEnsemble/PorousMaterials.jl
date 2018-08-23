@@ -1,5 +1,6 @@
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
 const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
+using Distributed
 
 """
    result = henry_coefficient(framework, molecule, temperature, ljforcefield,

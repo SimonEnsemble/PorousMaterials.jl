@@ -303,7 +303,7 @@ end;
     co_vector1 = box.f_to_c * (co2.atoms[2].xf - co2.atoms[1].xf)
     co_vector2 = box.f_to_c * (co2.atoms[3].xf - co2.atoms[1].xf)
     # TODO should be atol=1e-12, this math fails in julia 0.7.0
-    @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-4)
+    @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-10)
 end
 
 @testset "NearestImage Tests" begin

@@ -5,3 +5,4 @@ Tester.jl
 VisualizeTester.jl
 *.swp
 *.cif
+*.sh
