@@ -2,7 +2,7 @@ using PorousMaterials
 using Test
 using Distributed
 
-insertions_per_volume = 500
+insertions_per_volume = 100
 
 @testset "Henry coefficient tests" begin
     ###
