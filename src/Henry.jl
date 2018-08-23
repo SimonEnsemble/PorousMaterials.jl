@@ -36,7 +36,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="")
-    time_start = time_ns()
+    time_start = time()
     if verbose
         print("Simulating Henry coefficient of ")
         printstyled(molecule.species; color=:green)
@@ -111,7 +111,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
             println("\t⟨U, Coulomb⟩ (K): ", average_energies[b].coulomb)
         end
     end
-    time_stop = time_ns()
+    time_stop = time()
     elapsed_time = (time_stop - time_start) # seconds
 
     # compute error estimates
