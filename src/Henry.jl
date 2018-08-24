@@ -6,7 +6,7 @@ const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
                              nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
                              autosave=true)
 
-Conduct Widom insertions to compute the Henry coefficient Kₕ of a molecule in a framework.
+Conduct particle insertions to compute the Henry coefficient Kₕ of a molecule in a framework.
 Also, for free, the heat of adsorption and ensemble average energy of adsorption is computed.
 The Henry coefficient is a model for adsorption at infinite dilution (low coverage):
 ⟨N⟩ = Kₕ P, where P is pressure and Kₕ is the Henry coefficient.
@@ -31,7 +31,7 @@ the replication factors in reciprocal space.
 - `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
 """
-function henry_coefficient(framework::Framework, molecule::Molecule, temperature::Float64,
+function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="")
@@ -49,7 +49,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
         print_with_color(:green, insertions_per_volume)
         println(" insertions per Å³.")
     end
-    
+
     # determine the number of insertions based on the unit cell volume of the crystal (BEFORE replication)
     nb_insertions = ceil(Int, insertions_per_volume * framework.box.Ω)
     if verbose
@@ -70,6 +70,10 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     end
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)
+
+    # make a deep copy of the molecule passed so we don't change its coords
+    molecule = deepcopy(_molecule)
+
     # adjust molecule's fractional coordinates according to the replicated framework box.
     set_fractional_coords!(molecule, framework.box)
 
@@ -80,7 +84,6 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
 
-
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
     # set up function to take a tuple of arguments, the number of insertions to
     # perform and the molecule to move around/rotate. each core needs a different
@@ -90,7 +93,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
                                             temperature, ljforcefield, x[1],
                                             charged_system, ewald_precision, verbose)
 
-    # parallelize insertions across the cores
+    # parallelize insertions across the cores; keep nb_insertions_per_block same
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
 
     # unpack the boltzmann factor sum and weighted energy sum from each block
@@ -103,6 +106,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
     #    (these N_BLOCKS-long arrays)
     average_energies = wtd_energy_sums ./ boltzmann_factor_sums # K
     henry_coefficients = boltzmann_factor_sums / (universal_gas_constant * temperature * nb_insertions_per_block) # mol/(m³-bar)
+
     if verbose
         for b = 1:N_BLOCKS
             print_with_color(:yellow, @sprintf("\tBlock  %d/%d statistics:\n", b, N_BLOCKS))
@@ -111,7 +115,7 @@ function henry_coefficient(framework::Framework, molecule::Molecule, temperature
             println("\t⟨U, Coulomb⟩ (K): ", average_energies[b].coulomb)
         end
     end
-    elapsed_time = toc() / 60
+    elapsed_time = toc() / 60 # min
 
     # compute error estimates
     err_kh = 2.0 * std(henry_coefficients) / sqrt(N_BLOCKS)
@@ -207,7 +211,7 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         if (! isinf(energy.vdw)) && (! isinf(energy.coulomb))
             wtd_energy_sum += boltzmann_factor * energy
         end
-        # else add 0.0 b/c lim E --> ∞ E exp(-E) is zero.
+        # else add 0.0 b/c lim E --> ∞ of E exp(-b * E) is zero.
     end
     return boltzmann_factor_sum, wtd_energy_sum
 end
