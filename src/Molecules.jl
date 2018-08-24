@@ -333,9 +333,10 @@ Loop over all pairs of `LJSphere`'s in `molecule.atoms`. Return a matrix whose `
 element is the distance between atom `i` and atom `j` in the molecule.
 """
 function pairwise_atom_distances(molecule::Molecule, box::Box)
-    bond_lengths = zeros(length(molecule.atoms), length(molecule.atoms))
-    for i = 1:length(molecule.atoms)
-        for j = (i+1):length(molecule.atoms)
+    nb_atoms = length(molecule.atoms)
+    bond_lengths = zeros(nb_atoms, nb_atoms)
+    for i = 1:nb_atoms
+        for j = (i+1):nb_atoms
             dx = box.f_to_c * (molecule.atoms[i].xf - molecule.atoms[j].xf)
             bond_lengths[i, j] = norm(dx)
             bond_lengths[j, i] = bond_lengths[i, j]
