@@ -7,7 +7,7 @@ using JLD
 
 ig_tests = false
 xe_in_sbmof1_tests = true
-co2_tests = false
+co2_tests = true
 
 #
 # Ideal gas tests.
@@ -45,7 +45,7 @@ if xe_in_sbmof1_tests
     
  #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
     results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield, 
-                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, progressbar=true)
+                        n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, show_progress_bar=true)
 
     for i = 1:length(test_fugacities)
         @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)
@@ -98,13 +98,13 @@ if co2_tests
     co2 = Molecule("CO2EPM2")
     
     # make sure bond lenghts are preserved
-    bls = PorousMaterials.bond_lengths(co2, UnitCube())
+    bls = pairwise_atom_distances(co2, UnitCube())
     results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff, 
                         n_burn_cycles=25, n_sample_cycles=25, verbose=false)
     @printf("Testing that bond lenghts are preserved for %d molecules.\n", length(molecules))
     for m in molecules
         # bond lengths preserved?
-        @assert isapprox(bls, PorousMaterials.bond_lengths(m, UnitCube()))
+        @assert isapprox(bls, pairwise_atom_distances(m, UnitCube()))
         # charges hv same coords as atoms?
         for i = 1:3
             @assert isapprox(m.atoms[i].xf, m.charges[i].xf)
@@ -119,7 +119,7 @@ if co2_tests
     # simulate with PorousMaterials.jl in parallel
     if run_sims
         results = stepwise_adsorption_isotherm(zif71, co2, 298.0, convert(Array{Float64, 1}, df[:fugacity_Pa] / 100000.0), ff, 
-            n_burn_cycles=2000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-6)
+            n_burn_cycles=5000, n_sample_cycles=5000, verbose=true, sample_frequency=1, ewald_precision=1e-6, show_progress_bar=true)
         JLD.save("ZIF71_bogus_charges_co2_simulated_isotherm.jld", "results", results)
     else
         results = JLD.load("ZIF71_bogus_charges_co2_simulated_isotherm.jld")["results"]
