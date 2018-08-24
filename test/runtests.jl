@@ -84,6 +84,13 @@ end
 end;
 
 @testset "Molecules Tests" begin
+    molecule = Molecule("CO2")
+    rotate!(molecule, UnitCube())
+    @test isapprox(pairwise_atom_distances(molecule, UnitCube()),
+        [0 1.16 1.16; 1.16  0.0   1.16*2; 1.16 1.16*2 0])
+    @test isapprox(pairwise_charge_distances(molecule, UnitCube()),
+        [0 1.16 1.16; 1.16  0.0   1.16*2; 1.16 1.16*2 0])
+
     # test reader
     molecule = Molecule("CO2")
     @test charged(molecule)
