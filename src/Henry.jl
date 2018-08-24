@@ -38,7 +38,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     tic()
     if verbose
         print("Simulating Henry coefficient of ")
-        print_with_color(:green, molecule.species)
+        print_with_color(:green, molecule_.species)
         print(" in ")
         print_with_color(:green, framework.name)
         print(" at ")
@@ -72,7 +72,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     framework = replicate(framework, repfactors)
 
     # make a deep copy of the molecule passed so we don't change its coords
-    molecule = deepcopy(_molecule)
+    molecule = deepcopy(molecule_)
 
     # adjust molecule's fractional coordinates according to the replicated framework box.
     set_fractional_coords!(molecule, framework.box)
