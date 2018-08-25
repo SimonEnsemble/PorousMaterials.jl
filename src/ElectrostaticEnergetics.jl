@@ -246,7 +246,7 @@ function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_r::Float64,
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
     for k = 2:krep
-        @unsafe eikr[k] = eikr[k - 1] * eikr[1]
+        @inbounds eikr[k] = eikr[k - 1] * eikr[1]
     end
 
     # negative kreps are complex conjugate of positive ones.
@@ -331,7 +331,7 @@ function _ϕ_lr(charge_a::PtCharge, charge_b::PtCharge, eparams::EwaldParams,
         #     e^{i kb r * vec(kb)} *
         #     e^{i kb r * vec(kc)} where r = x - xᵢ
         #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-        @unsafe ϕ_lr += kvector.wt * real(
+        @inbounds ϕ_lr += kvector.wt * real(
                 eikar[kvector.ka] * eikbr[kvector.kb] * eikcr[kvector.kc])
     end
     return ϕ_lr * charge_a.q * charge_b.q
