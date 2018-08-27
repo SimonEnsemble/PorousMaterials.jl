@@ -382,7 +382,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
                     passed.")
                 end
             end
-a       end
+        end
 
         # assert that the molecules are inside the simulation box
         for m in molecules
