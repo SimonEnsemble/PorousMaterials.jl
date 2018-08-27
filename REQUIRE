@@ -3,9 +3,10 @@ SpecialFunctions
 OffsetArrays
 Roots
 Polynomials
-DataFrames 0.11
+DataFrames
 CSV
 StatsBase
 ProgressMeter
 JLD2
 Polynomials
+Distributed
