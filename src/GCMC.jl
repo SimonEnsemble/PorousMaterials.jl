@@ -589,11 +589,6 @@ a       end
                 end
             end # which move the code executes
 
-            # TODO remove after testing.
-            for m in molecules
-                @assert (! outside_box(m)) "molecule outside box!"
-            end
-
             # if we've done all burn cycles, take samples for statistics
             if outer_cycle > n_burn_cycles
                 if markov_chain_time % sample_frequency == 0
@@ -654,6 +649,17 @@ a       end
     end # outer cycles
     # finished MC moves at this point.
 
+    # out of paranoia, assert molecules not outside box and bond lengths preserved
+    for m in molecules
+        @assert(! outside_box(m), "molecule outside box!")
+        @assert(isapprox(pairwise_atom_distances(m, framework.box), 
+                         pairwise_atom_distances(molecule_, UnitCube()), atol=1e-12),
+                         "drift in atom bond lenghts!")
+        @assert(isapprox(pairwise_charge_distances(m, framework.box), 
+                         pairwise_charge_distances(molecule_, UnitCube()), atol=1e-12),
+                         "drift in charge-charge lenghts!")
+    end
+
     # compute total energy, compare to `current_energy*` variables where were incremented
     system_energy_end = SystemPotentialEnergy()
     system_energy_end.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
@@ -673,8 +679,10 @@ a       end
     if checkpoint != Dict()
         elapsed_time += checkpoint["time"]
     end
-    @printf("\tEstimated elapsed time: %d seconds\n", elapsed_time)
-    println("\tTotal # MC steps: ", markov_chain_time)
+    if verbose
+        @printf("\tEstimated elapsed time: %d seconds\n", elapsed_time)
+        println("\tTotal # MC steps: ", markov_chain_time)
+    end
 
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()

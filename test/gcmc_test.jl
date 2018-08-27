@@ -28,7 +28,7 @@ if ig_tests
     n_sim = similar(n_ig)
     for i = 1:length(fugacity)
         results, molecules = gcmc_simulation(empty_space, ideal_gas, temperature, fugacity[i], forcefield,
-                    n_burn_cycles=2500, n_sample_cycles=2500)
+                    n_burn_cycles=25000, n_sample_cycles=25000)
 #                    n_burn_cycles=100000, n_sample_cycles=100000)
         n_sim[i] = results["⟨N⟩ (molecules/unit cell)"]
         @printf("fugacity = %f Pa; n_ig = %e; n_sim = %e\n", fugacity[i], n_ig[i], n_sim[i])
@@ -100,13 +100,13 @@ if co2_tests
     co2 = Molecule("CO2EPM2")
 
     # make sure bond lenghts are preserved
-    bls = PorousMaterials.bond_lengths(co2, UnitCube())
-    results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff,
+    bls = pairwise_atom_distances(co2, UnitCube())
+    results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff, 
                         n_burn_cycles=25, n_sample_cycles=25, verbose=false)
     @printf("Testing that bond lenghts are preserved for %d molecules.\n", length(molecules))
     for m in molecules
         # bond lengths preserved?
-        @assert isapprox(bls, PorousMaterials.bond_lengths(m, UnitCube()))
+        @assert isapprox(bls, pairwise_atom_distances(m, UnitCube()))
         # charges hv same coords as atoms?
         for i = 1:3
             @assert isapprox(m.atoms[i].xf, m.charges[i].xf)

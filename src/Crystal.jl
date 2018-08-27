@@ -261,17 +261,22 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
 end
 
 # doc string in Misc.jl
-function write_to_xyz(framework::Framework, filename::AbstractString;
-                      comment::AbstractString="")
+function write_xyz(framework::Framework, filename::AbstractString;
+                      comment::AbstractString="", center::Bool=false)
     atoms = [atom.species for atom in framework.atoms]
     x = zeros(Float64, 3, length(framework.atoms))
     for (a, atom) in enumerate(framework.atoms)
         x[:, a] = framework.box.f_to_c * atom.xf
     end
+    if center
+        center_of_box = framework.box.f_to_c * [0.5, 0.5, 0.5]
+        for a = 1:length(framework.atoms)
+            x[:, a] -= center_of_box
+        end
+    end
 
-    write_to_xyz(atoms, x, filename, comment=comment)
-end
-
+    write_xyz(atoms, x, filename, comment=comment)
+end 
 
 """
     is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
