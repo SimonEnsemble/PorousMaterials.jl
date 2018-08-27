@@ -122,7 +122,7 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
 
 ## Building blocks
 
-All of the commands below (and above) should run if you're in the `PorousMaterials.jl/test` directory so that `PorousMaterials.jl` can find the right input files. By default, if you `Pkg.clone()`'d `PorousMaterials.jl`, the `test` directory is in `~/.julia/v0.6/PorousMaterials`.
+All of the commands below (and above) should run if you're in the `PorousMaterials.jl/test` directory so that `PorousMaterials.jl` can find the right input files. By default, if you `Pkg.add()`'d `PorousMaterials.jl`, the `test` directory is in `~/.julia/packages/UUID/PorousMaterials`.
 Just fire up Julia and type in:
 
 ```julia
@@ -333,9 +333,15 @@ Critical temperatures and pressures and acentric factors are stored in `data/Pen
 
 ## Installation
 
-1. Download and install the [Julia programming language](https://julialang.org/), v0.6.4.
+1. Download and install the [Julia programming language](https://julialang.org/), v1.0.
 
-2. In Julia, type `Pkg.clone("https://github.com/SimonEnsemble/PorousMaterials.jl.git")` to clone this repository and install Julia package dependencies in `REQUIRE`.
+2. In Julia, the following code will clone this repository and install Julia package dependencies in `REQUIRE`:
+
+```julia
+using Pkg
+Pkg.add(PackageSpec(url="https://github.com/SimonEnsemble/PorousMaterials.jl"))
+test PorousMaterials
+```
 
 3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
 
