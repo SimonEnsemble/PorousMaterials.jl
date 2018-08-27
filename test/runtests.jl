@@ -308,8 +308,6 @@ end;
         translate_by!(co2, 4.0 * [rand(), rand(), rand()], box)
         rotate!(co2, box)
     end
-    println("atom dist ", pairwise_atom_distances(co2, box))
-    println("charge dist ", pairwise_charge_distances(co2, box))
     @test isapprox(atom_distances, pairwise_atom_distances(co2, box), atol=1e-10)
     @test isapprox(charge_distances, pairwise_charge_distances(co2, box), atol=1e-10)
     @test isapprox(co2.xf_com, co2.atoms[1].xf, atol=1e-12) # should be on carbon
