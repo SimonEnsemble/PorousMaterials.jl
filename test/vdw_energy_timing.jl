@@ -1,8 +1,8 @@
 
 using BenchmarkTools, Compat
 using PorousMaterials
-using Base.Test
-    
+using Test
+
 ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 
 # Xe in SBMOF-1 tests, comparing to RASPA
