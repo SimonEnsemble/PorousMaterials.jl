@@ -8,5 +8,4 @@ CSV
 StatsBase
 ProgressMeter
 JLD2
-Polynomials
 Distributed
