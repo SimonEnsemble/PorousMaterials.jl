@@ -171,6 +171,11 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
                                    ewald_precision::Float64, verbose::Bool)
+    # compute pairwise atom & charge distances to later ensure these do not drift in the
+    #   course of the simulation (rotations and translations)
+    atom_distances = pairwise_atom_distances(molecule, framework.box)
+    charge_distances = pairwise_charge_distances(molecule, framework.box)
+
     # define Ewald summation params; this must be done on each core since they cannot share eikar for race condition possibility
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
@@ -213,6 +218,13 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         end
         # else add 0.0 b/c lim E --> ∞ of E exp(-b * E) is zero.
     end
+
+    # assert no significant drift in atom distances (e.g. bond lengths) upon rotations
+    if ! isapprox(atom_distances, pairwise_atom_distances(molecule, framework.box), atol=1e-10) ||
+       ! isapprox(charge_distances, pairwise_charge_distances(molecule, framework.box), atol=1e-10)
+        error("significant drift in bond lenghts during rotations/translations")
+    end
+
     return boltzmann_factor_sum, wtd_energy_sum
 end
 

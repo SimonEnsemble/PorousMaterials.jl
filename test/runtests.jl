@@ -84,6 +84,13 @@ end
 end;
 
 @testset "Molecules Tests" begin
+    molecule = Molecule("CO2")
+    rotate!(molecule, UnitCube())
+    @test isapprox(pairwise_atom_distances(molecule, UnitCube()),
+        [0 1.16 1.16; 1.16  0.0   1.16*2; 1.16 1.16*2 0])
+    @test isapprox(pairwise_charge_distances(molecule, UnitCube()),
+        [0 1.16 1.16; 1.16  0.0   1.16*2; 1.16 1.16*2 0])
+
     # test reader
     molecule = Molecule("CO2")
     @test charged(molecule)
@@ -128,8 +135,8 @@ end;
     @test isapprox(m, Molecule("CO2"))
 
     # test translate_to, translate_by
-    box = Box(1.23, 0.4, 6.0, π/2, π/2, π/2)
-    ms = [Molecule("CO2") for i = 1:2]
+    box = Framework("SBMOF-1.cif").box
+    ms = [Molecule("H2S") for i = 1:2]
     set_fractional_coords!.(ms, box)
     @test isapprox(ms[1], ms[2])
     translate_by!(ms[2], [0.0, 0.0, 0.0])
@@ -147,10 +154,13 @@ end;
         translate_to!(ms[2], [randn(), randn(), randn()])
         translate_to!(ms[2], [randn(), randn(), randn()], box)
     end
-    @test isapprox(norm(box.f_to_c * (ms[2].atoms[2].xf - ms[2].atoms[1].xf)), 
-                   norm(box.f_to_c * (ms[1].atoms[2].xf - ms[1].atoms[1].xf))) # shldn't change bond lengths
-    @test isapprox(norm(box.f_to_c * (ms[2].charges[2].xf - ms[2].charges[1].xf)), 
-                   norm(box.f_to_c * (ms[1].charges[2].xf - ms[1].charges[1].xf))) # shldn't change bond lengths
+    # bond lengths preserved?
+    for m in ms
+        @test isapprox(pairwise_atom_distances(m, box), 
+            pairwise_atom_distances(Molecule("H2S"), UnitCube()))
+        @test isapprox(pairwise_charge_distances(m, box), 
+            pairwise_charge_distances(Molecule("H2S"), UnitCube()))
+    end
     translate_to!(ms[1], [0.1, 0.2, 1.4])
     translate_to!(ms[2], box.f_to_c * [0.1, 0.2, 1.4], box)
     @test isapprox(ms[1], ms[2])
@@ -158,6 +168,12 @@ end;
     translate_by!(ms[1], [-0.1, -0.2, -1.1])
     translate_by!(ms[2], box.f_to_c * [-0.1, -0.2, -1.1], box)
     @test isapprox(ms[1], ms[2])
+    rotate!(ms[2], box)
+    rotate!(ms[1], box)
+    @test isapprox(pairwise_atom_distances(ms[2], box), 
+                   pairwise_atom_distances(Molecule("H2S"), UnitCube()))
+    @test isapprox(pairwise_charge_distances(ms[2], box), 
+                   pairwise_charge_distances(Molecule("H2S"), UnitCube()))
 
     # test unit vector on sphere generator
     ms = [Molecule("He") for i = 1:10000]
@@ -165,7 +181,7 @@ end;
         translate_to!(m, rand_point_on_unit_sphere())
     end
     @test all(isapprox.([norm(m.atoms[1].xf) for m in ms], 1.0))
-    write_to_xyz(ms, box, "random_vectors_on_sphere")
+    write_xyz(ms, box, "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
 
     # Test to see if rotation_matrix() is random and uniform on sphere surface
@@ -213,12 +229,14 @@ end;
         translate_by!(ms[2], [randn(), randn(), randn()], box)
         translate_to!(ms[2], [randn(), randn(), randn()])
         translate_to!(ms[2], [randn(), randn(), randn()], box)
+        rotate!(ms[2], box)
     end
-    @test isapprox(norm(box.f_to_c * (ms[2].atoms[2].xf - ms[2].atoms[1].xf)), 
-                   norm(box.f_to_c * (ms[1].atoms[2].xf - ms[1].atoms[1].xf))) # shldn't change bond lengths
-    @test isapprox(norm(box.f_to_c * (ms[2].charges[2].xf - ms[2].charges[1].xf)), 
-                   norm(box.f_to_c * (ms[1].charges[2].xf - ms[1].charges[1].xf))) # shldn't change bond lengths
-
+    for m in ms
+        @test isapprox(pairwise_atom_distances(m,               box), 
+                       pairwise_atom_distances(Molecule("CO2"), UnitCube()))
+        @test isapprox(pairwise_charge_distances(m,               box), 
+                       pairwise_charge_distances(Molecule("CO2"), UnitCube()))
+    end
     # test fractional, cartesian translates
     ms = [Molecule("CO2") for i = 1:2]
     translate_by!(ms[2], [0.1, 0.2, 0.3]) # fractional
@@ -263,14 +281,16 @@ end;
     for m in ms
        rotate!(m, box)
     end
-    write_to_xyz(ms, box, "co2s")
+    write_xyz(ms, box, "co2s")
     println("see co2s.xyz for dist'n of rotations")
 
     # make sure rotation, translate does not chage bond lengths or mess up center of mass
     co2 = Molecule("CO2")
-    bond_length = norm(co2.charges[1].xf - co2.charges[2].xf)
+    atom_distances = pairwise_atom_distances(co2, UnitCube())
+    charge_distances = pairwise_charge_distances(co2, UnitCube())
     set_fractional_coords!(co2, box)
-    @test isapprox(bond_length, norm(box.f_to_c * (co2.charges[1].xf - co2.charges[2].xf)))
+    @test isapprox(atom_distances, pairwise_atom_distances(co2, box))
+    @test isapprox(charge_distances, pairwise_charge_distances(co2, box))
     for i = 1:100000
         translate_to!(co2, [rand(), rand(), rand()])
         translate_by!(co2, [randn(), randn(), randn()])
@@ -278,17 +298,15 @@ end;
         translate_by!(co2, 4.0 * [rand(), rand(), rand()], box)
         rotate!(co2, box)
     end
-    @test isapprox(norm(box.f_to_c * (co2.charges[1].xf - co2.charges[2].xf)), 
-                bond_length, atol=1e-12)
-    @test isapprox(norm(box.f_to_c * (co2.atoms[1].xf - co2.atoms[2].xf)), 
-                bond_length, atol=1e-12)
+    @test isapprox(atom_distances, pairwise_atom_distances(co2, box), atol=1e-12)
+    @test isapprox(charge_distances, pairwise_charge_distances(co2, box), atol=1e-12)
     @test isapprox(co2.xf_com, co2.atoms[1].xf, atol=1e-12) # should be on carbon
-    #.atoms and charges shld have same coords still
+    #.atoms and charges shld have same coords still (this is just for CO2...
     @test all([isapprox(co2.atoms[k].xf, co2.charges[k].xf, atol=1e-12) for k = 1:3]) 
-    # bond angles preserved.
+    # shld still be linear...
     co_vector1 = box.f_to_c * (co2.atoms[2].xf - co2.atoms[1].xf)
     co_vector2 = box.f_to_c * (co2.atoms[3].xf - co2.atoms[1].xf)
-    @test isapprox(dot(co_vector1, co_vector2), -bond_length^2, atol=1e-12)
+    @test isapprox(dot(co_vector1, co_vector2), -norm(co_vector1)^2, atol=1e-12)
 end
 
 @testset "NearestImage Tests" begin
@@ -341,7 +359,7 @@ end;
     sbmof1 = Framework("SBMOF-1.cif")
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
     sbmof1 = replicate(sbmof1, rep_factors_sbmof1)
-    write_to_xyz(sbmof1, "replicated_sbmof1")
+    write_xyz(sbmof1, "replicated_sbmof1")
     xenon = Molecule("Xe")
     set_fractional_coords!(xenon, sbmof1.box)
     @test ! charged(xenon)
@@ -854,7 +872,8 @@ end
     # conducted.
     framework = Framework("SBMOF-1.cif")
     co2 = Molecule("CO2")
-    co_bond_length = norm(co2.atoms[1].xf - co2.atoms[2].xf)
+    atom_distances = pairwise_atom_distances(co2, UnitCube())
+    charge_distances = pairwise_charge_distances(co2, UnitCube())
     ljff = LJForceField("UFF.csv")
     temp = 298.0
     pressure = 0.5
@@ -870,19 +889,21 @@ end
         end
         results, molecules = gcmc_simulation(framework, deepcopy(co2), temp, pressure, ljff,
                                              n_burn_cycles=5, n_sample_cycles=5 * (i + 1),
-                                             verbose=true, sample_frequency=1, eos=:PengRobinson,
+                                             verbose=false, sample_frequency=1, eos=:PengRobinson,
                                              autosave=false, write_checkpoints=true, 
                                              checkpoint=checkpoint, checkpoint_frequency=1)
-        @test isapprox(norm(molecules[1].atoms[1].xf - molecules[1].atoms[2].xf), co_bond_length)
+        @test all([isapprox(atom_distances, pairwise_atom_distances(molec, UnitCube())) for molec in molecules])
+        @test all([isapprox(charge_distances, pairwise_charge_distances(molec, UnitCube())) for molec in molecules])
     end
 
     srand(1234)
     results2, molecules2 = gcmc_simulation(framework, deepcopy(co2), temp, pressure, ljff,
                                          n_burn_cycles=5, n_sample_cycles=20,
-                                         verbose=true, sample_frequency=1, eos=:PengRobinson,
+                                         verbose=false, sample_frequency=1, eos=:PengRobinson,
                                          autosave=false, write_checkpoints=false, 
                                          load_checkpoint_file=false, checkpoint_frequency=1)
-    @test isapprox(norm(molecules2[1].atoms[1].xf - molecules2[1].atoms[2].xf), co_bond_length)
+    @test all([isapprox(atom_distances, pairwise_atom_distances(molec, UnitCube())) for molec in molecules])
+    @test all([isapprox(charge_distances, pairwise_charge_distances(molec, UnitCube())) for molec in molecules])
     @test all(isapprox.(molecules, molecules2))
     @test isapprox(results["Q_st (K)"], results2["Q_st (K)"])
     @test isapprox(results["⟨N⟩ (mmol/g)"], results2["⟨N⟩ (mmol/g)"])
