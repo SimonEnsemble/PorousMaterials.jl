@@ -14,7 +14,7 @@ using Random
     sbmof1 = Framework("SBMOF-1.cif")
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
     sbmof1 = replicate(sbmof1, rep_factors_sbmof1)
-    write_to_xyz(sbmof1, "replicated_sbmof1")
+    write_xyz(sbmof1, "replicated_sbmof1")
     xenon = Molecule("Xe")
     set_fractional_coords!(xenon, sbmof1.box)
     @test ! charged(xenon)

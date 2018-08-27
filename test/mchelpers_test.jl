@@ -69,8 +69,8 @@ using Random
     translation_coords_changed = true
     translation_inside_box = true
     molecules = [Molecule("He"), Molecule("He")]
-    for i = 1:length(molecules)
-        set_fractional_coords!(molecules[i], box)
+    for molecule in molecules
+        set_fractional_coords!(molecule, box)
     end
     translate_to!(molecules[1], [0.99, 0.99, 0.01])
     translate_to!(molecules[2], box.f_to_c * [0.99, 0.99, 0.01], box)

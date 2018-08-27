@@ -279,7 +279,7 @@ function outside_box(molecule::Molecule)
 end
 
 # docstring in Misc.jl
-function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
+function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; 
     comment::AbstractString="")
 
     n_atoms = sum([length(molecule.atoms) for molecule in molecules])
@@ -294,9 +294,9 @@ function write_to_xyz(molecules::Array{Molecule, 1}, box::Box, filename::Abstrac
             atoms[atom_counter] = atom.species
         end
     end
-    @assert (atom_counter == n_atoms)
-
-    write_to_xyz(atoms, x, filename, comment=comment) # Misc.jl
+    @assert(atom_counter == n_atoms)
+    
+    write_xyz(atoms, x, filename, comment=comment) # Misc.jl
 end
 
 """
@@ -326,12 +326,39 @@ function charged(molecule::Molecule; verbose::Bool=false)
     return charged_flag
 end
 
-function bond_lengths(molecule::Molecule, box::Box)
-    bond_lengths = Float64[]
-    for i = 1:length(molecule.atoms)
-        for j = (i+1):length(molecule.atoms)
+"""
+    bl = pairwise_atom_distances(molecule, box) # n_atoms by n_atoms symmetric matrix
+
+Loop over all pairs of `LJSphere`'s in `molecule.atoms`. Return a matrix whose `(i, j)`
+element is the distance between atom `i` and atom `j` in the molecule.
+"""
+function pairwise_atom_distances(molecule::Molecule, box::Box)
+    nb_atoms = length(molecule.atoms)
+    bond_lengths = zeros(nb_atoms, nb_atoms)
+    for i = 1:nb_atoms
+        for j = (i+1):nb_atoms
             dx = box.f_to_c * (molecule.atoms[i].xf - molecule.atoms[j].xf)
-            push!(bond_lengths, norm(dx))
+            bond_lengths[i, j] = norm(dx)
+            bond_lengths[j, i] = bond_lengths[i, j]
+        end
+    end
+    return bond_lengths
+end
+
+"""
+    bl = pairwise_charge_distances(molecule, box) # n_atoms by n_atoms symmetric matrix
+
+Loop over all pairs of `PtCharge`'s in `molecule.charges`. Return a matrix whose `(i, j)`
+element is the distance between pt charge `i` and pt charge `j` in the molecule.
+"""
+function pairwise_charge_distances(molecule::Molecule, box::Box)
+    nb_charges = length(molecule.charges)
+    bond_lengths = zeros(nb_charges, nb_charges)
+    for i = 1:nb_charges
+        for j = (i+1):nb_charges
+            dx = box.f_to_c * (molecule.charges[i].xf - molecule.charges[j].xf)
+            bond_lengths[i, j] = norm(dx)
+            bond_lengths[j, i] = bond_lengths[i, j]
         end
     end
     return bond_lengths

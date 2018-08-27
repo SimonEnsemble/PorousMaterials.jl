@@ -154,13 +154,16 @@ The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻�
 This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
 - `temperature::Float64`: the temperature at which to compute the free energy for molecules where rotations are required. Lower temperatures overemphasize the minimum potential energy rotational conformation at that point.
 - `units::Symbol`: either `:K` or `:kJ_mol`, the units in which the energy should be stored in the returned `Grid`.
+- `center::Bool`: shift coords of grid so that the origin is the center of the unit cell `framework.box`.
 - `verbose::Bool=true`: print some information.
 
 # Returns
 - `grid::Grid`: A grid data structure containing the potential energy of the system
 """
 function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJForceField;
-                     n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
+                     n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, 
+                     temperature::Float64=NaN, units::Symbol=:kJ_mol, center::Bool=false,
+                     verbose::Bool=true)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
@@ -175,14 +178,11 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
                                                           framework.box,
                                                           verbose=verbose & charged_system)
 
-
-    repfactors = replication_factors(framework.box, ljforcefield)
-    framework = replicate(framework, repfactors)
-
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
 
-    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, [0.0, 0.0, 0.0])
+    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, 
+        center ? framework.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0])
 
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
@@ -191,9 +191,14 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
             @printf("\t%d molecule rotations per grid point with temperature %f K.\n", n_rotations, temperature)
         end
     end
+    
+    # compute replication factors required for short-range interactions & cutoff
+    repfactors = replication_factors(framework.box, ljforcefield)
+    framework = replicate(framework, repfactors)
 
 	for (i, xf) in enumerate(grid_pts[1]), (j, yf) in enumerate(grid_pts[2]), (k, zf) in enumerate(grid_pts[3])
-        translate_to!(molecule, [xf, yf, zf])
+        # must account for fact that framework is now replicated; use coords in home box
+        translate_to!(molecule, [xf, yf, zf] ./ repfactors)
         if ! rotations_required
             ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield)
         else

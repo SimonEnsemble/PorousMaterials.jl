@@ -1,11 +1,12 @@
-julia 0.6.4
+julia 0.7
 SpecialFunctions
 OffsetArrays
 Roots
 Polynomials
-DataFrames 0.11
+DataFrames
 CSV
 StatsBase
 ProgressMeter
-JLD
+JLD2
 Polynomials
+Distributed

@@ -2,7 +2,9 @@ using PorousMaterials
 using Test
 using Distributed
 
-insertions_per_volume = 100
+@warn "This will take a while..."
+
+insertions_per_volume = 1000
 
 @testset "Henry coefficient tests" begin
     ###
@@ -30,4 +32,6 @@ insertions_per_volume = 100
                                insertions_per_volume=insertions_per_volume, verbose=true)
     @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 2.88317e-05, atol=1.5e-7)
     @test isapprox(result["⟨U⟩ (kJ/mol)"], -18.69582223, atol=0.1)
+    # should not change molecule passed...
+    @test isapprox(molecule, Molecule("CO2"))
 end
