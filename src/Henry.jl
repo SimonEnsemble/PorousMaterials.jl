@@ -159,7 +159,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     end
 
     if verbose
-        println("Elapsed time (min): ", result["elapsed time (min)"])
+        println("\tElapsed time (min): ", result["elapsed time (min)"])
         printstyled("\t----- final results ----\n"; color=:green)
         for key in ["henry coefficient [mmol/(g-bar)]", "⟨U, vdw⟩ (kJ/mol)", "⟨U, Coulomb⟩ (kJ/mol)", "Qst (kJ/mol)"]
             @printf("\t%s = %f +/- %f\n", key, result[key], result["err " * key])
