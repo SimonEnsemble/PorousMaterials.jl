@@ -34,11 +34,11 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
         mkdir(PATH_TO_DATA * "grids/")
     end
 
-    if ! contains(filename, ".cube")
+    if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
-    
+
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
@@ -51,7 +51,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
         @printf(cubefile, "%d %f %f %f\n" , grid.n_pts[k],
             voxel_vector[1], voxel_vector[2], voxel_vector[3])
     end
-    
+
     for i = 1:grid.n_pts[1]
         for j = 1:grid.n_pts[2]
             for k = 1:grid.n_pts[3]
@@ -67,7 +67,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     if verbose
         println("See ", PATH_TO_DATA * "grids/" * filename)
     end
-    return 
+    return
 end
 
 """
@@ -82,7 +82,7 @@ Read a .cube file and return a populated `Grid` data structure.
 - `grid::Grid`: A grid data structure
 """
 function read_cube(filename::AbstractString)
-    if ! contains(filename, ".cube")
+    if ! occursin(".cube", filename)
         filename *= ".cube"
     end
 
@@ -92,17 +92,17 @@ function read_cube(filename::AbstractString)
     line = readline(cubefile)
     units = Symbol(split(line)[4])
     readline(cubefile)
-    
+
     # read origin
     line = readline(cubefile)
     origin = [parse(Float64, split(line)[1 + i]) for i = 1:3]
-    
+
     # read box info
     box_lines = [readline(cubefile) for i = 1:3]
-    
+
     # number of grid pts
     n_pts = Tuple([parse(Int, split(box_lines[i])[1]) for i = 1:3])
-    
+
     # f_to_c matrix (given by voxel vectors)
     f_to_c = zeros(Float64, 3, 3)
     for i = 1:3, j=1:3
@@ -111,9 +111,9 @@ function read_cube(filename::AbstractString)
     for k = 1:3
         f_to_c[:, k] = f_to_c[:, k] * (n_pts[k] - 1.0)
     end
-    
+
     # reconstruct box from f_to_c matrix
-    box = construct_box(f_to_c)
+    box = Box(f_to_c)
 
     # read in data
     data = zeros(Float64, n_pts...)
@@ -148,40 +148,41 @@ The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻�
 # Arguments
 - `framework::Framework`: crystal in which we seek to compute an energy grid for a molecule. `grid.box` will be `framework.box`.
 - `molecule::Molecule`: molecule for which we seek an energy grid
-- `ljforcefield::LennardJonesForceField`: molecular model for computing molecule-framework interactions
+- `ljforcefield::LJForceField`: molecular model for computing molecule-framework interactions
 - `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
 - `n_rotations::Int`: number of random rotations to conduct in a Monte Carlo simulation for finding the free energy of a molecule centered at a given grid point.
 This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
 - `temperature::Float64`: the temperature at which to compute the free energy for molecules where rotations are required. Lower temperatures overemphasize the minimum potential energy rotational conformation at that point.
 - `units::Symbol`: either `:K` or `:kJ_mol`, the units in which the energy should be stored in the returned `Grid`.
+- `center::Bool`: shift coords of grid so that the origin is the center of the unit cell `framework.box`.
 - `verbose::Bool=true`: print some information.
 
 # Returns
 - `grid::Grid`: A grid data structure containing the potential energy of the system
 """
-function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LennardJonesForceField;
-                     n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, temperature::Float64=NaN, units::Symbol=:kJ_mol, verbose::Bool=true)
+function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJForceField;
+                     n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, 
+                     temperature::Float64=NaN, units::Symbol=:kJ_mol, center::Bool=false,
+                     verbose::Bool=true)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
 
-    # TODO electrostatics
-    if length(molecule.charges) != 0
-        error("Electrostatics not implemented yet.")
-    end
-
-    const rotations_required = ((length(molecule.ljspheres) > 1) | (length(molecule.charges) > 1))
+    rotations_required = rotatable(molecule)
+    charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
     if rotations_required & isnan(temperature)
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
 
-    const repfactors = replication_factors(framework.box, ljforcefield)
-    framework = replicate(framework)
-    
-    # grid of voxel centers (each axis at least).
-    grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
+    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
+                                                          framework.box,
+                                                          verbose=verbose & charged_system)
 
-    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, [0.0, 0.0, 0.0])
+    # grid of voxel centers (each axis at least).
+    grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
+
+    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, 
+        center ? framework.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0])
 
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
@@ -190,23 +191,34 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::Len
             @printf("\t%d molecule rotations per grid point with temperature %f K.\n", n_rotations, temperature)
         end
     end
+    
+    # compute replication factors required for short-range interactions & cutoff
+    repfactors = replication_factors(framework.box, ljforcefield)
+    framework = replicate(framework, repfactors)
 
 	for (i, xf) in enumerate(grid_pts[1]), (j, yf) in enumerate(grid_pts[2]), (k, zf) in enumerate(grid_pts[3])
-        translate_to!(molecule, framework.box.f_to_c * [xf, yf, zf])
+        # must account for fact that framework is now replicated; use coords in home box
+        translate_to!(molecule, [xf, yf, zf] ./ repfactors)
         if ! rotations_required
             ensemble_average_energy = vdw_energy(framework, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
             for r = 1:n_rotations
-                rotate!(molecule)
-                energy = vdw_energy(framework, molecule, ljforcefield)
-                boltzmann_factor_sum += exp(-energy / temperature)
+                rotate!(molecule, framework.box)
+
+                energy = PotentialEnergy(0.0, 0.0)
+                energy.vdw = vdw_energy(framework, molecule, ljforcefield)
+                if charged_system
+                    energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams,
+                                                                    kvecs, eikar, eikbr, eikcr)
+                end
+                boltzmann_factor_sum += exp(-sum(energy) / temperature)
             end
             ensemble_average_energy = -temperature * log(boltzmann_factor_sum / n_rotations)
         end
 		grid.data[i, j, k] = ensemble_average_energy # K
 	end
-    
+
     if units == :kJ_mol # K - kJ/mol
         grid.data[:] = grid.data[:] * 8.314 / 1000.0
     end

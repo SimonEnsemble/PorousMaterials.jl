@@ -1,6 +1,3 @@
-using DataFrames
-using CSV
-
 """
 Data structure for a Lennard Jones forcefield.
 
@@ -12,7 +9,7 @@ Data structure for a Lennard Jones forcefield.
 - `σ²::Dict{Symbol, Dict{Symbol, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared[:He][:C]`
 - `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 """
-struct LennardJonesForceField
+struct LJForceField
     name::String
 
 	pure_σ::Dict{Symbol, Float64}
@@ -26,9 +23,9 @@ end
 
 
 """
-	ljforcefield = read_forcefield_file("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
+	ljforcefield = ForceField("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
 
-Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LennardJonesForceField object.
+Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LJForceField object.
 
 Kong mixing rules: DOI 10.1063/1.1680358
 Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelot_rules
@@ -39,25 +36,30 @@ Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelo
 - `mixing_rules::AbstractString`: The mixing rules used to compute the cross-interaction terms of the forcefield
 
 # Returns
-- `ljforcefield::LennardJonesForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
+- `ljforcefield::LJForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
-function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, mixing_rules::AbstractString="Lorentz-Berthelot")
-    if ! (mixing_rules in ["Lorentz-Berthelot", "Kong"])
-        # TODO add other mixing rules with corresponding tests
+function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0,
+                      mixing_rules::AbstractString="Lorentz-Berthelot")
+    if ! (lowercase(mixing_rules) in ["lorentz-berthelot", "kong", "geometric"])
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    df = CSV.read(PATH_TO_DATA * "forcefields/" * forcefieldfile) # from DataFrames
-    # assert that all atoms in the force field are unique (i.e. no duplicates)
-    @assert(length(unique(df[:atom])) == size(df, 1),
-        @sprintf("Duplicate atoms found in force field file %s\n", forcefieldfile))
+    forcefield_file_path = PATH_TO_DATA * "forcefields/" * forcefieldfile
 
-    ljff = LennardJonesForceField(forcefieldfile, Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
+    df = CSV.read(forcefield_file_path) # from DataFrames
+
+    ljff = LJForceField(forcefieldfile, Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
 
     # pure X-X interactions (X = (pseudo)atom)
     for row in eachrow(df)
-		ljff.pure_σ[Symbol(row[:atom])] = row[Symbol("sigma(A)")]
-		ljff.pure_ϵ[Symbol(row[:atom])] = row[Symbol("epsilon(K)")]
+        atom_species = Symbol(row[:atom])
+        # if atom already recorded, we have a duplicate. this is dangerous to overwrite.
+        if atom_species in keys(ljff.pure_σ)
+            error(@sprintf("Atom %s listed at least twice in %s.\n", atom_species,
+                forcefield_file_path))
+        end
+		ljff.pure_σ[atom_species] = row[Symbol("sigma(A)")]
+		ljff.pure_ϵ[atom_species] = row[Symbol("epsilon(K)")]
     end
 
     # cross X-Y interactions (X, Y = generally different (pseduo)atoms)
@@ -65,10 +67,10 @@ function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Floa
         ljff.ϵ[atom] = Dict{Symbol, Float64}()
         ljff.σ²[atom] = Dict{Symbol, Float64}()
 		for other_atom in [Symbol(other_atom) for other_atom in keys(ljff.pure_σ)]
-            if mixing_rules == "Lorentz-Berthelot"
+            if lowercase(mixing_rules) == "lorentz-berthelot"
                 ϵ_ij = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
                 σ_ij² = ((ljff.pure_σ[atom] + ljff.pure_σ[other_atom]) / 2.0) ^ 2
-            elseif mixing_rules == "Kong"
+            elseif lowercase(mixing_rules) == "kong"
                 ϵ_iiσ_ii⁶ = ljff.pure_ϵ[atom]       * ljff.pure_σ[atom] ^ 6
                 ϵ_jjσ_jj⁶ = ljff.pure_ϵ[other_atom] * ljff.pure_σ[other_atom] ^ 6
 
@@ -80,6 +82,9 @@ function read_forcefield_file(forcefieldfile::AbstractString; cutoffradius::Floa
 
                 ϵ_ij = ϵ_ijσ_ij⁶ ^ 2 / ϵ_ijσ_ij¹²
                 σ_ij² = (ϵ_ijσ_ij¹² / ϵ_ijσ_ij⁶) ^ (1/3)
+            elseif lowercase(mixing_rules) == "geometric"
+                ϵ_ij = sqrt(ljff.pure_ϵ[atom] * ljff.pure_ϵ[other_atom])
+                σ_ij² = ljff.pure_σ[atom] * ljff.pure_σ[other_atom] # √(σ_i σ_j)²
             end
             ljff.ϵ[atom][other_atom] = ϵ_ij
             ljff.σ²[atom][other_atom] = σ_ij²
@@ -123,21 +128,21 @@ function replication_factors(unitcell::Box, cutoff_radius::Float64)
 
 	# Repeat for `a`
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
-	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff_radius
+	while abs(dot(n_bc, c0)) / norm(n_bc) < cutoff_radius
 		rep[1] += 1
 		a += unitcell.f_to_c[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
-	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff_radius
+	while abs(dot(n_ac, c0)) / norm(n_ac) < cutoff_radius
 		rep[2] += 1
 		b += unitcell.f_to_c[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
-	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff_radius
+	while abs(dot(n_ab, c0)) / norm(n_ab) < cutoff_radius
 		rep[3] += 1
 		c += unitcell.f_to_c[:,3]
 		c0 = [a b c] * [.5, .5, .5]
@@ -146,21 +151,12 @@ function replication_factors(unitcell::Box, cutoff_radius::Float64)
 	return (rep[1], rep[2], rep[3])::Tuple{Int, Int, Int}
 end
 
-replication_factors(unitcell::Box, ljforcefield::LennardJonesForceField) = replication_factors(unitcell, sqrt(ljforcefield.cutoffradius_squared))
+replication_factors(unitcell::Box, ljforcefield::LJForceField) = replication_factors(unitcell, sqrt(ljforcefield.cutoffradius_squared))
 replication_factors(framework::Framework, cutoff_radius::Float64) = replication_factors(framework.box, cutoff_radius)
-replication_factors(framework::Framework, ljforcefield::LennardJonesForceField) = replication_factors(framework.box, sqrt(ljforcefield.cutoffradius_squared))
+replication_factors(framework::Framework, ljforcefield::LJForceField) = replication_factors(framework.box, sqrt(ljforcefield.cutoffradius_squared))
 
-"""
-    missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
-
-# Arguments
-- `atoms::Array{Symbol, 1}`: An array of atoms
-- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield object containing information on atom interactions
-
-# Returns
-- `missing_atoms::Array{Symbol, 1}`: An array of atoms, represented by Symbols, that are present in `atoms` but missing from the forcefield `ljforcefield`
-"""
-function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljforcefield::LennardJonesForceField)
+# to facilitate user-exposed function check_forcefield_coverage
+function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljforcefield::LJForceField)
     missing_atoms = Array{Symbol, 1}()
     for atom in atoms
         if !(atom in keys(ljforcefield.pure_ϵ))
@@ -171,7 +167,8 @@ function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljforcefield::Le
 end
 
 """
-    check_forcefield_coverage(Union{framework, molecule}, ljforcefield)
+    check_forcefield_coverage(framework, ljforcefield)
+    check_forcefield_coverage(molecule, ljforcefield)
 
 Check that the force field contains parameters for every atom present in a framework or molecule.
 Will print out which atoms are missing.
@@ -179,13 +176,13 @@ Will print out which atoms are missing.
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
 - `molecule::Molecule`: A molecule object
-- `ljforcefield::LennardJonesForceField`: A Lennard Jones forcefield object containing information on atom interactions
+- `ljforcefield::LJForceField`: A Lennard Jones forcefield object containing information on atom interactions
 
 # Returns
 - `check_forcefield_coverage::Bool`: Returns true if all atoms in the `framework` are also included in `ljforcefield`. False otherwise
 """
-function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJonesForceField)
-    atoms = unique(framework.atoms)
+function check_forcefield_coverage(framework::Framework, ljforcefield::LJForceField)
+    atoms = unique([a.species for a in framework.atoms])
     missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
     if length(missing_atoms) == 0
         return true
@@ -196,8 +193,8 @@ function check_forcefield_coverage(framework::Framework, ljforcefield::LennardJo
     end
 end
 
-function check_forcefield_coverage(molecule::Molecule, ljforcefield::LennardJonesForceField)
-    atoms = unique([ljs.atom for ljs in molecule.ljspheres])
+function check_forcefield_coverage(molecule::Molecule, ljforcefield::LJForceField)
+    atoms = unique([a.species for a in molecule.atoms])
     missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
     if length(missing_atoms) == 0
         return true
@@ -208,7 +205,7 @@ function check_forcefield_coverage(molecule::Molecule, ljforcefield::LennardJone
     end
 end
 
-function Base.show(io::IO, ff::LennardJonesForceField)
+function Base.show(io::IO, ff::LJForceField)
     println(io, "Force field: ", ff.name)
 	println(io, "Number of atoms included: ", length(ff.pure_σ))
 	println(io, "Cut-off radius (Å) = ", sqrt(ff.cutoffradius_squared))
