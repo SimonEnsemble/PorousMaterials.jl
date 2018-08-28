@@ -38,8 +38,7 @@ Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelo
 # Returns
 - `ljforcefield::LJForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
-
-function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, 
+function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0,
                       mixing_rules::AbstractString="Lorentz-Berthelot")
     if ! (lowercase(mixing_rules) in ["lorentz-berthelot", "kong", "geometric"])
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
@@ -129,21 +128,21 @@ function replication_factors(unitcell::Box, cutoff_radius::Float64)
 
 	# Repeat for `a`
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
-	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff_radius
+	while abs(dot(n_bc, c0)) / norm(n_bc) < cutoff_radius
 		rep[1] += 1
 		a += unitcell.f_to_c[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
-	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff_radius
+	while abs(dot(n_ac, c0)) / norm(n_ac) < cutoff_radius
 		rep[2] += 1
 		b += unitcell.f_to_c[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
-	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff_radius
+	while abs(dot(n_ab, c0)) / norm(n_ab) < cutoff_radius
 		rep[3] += 1
 		c += unitcell.f_to_c[:,3]
 		c0 = [a b c] * [.5, .5, .5]

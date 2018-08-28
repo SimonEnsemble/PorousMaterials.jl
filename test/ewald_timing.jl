@@ -1,6 +1,7 @@
 using PorousMaterials
-using Base.Test
-using BenchmarkTools, Compat
+using Test
+using BenchmarkTools
+using Profile
 framework = Framework("NU-1000_Greg.cif")
 
  # kreps = (11, 11, 9)
@@ -51,11 +52,9 @@ pc = PtCharge(q_test, xf)
 m = Molecule(:pt_charge, LJSphere[], [pc], xf)
 ϕ = electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
 @btime electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr) # 6.3 ms on cory's computer
-@profile electrostatic_potential_energy(framework, m, eparams, kvecs, eikar, eikbr, eikcr)
-Profile.print()
 
  # ϕ = ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
  # @btime ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
- # 
+ #
  # ϕ = ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
  # @btime ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)

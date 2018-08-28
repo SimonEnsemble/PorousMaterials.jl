@@ -1,4 +1,3 @@
-__precompile__()
 module PorousMaterials
 
 using CSV
@@ -8,8 +7,12 @@ using OffsetArrays # used for Ewald sum
 using SpecialFunctions # for erfc
 using StatsBase
 using ProgressMeter
-using JLD
 using Polynomials
+using JLD2
+using Statistics
+using Printf
+using LinearAlgebra
+
 
 # this runs everytime PorousMaterials is loaded, so if the user changes directory
 #   then the PATH_TO_DATA will change as well
@@ -53,6 +56,6 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
        calculate_properties, PengRobinsonGas, # EOS.jl
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
-       gcmc_result_savename, # GCMC.jl
+       gcmc_result_savename, GCMCstats, MarkovCounts, # GCMC.jl
        henry_coefficient, henry_result_savename # Henry.jl
 end

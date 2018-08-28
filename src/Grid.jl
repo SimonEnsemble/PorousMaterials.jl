@@ -34,11 +34,11 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
         mkdir(PATH_TO_DATA * "grids/")
     end
 
-    if ! contains(filename, ".cube")
+    if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
     cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
-    
+
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
@@ -51,7 +51,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
         @printf(cubefile, "%d %f %f %f\n" , grid.n_pts[k],
             voxel_vector[1], voxel_vector[2], voxel_vector[3])
     end
-    
+
     for i = 1:grid.n_pts[1]
         for j = 1:grid.n_pts[2]
             for k = 1:grid.n_pts[3]
@@ -67,7 +67,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     if verbose
         println("See ", PATH_TO_DATA * "grids/" * filename)
     end
-    return 
+    return
 end
 
 """
@@ -82,7 +82,7 @@ Read a .cube file and return a populated `Grid` data structure.
 - `grid::Grid`: A grid data structure
 """
 function read_cube(filename::AbstractString)
-    if ! contains(filename, ".cube")
+    if ! occursin(".cube", filename)
         filename *= ".cube"
     end
 
@@ -92,17 +92,17 @@ function read_cube(filename::AbstractString)
     line = readline(cubefile)
     units = Symbol(split(line)[4])
     readline(cubefile)
-    
+
     # read origin
     line = readline(cubefile)
     origin = [parse(Float64, split(line)[1 + i]) for i = 1:3]
-    
+
     # read box info
     box_lines = [readline(cubefile) for i = 1:3]
-    
+
     # number of grid pts
     n_pts = Tuple([parse(Int, split(box_lines[i])[1]) for i = 1:3])
-    
+
     # f_to_c matrix (given by voxel vectors)
     f_to_c = zeros(Float64, 3, 3)
     for i = 1:3, j=1:3
@@ -111,7 +111,7 @@ function read_cube(filename::AbstractString)
     for k = 1:3
         f_to_c[:, k] = f_to_c[:, k] * (n_pts[k] - 1.0)
     end
-    
+
     # reconstruct box from f_to_c matrix
     box = Box(f_to_c)
 
@@ -168,19 +168,19 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
 
-    const rotations_required = rotatable(molecule)
-    const charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
+    rotations_required = rotatable(molecule)
+    charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
     if rotations_required & isnan(temperature)
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
-    
+
     eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
                                                           framework.box,
                                                           verbose=verbose & charged_system)
 
-    # grid of voxel centers (each axis at least), in fractional coords
-    grid_pts = [collect(linspace(0.0, 1.0, n_pts[i])) for i = 1:3]
-    
+    # grid of voxel centers (each axis at least).
+    grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
+
     grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, 
         center ? framework.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0])
 
@@ -218,7 +218,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
         end
 		grid.data[i, j, k] = ensemble_average_energy # K
 	end
-    
+
     if units == :kJ_mol # K - kJ/mol
         grid.data[:] = grid.data[:] * 8.314 / 1000.0
     end

@@ -1,7 +1,8 @@
 using PorousMaterials
-using Base.Test
+using Test
+using Distributed
 
-warn("This will take a while...")
+@warn "This will take a while..."
 
 insertions_per_volume = 1000
 
@@ -14,11 +15,11 @@ insertions_per_volume = 1000
     molecule = Molecule("Xe")
     temperature = 298.0
 
-    result = henry_coefficient(framework, molecule, temperature, ljff, 
+    result = henry_coefficient(framework, molecule, temperature, ljff,
                                insertions_per_volume=insertions_per_volume, verbose=true)
     @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 0.00985348, atol=0.0002)
     @test isapprox(result["⟨U⟩ (kJ/mol)"], -39.6811, atol=0.1)
-    
+
     ###
     #  Henry test 2: CO2 in CAXVII_clean.cif
     ###
@@ -27,7 +28,7 @@ insertions_per_volume = 1000
     molecule = Molecule("CO2")
     temperature = 298.0
 
-    result = henry_coefficient(framework, molecule, temperature, ljff, 
+    result = henry_coefficient(framework, molecule, temperature, ljff,
                                insertions_per_volume=insertions_per_volume, verbose=true)
     @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 2.88317e-05, atol=1.5e-7)
     @test isapprox(result["⟨U⟩ (kJ/mol)"], -18.69582223, atol=0.1)
