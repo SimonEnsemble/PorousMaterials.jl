@@ -116,20 +116,20 @@ function calculate_properties(gas::VDWFluid, T::Float64, P::Float64; verbose::Bo
     rho = real.(polroots[isreal.(polroots)])
     #disregards all roots except the lowest one, as the lowest real root
     #is the density corresponding to the gas phase
-    rho = rho[indmin(rho)]
+    rho = rho[argmin(rho)]
     #specifies that molar volume is the reciprocal of the density
-    # In units of L/mol
-    vm = (1./ rho) * 1000
+    # In units of [L/mol]
+    vm = (1 ./ rho) * 1000
     #specifies the compressibility factor
-    z = (P * (1./ rho))./ (R * T)
+    z = (P * (1 ./ rho))./ (R * T)
 
     #Finds fugacity using the derivation from the Van der Waals
     fug = P .* exp. (- log. (((1 ./ rho) - gas.b) * P./(R * T))+(gas.b ./ ((1 ./ rho)-gas.b) - 2*gas.a*rho/(R*T)))
     #defines the fugacity coefficient as fugacity over pressure
     ϕ = fug ./ P
 
-    prop_dict = Dict("Density (mol/m³)" => rho, "Fugacity (bar)" => fug, 
-        "Molar Volume (L/mol)" => vm, "Fugacity Coefficient" => ϕ, 
+    prop_dict = Dict("Density (mol/m³)" => rho, "Fugacity (bar)" => fug,
+        "Molar Volume (L/mol)" => vm, "Fugacity Coefficient" => ϕ,
         "Compressibility Factor" => z )
 
     if verbose
@@ -145,21 +145,21 @@ end
     gas = VDWFluid(gas)
 
 Reads in vdw constants a and b of the `gas::Symbol`
-from the properties .csv file `PorousMaterials.PATH_TO_DATA * "vds_constants.csv"`
+from the properties .csv file `PorousMaterials.PATH_TO_DATA * "vdw_constants.csv"`
 and returns a complete `VDWFluid` data structure.
 
 # Returns
 - `VDWFluid::struct`: Data structure containing Van der Waals gas parameters.
 """
 function VDWFluid(gas::Symbol)
-    vdwfile = CSV.read(PATH_TO_DATA * "VDW_Constants.csv")
+    vdwfile = CSV.read(PATH_TO_DATA * "vdw_constants.csv")
     if ! (string(gas) in vdwfile[:molecule])
           error(@sprintf("Gas %s properties not found in %sVDW_Constants.csv", gas, PATH_TO_DATA))
     end
     gas = string(gas)
     A = vdwfile[vdwfile[:molecule].== gas, Symbol("a(m6bar/mol2)")]
     B = vdwfile[vdwfile[:molecule].== gas, Symbol("b(m3/mol)")]
-    return VDWFluid(A[1], B[1], gas)
+    return VDWFluid(A[1], B[1], Symbol(gas))
 end
 
 """
