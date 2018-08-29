@@ -54,7 +54,7 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable, # MChelpers.jl
        apply_periodic_boundary_condition!,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
-       calculate_properties, PengRobinsonGas, # EOS.jl
+       calculate_properties, PengRobinsonFluid, VDWFluid # EOS.jl
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
        gcmc_result_savename, GCMCstats, MarkovCounts, # GCMC.jl
        henry_coefficient, henry_result_savename # Henry.jl
