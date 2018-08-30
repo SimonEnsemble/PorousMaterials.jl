@@ -282,7 +282,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if eos == :ideal
        fugacity = pressure * 100000.0 # bar --> Pa
     elseif eos == :PengRobinson
-        prgas = PengRobinsonGas(molecule.species)
+        prgas = PengRobinsonFluid(molecule.species)
         gas_props = calculate_properties(prgas, temperature, pressure, verbose=false)
         fugacity = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
     else
@@ -634,10 +634,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # out of paranoia, assert molecules not outside box and bond lengths preserved
     for m in molecules
         @assert(! outside_box(m), "molecule outside box!")
-        @assert(isapprox(pairwise_atom_distances(m, framework.box), 
+        @assert(isapprox(pairwise_atom_distances(m, framework.box),
                          pairwise_atom_distances(molecule_, UnitCube()), atol=1e-12),
                          "drift in atom bond lenghts!")
-        @assert(isapprox(pairwise_charge_distances(m, framework.box), 
+        @assert(isapprox(pairwise_charge_distances(m, framework.box),
                          pairwise_charge_distances(molecule_, UnitCube()), atol=1e-12),
                          "drift in charge-charge lenghts!")
     end
