@@ -9,7 +9,7 @@ Data structure for a molecule/adsorbate.
 """
 struct Molecule
     species::Symbol
-    atoms::LJSpheres
+    atoms::Atoms
     charges::Charges
     xf_com::Array{Float64, 1}
 end
@@ -54,12 +54,12 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     x_com = [0.0, 0.0, 0.0]
     total_mass = 0.0
 
-    atoms = LJSpheres(Array{Symbol, 1}(), Array{Float64, 2}(undef, 3, 0))
+    species = Array{Symbol, 1}()
+    atom_coords = Array{Float64, 2}(undef, 3, 0)
     for row in eachrow(df_lj)
-        x = [row[:x], row[:y], row[:z]]
-        atom = Symbol(row[:atom])
+        atom_coords = [atom_coords [row[:x], row[:y], row[:z]]]
+        push!(species, Symbol(row[:atom]))
         # assume a unit cube as a box for now.
-        push!(atoms, x, atom)
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
@@ -67,6 +67,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         x_com += atomic_masses[atom] .* x
     end
     x_com /= total_mass
+    atoms = Atoms(species, atom_coords)
 
     # Read in point charges
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
@@ -77,12 +78,14 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     end
     df_c = CSV.read(chargesfilename)
 
-    charges = Charges(Array{Float64, 1}(), Array{Float64, 2}(undef, 3, 0))
+    charge_vals = Array{Flaot64, 1}()
+    charge_coords
     for row in eachrow(df_c)
         # assume unit cube as box for now.
-        x = [row[:x], row[:y], row[:z]]
-        push!(charges, x, row[:q])
+        charge_coords = [charge_coords [row[:x], row[:y], row[:z]]]
+        push!(charge_vals, row[:q])
     end
+    charges = Charges(charge_vals, charge_coords)
 
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 

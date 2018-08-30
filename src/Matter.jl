@@ -11,23 +11,19 @@ fractional coordinates.
 - `species::Symbol`: atom species name, e.g. `:C`
 - `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
 """
-mutable struct LJSpheres
+struct Atoms
+    n_atoms::Int
     species::Array{Symbol, 1}
     xf::Array{Float64, 2}
 end
 
-function LJSpheres(species::Array{AbstractString, 1}, xf::Array{Float64, 2})
-    return LJSpheres([Symbol(s) for s in species], xf)
-end
+Atoms(species::Array{AbstractString, 1}, xf::Array{Float64, 2}) = Atoms([Symbol(s) for s in species], xf)
 
-function push!(atoms::LJSpheres, new_col::Array{Float64, 1}, new_species::Symbol)
-    Base.push!(atoms.species, new_species)
-    atoms.xf = [atoms.xf new_col]
-end
+Atoms(species::Array{Symbol, 1}, xf::Array{Float64, 2}) = Atoms(size(xf, 2), species, xf)
 
-function Base.isapprox(ljs1::LJSpheres, ljs2::LJSpheres)
-    return all((ljs1.species[i] == ljs2.species[i]) for i = 1:length(ljs1.species)) &&
-            isapprox(ljs1.xf, ljs2.xf)
+function Base.isapprox(atoms1::Atoms, atoms2::Atoms)
+    return all((atoms1.species[i] == atoms2.species[i]) for i = 1:length(atoms1.species)) &&
+            isapprox(atoms1.xf, atoms2.xf)
 end
 
 #function Base.isapprox(ljs1::LJSphere, ljs2::LJSphere)
@@ -44,15 +40,16 @@ Point charge data structure indicates its charge and position in fractional coor
 - `q::Float64`: signed magnitude of charge (units: electrons), e.g. `1.0`
 - `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
 """
-mutable struct Charges
+struct Charges
+    n_charges::Int
     q::Array{Float64, 1}
     xf::Array{Float64, 2}
 end
-Base
 
-function push!(charges::Charges, new_col::Array{Float64, 1}, new_q::Float64)
-    Base.push!(charges.q, new_q)
-    charges.xf = [charges.xf new_col]
+Charges(q::Array{Float64, 1}, xf::Array{Float64, 2}) = Charges(size(xf, 2), q, xf)
+
+function Base.isapprox(c1::Charges, c2::Charges)
+    return (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))
 end
 
 #function Base.isapprox(c1::PtCharge, c2::PtCharge)

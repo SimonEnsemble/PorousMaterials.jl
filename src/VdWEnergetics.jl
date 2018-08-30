@@ -142,7 +142,7 @@ end
 Assumes unit cell box is a unit cube and no periodic boundary conditions
 are applied.
 """
-function vdw_energy_no_PBC(molecule::Molecule, atoms::LJSpheres, ljff::LJForceField)
+function vdw_energy_no_PBC(molecule::Molecule, atoms::Atoms, ljff::LJForceField)
     energy = 0.0
     for i = 1:size(molecule.atoms.xf, 2) # loop over all atoms in molecule
         for j = 1:size(atoms.xf, 2)

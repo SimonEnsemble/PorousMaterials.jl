@@ -43,7 +43,7 @@ export
        Box, replicate, UnitCube, write_vtk,
 
        # Matter.jl
-       LJSpheres, Charges,
+       Atoms, Charges,
 
        # NearestImage.jl
        nearest_image!, nearest_r², nearest_r,
