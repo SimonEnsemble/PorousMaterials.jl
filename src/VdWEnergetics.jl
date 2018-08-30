@@ -18,19 +18,17 @@ the potential energy in units Kelvin (well, whatever the units of ϵ are).
 """
 @inline function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
 	ratio = (σ² / r²) ^ 3
-	return 4.0 * ϵ * (ratio ^ 2 - ratio)
+	return 4.0 * ϵ * ratio * (ratio - 1.0)
 end
 
 # note this assumes the molecule is inside the box... i.e. fractional coords in [1,1,1]
 # u and v are tuples with the species and the set of coords for the position
-@inline function vdw_energy(u::Tuple{Symbol, Array{Float64, 1}}, v::Tuple{Symbol, Array{Float64, 1}},
-                    ljff::LJForceField, box::Box)
-    r² = nearest_r²(u[2], v[2], box)
+@inline function vdw_energy(r²::Float64, a1::Symbol, a2::Symbol, ljff::LJForceField, box::Box)
     if r² < ljff.cutoffradius_squared # within cutoff radius
         if r² < R_OVERLAP_squared # overlapping atoms
             return Inf
         else # not overlapping
-            return lennard_jones(r², ljff.σ²[u[1]][v[1]], ljff.ϵ[u[1]][v[1]])
+            return lennard_jones(r², ljff.σ²[a1][a2], ljff.ϵ[a1][a2])
         end
     else # outside cutoff radius and overlap radius
         return 0.0
@@ -56,11 +54,22 @@ image convention can be applied. See [`replicate`](@ref).
 """
 function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
 	energy = 0.0
-    for i = 1:size(molecule.atoms.xf, 2) # loop over all atoms in molecule
-        for j = 1:size(framework.atoms.xf, 2)
-            energy += vdw_energy((molecule.atoms.species[i], molecule.atoms.xf[:, i]),
-                    (framework.atoms.species[j], framework.atoms.xf[:, j]),
-                    ljff, framework.box)
+    for i = 1:molecule.atoms.n_atoms # loop over all atoms in molecule
+        @inbounds dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[:, i])
+        nearest_image!(dxf)
+        @inbounds dxf .= framework.box.f_to_c * dxf
+        @inbounds dxf .= dxf .* dxf
+        for j = 1:framework.atoms.n_atoms
+            @inbounds r² = dxf[1, j] + dxf[2, j] + dxf[3, j]
+            if r² < ljff.cutoffradius_squared # within cutoff radius
+                if r² < R_OVERLAP_squared # overlapping atoms
+                    return Inf
+                else # not overlapping
+                    @inbounds energy += lennard_jones(r²,
+                            ljff.σ²[molecule.atoms.species[i]][framework.atoms.species[j]],
+                            ljff.ϵ[molecule.atoms.species[i]][framework.atoms.species[j]])
+                end
+            end
         end
     end
 	return energy

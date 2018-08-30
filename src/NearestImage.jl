@@ -11,20 +11,18 @@ Warning: this assumes the two molecules are in the box described by fractional c
 - `dxf::Array{Float64, 1}`: A vector between two atoms in fractional space
 """
 @inline function nearest_image!(dxf::Array{Float64, 2})
-    for j = 1:size(dxf, 2)
-        for k = 1:3 # loop over components
-            @inbounds if abs(dxf[k][j]) > 0.5
-                @inbounds dxf[k][j] -= sign(dxf[k][j])
-            end
+    for i in eachindex(dxf)
+        @inbounds if abs(dxf[i]) > 0.5
+            @inbounds dxf[i] -= sign(dxf[i])
         end
     end
     return nothing
 end
 
 @inline function nearest_image!(dxf::Array{Float64, 1})
-    for k = 1:3 # loop over components
-        @inbounds if abs(dxf[k]) > 0.5
-            @inbounds dxf[k] -= sign(dxf[k])
+    for i in eachindex(dxf) # loop over components
+        @inbounds if abs(dxf[i]) > 0.5
+            @inbounds dxf[i] -= sign(dxf[i])
         end
     end
     return nothing

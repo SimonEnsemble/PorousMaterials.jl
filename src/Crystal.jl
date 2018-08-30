@@ -185,11 +185,10 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # Construct the unit cell box
     box = Box(a, b, c, α, β, γ)
 
-    has_charge = charge_values .!= 0
     charge_coords = Array{Float64, 2}(undef, 3, 0)
     non_zero_charge_values = Array{Float64, 1}()
-    for i = 1:length(has_charge)
-        if has_charge[i]
+    for i = 1:length(charge_values)
+        if charge_values[i] != 0.0
             charge_coords = [charge_coords coords[:, i]]
             push!(non_zero_charge_values, charge_values[i])
         end

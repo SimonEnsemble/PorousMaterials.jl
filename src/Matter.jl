@@ -17,18 +17,12 @@ struct Atoms
     xf::Array{Float64, 2}
 end
 
-Atoms(species::Array{AbstractString, 1}, xf::Array{Float64, 2}) = Atoms([Symbol(s) for s in species], xf)
-
 Atoms(species::Array{Symbol, 1}, xf::Array{Float64, 2}) = Atoms(size(xf, 2), species, xf)
 
 function Base.isapprox(atoms1::Atoms, atoms2::Atoms)
     return all((atoms1.species[i] == atoms2.species[i]) for i = 1:length(atoms1.species)) &&
             isapprox(atoms1.xf, atoms2.xf)
 end
-
-#function Base.isapprox(ljs1::LJSphere, ljs2::LJSphere)
-#    return ((ljs1.species == ljs2.species) && isapprox(ljs1.xf, ljs2.xf))
-#end
 
 """
 Point charge data structure indicates its charge and position in fractional coordinates.
@@ -51,7 +45,3 @@ Charges(q::Array{Float64, 1}, xf::Array{Float64, 2}) = Charges(size(xf, 2), q, x
 function Base.isapprox(c1::Charges, c2::Charges)
     return (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))
 end
-
-#function Base.isapprox(c1::PtCharge, c2::PtCharge)
-#    return (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))
-#end
