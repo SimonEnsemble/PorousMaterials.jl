@@ -9,17 +9,15 @@ Data structure for a molecule/adsorbate.
 """
 struct Molecule
     species::Symbol
-    atoms::Array{LJSphere, 1}
-    charges::Array{PtCharge, 1}
+    atoms::LJSpheres
+    charges::Charges
     xf_com::Array{Float64, 1}
 end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
     return (m1.species == m2.species) && isapprox(m1.xf_com, m2.xf_com) &&
-        (length(m1.atoms) == length(m2.atoms)) &&
-        (length(m1.charges) == length(m2.charges)) &&
-        all([isapprox(m1.atoms[i], m2.atoms[i]) for i = 1:length(m1.atoms)]) &&
-        all([isapprox(m1.charges[i], m2.charges[i]) for i = 1:length(m1.charges)])
+        (isapprox(m1.atoms, m2.atoms)) &&
+        (isapprox(m1.charges, m2.charges))
 end
 
 """
@@ -56,12 +54,12 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     x_com = [0.0, 0.0, 0.0]
     total_mass = 0.0
 
-    atoms = LJSphere[]
+    atoms = LJSpheres(Array{Symbol, 1}(), Array{Float64, 2}(undef, 3, 0))
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
         # assume a unit cube as a box for now.
-        push!(atoms, LJSphere(atom, x))
+        push!(atoms, x, atom)
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
@@ -79,17 +77,17 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     end
     df_c = CSV.read(chargesfilename)
 
-    charges = PtCharge[]
+    charges = Charges(Array{Float64, 1}(), Array{Float64, 2}(undef, 3, 0))
     for row in eachrow(df_c)
         # assume unit cube as box for now.
         x = [row[:x], row[:y], row[:z]]
-        push!(charges, PtCharge(row[:q], x))
+        push!(charges, x, row[:q])
     end
 
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
     # check for charge neutrality
-    if (length(charges) > 0) && (! (total_charge(molecule) ≈ 0.0))
+    if (length(charges.q) > 0) && (! (total_charge(molecule) ≈ 0.0))
         if assert_charge_neutrality
             error(@sprintf("Molecule %s is not charge neutral! Pass
             `assert_charge_neutrality=false` to ignore this error message.", species))
@@ -107,11 +105,11 @@ to a unit cell box that is a unit cube. This function adjusts the fractional coo
 of the molecule to be consistent with a different box.
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] = box.c_to_f * ljsphere.xf
+    for i = 1:size(molecule.atoms.xf, 2)
+        molecule.atoms.xf[:, i] = box.c_to_f * molecule.atoms.xf[:, i]
     end
-    for charge in molecule.charges
-        charge.xf[:] = box.c_to_f * charge.xf
+    for j = 1:size(molecule.charges.xf, 2)
+        molecule.charges.xf[:, j] = box.c_to_f * molecule.charges.xf[:, j]
     end
     molecule.xf_com[:] = box.c_to_f * molecule.xf_com
     return nothing
@@ -143,12 +141,12 @@ Cartesian coordinate space. For the latter, a unit cell box is required for cont
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
     # move LJSphere's
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] += dxf
+    for i = 1:size(molecule.atoms.xf, 2)
+        molecule.atoms.xf[:, i] += dxf
     end
     # move PtCharge's
-    for charge in molecule.charges
-        charge.xf[:] += dxf
+    for j = 1:size(molecule.atoms.xf, 2)
+        molecule.charges.xf[:, j] .+= dxf
     end
     # adjust center of mass
     molecule.xf_com[:] += dxf
@@ -279,7 +277,7 @@ function outside_box(molecule::Molecule)
 end
 
 # docstring in Misc.jl
-function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; 
+function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
     comment::AbstractString="")
 
     n_atoms = sum([length(molecule.atoms) for molecule in molecules])
@@ -295,7 +293,7 @@ function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractSt
         end
     end
     @assert(atom_counter == n_atoms)
-    
+
     write_xyz(atoms, x, filename, comment=comment) # Misc.jl
 end
 
@@ -311,11 +309,7 @@ Sum up point charges on a molecule.
 - `total_charge::Float64`: The sum of the point charges of `molecule`
 """
 function total_charge(molecule::Molecule)
-    total_charge = 0.0
-    for charge in molecule.charges
-        total_charge += charge.q
-    end
-    return total_charge
+    return sum(molecule.charges.q)
 end
 
 function charged(molecule::Molecule; verbose::Bool=false)

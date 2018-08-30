@@ -21,6 +21,7 @@ struct LJForceField
 	cutoffradius_squared::Float64
 end
 
+Base.broadcastable(ljff::LJForceField) = Ref(ljff)
 
 """
 	ljforcefield = ForceField("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")

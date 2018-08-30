@@ -35,6 +35,8 @@ struct Box
     reciprocal_lattice::Array{Float64, 2}
 end
 
+Base.broadcastable(b::Box) = Ref(b)
+
 """
     r = reciprocal_lattice(f_to_c)
 

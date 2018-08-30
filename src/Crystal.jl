@@ -4,8 +4,8 @@ using Test
 struct Framework
     name::String
     box::Box
-    atoms::Array{LJSphere, 1}
-    charges::Array{PtCharge, 1}
+    atoms::LJSpheres
+    charges::Charges
 end
 
 """
@@ -52,7 +52,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     xf = Array{Float64, 1}()
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
-    species = Array{Symbol, 1}()
+    atoms = LJSpheres(Array{Symbol, 1}(), Array{Float64, 2}(undef, 3, 0))
+    charges = Charges(Array{Float64, 1}(), Array{Float64, 2}(undef, 3, 0))
 
     # Start of .cif reader
     if extension == "cif"
@@ -132,7 +133,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 break
             end
 
-            push!(species, Symbol(line[name_to_column[atom_column_name]]))
+            push!(atoms.species, Symbol(line[name_to_column[atom_column_name]]))
             push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
             push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
             push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
@@ -183,13 +184,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # Construct the unit cell box
     box = Box(a, b, c, α, β, γ)
 
-    atoms = LJSphere[]
-    charges = PtCharge[]
-    for a = 1:length(species)
+    for a = 1:length(atoms.species)
         frac_coord = [xf[a], yf[a], zf[a]]
-        push!(atoms, LJSphere(species[a], frac_coord))
+        push!(atoms, frac_coord, atoms.species[a])
         if abs(charge_values[a]) > 0.0
-            push!(charges, PtCharge(charge_values[a], frac_coord))
+            push!(charges, frac_coord, charge_values[a])
         end
     end
 
@@ -276,7 +275,7 @@ function write_xyz(framework::Framework, filename::AbstractString;
     end
 
     write_xyz(atoms, x, filename, comment=comment)
-end 
+end
 
 """
     is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
@@ -294,6 +293,15 @@ between every pair of atoms and ensuring distance is greater than
 - `overlap::Bool`: A Boolean telling us if any two atoms in the framework are overlapping
 """
 function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
+    if _overlap(framework.atoms, framework.box, overlap_tol) > size(framework.atoms.xf, 2)
+#        @warn @sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+#            framework.name, overlap_tol)
+        return true
+    else
+        return false
+    end
+
+#=
     overlap = false
     for (i, atom_i) in enumerate(framework.atoms)
         for (j, atom_j) in enumerate(framework.atoms)
@@ -310,9 +318,19 @@ function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::B
         end
     end
     return overlap
+=#
 end
 
 function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
+    if _overlap(framework.charges, framework.box, overlap_tol) > size(framework.charges.xf, 2)
+#        @warn @sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+#            framework.name, overlap_tol)
+        return true
+    else
+        return false
+    end
+
+#=
     overlap = false
     for (i, charge_i) in enumerate(framework.charges)
         for (j, charge_j) in enumerate(framework.charges)
@@ -329,18 +347,24 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
         end
     end
     return overlap
+=#
 end
 
-# determine if two lennard-jones spheres overlap
-function _overlap(a1::Union{PtCharge, LJSphere}, a2::Union{PtCharge, LJSphere}, box::Box,
-                  overlap_tol::Float64)
-    dxf = a1.xf - a2.xf
-    nearest_image!(dxf)
-    if norm(box.f_to_c * dxf) < overlap_tol
-        return true
-    else
-        return false
+# determine if two lennard-jones spheres overlap, returns the number of LJSpheres that
+#   do overlap, and can then use that number to determine if they overlap or are repeats
+function _overlap(a1::Union{Charges, LJSpheres}, a2::Union{Charges, LJSpheres},
+                  box::Box, overlap_tol::Float64)
+    dxf = Array{Float64, 2}(undef, 3, 0)
+    for i = 1:size(a2.xf, 2)
+        dxf = [dxf a1.xf .- a2.xf[:, i]]
+        nearest_image!(dxf[:, i])
     end
+    dxc = box.f_to_c * dxf
+    return sum(norm.(dxc[:, i] for i = 1:size(dxc, 2)) .< overlap_tol) > (size(a1.xf, 2))
+end
+
+function _overlap(a1::Union{Charges, LJSpheres}, box::Box, overlap_tol::Float64)
+    return _overlap(a1, a1, box, overlap_tol)
 end
 
 #TODO write tests for this! one with diff elements
@@ -417,11 +441,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
 end
 
 function total_charge(framework::Framework)
-    q = 0.0
-    for charge in framework.charges
-        q += charge.q
-    end
-    return q
+    return sum(framework.charges.q)
 end
 
 """
