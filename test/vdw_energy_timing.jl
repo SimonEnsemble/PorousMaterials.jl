@@ -13,11 +13,11 @@ xenon = Molecule("Xe")
 set_fractional_coords!(xenon, sbmof1.box)
 
 @test ! charged(xenon)
-xenon.atoms[1].xf[:] = sbmof1.box.c_to_f * zeros(3)
+xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * zeros(3)
 energy = vdw_energy(sbmof1, xenon, ljforcefield)
 @test isapprox(energy, -5041.58, atol = 0.005)
-xenon.atoms[1].xf[1] = 0.494265; xenon.atoms[1].xf[2] = 2.22668; xenon.atoms[1].xf[3] = 0.450354;
-xenon.atoms[1].xf[:] = sbmof1.box.c_to_f * xenon.atoms[1].xf[:]
+xenon.atoms.xf[1, 1] = 0.494265; xenon.atoms.xf[2, 1] = 2.22668; xenon.atoms.xf[3, 1] = 0.450354;
+xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * xenon.atoms.xf[:, 1]
 energy = vdw_energy(sbmof1, xenon, ljforcefield)
 @test isapprox(energy, 12945.838, atol = 0.005)
 

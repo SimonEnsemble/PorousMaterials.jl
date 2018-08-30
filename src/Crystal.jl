@@ -135,9 +135,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             end
 
             push!(species, Symbol(line[name_to_column[atom_column_name]]))
-            #push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
-            #push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
-            #push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
             coords = [coords [mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0),
                     mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0),
                     mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0)]]
@@ -188,8 +185,18 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # Construct the unit cell box
     box = Box(a, b, c, α, β, γ)
 
+    has_charge = charge_values .!= 0
+    charge_coords = Array{Float64, 2}(undef, 3, 0)
+    non_zero_charge_values = Array{Float64, 1}()
+    for i = 1:length(has_charge)
+        if has_charge[i]
+            charge_coords = [charge_coords coords[:, i]]
+            push!(non_zero_charge_values, charge_values[i])
+        end
+    end
+
     atoms = Atoms(species, coords)
-    charges = Charges(charge_values, coords)
+    charges = Charges(non_zero_charge_values, charge_coords)
 
 #=
     for a = 1:length(atoms.species)
@@ -436,8 +443,8 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     end
     charge_coords_to_keep = Array{Float64, 2}(undef, 3, 0)
     for i = 1:length(charges_to_keep)
-        if atoms_to_keep[i]
-            charge_coords_to_keep = [charge_coords_to_keep framework.atoms.xf[:, i]]
+        if charges_to_keep[i]
+            charge_coords_to_keep = [charge_coords_to_keep framework.charges.xf[:, i]]
         end
     end
 

@@ -68,7 +68,7 @@ using Random
     # energy with PBC but padded so effetive periodic interactions are zero, bc beyond cutoff
     energy = vdw_energy(f, co2, ljff)
     atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
-    ljspheres = [LJSphere(atoms[i], x[:, i] + [50.0, 50.0, 50.0]) for i = 1:length(atoms)] # cage as LJSphere array
+    ljspheres = Atoms(atoms, x .+ [50.0, 50.0, 50.0]) #for i = 1:length(atoms) # cage as LJSphere array
     co2 = Molecule("CO2")
     translate_to!(co2, [50.0, 50.0, 50.0])
     @test isapprox(energy, vdw_energy_no_PBC(co2, ljspheres, ljff))
