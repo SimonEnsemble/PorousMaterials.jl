@@ -153,8 +153,8 @@ are applied.
 """
 function vdw_energy_no_PBC(molecule::Molecule, atoms::Atoms, ljff::LJForceField)
     energy = 0.0
-    for i = 1:size(molecule.atoms.xf, 2) # loop over all atoms in molecule
-        for j = 1:size(atoms.xf, 2)
+    for i = 1:molecule.atoms.n_atoms # loop over all atoms in molecule
+        for j = 1:atoms.n_atoms
             dx = molecule.atoms.xf[:, i] - atoms.xf[:, j]
             r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
             energy += lennard_jones(r², ljff.σ²[molecule.atoms.species[i]][atoms.species[j]],

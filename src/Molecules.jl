@@ -110,10 +110,10 @@ to a unit cell box that is a unit cube. This function adjusts the fractional coo
 of the molecule to be consistent with a different box.
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
-    for i = 1:size(molecule.atoms.xf, 2)
+    for i = 1:molecule.atoms.n_atoms
         molecule.atoms.xf[:, i] = box.c_to_f * molecule.atoms.xf[:, i]
     end
-    for j = 1:size(molecule.charges.xf, 2)
+    for j = 1:molecule.charges.n_charges
         molecule.charges.xf[:, j] = box.c_to_f * molecule.charges.xf[:, j]
     end
     molecule.xf_com[:] = box.c_to_f * molecule.xf_com
@@ -127,11 +127,11 @@ Change fractional coordinates of a molecule in the context of a given box to Car
 i.e. to correspond to fractional coords in a unit cube box.
 """
 function set_fractional_coords_to_unit_cube!(molecule::Molecule, box::Box)
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] = box.f_to_c * ljsphere.xf
+    for i = 1:molecule.atoms.n_atoms
+        molecule.atoms.xf[:, i] = box.f_to_c * molecule.atoms.xf[:, i]
     end
-    for charge in molecule.charges
-        charge.xf[:] = box.f_to_c * charge.xf
+    for i = 1:molecule.charges.n_charges
+        molecule.charges.xf[:, i] = box.f_to_c * molecule.charges.xf[:, i]
     end
     molecule.xf_com[:] = box.f_to_c * molecule.xf_com
     return nothing
@@ -146,11 +146,11 @@ Cartesian coordinate space. For the latter, a unit cell box is required for cont
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
     # move LJSphere's
-    for i = 1:size(molecule.atoms.xf, 2)
+    for i = 1:molecule.atoms.n_atoms
         molecule.atoms.xf[:, i] += dxf
     end
     # move PtCharge's
-    for j = 1:size(molecule.atoms.xf, 2)
+    for j = 1:molecule.charges.n_charges
         molecule.charges.xf[:, j] .+= dxf
     end
     # adjust center of mass
@@ -252,11 +252,11 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] = molecule.xf_com + r * (ljsphere.xf - molecule.xf_com)
+    for i = 1:molecule.atoms.n_atoms
+        molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
     end
-    for charge in molecule.charges
-        charge.xf[:] = molecule.xf_com + r * (charge.xf - molecule.xf_com)
+    for i = 1:molecule.charges.n_charges
+        molecule.charges.xf[:, i] = molecule.xf_com + r * (molecule.charges.xf[:, i] - molecule.xf_com)
     end
 end
 
@@ -285,16 +285,16 @@ end
 function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
     comment::AbstractString="")
 
-    n_atoms = sum([length(molecule.atoms) for molecule in molecules])
+    n_atoms = sum([molecule.atoms.n_atoms for molecule in molecules])
     atoms = Array{Symbol}(undef, n_atoms)
     x = zeros(Float64, 3, n_atoms)
 
     atom_counter = 0
     for molecule in molecules
-        for atom in molecule.atoms
+        for i = 1:molecule.atoms.n_atoms
             atom_counter += 1
-            x[:, atom_counter] = box.f_to_c * atom.xf
-            atoms[atom_counter] = atom.species
+            x[:, atom_counter] = box.f_to_c * molecule.atoms.xf[:, i]
+            atoms[atom_counter] = molecule.atoms.species[i]
         end
     end
     @assert(atom_counter == n_atoms)
@@ -332,11 +332,11 @@ Loop over all pairs of `LJSphere`'s in `molecule.atoms`. Return a matrix whose `
 element is the distance between atom `i` and atom `j` in the molecule.
 """
 function pairwise_atom_distances(molecule::Molecule, box::Box)
-    nb_atoms = length(molecule.atoms)
+    nb_atoms = molecule.atoms.n_atoms
     bond_lengths = zeros(nb_atoms, nb_atoms)
     for i = 1:nb_atoms
         for j = (i+1):nb_atoms
-            dx = box.f_to_c * (molecule.atoms[i].xf - molecule.atoms[j].xf)
+            dx = box.f_to_c * (molecule.atoms.xf[:, i] - molecule.atoms.xf[:, j])
             bond_lengths[i, j] = norm(dx)
             bond_lengths[j, i] = bond_lengths[i, j]
         end
@@ -351,11 +351,11 @@ Loop over all pairs of `PtCharge`'s in `molecule.charges`. Return a matrix whose
 element is the distance between pt charge `i` and pt charge `j` in the molecule.
 """
 function pairwise_charge_distances(molecule::Molecule, box::Box)
-    nb_charges = length(molecule.charges)
+    nb_charges = molecule.charges.n_charges
     bond_lengths = zeros(nb_charges, nb_charges)
     for i = 1:nb_charges
         for j = (i+1):nb_charges
-            dx = box.f_to_c * (molecule.charges[i].xf - molecule.charges[j].xf)
+            dx = box.f_to_c * (molecule.charges.xf[:, i] - molecule.charges.xf[:, j])
             bond_lengths[i, j] = norm(dx)
             bond_lengths[j, i] = bond_lengths[i, j]
         end

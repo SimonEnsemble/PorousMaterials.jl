@@ -21,20 +21,20 @@ using Random
     @test charged(molecule)
     atomic_masses = read_atomic_masses()
     @test molecule.species == :CO2
-    @test length(molecule.atoms) == 3
-    @test molecule.atoms[1].species == :C_CO2
-    @test molecule.atoms[2].species == :O_CO2
-    @test molecule.atoms[3].species == :O_CO2
-    @test all(molecule.atoms[1].xf .≈ [0.0, 0.0, 0.0])
-    @test all(molecule.atoms[2].xf .≈ [-1.16, 0.0, 0.0])
-    @test all(molecule.atoms[3].xf .≈ [1.16, 0.0, 0.0])
+    @test molecule.atoms.n_atoms == 3
+    @test molecule.atoms.species[1] == :C_CO2
+    @test molecule.atoms.species[2] == :O_CO2
+    @test molecule.atoms.species[3] == :O_CO2
+    @test all(molecule.atoms.xf[:, 1] .≈ [0.0, 0.0, 0.0])
+    @test all(molecule.atoms.xf[:, 2] .≈ [-1.16, 0.0, 0.0])
+    @test all(molecule.atoms.xf[:, 3] .≈ [1.16, 0.0, 0.0])
     @test all(molecule.xf_com .≈ [0.0, 0.0, 0.0])
-    @test length(molecule.charges) == 3
-    @test molecule.charges[1].q ≈ 0.7
-    @test molecule.charges[2].q ≈ -0.35
-    @test molecule.charges[3].q ≈ -0.35
+    @test molecule.charges.n_charges == 3
+    @test molecule.charges.q[1] ≈ 0.7
+    @test molecule.charges.q[2] ≈ -0.35
+    @test molecule.charges.q[3] ≈ -0.35
     for i = 1:3
-        @test all(molecule.charges[i].xf ≈ molecule.atoms[i].xf)
+        @test all(molecule.charges.xf[:, i] ≈ molecule.atoms.xf[:, i])
     end
 
     m = Molecule("CO2")
@@ -107,7 +107,7 @@ using Random
     for m in ms
         translate_to!(m, rand_point_on_unit_sphere())
     end
-    @test all(isapprox.([norm(m.atoms[1].xf) for m in ms], 1.0))
+    @test all(isapprox.([norm(m.atoms.xf[:, 1]) for m in ms], 1.0))
     write_xyz(ms, box, "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
 
@@ -197,10 +197,10 @@ using Random
         rotate!(m2, box)
     end
     @test isapprox(m2.xf_com, box.c_to_f * [5.0, 10.0, 15.0])
-    @test isapprox(norm(box.f_to_c * (m2.charges[1].xf - m2.charges[2].xf)),
-                   norm(box.f_to_c * (m1.charges[1].xf - m1.charges[2].xf)))
-    @test isapprox(norm(box.f_to_c * (m2.atoms[1].xf - m2.atoms[2].xf)),
-                   norm(box.f_to_c * (m1.atoms[1].xf - m1.atoms[2].xf)))
+    @test isapprox(norm(box.f_to_c * (m2.charges.xf[:, 1] - m2.charges.xf[:, 2])),
+                   norm(box.f_to_c * (m1.charges.xf[:, 1] - m1.charges.xf[:, 2])))
+    @test isapprox(norm(box.f_to_c * (m2.atoms.xf[:, 1] - m2.atoms.xf[:, 2])),
+                   norm(box.f_to_c * (m1.atoms.xf[:, 1] - m1.atoms.xf[:, 2])))
     m2_old = deepcopy(m2)
     rotate!(m2, box)
     @test ! isapprox(m2_old, m2)
@@ -233,12 +233,12 @@ using Random
     println("charge dist ", pairwise_charge_distances(co2, box))
     @test isapprox(atom_distances, pairwise_atom_distances(co2, box), atol=1e-10)
     @test isapprox(charge_distances, pairwise_charge_distances(co2, box), atol=1e-10)
-    @test isapprox(co2.xf_com, co2.atoms[1].xf, atol=1e-12) # should be on carbon
+    @test isapprox(co2.xf_com, co2.atoms.xf[:, 1], atol=1e-12) # should be on carbon
     #.atoms and charges shld have same coords still (this is just for CO2...
-    @test all([isapprox(co2.atoms[k].xf, co2.charges[k].xf, atol=1e-12) for k = 1:3])
+    @test all([isapprox(co2.atoms.xf[:, k], co2.charges.xf[:, k], atol=1e-12) for k = 1:3])
     # shld still be linear...
-    co_vector1 = box.f_to_c * (co2.atoms[2].xf - co2.atoms[1].xf)
-    co_vector2 = box.f_to_c * (co2.atoms[3].xf - co2.atoms[1].xf)
+    co_vector1 = box.f_to_c * (co2.atoms.xf[:, 2] - co2.atoms.xf[:, 1])
+    co_vector2 = box.f_to_c * (co2.atoms.xf[:, 3] - co2.atoms.xf[:, 1])
     @test isapprox(dot(co_vector1, co_vector2), -norm(co_vector1)^2, atol=1e-10)
 end
 end
