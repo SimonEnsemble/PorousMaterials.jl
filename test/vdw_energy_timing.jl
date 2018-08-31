@@ -1,8 +1,8 @@
-
 using BenchmarkTools, Compat
 using PorousMaterials
 using Test
 using Random
+using Printf
 
 ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 
@@ -24,18 +24,27 @@ energy = vdw_energy(sbmof1, xenon, ljforcefield)
 
 # guest-host vdw_energy timing
 vdw_energy(sbmof1, xenon, ljforcefield)
+println("Guest-Host Van der Waals energy computation:")
 @btime vdw_energy(sbmof1, xenon, ljforcefield)
 
 # guest-guest vdw_energy timing
 Random.seed!(1234) # so that every trial will be the same
-box = UnitCube()
+box = Box(100.0, 100.0, 100.0, π/2, π/2, π/2)
 co2 = Molecule("CO2")
 ms = Array{Molecule, 1}()
-for i = 1:100 # give a decent number of molecules to test
+num_molecules = 100
+while length(ms) < num_molecules # give a decent number of molecules to test
     insert_molecule!(ms, box, co2)
+    # Ensure that no molecules have infinite lj energy, so that it calculates
+    #   the interaction between all molecules
+    if vdw_energy(length(ms), ms, ljforcefield, box) >= Inf
+        pop!(ms)
+    end
 end
 vdw_energy(1, ms, ljforcefield, box)
+println("Guest-Guest Van der Waals energy computation for a single molecule:")
 @btime vdw_energy(1, ms, ljforcefield, box)
+@printf("Guest-Guest Van der Waals energy computation for all %i molecules:\n", num_molecules)
 @btime begin
     for i = 1:length(ms)
         vdw_energy(i, ms, ljforcefield, box)

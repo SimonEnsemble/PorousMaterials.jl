@@ -52,7 +52,7 @@ image convention can be applied. See [`replicate`](@ref).
 # Returns
 - `energy::Float64`: Van der Waals interaction energy
 """
-function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
+@inline function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
 	energy = 0.0
     for i = 1:molecule.atoms.n_atoms # loop over all atoms in molecule
         @inbounds dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[:, i])
@@ -108,12 +108,13 @@ function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljff::LJFor
             @inbounds dxf .= box.f_to_c * dxf
             @inbounds dxf .= dxf .* dxf
             for other_atom_id = 1:molecules[other_molecule_id].atoms.n_atoms
-                r² = dxf[1, other_atom_id] + dxf[2, other_atom_id] + dxf[3, other_atom_id]
+                @inbounds r² = dxf[1, other_atom_id] + dxf[2, other_atom_id] + dxf[3, other_atom_id]
                 if r² < ljff.cutoffradius_squared # within cutoff radius
                     if r² < R_OVERLAP_squared # overlapping atoms
                         return Inf
                     else # not overlapping
-                        energy += lennard_jones(r², ljff.σ²[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]],
+                        @inbounds energy += lennard_jones(r²,
+                                            ljff.σ²[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]],
                                             ljff.ϵ[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]])
                     end
                 end
