@@ -94,16 +94,29 @@ using the nearest image convention.
 function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
     energy = 0.0
     # Loop over all atoms in molecules[molecule_id]
-    for this_matom in molecules[molecule_id].atoms
+    for atom_id = 1:molecules[molecule_id].atoms.n_atoms
         # look at its interaction with all other molecules
-        for (other_molecule_id, other_molecule) in enumerate(molecules)
+        for other_molecule_id = 1:length(molecules)
             # molecule cannot interact with itself
             if other_molecule_id == molecule_id
                 continue
             end
             # loop over every atom in the other molecule
-            for other_matom in other_molecule.atoms
-                energy += vdw_energy(this_matom, other_matom, ljff, box)
+            @inbounds dxf = broadcast(-, molecules[molecule_id].atoms.xf[:, atom_id],
+                        molecules[other_molecule_id].atoms.xf)
+            nearest_image!(dxf)
+            @inbounds dxf .= box.f_to_c * dxf
+            @inbounds dxf .= dxf .* dxf
+            for other_atom_id = 1:molecules[other_molecule_id].atoms.n_atoms
+                r² = dxf[1, other_atom_id] + dxf[2, other_atom_id] + dxf[3, other_atom_id]
+                if r² < ljff.cutoffradius_squared # within cutoff radius
+                    if r² < R_OVERLAP_squared # overlapping atoms
+                        return Inf
+                    else # not overlapping
+                        energy += lennard_jones(r², ljff.σ²[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]],
+                                            ljff.ϵ[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]])
+                    end
+                end
             end
         end
     end

@@ -18,10 +18,10 @@ using Random
     xenon = Molecule("Xe")
     set_fractional_coords!(xenon, sbmof1.box)
     @test ! charged(xenon)
-    xenon.atoms[1].xf[:] = sbmof1.box.c_to_f * zeros(3)
+    xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * zeros(3)
     energy = vdw_energy(sbmof1, xenon, ljforcefield)
     @test isapprox(energy, -5041.58, atol = 0.005)
-    xenon.atoms[1].xf[:] = sbmof1.box.c_to_f * [0.494265, 2.22668, 0.450354]
+    xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * [0.494265, 2.22668, 0.450354]
     energy = vdw_energy(sbmof1, xenon, ljforcefield)
     @test isapprox(energy, 12945.838, atol = 0.005)
 

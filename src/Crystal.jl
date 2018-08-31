@@ -285,15 +285,15 @@ end
 # doc string in Misc.jl
 function write_xyz(framework::Framework, filename::AbstractString;
                       comment::AbstractString="", center::Bool=false)
-    atoms = [atom.species for atom in framework.atoms]
+    atoms = framework.atoms.species
     x = zeros(Float64, 3, framework.atoms.n_atoms)
-    for (a, atom) in enumerate(framework.atoms)
-        x[:, a] = framework.box.f_to_c * atom.xf
+    for i = 1:framework.atoms.n_atoms
+        x[:, i] = framework.box.f_to_c * framework.atoms.xf[:, i]
     end
     if center
         center_of_box = framework.box.f_to_c * [0.5, 0.5, 0.5]
-        for a = 1:framework.atoms.n_atoms
-            x[:, a] -= center_of_box
+        for i = 1:framework.atoms.n_atoms
+            x[:, i] -= center_of_box
         end
     end
 
