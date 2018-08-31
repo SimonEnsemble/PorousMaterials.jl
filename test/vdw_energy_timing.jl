@@ -2,6 +2,7 @@
 using BenchmarkTools, Compat
 using PorousMaterials
 using Test
+using Random
 
 ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 
@@ -21,5 +22,22 @@ xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * xenon.atoms.xf[:, 1]
 energy = vdw_energy(sbmof1, xenon, ljforcefield)
 @test isapprox(energy, 12945.838, atol = 0.005)
 
+# guest-host vdw_energy timing
 vdw_energy(sbmof1, xenon, ljforcefield)
 @btime vdw_energy(sbmof1, xenon, ljforcefield)
+
+# guest-guest vdw_energy timing
+Random.seed!(1234) # so that every trial will be the same
+box = UnitCube()
+co2 = Molecule("CO2")
+ms = Array{Molecule, 1}()
+for i = 1:100 # give a decent number of molecules to test
+    insert_molecule!(ms, box, co2)
+end
+vdw_energy(1, ms, ljforcefield, box)
+@btime vdw_energy(1, ms, ljforcefield, box)
+@btime begin
+    for i = 1:length(ms)
+        vdw_energy(i, ms, ljforcefield, box)
+    end
+end
