@@ -136,5 +136,4 @@ function reinsert_molecule!(molecule::Molecule, box::Box)
 end
 
 # do we need to conduct a rotation or not? # TODO what if it is an ion? No need to rotate...
-rotatable(molecule::Molecule) = (length(molecule.atoms) + length(molecule.charges) > 1)::Bool
-
+rotatable(molecule::Molecule) = (molecule.atoms.n_atoms + molecule.charges.n_charges > 1)::Bool

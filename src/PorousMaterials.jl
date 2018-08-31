@@ -32,7 +32,7 @@ include("Forcefield.jl")
 include("Energetics_Util.jl")
 include("VdWEnergetics.jl")
 #include("ElectrostaticEnergetics.jl")
-#include("MChelpers.jl")
+include("MChelpers.jl")
 include("Grid.jl")
 #include("EOS.jl")
 #include("Henry.jl")
@@ -74,7 +74,7 @@ export
        #electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total,
 
        # MChelpers.jl
-       #insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,
+       insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,
 
        # Grid.jl
        apply_periodic_boundary_condition!,

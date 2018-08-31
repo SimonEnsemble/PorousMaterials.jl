@@ -63,7 +63,7 @@ using Random
     translate_to!(molecule, [26.0, -0.2, 12.], box)
     apply_periodic_boundary_condition!(molecule)
     @test isapprox(box.f_to_c * molecule.xf_com, [1.0, 24.8, 12.0])
-    @test isapprox(box.f_to_c * molecule.atoms[1].xf, [1.0, 24.8, 12.0])
+    @test isapprox(box.f_to_c * molecule.atoms.xf[:, 1], [1.0, 24.8, 12.0])
 
     translation_old_molecule_stored_properly = true
     translation_coords_changed = true
