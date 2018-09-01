@@ -259,6 +259,7 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
+    # TODO change this to use broadcasting
     for i = 1:molecule.atoms.n_atoms
         molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
     end
