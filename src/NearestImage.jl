@@ -8,37 +8,13 @@ space; modifies `dxf` for nearest image convention. Fractional coordinates here 
 Warning: this assumes the two molecules are in the box described by fractional coords [0, 1]³.
 
 # Arguments
-- `dxf::Array{Float64, 1}`: A vector between two atoms in fractional space
+- `dxf::Array{Float64}`: A vector between two atoms in fractional space
 """
-@inline function nearest_image!(dxf::Array{Float64, 2})
+@inline function nearest_image!(dxf::Array{Float64})
     for i in eachindex(dxf)
         @inbounds if abs(dxf[i]) > 0.5
             @inbounds dxf[i] -= sign(dxf[i])
         end
     end
     return nothing
-end
-
-@inline function nearest_image!(dxf::Array{Float64, 1})
-    for i in eachindex(dxf) # loop over components
-        @inbounds if abs(dxf[i]) > 0.5
-            @inbounds dxf[i] -= sign(dxf[i])
-        end
-    end
-    return nothing
-end
-
-@inline function nearest_r²(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
-    # vector from y to x in fractional coordinate space
-    @inbounds dxf = xf .- yf
-    # apply nearest image convention for periodic boundary conditions
-    nearest_image!(dxf)
-    # convert to cartesian
-    @inbounds dx = box.f_to_c * dxf
-    # return r²
-    @inbounds return dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
-end
-
-@inline function nearest_r(xf::Array{Float64, 1}, yf::Array{Float64, 1}, box::Box)
-    return sqrt(nearest_r²(xf, yf, box))
 end
