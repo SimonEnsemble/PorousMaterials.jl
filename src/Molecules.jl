@@ -40,8 +40,10 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
-
-    # Read in Lennard Jones spheres
+    
+    ###
+    #  Read in Lennard Jones spheres
+    ###
     atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
     if ! isfile(atomsfilename)
         error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in
@@ -69,9 +71,12 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         push!(atom_species, Symbol(atom))
     end
     x_com /= total_mass
+    # construct atoms attribute of molecule
     atoms = Atoms(atom_species, atom_coords)
-
-    # Read in point charges
+    
+    ###
+    #  Read in point charges
+    ###
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
     if ! isfile(chargesfilename)
         error(@sprintf("No file %s exists. Even if there are no point charges in %s,
@@ -87,8 +92,10 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         charge_coords = [charge_coords [row[:x], row[:y], row[:z]]]
         push!(charge_vals, row[:q])
     end
+    # construct charges attribute of molecule
     charges = Charges(charge_vals, charge_coords)
-
+    
+    # construct molecule
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
     # check for charge neutrality
@@ -313,9 +320,7 @@ Sum up point charges on a molecule.
 # Returns
 - `total_charge::Float64`: The sum of the point charges of `molecule`
 """
-function total_charge(molecule::Molecule)
-    return sum(molecule.charges.q)
-end
+total_charge(molecule::Molecule) = (molecule.charges.n_charges == 0) ? 0.0 : sum(molecule.charges.q)
 
 function charged(molecule::Molecule; verbose::Bool=false)
     charged_flag = molecule.charges.n_charges > 0
