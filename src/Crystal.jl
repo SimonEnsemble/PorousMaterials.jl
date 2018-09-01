@@ -184,28 +184,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     # Construct the unit cell box
     box = Box(a, b, c, α, β, γ)
-
-    charge_coords = Array{Float64, 2}(undef, 3, 0)
-    non_zero_charge_values = Array{Float64, 1}()
-    for i = 1:length(charge_values)
-        if charge_values[i] != 0.0
-            charge_coords = [charge_coords coords[:, i]]
-            push!(non_zero_charge_values, charge_values[i])
-        end
-    end
-
+    # construct atoms attribute of framework
     atoms = Atoms(species, coords)
-    charges = Charges(non_zero_charge_values, charge_coords)
-
-#=
-    for a = 1:length(atoms.species)
-        frac_coord = [xf[a], yf[a], zf[a]]
-        push!(atoms, frac_coord, atoms.species[a])
-        if abs(charge_values[a]) > 0.0
-            push!(charges, frac_coord, charge_values[a])
-        end
-    end
-=#
+    # construct charges attribute of framework; include only nonzero charges
+    idx_nz = charge_values .!= 0.0
+    charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
     framework = Framework(filename, box, atoms, charges)
 
@@ -458,9 +441,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     return new_framework
 end
 
-function total_charge(framework::Framework)
-    return sum(framework.charges.q)
-end
+total_charge(framework::Framework) = (framework.charges.n_charges == 0) ? 0.0 : sum(framework.charges.q)
 
 """
     charge_neutral_flag = charge_neutral(framework, net_charge_tol) # true or false
