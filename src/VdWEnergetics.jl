@@ -21,6 +21,31 @@ the potential energy in units Kelvin (well, whatever the units of ϵ are).
 	return 4.0 * ϵ * ratio * (ratio - 1.0)
 end
 
+# generic atoms-atoms van der waals energy function; pass bigger list of atoms second for speed
+@inline function vdw_energy(atoms_i::Atoms, atoms_j::Atoms, box::Box, ljff::LJForceField)
+	energy = 0.0
+    for i = 1:atoms_i.n_atoms
+        # vectors from atom i to atoms_j in fractional space
+        @inbounds dxf = broadcast(-, atoms_j.xf, atoms_i.xf[:, i])
+        nearest_image!(dxf)
+        # convert to Cartesian coords
+        @inbounds dxf .= box.f_to_c * dxf
+        for j = 1:atoms_j.n_atoms
+            @inbounds r² = dxf[1, j] ^ 2 + dxf[2, j] ^ 2 + dxf[3, j] ^ 2
+            if r² < ljff.cutoffradius_squared # within cutoff radius
+                if r² < R_OVERLAP_squared # overlapping atoms
+                    return Inf # no sense in continuing to next atom and adding Inf
+                else # not overlapping
+                    @inbounds energy += lennard_jones(r²,
+                            ljff.σ²[atoms_i.species[i]][atoms_j.species[j]],
+                             ljff.ϵ[atoms_i.species[i]][atoms_j.species[j]])  
+                end
+            end
+        end
+    end
+	return energy
+end
+
 """
     energy = vdw_energy(framework, molecule, ljforcefield)
 
@@ -39,29 +64,7 @@ image convention can be applied. See [`replicate`](@ref).
 - `energy::Float64`: Van der Waals interaction energy
 """
 @inline function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
-	energy = 0.0
-    for i = 1:molecule.atoms.n_atoms # loop over all atoms in molecule
-        # vectors from framework to molecule atom in fractional space
-        @inbounds dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[:, i])
-        nearest_image!(dxf)
-        # convert to Cartesian coords
-        @inbounds dxf .= framework.box.f_to_c * dxf
-        # set up for sum of square components to get distance
-        @inbounds dxf .= dxf .* dxf 
-        for j = 1:framework.atoms.n_atoms
-            @inbounds r² = dxf[1, j] + dxf[2, j] + dxf[3, j]
-            if r² < ljff.cutoffradius_squared # within cutoff radius
-                if r² < R_OVERLAP_squared # overlapping atoms
-                    return Inf # no sense in continuing to next atom and adding Inf
-                else # not overlapping
-                    @inbounds energy += lennard_jones(r²,
-                            ljff.σ²[molecule.atoms.species[i]][framework.atoms.species[j]],
-                            ljff.ϵ[ molecule.atoms.species[i]][framework.atoms.species[j]])
-                end
-            end
-        end
-    end
-	return energy
+    return vdw_energy(molecule.atoms, framework.atoms, framework.box, ljff)
 end
 
 """
@@ -82,34 +85,13 @@ using the nearest image convention.
 """
 function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
     energy = 0.0
-    # Loop over all atoms in molecules[molecule_id]
-    for atom_id = 1:molecules[molecule_id].atoms.n_atoms
-        # look at its interaction with all other molecules
-        for other_molecule_id = 1:length(molecules)
-            # molecule cannot interact with itself
-            if other_molecule_id == molecule_id
-                continue
-            end
-            # vectors from molecule atom to all atoms in other molecule
-            @inbounds dxf = broadcast(-, molecules[other_molecule_id].atoms.xf,
-                                         molecules[molecule_id].atoms.xf[:, atom_id])
-            nearest_image!(dxf)
-            @inbounds dxf .= box.f_to_c * dxf
-            @inbounds dxf .= dxf .* dxf
-            # loop over every atom in the other molecule
-            for other_atom_id = 1:molecules[other_molecule_id].atoms.n_atoms
-                @inbounds r² = dxf[1, other_atom_id] + dxf[2, other_atom_id] + dxf[3, other_atom_id]
-                if r² < ljff.cutoffradius_squared # within cutoff radius
-                    if r² < R_OVERLAP_squared # overlapping atoms
-                        return Inf
-                    else # not overlapping
-                        @inbounds energy += lennard_jones(r²,
-                                ljff.σ²[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]],
-                                 ljff.ϵ[molecules[molecule_id].atoms.species[atom_id]][molecules[other_molecule_id].atoms.species[other_atom_id]])
-                    end
-                end
-            end
+    # loop over all other molecules
+    for other_molecule_id = 1:length(molecules)
+        # molecule cannot interact with itself
+        if other_molecule_id == molecule_id
+            continue
         end
+        @inbounds energy += vdw_energy(molecules[molecule_id].atoms, molecules[other_molecule_id].atoms, box, ljff)
     end
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
