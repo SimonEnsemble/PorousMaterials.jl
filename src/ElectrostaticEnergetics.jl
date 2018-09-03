@@ -227,9 +227,10 @@ function setup_Ewald_sum(framework::Framework, sr_cutoff_r::Float64; ϵ::Float64
     end
     # pre-allocate memory for e^{i k vec(k) ⋅ r}. Don't put these in EwaldParams for speed,
     #  so they are passed as reference. These are OffsetArrays, which changes indexing scheme.
-    max_kreps = maximum(kreps)
-    eikr = OffsetArray{Complex{Float64}}(undef, 1:framework.charges.n_charges, 1:3, -max_kreps:max_kreps) # remove negative kreps[1] and take advantage of symmetry
-    return eparams, eikr
+    eikar = OffsetArray{Complex{Float64}}(undef, 1:framework.charges.n_charges, 0:kreps[1]) # remove negative kreps[1] and take advantage of symmetry
+    eikbr = OffsetArray{Complex{Float64}}(undef, 1:framework.charges.n_charges, -kreps[2]:kreps[2])
+    eikcr = OffsetArray{Complex{Float64}}(undef, 1:framework.charges.n_charges, -kreps[3]:kreps[3])
+    return eparams, eikar, eikbr, eikcr
 end
 
 """
@@ -240,33 +241,23 @@ Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fil
 
 eikr: charges, then kreps, then abc
 """
-@inline function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_dx::Array{Float64, 2}, 
-                            kreps::Tuple{Int, Int, Int})
+@inline function fill_eikr!(eikr::OffsetArray{Complex{Float64}}, k_dot_dx::Array{Float64, 1}, 
+                            krep::Int, incl_neg_reps::Bool)
     # explicitly compute for k = 1, k = 0
-    @inbounds eikr[:, :, 0] .= exp(0.0 * im)
-    @inbounds eikr[:, :, 1] .= exp.(im * transpose(k_dot_dx))
-    @inbounds eikr[:, :, -1] .= conj.(eikr[:, :, 1])
+    @inbounds eikr[:, 0] .= exp(0.0 * im)
+    @inbounds eikr[:, 1] .= exp.(im * k_dot_dx)
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
-    for k = 2:maximum(kreps)
-        @inbounds eikr[:, :, k] .= eikr[:, :, k - 1] .* eikr[:, :, 1]
-        @inbounds eikr[:, :, -k] .= conj.(eikr[:, :, k])
+    for k = 2:krep
+        @inbounds eikr[:, k] .= eikr[:, k - 1] .* eikr[:, 1]
     end
- #     for abc = 1:3
- #         # recursion relation for higher frequencies to avoid expensive computing of cosine.
- #         #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
- #  #         @inbounds for k = 2:kreps[abc]
- #  #             @inbounds eikr[:, k, abc] .= eikr[:, k - 1, abc] .* eikr[:, 1, abc]
- #  #         end
- # 
- #         # negative kreps are complex conjugate of positive ones.
- #         #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
- #         if abc != 1
- #             @inbounds for k = -kreps[abc]:-1
- #                 @inbounds eikr[:, k, abc] .= conj.(eikr[:, -k, abc])
- #             end
- #         end
- #     end
+    # negative kreps are complex conjugate of positive ones.
+    #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
+    if incl_neg_reps
+        for k = -krep:-1
+            @inbounds eikr[:, k] .= conj.(eikr[:, -k])
+        end
+    end
 end
 """
     ϕ = electrostatic_potential_energy(framework, molecule, eparams, kvectors,
@@ -303,10 +294,13 @@ electrostatic potential inside `framework` at point `x` (units: K)
 function electrostatic_potential_energy(framework::Framework,
                                         molecule::Molecule,
                                         eparams::EwaldParams,
-                                        eikr::OffsetArray{Complex{Float64}})
+                                        eikar::OffsetArray{Complex{Float64}},
+                                        eikbr::OffsetArray{Complex{Float64}},
+                                        eikcr::OffsetArray{Complex{Float64}})
     ϕ = 0.0
     # loop over charges of the molecule
     for c = 1:molecule.charges.n_charges
+        ϕ_c = 0.0 # owing to this one charge in this molecule
         @inbounds dxf = broadcast(-, framework.charges.xf, molecule.charges.xf[:, c])
 
         ###
@@ -314,7 +308,9 @@ function electrostatic_potential_energy(framework::Framework,
         ###
         @inbounds k_dot_dx = framework.box.reciprocal_lattice * framework.box.f_to_c * dxf
 
-        fill_eikr!(eikr, k_dot_dx, eparams.kreps)
+        fill_eikr!(eikar, k_dot_dx[1, :], eparams.kreps[1], false)
+        fill_eikr!(eikbr, k_dot_dx[2, :], eparams.kreps[2], true)
+        fill_eikr!(eikcr, k_dot_dx[3, :], eparams.kreps[3], true)
         
         # loop over kevectors
         for kvec in eparams.kvecs
@@ -324,10 +320,8 @@ function electrostatic_potential_energy(framework::Framework,
             #     e^{i kb r * vec(kc)} where r = x - xᵢ
             #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
             for a = 1:framework.charges.n_charges
-                @inbounds ϕ += kvec.wt * molecule.charges.q[c] * framework.charges.q[a] * real.(eikr[a, 1, kvec.ka] .* eikr[a, 2, kvec.kb] .* eikr[a, 3, kvec.kc])
+                @inbounds ϕ_c += kvec.wt * framework.charges.q[a] * real(eikar[a, kvec.ka] * eikbr[a, kvec.kb] * eikcr[a, kvec.kc])
             end
- #             @inbounds blah = framework.charges.q .* real.(eikr[:, 1, kvec.ka] .* eikr[:, 2, kvec.kb] .* eikr[:, 3, kvec.kc])
- #             @inbounds ϕ += kvec.wt * molecule.charges.q[c] * sum(blah)
         end
 
         ###
@@ -339,14 +333,14 @@ function electrostatic_potential_energy(framework::Framework,
         # set up for sum of square components to get distance
         @inbounds dxf .= dxf .* dxf 
         for a = 1:framework.charges.n_charges
-            r = sqrt(dxf[1, a] + dxf[2, a] + dxf[3, a])
+            @fastmath @inbounds r = sqrt(dxf[1, a] + dxf[2, a] + dxf[3, a])
             if r < eparams.sr_cutoff_r
-                ϕ += molecule.charges.q[c] * framework.charges.q[a] / r * erfc(r * eparams.α) / FOUR_π_ϵ₀
+                @inbounds @fastmath ϕ_c += framework.charges.q[a] / r * erfc(r * eparams.α) / FOUR_π_ϵ₀
             end
         end
-
-        return ϕ
+        ϕ += ϕ_c * molecule.charges.q[c]
     end
+    return ϕ
 end
 
  # # long-range contribution to Ewald sum
