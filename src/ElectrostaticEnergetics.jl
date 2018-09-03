@@ -323,8 +323,11 @@ function electrostatic_potential_energy(framework::Framework,
             #     e^{i kb r * vec(kb)} *
             #     e^{i kb r * vec(kc)} where r = x - xᵢ
             #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-            @inbounds blah = framework.charges.q .* real.(eikr[:, 1, kvec.ka] .* eikr[:, 2, kvec.kb] .* eikr[:, 3, kvec.kc])
-            @inbounds ϕ += kvec.wt * molecule.charges.q[c] * sum(blah)
+            for a = 1:framework.charges.n_charges
+                @inbounds ϕ += kvec.wt * molecule.charges.q[c] * framework.charges.q[a] * real.(eikr[a, 1, kvec.ka] .* eikr[a, 2, kvec.kb] .* eikr[a, 3, kvec.kc])
+            end
+ #             @inbounds blah = framework.charges.q .* real.(eikr[:, 1, kvec.ka] .* eikr[:, 2, kvec.kb] .* eikr[:, 3, kvec.kc])
+ #             @inbounds ϕ += kvec.wt * molecule.charges.q[c] * sum(blah)
         end
 
         ###
