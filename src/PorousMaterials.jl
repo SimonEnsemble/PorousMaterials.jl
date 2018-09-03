@@ -31,7 +31,7 @@ include("Molecules.jl")
 include("Forcefield.jl")
 include("Energetics_Util.jl")
 include("VdWEnergetics.jl")
-#include("ElectrostaticEnergetics.jl")
+include("ElectrostaticEnergetics.jl")
 include("MChelpers.jl")
 include("Grid.jl")
 #include("EOS.jl")
@@ -59,7 +59,7 @@ export
        # Molecules.jl
        Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged,
-       pairwise_atom_distances, pairwise_charge_distances,
+       pairwise_atom_distances, pairwise_charge_distances, Ion,
 
        # Forcefield.jl
        LJForceField, replication_factors, check_forcefield_coverage,
@@ -71,7 +71,7 @@ export
        lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
        # ElectrostaticEnergetics.jl
-       #electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total,
+       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total,
 
        # MChelpers.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,
