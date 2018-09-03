@@ -190,18 +190,18 @@ end
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
     println(io, "Center of mass (fractional coords): ", molecule.xf_com)
-    if length(molecule.atoms) > 0
-        print(io, "Lennard-Jones spheres: ")
-        for ljsphere in molecule.atoms
-            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", ljsphere.species,
-                    ljsphere.xf[1], ljsphere.xf[2], ljsphere.xf[3])
+    if molecule.atoms.n_atoms > 0
+        print(io, "Atoms:\n")
+        for i = 1:molecule.atoms.n_atoms
+            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                molecule.atoms.xf[:, i]...)
         end
     end
-    if length(molecule.charges) > 0
+    if molecule.charges.n_charges > 0
         print(io, "\nPoint charges: ")
-        for charge in molecule.charges
-            @printf(io, "\n\tq = %f, xf = [%.3f, %.3f, %.3f]", charge.q,
-                    charge.xf[1], charge.xf[2], charge.xf[3])
+        for i = 1:molecule.charges.n_charges
+            @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                molecule.charges.xf[:, i]...)
         end
     end
 end
@@ -368,3 +368,10 @@ function pairwise_charge_distances(molecule::Molecule, box::Box)
     end
     return bond_lengths
 end
+
+# facilitate constructing a point charge
+Ion(q::Float64, xf::Array{Float64, 1}, species::Symbol=:ion) = Molecule(
+    species,
+    Atoms(0, Symbol[], zeros(0, 0)),
+    Charges(1, [q], reshape(xf, (3, 1))), 
+    xf)
