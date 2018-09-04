@@ -6,7 +6,7 @@ using DataFrames
 using JLD2
 using Printf
 
-ig_tests = true
+ig_tests = false
 xe_in_sbmof1_tests = true
 co2_tests = true
 
@@ -19,7 +19,7 @@ co2_tests = true
 if ig_tests
     empty_space = Framework("empty_box.cssr") # zero atoms!
     ideal_gas = Molecule("IG")
-    @assert (length(empty_space.atoms) == 0)
+    @assert (empty_space.n_atoms == 0)
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
     fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar

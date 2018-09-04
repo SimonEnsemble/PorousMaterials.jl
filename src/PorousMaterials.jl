@@ -34,9 +34,9 @@ include("VdWEnergetics.jl")
 include("ElectrostaticEnergetics.jl")
 include("MChelpers.jl")
 include("Grid.jl")
-#include("EOS.jl")
-#include("Henry.jl")
-#include("GCMC.jl")
+include("EOS.jl")
+include("Henry.jl")
+include("GCMC.jl")
 
 export
        # Box.jl
@@ -78,15 +78,15 @@ export
 
        # Grid.jl
        apply_periodic_boundary_condition!,
-       Grid, write_cube, read_cube, energy_grid#,
+       Grid, write_cube, read_cube, energy_grid,
 
        # EOS.jl
-       #calculate_properties, PengRobinsonGas,
+       calculate_properties, PengRobinsonGas,
 
        # GCMC.jl
-       #gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
-       #gcmc_result_savename, GCMCstats, MarkovCounts,
+       gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
+       gcmc_result_savename, GCMCstats, MarkovCounts,
 
        # Henry.jl
-       #henry_coefficient, henry_result_savename
+       henry_coefficient, henry_result_savename
 end
