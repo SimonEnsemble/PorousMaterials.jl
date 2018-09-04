@@ -14,7 +14,8 @@ using Random
     rep_factors = replication_factors(framework, sr_cutoff_r)
     sim_box = replicate(framework.box, rep_factors)
     framework = replicate(framework, rep_factors)
-    eparams, eikar, eikbr, eikcr = setup_Ewald_sum(framework, sr_cutoff_r, verbose=false, ϵ=1e-6)
+    eparams = setup_Ewald_sum(framework.box, sr_cutoff_r, verbose=false, ϵ=1e-6)
+    eikr = Eikr(framework, eparams)
     q_test = 0.8096
     # ensure getting right Ewald settings
     #  note there are differnet method to choose
@@ -31,17 +32,17 @@ using Random
 
     xf = framework.box.c_to_f * [9.535619863743, 20.685576379935, 0.127344239990]
     m = Ion(q_test, xf)
-    ϕ = electrostatic_potential_energy(framework, m, eparams, eikar, eikbr, eikcr)
+    ϕ = electrostatic_potential_energy(framework, m, eparams, eikr)
     @test isapprox(total(ϕ), 111373.38, atol=2.5)
 
     xf = framework.box.c_to_f * [4.269654927228, 23.137319129548, 28.352847101096]
     m = Ion(q_test, xf)
-    ϕ = electrostatic_potential_energy(framework, m, eparams, eikar, eikbr, eikcr)
+    ϕ = electrostatic_potential_energy(framework, m, eparams, eikr)
     @test isapprox(total(ϕ), -531.0, atol=0.5)
 
     xf = framework.box.c_to_f * [-0.047382031804, 7.209555961450, 5.158180463556]
     m = Ion(q_test, xf)
-    ϕ = electrostatic_potential_energy(framework, m, eparams, eikar, eikbr, eikcr)
+    ϕ = electrostatic_potential_energy(framework, m, eparams, eikr)
     @test isapprox(total(ϕ), -2676.8230141, atol=0.5)
 
     # NIST data to test Ewald sums
@@ -109,19 +110,17 @@ using Random
         kvec_keep = [kvec.ka ^ 2 + kvec.kb ^2 + kvec.kc ^2 < 27 for kvec in kvecs]
         kvecs = kvecs[kvec_keep]
         eparams = PorousMaterials.EwaldParams(kreps, α, sr_cutoff_r, kvecs)
-        eikar = OffsetArray{Complex{Float64}}(undef, 1:3, 0:kreps[1]) # 3 charges per water
-        eikbr = OffsetArray{Complex{Float64}}(undef, 1:3, -kreps[2]:kreps[2])
-        eikcr = OffsetArray{Complex{Float64}}(undef, 1:3, -kreps[3]:kreps[3])
-        ϕ = electrostatic_potential_energy(ms, eparams, box, eikar, eikbr, eikcr)
+        eikr = Eikr(ms[1], eparams)
+        ϕ = electrostatic_potential_energy(ms, eparams, box, eikr)
         @test isapprox(ϕ.self, energies_should_be[c]["self"], rtol=0.00001)
         @test isapprox(ϕ.sr, energies_should_be[c]["real"], rtol=0.00001)
         @test isapprox(ϕ.lr_excluding_own_images + ϕ.lr_own_images, energies_should_be[c]["fourier"],  rtol=0.00001)
         @test isapprox(ϕ.intra, energies_should_be[c]["intra"],  rtol=0.0001)
         # test incremented potential energy
-        @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy(ms, eparams, box, eikar, eikbr, eikcr)), total(ϕ), atol=0.01)
+        @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy(ms, eparams, box, eikr)), total(ϕ), atol=0.01)
         # test potential energy function for MC sims
-        ϕ_minus_molecule = electrostatic_potential_energy(ms[2:end], eparams, box, eikar, eikbr, eikcr)
-        ϕ_MC =  electrostatic_potential_energy(ms, 1, eparams, box, eikar, eikbr, eikcr)
+        ϕ_minus_molecule = electrostatic_potential_energy(ms[2:end], eparams, box, eikr)
+        ϕ_MC =  electrostatic_potential_energy(ms, 1, eparams, box, eikr)
         @test(isapprox(total(ϕ) - total(ϕ_minus_molecule), total(ϕ_MC), atol=0.01))
     end
 
@@ -147,8 +146,10 @@ using Random
     # test vdW energy
     @test isapprox(vdw_energy(zif71, co2, ff), -132.56, atol=0.01)
     # test electrostatics
-    eparams, eikar, eikbr, eikcr = setup_Ewald_sum(zif71, 12.0, verbose=false, ϵ=1e-6)
-    ϕ = electrostatic_potential_energy(zif71, co2, eparams, eikar, eikbr, eikcr)
+    eparams = setup_Ewald_sum(zif71.box, 12.0, verbose=false, ϵ=1e-6)
+    eikr_gh = Eikr(zif71, eparams)
+    eikr_gg = Eikr(co2, eparams)
+    ϕ = electrostatic_potential_energy(zif71, co2, eparams, eikr_gh)
     @test isapprox(total(ϕ), -9.37846564, atol=0.1)
 
     # test 2: guest-guest
@@ -169,23 +170,23 @@ using Random
     co2_2.charges.xf[:, 3] = [0.47020, 0.38540, 0.52461]
     @test isapprox(PorousMaterials.total_vdw_energy(zif71, [co2, co2_2], ff), -311.10392551, atol=0.1)
     @test isapprox(PorousMaterials.total_vdw_energy([co2, co2_2], ff, zif71.box), -50.975, atol=0.1)
-    @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], eparams, eikar, eikbr, eikcr)), -36.00, atol=0.3)
-    ϕ = electrostatic_potential_energy([co2, co2_2], eparams, box, eikar, eikbr, eikcr)
+    @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy(zif71, [co2, co2_2], eparams, eikr_gh)), -36.00, atol=0.3)
+    ϕ = electrostatic_potential_energy([co2, co2_2], eparams, zif71.box, eikr_gg)
     @test isapprox(total(ϕ), 59.3973, atol=0.05)
 
     # MC function for electrostatic potential should be equal to difference in two systems
     #  one with both co2's and one with just one of the co2's
-    ϕ_both = electrostatic_potential_energy([co2, co2_2], eparams, box, eikar, eikbr, eikcr)
-    ϕ_one = electrostatic_potential_energy([co2], eparams, box, eikar, eikbr, eikcr)
-    ϕ_for_MC = electrostatic_potential_energy([co2, co2_2], 2, eparams, box, eikar, eikbr, eikcr)
+    ϕ_both = electrostatic_potential_energy([co2, co2_2], eparams, zif71.box, eikr_gg)
+    ϕ_one = electrostatic_potential_energy([co2], eparams, zif71.box, eikr_gg)
+    ϕ_for_MC = electrostatic_potential_energy([co2, co2_2], 2, eparams, zif71.box, eikr_gg)
     @test isapprox(total(ϕ_both) - total(ϕ_one), total(ϕ_for_MC))
     # difference in potential energy when adding 1 co2 should be that of the system with one co2
-    ϕ_for_MC = electrostatic_potential_energy([co2], 1, eparams, box, eikar, eikbr, eikcr)
+    ϕ_for_MC = electrostatic_potential_energy([co2], 1, eparams, zif71.box, eikr_gg)
     @test isapprox(total(ϕ_for_MC), total(ϕ_one))
 
     # assert total_electrostatic_potential function incrementer works
-    @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, box, eikar, eikbr, eikcr)),
-                   total(electrostatic_potential_energy([co2, co2_2], eparams, box, eikar, eikbr, eikcr)))
+    @test isapprox(total(PorousMaterials.total_electrostatic_potential_energy([co2, co2_2], eparams, zif71.box, eikr_gg)),
+                   total(electrostatic_potential_energy([co2, co2_2], eparams, zif71.box, eikr_gg)))
 
 end
 end

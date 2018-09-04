@@ -71,7 +71,7 @@ export
        lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
        # ElectrostaticEnergetics.jl
-       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total,
+       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, Eikr,
 
        # MChelpers.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,
