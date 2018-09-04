@@ -7,7 +7,7 @@ using JLD2
 using Printf
 
 ig_tests = false
-xe_in_sbmof1_tests = true
+xe_in_sbmof1_tests = false
 co2_tests = true
 
 #
@@ -109,9 +109,9 @@ if co2_tests
         @assert isapprox(bls, pairwise_atom_distances(m, UnitCube()))
         # charges hv same coords as atoms?
         for i = 1:3
-            @assert isapprox(m.atoms[i].xf, m.charges[i].xf)
+            @assert isapprox(m.atoms.xf[:, i], m.charges.xf[:, i])
         end
-        @assert isapprox(m.xf_com, m.atoms[1].xf) # C atom is center
+        @assert isapprox(m.xf_com, m.atoms.xf[:, 1]) # C atom is center
     end
 
 
