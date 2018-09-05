@@ -174,9 +174,9 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
 
-    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
-                                                          framework.box,
-                                                          verbose=verbose & charged_system)
+    eparams = setup_Ewald_sum(framework.box, sqrt(ljforcefield.cutoffradius_squared),
+                              verbose=verbose & charged_system)
+    eikr = Eikr(framework, eparams)
 
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
@@ -209,8 +209,8 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
                 energy = PotentialEnergy(0.0, 0.0)
                 energy.vdw = vdw_energy(framework, molecule, ljforcefield)
                 if charged_system
-                    energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams,
-                                                                    kvecs, eikar, eikbr, eikcr)
+                    energy.coulomb = total(electrostatic_potential_energy(framework, molecule, 
+                                                                         eparams, eikr))
                 end
                 boltzmann_factor_sum += exp(-sum(energy) / temperature)
             end

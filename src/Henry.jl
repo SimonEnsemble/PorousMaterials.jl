@@ -183,10 +183,11 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams, kvecs, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared),
-                                                          framework.box,
-                                                          verbose=(verbose & (myid() == 1)  & charged_system),
-                                                          ϵ=ewald_precision)
+    eparams = setup_Ewald_sum(framework.box, sqrt(ljforcefield.cutoffradius_squared),
+                              verbose=(verbose & (myid() == 1)  & charged_system),
+                              ϵ=ewald_precision)
+    eikr = Eikr(framework, eparams)
+
     # to be Σᵢ Eᵢe^(-βEᵢ)
     wtd_energy_sum = PotentialEnergy(0.0, 0.0)
     # to be Σᵢ e^(-βEᵢ)
@@ -206,8 +207,7 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         energy = PotentialEnergy(0.0, 0.0)
         energy.vdw = vdw_energy(framework, molecule, ljforcefield)
         if charged_system
-            energy.coulomb = electrostatic_potential_energy(framework, molecule, eparams,
-                                                            kvecs, eikar, eikbr, eikcr)
+            energy.coulomb = total(electrostatic_potential_energy(framework, molecule, eparams, eikr))
         end
 
         # calculate Boltzmann factor e^(-βE)

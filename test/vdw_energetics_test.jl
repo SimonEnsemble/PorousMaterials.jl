@@ -18,10 +18,10 @@ using Random
     xenon = Molecule("Xe")
     set_fractional_coords!(xenon, sbmof1.box)
     @test ! charged(xenon)
-    xenon.atoms[1].xf[:] = sbmof1.box.c_to_f * zeros(3)
+    xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * zeros(3)
     energy = vdw_energy(sbmof1, xenon, ljforcefield)
     @test isapprox(energy, -5041.58, atol = 0.005)
-    xenon.atoms[1].xf[:] = sbmof1.box.c_to_f * [0.494265, 2.22668, 0.450354]
+    xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * [0.494265, 2.22668, 0.450354]
     energy = vdw_energy(sbmof1, xenon, ljforcefield)
     @test isapprox(energy, 12945.838, atol = 0.005)
 
@@ -68,7 +68,7 @@ using Random
     # energy with PBC but padded so effetive periodic interactions are zero, bc beyond cutoff
     energy = vdw_energy(f, co2, ljff)
     atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
-    ljspheres = [LJSphere(atoms[i], x[:, i] + [50.0, 50.0, 50.0]) for i = 1:length(atoms)] # cage as LJSphere array
+    ljspheres = Atoms(atoms, x .+ [50.0, 50.0, 50.0]) #for i = 1:length(atoms) # cage as LJSphere array
     co2 = Molecule("CO2")
     translate_to!(co2, [50.0, 50.0, 50.0])
     @test isapprox(energy, vdw_energy_no_PBC(co2, ljspheres, ljff))

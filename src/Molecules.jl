@@ -9,17 +9,15 @@ Data structure for a molecule/adsorbate.
 """
 struct Molecule
     species::Symbol
-    atoms::Array{LJSphere, 1}
-    charges::Array{PtCharge, 1}
+    atoms::Atoms
+    charges::Charges
     xf_com::Array{Float64, 1}
 end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
     return (m1.species == m2.species) && isapprox(m1.xf_com, m2.xf_com) &&
-        (length(m1.atoms) == length(m2.atoms)) &&
-        (length(m1.charges) == length(m2.charges)) &&
-        all([isapprox(m1.atoms[i], m2.atoms[i]) for i = 1:length(m1.atoms)]) &&
-        all([isapprox(m1.charges[i], m2.charges[i]) for i = 1:length(m1.charges)])
+        (isapprox(m1.atoms, m2.atoms)) &&
+        (isapprox(m1.charges, m2.charges))
 end
 
 """
@@ -42,8 +40,10 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
-
-    # Read in Lennard Jones spheres
+    
+    ###
+    #  Read in Lennard Jones spheres
+    ###
     atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
     if ! isfile(atomsfilename)
         error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in
@@ -56,21 +56,27 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     x_com = [0.0, 0.0, 0.0]
     total_mass = 0.0
 
-    atoms = LJSphere[]
+    atom_species = Array{Symbol, 1}()
+    atom_coords = Array{Float64, 2}(undef, 3, 0)
     for row in eachrow(df_lj)
         x = [row[:x], row[:y], row[:z]]
         atom = Symbol(row[:atom])
         # assume a unit cube as a box for now.
-        push!(atoms, LJSphere(atom, x))
         if ! (atom in keys(atomic_masses))
             error(@sprintf("Atomic mass of %s not found. See `read_atomic_masses()`\n", atom))
         end
         total_mass += atomic_masses[atom]
         x_com += atomic_masses[atom] .* x
+        atom_coords = [atom_coords x]
+        push!(atom_species, Symbol(atom))
     end
     x_com /= total_mass
-
-    # Read in point charges
+    # construct atoms attribute of molecule
+    atoms = Atoms(atom_species, atom_coords)
+    
+    ###
+    #  Read in point charges
+    ###
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
     if ! isfile(chargesfilename)
         error(@sprintf("No file %s exists. Even if there are no point charges in %s,
@@ -79,17 +85,21 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     end
     df_c = CSV.read(chargesfilename)
 
-    charges = PtCharge[]
+    charge_vals = Array{Float64, 1}()
+    charge_coords = Array{Float64, 2}(undef, 3, 0)
     for row in eachrow(df_c)
         # assume unit cube as box for now.
-        x = [row[:x], row[:y], row[:z]]
-        push!(charges, PtCharge(row[:q], x))
+        charge_coords = [charge_coords [row[:x], row[:y], row[:z]]]
+        push!(charge_vals, row[:q])
     end
-
+    # construct charges attribute of molecule
+    charges = Charges(charge_vals, charge_coords)
+    
+    # construct molecule
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
     # check for charge neutrality
-    if (length(charges) > 0) && (! (total_charge(molecule) ≈ 0.0))
+    if (length(charges.q) > 0) && (! (total_charge(molecule) ≈ 0.0))
         if assert_charge_neutrality
             error(@sprintf("Molecule %s is not charge neutral! Pass
             `assert_charge_neutrality=false` to ignore this error message.", species))
@@ -107,11 +117,11 @@ to a unit cell box that is a unit cube. This function adjusts the fractional coo
 of the molecule to be consistent with a different box.
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] = box.c_to_f * ljsphere.xf
+    for i = 1:molecule.atoms.n_atoms
+        molecule.atoms.xf[:, i] = box.c_to_f * molecule.atoms.xf[:, i]
     end
-    for charge in molecule.charges
-        charge.xf[:] = box.c_to_f * charge.xf
+    for j = 1:molecule.charges.n_charges
+        molecule.charges.xf[:, j] = box.c_to_f * molecule.charges.xf[:, j]
     end
     molecule.xf_com[:] = box.c_to_f * molecule.xf_com
     return nothing
@@ -124,11 +134,11 @@ Change fractional coordinates of a molecule in the context of a given box to Car
 i.e. to correspond to fractional coords in a unit cube box.
 """
 function set_fractional_coords_to_unit_cube!(molecule::Molecule, box::Box)
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] = box.f_to_c * ljsphere.xf
+    for i = 1:molecule.atoms.n_atoms
+        molecule.atoms.xf[:, i] = box.f_to_c * molecule.atoms.xf[:, i]
     end
-    for charge in molecule.charges
-        charge.xf[:] = box.f_to_c * charge.xf
+    for i = 1:molecule.charges.n_charges
+        molecule.charges.xf[:, i] = box.f_to_c * molecule.charges.xf[:, i]
     end
     molecule.xf_com[:] = box.f_to_c * molecule.xf_com
     return nothing
@@ -143,12 +153,12 @@ Cartesian coordinate space. For the latter, a unit cell box is required for cont
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
     # move LJSphere's
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] += dxf
+    for i = 1:molecule.atoms.n_atoms
+        molecule.atoms.xf[:, i] += dxf
     end
     # move PtCharge's
-    for charge in molecule.charges
-        charge.xf[:] += dxf
+    for j = 1:molecule.charges.n_charges
+        molecule.charges.xf[:, j] .+= dxf
     end
     # adjust center of mass
     molecule.xf_com[:] += dxf
@@ -180,18 +190,18 @@ end
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
     println(io, "Center of mass (fractional coords): ", molecule.xf_com)
-    if length(molecule.atoms) > 0
-        print(io, "Lennard-Jones spheres: ")
-        for ljsphere in molecule.atoms
-            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", ljsphere.species,
-                    ljsphere.xf[1], ljsphere.xf[2], ljsphere.xf[3])
+    if molecule.atoms.n_atoms > 0
+        print(io, "Atoms:\n")
+        for i = 1:molecule.atoms.n_atoms
+            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                molecule.atoms.xf[:, i]...)
         end
     end
-    if length(molecule.charges) > 0
+    if molecule.charges.n_charges > 0
         print(io, "\nPoint charges: ")
-        for charge in molecule.charges
-            @printf(io, "\n\tq = %f, xf = [%.3f, %.3f, %.3f]", charge.q,
-                    charge.xf[1], charge.xf[2], charge.xf[3])
+        for i = 1:molecule.charges.n_charges
+            @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                molecule.charges.xf[:, i]...)
         end
     end
 end
@@ -249,11 +259,12 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
-    for ljsphere in molecule.atoms
-        ljsphere.xf[:] = molecule.xf_com + r * (ljsphere.xf - molecule.xf_com)
+    # TODO change this to use broadcasting
+    for i = 1:molecule.atoms.n_atoms
+        molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
     end
-    for charge in molecule.charges
-        charge.xf[:] = molecule.xf_com + r * (charge.xf - molecule.xf_com)
+    for i = 1:molecule.charges.n_charges
+        molecule.charges.xf[:, i] = molecule.xf_com + r * (molecule.charges.xf[:, i] - molecule.xf_com)
     end
 end
 
@@ -279,23 +290,23 @@ function outside_box(molecule::Molecule)
 end
 
 # docstring in Misc.jl
-function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString; 
+function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
     comment::AbstractString="")
 
-    n_atoms = sum([length(molecule.atoms) for molecule in molecules])
+    n_atoms = sum([molecule.atoms.n_atoms for molecule in molecules])
     atoms = Array{Symbol}(undef, n_atoms)
     x = zeros(Float64, 3, n_atoms)
 
     atom_counter = 0
     for molecule in molecules
-        for atom in molecule.atoms
+        for i = 1:molecule.atoms.n_atoms
             atom_counter += 1
-            x[:, atom_counter] = box.f_to_c * atom.xf
-            atoms[atom_counter] = atom.species
+            x[:, atom_counter] = box.f_to_c * molecule.atoms.xf[:, i]
+            atoms[atom_counter] = molecule.atoms.species[i]
         end
     end
     @assert(atom_counter == n_atoms)
-    
+
     write_xyz(atoms, x, filename, comment=comment) # Misc.jl
 end
 
@@ -310,16 +321,10 @@ Sum up point charges on a molecule.
 # Returns
 - `total_charge::Float64`: The sum of the point charges of `molecule`
 """
-function total_charge(molecule::Molecule)
-    total_charge = 0.0
-    for charge in molecule.charges
-        total_charge += charge.q
-    end
-    return total_charge
-end
+total_charge(molecule::Molecule) = (molecule.charges.n_charges == 0) ? 0.0 : sum(molecule.charges.q)
 
 function charged(molecule::Molecule; verbose::Bool=false)
-    charged_flag = length(molecule.charges) > 0
+    charged_flag = molecule.charges.n_charges > 0
     if verbose
         @printf("\tMolecule %s has point charges? %s\n", molecule.species, charged_flag)
     end
@@ -333,11 +338,11 @@ Loop over all pairs of `LJSphere`'s in `molecule.atoms`. Return a matrix whose `
 element is the distance between atom `i` and atom `j` in the molecule.
 """
 function pairwise_atom_distances(molecule::Molecule, box::Box)
-    nb_atoms = length(molecule.atoms)
+    nb_atoms = molecule.atoms.n_atoms
     bond_lengths = zeros(nb_atoms, nb_atoms)
     for i = 1:nb_atoms
         for j = (i+1):nb_atoms
-            dx = box.f_to_c * (molecule.atoms[i].xf - molecule.atoms[j].xf)
+            dx = box.f_to_c * (molecule.atoms.xf[:, i] - molecule.atoms.xf[:, j])
             bond_lengths[i, j] = norm(dx)
             bond_lengths[j, i] = bond_lengths[i, j]
         end
@@ -352,14 +357,21 @@ Loop over all pairs of `PtCharge`'s in `molecule.charges`. Return a matrix whose
 element is the distance between pt charge `i` and pt charge `j` in the molecule.
 """
 function pairwise_charge_distances(molecule::Molecule, box::Box)
-    nb_charges = length(molecule.charges)
+    nb_charges = molecule.charges.n_charges
     bond_lengths = zeros(nb_charges, nb_charges)
     for i = 1:nb_charges
         for j = (i+1):nb_charges
-            dx = box.f_to_c * (molecule.charges[i].xf - molecule.charges[j].xf)
+            dx = box.f_to_c * (molecule.charges.xf[:, i] - molecule.charges.xf[:, j])
             bond_lengths[i, j] = norm(dx)
             bond_lengths[j, i] = bond_lengths[i, j]
         end
     end
     return bond_lengths
 end
+
+# facilitate constructing a point charge
+Ion(q::Float64, xf::Array{Float64, 1}, species::Symbol=:ion) = Molecule(
+    species,
+    Atoms(0, Symbol[], zeros(0, 0)),
+    Charges(1, [q], reshape(xf, (3, 1))), 
+    xf)

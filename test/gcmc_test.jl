@@ -6,8 +6,8 @@ using DataFrames
 using JLD2
 using Printf
 
-ig_tests = true
-xe_in_sbmof1_tests = true
+ig_tests = false
+xe_in_sbmof1_tests = false
 co2_tests = true
 
 #
@@ -19,7 +19,7 @@ co2_tests = true
 if ig_tests
     empty_space = Framework("empty_box.cssr") # zero atoms!
     ideal_gas = Molecule("IG")
-    @assert (length(empty_space.atoms) == 0)
+    @assert (empty_space.n_atoms == 0)
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
     fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
@@ -109,9 +109,9 @@ if co2_tests
         @assert isapprox(bls, pairwise_atom_distances(m, UnitCube()))
         # charges hv same coords as atoms?
         for i = 1:3
-            @assert isapprox(m.atoms[i].xf, m.charges[i].xf)
+            @assert isapprox(m.atoms.xf[:, i], m.charges.xf[:, i])
         end
-        @assert isapprox(m.xf_com, m.atoms[1].xf) # C atom is center
+        @assert isapprox(m.xf_com, m.atoms.xf[:, 1]) # C atom is center
     end
 
 

@@ -72,8 +72,8 @@ using Random
     @test vdw_energy(1, molecules, ljforcefield, sim_box) ≈ 0.0
     @test vdw_energy(2, molecules, ljforcefield, sim_box) ≈ 0.0
     # the position of a molecule should not change inside vdw_energy.
-    @test all(molecules[1].atoms[1].xf .== sim_box.c_to_f * [0.0, 0.0, 0.0])
-    @test all(molecules[2].atoms[1].xf .== sim_box.c_to_f * [12.0, 12.0, 12.0])
+    @test all(molecules[1].atoms.xf[:, 1] .== sim_box.c_to_f * [0.0, 0.0, 0.0])
+    @test all(molecules[2].atoms.xf[:, 1] .== sim_box.c_to_f * [12.0, 12.0, 12.0])
     # TODO write tests for CO2 where there are more than one beads
 
     # Molecules with more than one ljsphere

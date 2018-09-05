@@ -1,44 +1,47 @@
-# Matter is composed of Lennard-Jones spheres and point charges.
-
 """
-Data structure for a Lennard-Jones sphere, containing its species and position in
-fractional coordinates.
+Data structure holds a set of atom species and their positions in fractional coordinates.
+
+Fractional coords of atom `i` is `charges.xf[:, i]`.
 
 # Example use
-    ljs = LJSphere(:C, [0.0, 0.0, 0.0])
+    atoms = Atoms(2, [:C, :F], [0.0 1.0; 2.0 3.0; 4.0 5.0])
 
 # Attributes
-- `species::Symbol`: atom species name, e.g. `:C`
-- `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
+- `n_atoms::Int`: number of atoms
+- `species::Array{Symbol, 1}`: atom species
+- `xf::Array{Float64, 2}`: fractional coordinates in the columns
 """
-struct LJSphere
-    species::Symbol
-    xf::Array{Float64, 1}
+struct Atoms
+    n_atoms::Int
+    species::Array{Symbol, 1}
+    xf::Array{Float64, 2}
 end
 
-function LJSphere(species::AbstractString, xf::Array{Float64, 1})
-    return LJSphere(Symbol(species), xf)
-end
+# compute n_species automatically from array sizes
+Atoms(species::Array{Symbol, 1}, xf::Array{Float64, 2}) = Atoms(size(xf, 2), species, xf)
 
-function Base.isapprox(ljs1::LJSphere, ljs2::LJSphere)
-    return ((ljs1.species == ljs2.species) && isapprox(ljs1.xf, ljs2.xf))
-end
+Base.isapprox(a1::Atoms, a2::Atoms) = (a1.species == a2.species) && isapprox(a1.xf, a2.xf)
 
 """
-Point charge data structure indicates its charge and position in fractional coordinates.
+Data structure holds a set of point charges and their positions in fractional coordinates.
+
+Fractional coords of charge `i` is `charges.xf[:, i]`.
 
 # Example use
-    ptc = PtCharge(-0.2, [0.0, 0.0, 0.0])
+    charges = Charges(2, [-1.0, 1.0], [0.0 1.0; 2.0 3.0; 4.0 5.0])
 
 # Attributes
-- `q::Float64`: signed magnitude of charge (units: electrons), e.g. `1.0`
-- `xf::Array{Float64, 1}`: fractional coordinates, e.g. `[1.0, 0.0, 4.0]`.
+- `n_charges::Int`: number of charges
+- `q::Array{Float64, 1}`: signed magnitude of charges (units: electrons)
+- `xf::Array{Float64, 2}`: fractional coordinates in the columns
 """
-struct PtCharge
-    q::Float64
-    xf::Array{Float64, 1}
+struct Charges
+    n_charges::Int
+    q::Array{Float64, 1}
+    xf::Array{Float64, 2}
 end
 
-function Base.isapprox(c1::PtCharge, c2::PtCharge)
-    return (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))
-end
+# compute n_charges automatically from array sizes
+Charges(q::Array{Float64, 1}, xf::Array{Float64, 2}) = Charges(size(xf, 2), q, xf)
+
+Base.isapprox(c1::Charges, c2::Charges) = (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))

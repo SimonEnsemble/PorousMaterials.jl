@@ -100,19 +100,17 @@ end
                                   framework::Framework,
                                   ljforcefield::LJForceField,
                                   eparams::EwaldParams,
-                                  kvectors::Array{Kvector, 1},
-                                  eikar::OffsetArray{Complex{Float64}},
-                                  eikbr::OffsetArray{Complex{Float64}},
-                                  eikcr::OffsetArray{Complex{Float64}},
+                                  eikr_gh::Eikr,
+                                  eikr_gg::Eikr,
                                   charged_molecules::Bool,
                                   charged_framework::Bool)
     energy = SystemPotentialEnergy()
     energy.guest_guest.vdw = vdw_energy(molecule_id, molecules, ljforcefield, framework.box)
     energy.guest_host.vdw = vdw_energy(framework, molecules[molecule_id], ljforcefield)
     if charged_molecules
-        energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules, molecule_id, eparams, kvectors, eikar, eikbr, eikcr))
+        energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules, molecule_id, eparams, framework.box, eikr_gg))
         if charged_framework
-            energy.guest_host.coulomb = electrostatic_potential_energy(framework, molecules[molecule_id], eparams, kvectors, eikar, eikbr, eikcr)
+            energy.guest_host.coulomb = total(electrostatic_potential_energy(framework, molecules[molecule_id], eparams, eikr_gh))
         end
     end
     return energy
@@ -325,79 +323,65 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # adjust fractional coords of molecule according to *replicated* framework
     set_fractional_coords!(molecule, framework.box)
     if verbose
-# TODO: These lines cause an `invalid escape sequence` when executing runtests.jl in julia 0.7.0
-#        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\.\n",
-#            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\n",
+            repfactors..., sqrt(ljforcefield.cutoffradius_squared))
         println("\tFramework crystal density: ", crystal_density(framework))
         println("\tFramework chemical formula: ", chemical_formula(framework))
-        println("\tTotal number of LJ Spheres: ", length(framework.atoms))
-        println("\tTotal number of point charges: ", length(framework.charges))
+        println("\tTotal number of atoms: ", framework.atoms.n_atoms)
+        println("\tTotal number of point charges: ", framework.charges.n_charges)
     end
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
-    molecule_template = deepcopy(molecule)
-    if ! (total_charge(molecule_template) ≈ 0.0)
-        error(@sprintf("Molecule %s is not charge neutral!\n", molecule_template.species))
+    if ! (total_charge(molecule) ≈ 0.0)
+        error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
     end
 
-    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule_template, ljforcefield))
+    if ! (check_forcefield_coverage(framework, ljforcefield) & check_forcefield_coverage(molecule, ljforcefield))
         error("Missing atoms from forcefield.")
     end
 
     # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
     #   there is no point in going through the computations if all charges are zero!
     charged_framework = charged(framework, verbose=verbose)
-    charged_molecules = charged(molecule_template, verbose=verbose)
+    charged_molecules = charged(molecule, verbose=verbose)
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(sqrt(ljforcefield.cutoffradius_squared), framework.box,
+    eparams = setup_Ewald_sum(framework.box, sqrt(ljforcefield.cutoffradius_squared),
                         verbose=verbose & (charged_framework || charged_molecules),
                         ϵ=ewald_precision)
+    eikr_gh = Eikr(framework, eparams)
+    eikr_gg = Eikr(molecule, eparams)
 
     # initiate system energy to which we increment when MC moves are accepted
     system_energy = SystemPotentialEnergy()
     # if we don't start with an emtpy framework, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
-        # ensure molecule template matches species of starting molecules.
-        @assert (all([m.species == molecule_template.species for m in molecules]))
-
-        # set fractional coords of these molecules consistent with framework box
         for m in molecules
+            # set fractional coords of these molecules consistent with framework box
             set_fractional_coords!(m, framework.box)
-        end
-
-        # assert that the bond lengths are equal between the template and array to make
-        # sure the right fractional coords were used
-        if length(molecule.atoms) > 1
-            template_bond_length = norm(framework.box.f_to_c * (molecule_template.atoms[1].xf - molecule_template.atoms[2].xf))
-            for m in molecules
-                bond_length = norm(framework.box.f_to_c * (m.atoms[1].xf - m.atoms[2].xf))
-                if ! isapprox(bond_length, template_bond_length, atol=1e-6)
-                    error("A bond length between atoms in a molecule in `molecules` passed
-                    in as an initial configuration is not equal to the molecule template
-                    passed.")
-                end
-            end
-        end
-
-        # assert that the molecules are inside the simulation box
-        for m in molecules
-            if outside_box(m)
-                error("A molecule in `molecules` passed to `gcmc_simulation` as a starting
-                configuation of molecules is outside of the framework box!")
-            end
+            # ensure molecule template matches species of starting molecules.
+            @assert m.species == molecule.species "initializing with wrong molecule species"
+            # assert that the molecules are inside the simulation box
+            @assert (! outside_box(m)) "initializing with molecules outside simulation box!"
+            # ensure pair-wise bond distances match template
+            @assert isapprox(pairwise_atom_distances(m, framework.box),
+                             pairwise_atom_distances(molecule, framework.box),
+                             atol=1e-10) "bond lengths between atoms in molecules initilized with do not match template"
+            @assert isapprox(pairwise_charge_distances(m, framework.box),
+                             pairwise_charge_distances(molecule, framework.box),
+                             atol=1e-10) "distances between charges in molecules initilized with do not match template"
         end
 
         system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
         system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
-        system_energy.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
-                                                    eparams, kvectors, eikar, eikbr, eikcr)
+        system_energy.guest_host.coulomb = total(total_electrostatic_potential_energy(framework, molecules,
+                                                    eparams, eikr_gh))
         system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
-                                            eparams, kvectors, eikar, eikbr, eikcr))
+                                            eparams, framework.box, eikr_gg))
 
         # assert calculated system energy consistent with checkpoint
         if checkpoint != Dict()
@@ -466,11 +450,11 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             markov_counts.n_proposed[which_move] += 1
 
             if which_move == INSERTION
-                insert_molecule!(molecules, framework.box, molecule_template)
+                insert_molecule!(molecules, framework.box, molecule)
 
                 energy = potential_energy(length(molecules), molecules, framework,
-                                                ljforcefield, eparams, kvectors, eikar, eikbr,
-                                                eikcr, charged_molecules, charged_framework)
+                                                ljforcefield, eparams, eikr_gh, eikr_gg,
+                                                charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for Insertion
                 if rand() < fugacity * framework.box.Ω / (length(molecules) * KB *
@@ -489,7 +473,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
                 # compute the potential energy of the molecule we propose to delete
                 energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, kvectors, eikar, eikbr, eikcr,
+                                          eparams, eikr_gh, eikr_gg,
                                           charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for Deletion
@@ -508,14 +492,14 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
                 # energy of the molecule before it was translated
                 energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams,
-                                          kvectors, eikar, eikbr, eikcr, charged_molecules, charged_framework)
+                                          eparams, eikr_gh, eikr_gg,
+                                          charged_molecules, charged_framework)
 
                 old_molecule = translate_molecule!(molecules[molecule_id], framework.box)
 
                 # energy of the molecule after it is translated
                 energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, kvectors, eikar, eikbr, eikcr,
+                                              eparams, eikr_gh, eikr_gg,
                                               charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for translation
@@ -534,7 +518,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
                 # energy of the molecule before we rotate it
                 energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, kvectors, eikar, eikbr, eikcr,
+                                              eparams, eikr_gh, eikr_gg,
                                               charged_molecules, charged_framework)
 
                 # store old molecule to restore old position in case move is rejected
@@ -545,7 +529,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
                 # energy of the molecule after it is translated
                 energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, kvectors, eikar, eikbr, eikcr,
+                                              eparams, eikr_gh, eikr_gg,
                                               charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for rotation
@@ -564,18 +548,16 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
                 # compute the potential energy of the molecule we propose to re-insert
                 energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                             eparams,
-                                             kvectors, eikar, eikbr, eikcr, charged_molecules,
-                                             charged_framework)
+                                             eparams, eikr_gh, eikr_gg,
+                                             charged_molecules, charged_framework)
 
                 # reinsert molecule; store old configuration of the molecule in case proposal is rejected
                 old_molecule = reinsert_molecule!(molecules[molecule_id], framework.box)
 
                 # compute the potential energy of the molecule in its new configuraiton
                 energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams,
-                                             kvectors, eikar, eikbr, eikcr, charged_molecules,
-                                             charged_framework)
+                                              eparams, eikr_gh, eikr_gg,
+                                              charged_molecules, charged_framework)
 
                 # Metropolis Hastings Acceptance for reinsertion
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -664,10 +646,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     system_energy_end = SystemPotentialEnergy()
     system_energy_end.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
     system_energy_end.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
-    system_energy_end.guest_host.coulomb = total_electrostatic_potential_energy(framework, molecules,
-                                       eparams, kvectors, eikar, eikbr, eikcr)
+    system_energy_end.guest_host.coulomb = total(total_electrostatic_potential_energy(framework, molecules,
+                                                 eparams, eikr_gh))
     system_energy_end.guest_guest.coulomb = total(total_electrostatic_potential_energy(molecules,
-                                        eparams, kvectors, eikar, eikbr, eikcr))
+                                        eparams, framework.box, eikr_gg))
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
     if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
