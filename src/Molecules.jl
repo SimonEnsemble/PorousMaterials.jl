@@ -40,8 +40,10 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
-
-    # Read in Lennard Jones spheres
+    
+    ###
+    #  Read in Lennard Jones spheres
+    ###
     atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
     if ! isfile(atomsfilename)
         error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in
@@ -69,9 +71,12 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         push!(atom_species, Symbol(atom))
     end
     x_com /= total_mass
+    # construct atoms attribute of molecule
     atoms = Atoms(atom_species, atom_coords)
-
-    # Read in point charges
+    
+    ###
+    #  Read in point charges
+    ###
     chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
     if ! isfile(chargesfilename)
         error(@sprintf("No file %s exists. Even if there are no point charges in %s,
@@ -87,8 +92,10 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         charge_coords = [charge_coords [row[:x], row[:y], row[:z]]]
         push!(charge_vals, row[:q])
     end
+    # construct charges attribute of molecule
     charges = Charges(charge_vals, charge_coords)
-
+    
+    # construct molecule
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
     # check for charge neutrality
@@ -183,18 +190,18 @@ end
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
     println(io, "Center of mass (fractional coords): ", molecule.xf_com)
-    if length(molecule.atoms) > 0
-        print(io, "Lennard-Jones spheres: ")
-        for ljsphere in molecule.atoms
-            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", ljsphere.species,
-                    ljsphere.xf[1], ljsphere.xf[2], ljsphere.xf[3])
+    if molecule.atoms.n_atoms > 0
+        print(io, "Atoms:\n")
+        for i = 1:molecule.atoms.n_atoms
+            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                molecule.atoms.xf[:, i]...)
         end
     end
-    if length(molecule.charges) > 0
+    if molecule.charges.n_charges > 0
         print(io, "\nPoint charges: ")
-        for charge in molecule.charges
-            @printf(io, "\n\tq = %f, xf = [%.3f, %.3f, %.3f]", charge.q,
-                    charge.xf[1], charge.xf[2], charge.xf[3])
+        for i = 1:molecule.charges.n_charges
+            @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                molecule.charges.xf[:, i]...)
         end
     end
 end
@@ -252,6 +259,7 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
+    # TODO change this to use broadcasting
     for i = 1:molecule.atoms.n_atoms
         molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
     end
@@ -313,9 +321,7 @@ Sum up point charges on a molecule.
 # Returns
 - `total_charge::Float64`: The sum of the point charges of `molecule`
 """
-function total_charge(molecule::Molecule)
-    return sum(molecule.charges.q)
-end
+total_charge(molecule::Molecule) = (molecule.charges.n_charges == 0) ? 0.0 : sum(molecule.charges.q)
 
 function charged(molecule::Molecule; verbose::Bool=false)
     charged_flag = molecule.charges.n_charges > 0
@@ -362,3 +368,10 @@ function pairwise_charge_distances(molecule::Molecule, box::Box)
     end
     return bond_lengths
 end
+
+# facilitate constructing a point charge
+Ion(q::Float64, xf::Array{Float64, 1}, species::Symbol=:ion) = Molecule(
+    species,
+    Atoms(0, Symbol[], zeros(0, 0)),
+    Charges(1, [q], reshape(xf, (3, 1))), 
+    xf)

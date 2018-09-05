@@ -1,4 +1,4 @@
-using BenchmarkTools, Compat
+using BenchmarkTools
 using PorousMaterials
 using Test
 using Random
@@ -43,6 +43,7 @@ while length(ms) < num_molecules # give a decent number of molecules to test
 end
 vdw_energy(1, ms, ljforcefield, box)
 println("Guest-Guest Van der Waals energy computation for a single molecule:")
+println("\t# of molecules: ", length(ms))
 @btime vdw_energy(1, ms, ljforcefield, box)
 @printf("Guest-Guest Van der Waals energy computation for all %i molecules:\n", num_molecules)
 @btime begin
