@@ -183,6 +183,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
         for i = 1:n_atoms
             coords = [ coords [xf[i], yf[i], zf[i]] ]
+        end
     end
 
     # Construct the unit cell box
