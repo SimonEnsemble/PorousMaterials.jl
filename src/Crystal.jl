@@ -484,7 +484,6 @@ function strip_numbers_from_atom_labels!(framework::Framework)
 		species = string(framework.atoms.species[i])
 		for j = 1:length(species)
 			if ! isletter(species[j])
-                #framework.atoms[a] = LJSphere(species[1:j-1], atom.xf)
                 framework.atoms.species[i] = Symbol(species[1:j-1])
 				break
 			end
@@ -507,7 +506,7 @@ Find the irreducible chemical formula of a crystal structure.
 - `formula::Dict{Symbol, Int}`: A dictionary with the irreducible chemical formula of a crystal structure
 """
 function chemical_formula(framework::Framework; verbose::Bool=false)
-    unique_atoms = unique([framework.atoms.species[i] for i = 1:framework.atoms.n_atoms])
+    unique_atoms = unique(framework.atoms.species)
     # use dictionary to count atom types
     atom_counts = Dict{Symbol, Int}([a => 0 for a in unique_atoms])
     for i = 1:framework.atoms.n_atoms
@@ -616,7 +615,6 @@ function write_cif(framework::Framework, filename::String)
     for i = 1:framework.atoms.n_atoms
         q = 0.0
         if charged(framework)
-            #charge = framework.charges.q[i]
             q = framework.charges.q[i]
             if ! isapprox(framework.charges.xf[:, i], framework.atoms.xf[:, i])
                 error("write_cif assumes charges correspond to LJspheres")
