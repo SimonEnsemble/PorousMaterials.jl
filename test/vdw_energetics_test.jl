@@ -11,7 +11,7 @@ using Random
 @testset "VdwEnergetics Tests" begin
     # Xe in SBMOF-1 tests, comparing to RASPA
     ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
-    sbmof1 = Framework("SBMOF-1.cif")
+    sbmof1 = Framework("SBMOF-1_cory.cif")
     rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
     sbmof1 = replicate(sbmof1, rep_factors_sbmof1)
     write_xyz(sbmof1, "replicated_sbmof1")

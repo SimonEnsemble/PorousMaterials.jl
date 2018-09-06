@@ -45,7 +45,7 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        strip_numbers_from_atom_labels!, chemical_formula, molecular_weight, crystal_density,
        construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges, # Crystal.jl
        Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
-       translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged, 
+       translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged,
        pairwise_atom_distances, pairwise_charge_distances, # Molecules.jl
        LJForceField, replication_factors, check_forcefield_coverage, # Forcefield.jl
        PotentialEnergy, SystemPotentialEnergy, # Energetics_Util.jl
@@ -54,7 +54,7 @@ export Box, replicate, UnitCube, write_vtk, # Box.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable, # MChelpers.jl
        apply_periodic_boundary_condition!,
        Grid, write_cube, read_cube, energy_grid, # Grid.jl
-       calculate_properties, PengRobinsonFluid, VDWFluid # EOS.jl
+       calculate_properties, PengRobinsonFluid, VDWFluid, # EOS.jl
        gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
        gcmc_result_savename, GCMCstats, MarkovCounts, # GCMC.jl
        henry_coefficient, henry_result_savename # Henry.jl

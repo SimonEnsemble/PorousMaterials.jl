@@ -38,7 +38,7 @@ using Random
     end
 
     m = Molecule("CO2")
-    box = Framework("SBMOF-1.cif").box
+    box = Framework("SBMOF-1_cory.cif").box
     set_fractional_coords!(m, box)
     set_fractional_coords_to_unit_cube!(m, box)
     @test isapprox(m, Molecule("CO2")) # should restore.
@@ -60,7 +60,7 @@ using Random
     @test isapprox(m, Molecule("CO2"))
 
     # test translate_to, translate_by
-    box = Framework("SBMOF-1.cif").box
+    box = Framework("SBMOF-1_cory.cif").box
     ms = [Molecule("H2S") for i = 1:2]
     for m in ms
         set_fractional_coords!(m, box)
@@ -148,7 +148,7 @@ using Random
     @test r_det_1
 
     # test translate_by for fractional and cartesian
-    box = Framework("SBMOF-1.cif").box
+    box = Framework("SBMOF-1_cory.cif").box
     ms = [Molecule("CO2") for i = 1:2]
     for m in ms
         set_fractional_coords!(m, box)
@@ -186,7 +186,7 @@ using Random
     @test ! isapprox(ms[1], ms[2])
 
     # test rotate function; bond lengths must preserve, center of mass must preserve.
-    box = Framework("SBMOF-1.cif").box
+    box = Framework("SBMOF-1_cory.cif").box
     m1 = Molecule("CO2")
     m2 = Molecule("CO2")
     set_fractional_coords!(m1, box)

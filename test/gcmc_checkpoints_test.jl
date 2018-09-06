@@ -15,7 +15,7 @@ using Random
     #  (3)   load checkpoint, 5 sample, 20 burn
     # thus we set random number seed before each simulation to ensure exaclty same moves are
     # conducted.
-    framework = Framework("SBMOF-1.cif")
+    framework = Framework("SBMOF-1_cory.cif")
     co2 = Molecule("CO2")
     atom_distances = pairwise_atom_distances(co2, UnitCube())
     charge_distances = pairwise_charge_distances(co2, UnitCube())
