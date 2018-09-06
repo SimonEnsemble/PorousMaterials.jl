@@ -1,0 +1,10 @@
+The enclosed file (lj_sample_config_periodic#.txt) is a text file containing a single configuration
+of Lennard-Jones atoms. The file is organized as follows:
+
+Line  1       :  x, y, and z dimensions of periodic volume
+Line  2       : Number of Lennard-Jones atoms in the rest of file (N)
+Lines 3->N+2 : 
+      Column 1   : Identification number of current atom (will equal [Line # -2])
+      Columns 2-4: x, y, and z coordinates of current atom
+
+All coordinates and dimensions are given in Lennard-Jones reduced units

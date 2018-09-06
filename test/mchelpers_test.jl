@@ -9,7 +9,7 @@ using Statistics
 using Random
 
 @testset "MCHelpers Tests" begin
-    sim_box = Framework("SBMOF-1.cif").box
+    sim_box = Framework("SBMOF-1_cory.cif").box
 
     #
     #INSERTION TESTS
