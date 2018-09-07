@@ -21,6 +21,7 @@ struct LJForceField
 	cutoffradius_squared::Float64
 end
 
+Base.broadcastable(ljff::LJForceField) = Ref(ljff)
 
 """
 	ljforcefield = ForceField("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
@@ -38,8 +39,7 @@ Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelo
 # Returns
 - `ljforcefield::LJForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
-
-function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0, 
+function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0,
                       mixing_rules::AbstractString="Lorentz-Berthelot")
     if ! (lowercase(mixing_rules) in ["lorentz-berthelot", "kong", "geometric"])
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
@@ -129,21 +129,21 @@ function replication_factors(unitcell::Box, cutoff_radius::Float64)
 
 	# Repeat for `a`
 	# |n_bc ⋅ c0|/|n_bc| defines the distance from the end of the supercell and the center. As long as that distance is less than the cutoff radius, we need to increase it
-	while abs(dot(n_bc, c0)) / vecnorm(n_bc) < cutoff_radius
+	while abs(dot(n_bc, c0)) / norm(n_bc) < cutoff_radius
 		rep[1] += 1
 		a += unitcell.f_to_c[:,1]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `b`
-	while abs(dot(n_ac, c0)) / vecnorm(n_ac) < cutoff_radius
+	while abs(dot(n_ac, c0)) / norm(n_ac) < cutoff_radius
 		rep[2] += 1
 		b += unitcell.f_to_c[:,2]
 		c0 = [a b c] * [.5, .5, .5]
 	end
 
 	# Repeat for `c`
-	while abs(dot(n_ab, c0)) / vecnorm(n_ab) < cutoff_radius
+	while abs(dot(n_ab, c0)) / norm(n_ab) < cutoff_radius
 		rep[3] += 1
 		c += unitcell.f_to_c[:,3]
 		c0 = [a b c] * [.5, .5, .5]
@@ -155,17 +155,6 @@ end
 replication_factors(unitcell::Box, ljforcefield::LJForceField) = replication_factors(unitcell, sqrt(ljforcefield.cutoffradius_squared))
 replication_factors(framework::Framework, cutoff_radius::Float64) = replication_factors(framework.box, cutoff_radius)
 replication_factors(framework::Framework, ljforcefield::LJForceField) = replication_factors(framework.box, sqrt(ljforcefield.cutoffradius_squared))
-
-# to facilitate user-exposed function check_forcefield_coverage
-function atoms_missing_from_forcefield(atoms::Array{Symbol, 1}, ljforcefield::LJForceField)
-    missing_atoms = Array{Symbol, 1}()
-    for atom in atoms
-        if !(atom in keys(ljforcefield.pure_ϵ))
-            push!(missing_atoms, atom)
-        end
-    end
-    return missing_atoms
-end
 
 """
     check_forcefield_coverage(framework, ljforcefield)
@@ -180,30 +169,19 @@ Will print out which atoms are missing.
 - `ljforcefield::LJForceField`: A Lennard Jones forcefield object containing information on atom interactions
 
 # Returns
-- `check_forcefield_coverage::Bool`: Returns true if all atoms in the `framework` are also included in `ljforcefield`. False otherwise
+- `all_covered::Bool`: Returns true if all atoms in the `framework` are also included in `ljforcefield`. False otherwise
 """
-function check_forcefield_coverage(framework::Framework, ljforcefield::LJForceField)
-    atoms = unique([a.species for a in framework.atoms])
-    missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
-    if length(missing_atoms) == 0
-        return true
-    else
-        @printf("Framework %s possesses the following atoms not covered by the forcefield %s:\n", framework.name, ljforcefield.name)
-        println(string(missing_atoms))
-        return false
+function check_forcefield_coverage(f_or_m::Union{Framework, Molecule}, ljff::LJForceField)
+    unique_species = unique(f_or_m.atoms.species)
+    all_covered = true
+    for species in unique_species
+        if !(species in keys(ljff.pure_ϵ))
+            @warn @sprintf("\t%s in %s missing from %s force field.", species, 
+                isa(f_or_m, Framework) ? f_or_m.name : f_or_m.species, ljff.name)
+            all_covered = false
+        end
     end
-end
-
-function check_forcefield_coverage(molecule::Molecule, ljforcefield::LJForceField)
-    atoms = unique([a.species for a in molecule.atoms])
-    missing_atoms = atoms_missing_from_forcefield(atoms, ljforcefield)
-    if length(missing_atoms) == 0
-        return true
-    else
-        @printf("Molecule %s possesses the following atoms not covered by the forcefield %s:\n", molecule.species, ljforcefield.name)
-        println(string(missing_atoms))
-        return false
-    end
+    return all_covered
 end
 
 function Base.show(io::IO, ff::LJForceField)

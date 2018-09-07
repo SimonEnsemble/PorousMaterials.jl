@@ -1,11 +1,11 @@
-using Base.Test
+using Test
 
 # Data structure for a framework; user-friendly constructor below
 struct Framework
     name::String
     box::Box
-    atoms::Array{LJSphere, 1}
-    charges::Array{PtCharge, 1}
+    atoms::Atoms
+    charges::Charges
 end
 
 """
@@ -49,10 +49,12 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     # Initialize arrays. We'll populate them when reading through the crystal structure file.
     charge_values = Array{Float64, 1}()
+    species = Array{Symbol, 1}()
     xf = Array{Float64, 1}()
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
-    species = Array{Symbol, 1}()
+    coords = Array{Float64, 2}(undef, 3, 0)
+
 
     # Start of .cif reader
     if extension == "cif"
@@ -68,15 +70,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # Make sure the space group is P1
             if line[1] == "_symmetry_space_group_name_H-M"
                 if length(line) == 3
-                    @assert(contains(line[2] * line[3], "P1") ||
-                            contains(line[2] * line[3], "P 1") ||
-                            contains(line[2] * line[3], "-P1"),
-                            "cif must have P1 symmetry.\n")
+                    @assert (occursin("P1", line[2] * line[3]) ||
+                            occursin("P 1", line[2] * line[3]) ||
+                            occursin("-P1", line[2] * line[3]))
+                            "cif must have P1 symmetry.\n"
                 elseif length(line) == 2
-                    @assert(contains(line[2], "P1") ||
-                            contains(line[2], "P 1") ||
-                            contains(line[2], "-P1"),
-                            "cif must have P1 symmetry.\n")
+                    @assert (occursin("P1", line[2]) ||
+                            occursin("P 1", line[2]) ||
+                            occursin("-P1", line[2]))
+                            "cif must have P1 symmetry.\n"
                 else
                     println(line)
                     error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
@@ -101,7 +103,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # and replace it with a while-loop further down
             if line[1] == "loop_"
                 next_line = split(lines[i+1])
-                if contains(next_line[1], "_atom_site")
+                if occursin("_atom_site", next_line[1])
                     loop_starts = i + 1
                     break
                 end
@@ -132,10 +134,10 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 break
             end
 
-            push!(species, line[name_to_column[atom_column_name]])
-            push!(xf, mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0))
-            push!(yf, mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0))
-            push!(zf, mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0))
+            push!(species, Symbol(line[name_to_column[atom_column_name]]))
+            coords = [coords [mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0),
+                    mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0),
+                    mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0)]]
             # If charges present, import them
             if haskey(name_to_column, "_atom_site_charge")
                 push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
@@ -170,7 +172,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         # Read in atoms and fractional coordinates
         for i = 1:n_atoms
             line = split(lines[4 + i])
-            push!(species, line[2])
+            push!(species, Symbol(line[2]))
 
             push!(xf, mod(parse(Float64, line[3]), 1.0)) # Wrap to [0,1]
             push!(yf, mod(parse(Float64, line[4]), 1.0)) # Wrap to [0,1]
@@ -178,20 +180,19 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
             push!(charge_values, parse(Float64, line[14]))
         end
+
+        for i = 1:n_atoms
+            coords = [ coords [xf[i], yf[i], zf[i]] ]
+        end
     end
 
     # Construct the unit cell box
     box = Box(a, b, c, α, β, γ)
-
-    atoms = LJSphere[]
-    charges = PtCharge[]
-    for a = 1:length(species)
-        frac_coord = [xf[a], yf[a], zf[a]]
-        push!(atoms, LJSphere(species[a], frac_coord))
-        if abs(charge_values[a]) > 0.0
-            push!(charges, PtCharge(charge_values[a], frac_coord))
-        end
-    end
+    # construct atoms attribute of framework
+    atoms = Atoms(species, coords)
+    # construct charges attribute of framework; include only nonzero charges
+    idx_nz = charge_values .!= 0.0
+    charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
     framework = Framework(filename, box, atoms, charges)
 
@@ -233,45 +234,58 @@ construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the 
 """
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
     # determine number of atoms in replicated framework
-    n_atoms = length(framework.atoms) * repfactors[1] * repfactors[2] * repfactors[3]
+    n_atoms = size(framework.atoms.xf, 2) * repfactors[1] * repfactors[2] * repfactors[3]
 
     # replicate box
     new_box = replicate(framework.box, repfactors)
 
     # replicate atoms and charges
-    new_charges = PtCharge[]
-    new_atoms = LJSphere[]
+    charge_coords = Array{Float64, 2}(undef, 3, 0)
+    charge_vals = Array{Float64, 1}()
+    atom_coords = Array{Float64, 2}(undef, 3, 0)
+    species = Array{Symbol, 1}()
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
-        for atom in framework.atoms
-            xf = atom.xf + 1.0 * [ra, rb, rc]
+        for i = 1:framework.atoms.n_atoms
+            xf = framework.atoms.xf[:, i] + 1.0 * [ra, rb, rc]
             # scale fractional coords
             xf = xf ./ repfactors
-            push!(new_atoms, LJSphere(atom.species, xf))
+            atom_coords = [atom_coords xf]
+            push!(species, Symbol(framework.atoms.species[i]))
         end
-        for charge in framework.charges
-            xf = charge.xf + 1.0 * [ra, rb, rc]
+        for j = 1:framework.charges.n_charges
+            xf = framework.charges.xf[:, j] + 1.0 * [ra, rb, rc]
             # scale fractional coords
             xf = xf ./ repfactors
-            push!(new_charges, PtCharge(charge.q, xf))
+            charge_coords = [charge_coords xf]
+            push!(charge_vals, framework.charges.q[j])
         end
     end
-    @assert(length(new_charges) == length(framework.charges) * prod(repfactors))
-    @assert(length(new_atoms) == length(framework.atoms) * prod(repfactors))
+
+    new_atoms = Atoms(species, atom_coords)
+    new_charges = Charges(charge_vals, charge_coords)
+
+    @assert (new_charges.n_charges == framework.charges.n_charges * prod(repfactors))
+    @assert (new_atoms.n_atoms == framework.atoms.n_atoms * prod(repfactors))
     return Framework(framework.name, new_box, new_atoms, new_charges)
 end
 
 # doc string in Misc.jl
-function write_to_xyz(framework::Framework, filename::AbstractString;
-                      comment::AbstractString="")
-    atoms = [atom.species for atom in framework.atoms]
-    x = zeros(Float64, 3, length(framework.atoms))
-    for (a, atom) in enumerate(framework.atoms)
-        x[:, a] = framework.box.f_to_c * atom.xf
+function write_xyz(framework::Framework, filename::AbstractString;
+                      comment::AbstractString="", center::Bool=false)
+    atoms = framework.atoms.species
+    x = zeros(Float64, 3, framework.atoms.n_atoms)
+    for i = 1:framework.atoms.n_atoms
+        x[:, i] = framework.box.f_to_c * framework.atoms.xf[:, i]
+    end
+    if center
+        center_of_box = framework.box.f_to_c * [0.5, 0.5, 0.5]
+        for i = 1:framework.atoms.n_atoms
+            x[:, i] -= center_of_box
+        end
     end
 
-    write_to_xyz(atoms, x, filename, comment=comment)
+    write_xyz(atoms, x, filename, comment=comment)
 end
-
 
 """
     is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
@@ -290,16 +304,17 @@ between every pair of atoms and ensuring distance is greater than
 """
 function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
     overlap = false
-    for (i, atom_i) in enumerate(framework.atoms)
-        for (j, atom_j) in enumerate(framework.atoms)
+    for i = 1:framework.atoms.n_atoms
+        for j = 1:framework.atoms.n_atoms
             if j >= i
                 continue
             end
-            if _overlap(atom_i, atom_j, framework.box, overlap_tol)
+            if _overlap(framework.atoms.xf[:, i], framework.atoms.xf[:, j],
+                        framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    warn(@sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
-                        framework.name, overlap_tol))
+                    @warn @sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol)
                 end
             end
         end
@@ -309,16 +324,17 @@ end
 
 function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::Bool=true)
     overlap = false
-    for (i, charge_i) in enumerate(framework.charges)
-        for (j, charge_j) in enumerate(framework.charges)
+    for i = 1:framework.charges.n_charges
+        for j = 1:framework.charges.n_charges
             if j >= i
                 continue
             end
-            if _overlap(charge_i, charge_j, framework.box, overlap_tol)
+            if _overlap(framework.charges.xf[:, i], framework.charges.xf[:, j],
+                        framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    warn(@sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
-                        framework.name, overlap_tol))
+                    @warn @sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                        framework.name, overlap_tol)
                 end
             end
         end
@@ -326,16 +342,18 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
     return overlap
 end
 
-# determine if two lennard-jones spheres overlap
-function _overlap(a1::Union{PtCharge, LJSphere}, a2::Union{PtCharge, LJSphere}, box::Box,
-                  overlap_tol::Float64)
-    dxf = a1.xf - a2.xf
+# determine if two lennard-jones spheres overlap, returns the number of Atoms that
+#   do overlap, and can then use that number to determine if they overlap or are repeats
+function _overlap(xf_1::Array{Float64, 1}, xf_2::Array{Float64, 1},
+                  box::Box, overlap_tol::Float64)
+    dxf = xf_1 .- xf_2
     nearest_image!(dxf)
-    if norm(box.f_to_c * dxf) < overlap_tol
-        return true
-    else
-        return false
-    end
+    dxc = box.f_to_c * dxf
+    return norm(dxc) < overlap_tol
+end
+
+function _overlap(xf::Union{Charges, Atoms}, box::Box, overlap_tol::Float64)
+    return _overlap(xf, xf, box, overlap_tol)
 end
 
 #TODO write tests for this! one with diff elements
@@ -358,19 +376,20 @@ must be identical.
 function remove_overlapping_atoms_and_charges(framework::Framework;
     atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1, verbose::Bool=true)
 
-    atoms_to_keep = trues(length(framework.atoms))
-    charges_to_keep = trues(length(framework.atoms))
+    atoms_to_keep = trues(framework.atoms.n_atoms)
+    charges_to_keep = trues(framework.atoms.n_atoms)
 
-    for (i, atom_i) in enumerate(framework.atoms)
-        for (j, atom_j) in enumerate(framework.atoms)
+    for i = 1:framework.atoms.n_atoms
+        for j =  1:framework.atoms.n_atoms
             if j >= i
                 continue
             end
-            if _overlap(atom_i, atom_j, framework.box, atom_overlap_tol)
-                if atom_i.species != atom_j.species
+            if _overlap(framework.atoms.xf[:, i], framework.atoms.xf[:, j],
+                        framework.box, atom_overlap_tol)
+                if framework.atoms.species[i] != framework.atoms.species[j]
                     error(@sprintf("Atom %d, %s and atom %d, %s overlap but are not the
                     same element so we will not automatically remove one in the pair.\n",
-                    i, atom_i.species, j, atom_j.species))
+                    i, framework.atoms.species[i], j, framework.atoms.species[j]))
                 else
                     atoms_to_keep[i] = false
                 end
@@ -381,16 +400,17 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
         println("# atoms removed: ", sum(.! atoms_to_keep))
     end
 
-    for (i, charge_i) in enumerate(framework.charges)
-        for (j, charge_j) in enumerate(framework.charges)
+    for i = 1:framework.charges.n_charges
+        for j = 1:framework.charges.n_charges
             if j >= i
                 continue
             end
-            if _overlap(charge_i, charge_j, framework.box, charge_overlap_tol)
-                if ! isapprox(charge_i.q, charge_j.q)
+            if _overlap(framework.charges.xf[:, i], framework.charges.xf[:, j],
+                        framework.box, charge_overlap_tol)
+                if ! isapprox(framework.charges.q[i], framework.charges.q[j])
                     error(@sprintf("charge %d of %f and charge %d of %f overlap but are
                     not the same charge so we will not automatically remove one in the pair.\n",
-                    i, charge_i.q, j, charge_j.q))
+                    i, framework.charges.q[j], j, framework.charges.q[j]))
                 else
                     charges_to_keep[i] = false
                 end
@@ -401,9 +421,23 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
         println("# charges removed: ", sum(.! charges_to_keep))
     end
 
-    new_framework = Framework(framework.name, framework.box,
-        framework.atoms[atoms_to_keep],
-        charged(framework) ? framework.charges[charges_to_keep] : PtCharge[])
+    atom_coords_to_keep = Array{Float64, 2}(undef, 3, 0)
+    for i = 1:length(atoms_to_keep)
+        if atoms_to_keep[i]
+            atom_coords_to_keep = [atom_coords_to_keep framework.atoms.xf[:, i]]
+        end
+    end
+    charge_coords_to_keep = Array{Float64, 2}(undef, 3, 0)
+    for i = 1:length(charges_to_keep)
+        if charges_to_keep[i]
+            charge_coords_to_keep = [charge_coords_to_keep framework.charges.xf[:, i]]
+        end
+    end
+
+    atoms = Atoms(framework.atoms.species[atoms_to_keep], atom_coords_to_keep)
+    charges = Charges(framework.charges.q[charges_to_keep], charge_coords_to_keep)
+
+    new_framework = Framework(framework.name, framework.box, atoms, charges)
 
     @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
     @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
@@ -411,13 +445,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     return new_framework
 end
 
-function total_charge(framework::Framework)
-    q = 0.0
-    for charge in framework.charges
-        q += charge.q
-    end
-    return q
-end
+total_charge(framework::Framework) = (framework.charges.n_charges == 0) ? 0.0 : sum(framework.charges.q)
 
 """
     charge_neutral_flag = charge_neutral(framework, net_charge_tol) # true or false
@@ -435,7 +463,7 @@ end
 Determine if a framework has point charges
 """
 function charged(framework::Framework; verbose::Bool=false)
-    charged_flag = length(framework.charges) > 0
+    charged_flag = framework.charges.n_charges > 0
     if verbose
         @printf("\tFramework atoms of %s have charges? %s\n", framework.name, charged_flag)
     end
@@ -455,12 +483,12 @@ e.g. C12 --> C
 - `framework::Framework`: The framework containing the crystal structure information
 """
 function strip_numbers_from_atom_labels!(framework::Framework)
-    for (a, atom) in enumerate(framework.atoms)
+    for i = 1:framework.atoms.n_atoms
         # atom species in string format
-		species = string(atom.species)
+		species = string(framework.atoms.species[i])
 		for j = 1:length(species)
-			if ! isalpha(species[j])
-                framework.atoms[a] = LJSphere(species[1:j-1], atom.xf)
+			if ! isletter(species[j])
+                framework.atoms.species[i] = Symbol(species[1:j-1])
 				break
 			end
 		end
@@ -468,8 +496,6 @@ function strip_numbers_from_atom_labels!(framework::Framework)
     return
 end
 
-# TODO Does this need documentation explaining it? Would it make sense to put it
-#   with the other write_vtk function headers in Box.jl?
 write_vtk(framework::Framework) = write_vtk(framework.box, split(framework.name, ".")[1])
 
 """
@@ -484,15 +510,15 @@ Find the irreducible chemical formula of a crystal structure.
 - `formula::Dict{Symbol, Int}`: A dictionary with the irreducible chemical formula of a crystal structure
 """
 function chemical_formula(framework::Framework; verbose::Bool=false)
-    unique_atoms = unique([atom.species for atom in framework.atoms])
+    unique_atoms = unique(framework.atoms.species)
     # use dictionary to count atom types
     atom_counts = Dict{Symbol, Int}([a => 0 for a in unique_atoms])
-    for atom in framework.atoms
-        atom_counts[atom.species] += 1
+    for i = 1:framework.atoms.n_atoms
+        atom_counts[framework.atoms.species[i]] += 1
     end
 
     # get greatest common divisor
-    gcd_ = gcd([k for k in values(atom_counts)]...)
+    gcd_ = gcd([k for k in values(atom_counts)])
 
     # turn into irreducible chemical formula
     for atom in keys(atom_counts)
@@ -527,8 +553,8 @@ function molecular_weight(framework::Framework)
     atomic_masses = read_atomic_masses()
 
     mass = 0.0
-	for atom in framework.atoms
-        mass += atomic_masses[atom.species]
+	for i = 1:framework.atoms.n_atoms
+        mass += atomic_masses[framework.atoms.species[i]]
     end
 
     return mass # amu
@@ -557,11 +583,11 @@ Write a `framework::Framework` to a .cif file with `filename::String`. If `filen
 not include the .cif extension, it will automatically be added.
 """
 function write_cif(framework::Framework, filename::String)
-    if charged(framework) && (length(framework.atoms) != length(framework.charges))
-        error("write_cif assumes equal numbers of Charges and LJSpheres (or zero charges)")
+    if charged(framework) && (framework.atoms.n_atoms != framework.charges.n_charges)
+        error("write_cif assumes equal numbers of Charges and Atoms (or zero charges)")
     end
     # append ".cif" to filename if it doesn't already have the extension
-    if ! contains(filename, ".cif")
+    if ! occursin(".cif", filename)
         filename *= ".cif"
     end
     cif_file = open(filename, "w")
@@ -590,16 +616,15 @@ function write_cif(framework::Framework, filename::String)
     @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
     @printf(cif_file, "_atom_site_charge\n")
 
-    for (a, atom) in enumerate(framework.atoms)
+    for i = 1:framework.atoms.n_atoms
         q = 0.0
         if charged(framework)
-            charge = framework.charges[a]
-            q = charge.q
-            if ! isapprox(charge.xf, atom.xf)
+            q = framework.charges.q[i]
+            if ! isapprox(framework.charges.xf[:, i], framework.atoms.xf[:, i])
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
-        @printf(cif_file, "%s %f %f %f %f\n", atom.species, atom.xf..., q)
+        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i], framework.atoms.xf[:, i]..., q)
      end
      close(cif_file)
 end
@@ -613,7 +638,7 @@ of the atoms or pass an array of charges to assign to each atom, with the order 
 array consistent with the order of `framework.atoms`.
 
 If the framework already has charges, the charges are removed and new charges are added
-accordingly so that `length(framework.atoms) == length(framework.charges)`.
+accordingly so that `framework.atoms.n_atoms == framework.charges.n_charges`.
 
 # Examples
 ```
@@ -642,32 +667,37 @@ are assigned.
 function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float64}, Array{Float64, 1}},
     net_charge_tol::Float64=1e-5)
     # if charges are already present, may make little sense to assign charges to atoms again
-    if length(framework.charges) != 0
-        warn(@sprintf("Charges are already present in %s. Removing the current charges on the
-        framework and adding new ones...\n", framework.name))
+    if framework.charges.n_charges != 0
+        @warn @sprintf("Charges are already present in %s. Removing the current charges on the
+        framework and adding new ones...\n", framework.name)
     end
 
     # build the array of point charges according to atom species
-    pt_charges = PtCharge[]
-    for (a, atom) in enumerate(framework.atoms)
+    charge_vals = Array{Float64, 1}()
+    charge_coords = Array{Float64, 2}(undef, 3, 0)
+    for i = 1:framework.atoms.n_atoms
         if isa(charges, Dict{Symbol, Float64})
-            if ! (atom.species in keys(charges))
+            if ! (framework.atoms.species[i] in keys(charges))
                 error(@sprintf("Atom %s is not present in the charge dictionary passed to
                 `assign_charges` for %s\n", atom.species, framework.name))
             end
-            push!(pt_charges, PtCharge(charges[atom.species], atom.xf))
+            push!(charge_vals, charges[framework.atoms.species[i]])
+            charge_coords = [charge_coords framework.atoms.xf[:, i]]
         else
-            if length(charges) != length(framework.atoms)
+            if length(charges) != framework.atoms.n_atoms
                 error(@sprintf("Length of `charges` array passed to `assign_charges` is not
                 equal to the number of atoms in %s = %d\n", framework.name,
-                length(framework.atoms)))
+                framework.atoms.n_atoms))
             end
-            push!(pt_charges, PtCharge(charges[a], atom.xf))
+            push!(charge_vals, charges[i])
+            charge_coords = [charge_coords framework.atoms.xf[:, i]]
         end
     end
 
+    charges = Charges(charge_vals, charge_coords)
+
     # construct new framework
-    new_framework = Framework(framework.name, framework.box, framework.atoms, pt_charges)
+    new_framework = Framework(framework.name, framework.box, framework.atoms, charges)
 
     # check for charge neutrality
     if abs(total_charge(new_framework)) > net_charge_tol
@@ -682,8 +712,8 @@ end
 function Base.show(io::IO, framework::Framework)
     println(io, "Name: ", framework.name)
     println(io, framework.box)
-	@printf(io, "Number of atoms = %d\n", length(framework.atoms))
-	@printf(io, "Number of charges = %d\n", length(framework.charges))
+	@printf(io, "Number of atoms = %d\n", framework.atoms.n_atoms)
+	@printf(io, "Number of charges = %d\n", framework.charges.n_charges)
     println(io, "Chemical formula: ", chemical_formula(framework))
 end
 
@@ -693,13 +723,13 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
         return false
     end
     box_flag = isapprox(f1.box, f2.box)
-    if length(f1.charges) != length(f2.charges)
+    if f1.charges.n_charges != f2.charges.n_charges
         return false
     end
-    if length(f1.atoms) != length(f2.atoms)
+    if f1.atoms.n_atoms != f2.atoms.n_atoms
         return false
     end
-    charges_flag = all(isapprox.(f1.charges, f2.charges))
-    atoms_flag = all(isapprox.(f1.atoms, f2.atoms))
+    charges_flag = isapprox(f1.charges, f2.charges)
+    atoms_flag = isapprox(f1.atoms, f2.atoms)
     return box_flag && charges_flag && atoms_flag
 end

@@ -1,4 +1,4 @@
-julia 0.6.4
+julia 0.7
 SpecialFunctions
 OffsetArrays
 Roots
@@ -7,5 +7,4 @@ DataFrames
 CSV
 StatsBase
 ProgressMeter
-JLD
-Polynomials
+JLD2

@@ -35,6 +35,8 @@ struct Box
     reciprocal_lattice::Array{Float64, 2}
 end
 
+Base.broadcastable(b::Box) = Ref(b)
+
 """
     r = reciprocal_lattice(f_to_c)
 
@@ -74,7 +76,7 @@ function Box(a::Float64, b::Float64, c::Float64,
     # the columns of f_to_c are the unit cell axes
     r = reciprocal_lattice(f_to_c)
 
-    @assert f_to_c * c_to_f ≈ eye(3)
+    @assert f_to_c * c_to_f ≈ Matrix{Float64}(I, 3, 3)
     @assert isapprox(r, 2.0 * π * inv(f_to_c))
 
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)

@@ -18,19 +18,32 @@ the potential energy in units Kelvin (well, whatever the units of ϵ are).
 """
 @inline function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
 	ratio = (σ² / r²) ^ 3
-	return 4.0 * ϵ * (ratio ^ 2 - ratio)
+	return 4.0 * ϵ * ratio * (ratio - 1.0)
 end
 
-# note this assumes the molecule is inside the box... i.e. fractional coords in [1,1,1]
-@inline function vdw_energy(u::LJSphere, v::LJSphere, ljff::LJForceField, box::Box)
-    r² = nearest_r²(u.xf, v.xf, box)
-    if r² < R_OVERLAP_squared # overlapping atoms
-        return Inf
-    elseif r² < ljff.cutoffradius_squared # within cutoff radius; not overlapping
-        return lennard_jones(r², ljff.σ²[u.species][v.species], ljff.ϵ[u.species][v.species])
-    else # outside cutoff radius
-        return 0.0
+# generic atoms-atoms van der waals energy function; pass bigger list of atoms second for speed
+@inline function vdw_energy(atoms_i::Atoms, atoms_j::Atoms, box::Box, ljff::LJForceField)
+	energy = 0.0
+    for i = 1:atoms_i.n_atoms
+        # vectors from atom i to atoms_j in fractional space
+        @inbounds dxf = broadcast(-, atoms_j.xf, atoms_i.xf[:, i])
+        nearest_image!(dxf)
+        # convert to Cartesian coords
+        @inbounds dxf .= box.f_to_c * dxf
+        for j = 1:atoms_j.n_atoms
+            @inbounds r² = dxf[1, j] ^ 2 + dxf[2, j] ^ 2 + dxf[3, j] ^ 2
+            if r² < ljff.cutoffradius_squared # within cutoff radius
+                if r² < R_OVERLAP_squared # overlapping atoms
+                    return Inf # no sense in continuing to next atom and adding Inf
+                else # not overlapping
+                    @inbounds energy += lennard_jones(r²,
+                            ljff.σ²[atoms_i.species[i]][atoms_j.species[j]],
+                             ljff.ϵ[atoms_i.species[i]][atoms_j.species[j]])  
+                end
+            end
+        end
     end
+	return energy
 end
 
 """
@@ -50,14 +63,8 @@ image convention can be applied. See [`replicate`](@ref).
 # Returns
 - `energy::Float64`: Van der Waals interaction energy
 """
-function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
-	energy = 0.0
-    for matom in molecule.atoms
-        @simd for fatom in framework.atoms
-            energy += vdw_energy(matom, fatom, ljff, framework.box)
-        end
-    end
-	return energy
+@inline function vdw_energy(framework::Framework, molecule::Molecule, ljff::LJForceField)
+    return vdw_energy(molecule.atoms, framework.atoms, framework.box, ljff)
 end
 
 """
@@ -78,19 +85,13 @@ using the nearest image convention.
 """
 function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
     energy = 0.0
-    # Loop over all atoms in molecules[molecule_id]
-    for this_matom in molecules[molecule_id].atoms
-        # look at its interaction with all other molecules
-        for (other_molecule_id, other_molecule) in enumerate(molecules)
-            # molecule cannot interact with itself
-            if other_molecule_id == molecule_id
-                continue
-            end
-            # loop over every atom in the other molecule
-            for other_matom in other_molecule.atoms
-                energy += vdw_energy(this_matom, other_matom, ljff, box)
-            end
+    # loop over all other molecules
+    for other_molecule_id = 1:length(molecules)
+        # molecule cannot interact with itself
+        if other_molecule_id == molecule_id
+            continue
         end
+        @inbounds energy += vdw_energy(molecules[molecule_id].atoms, molecules[other_molecule_id].atoms, box, ljff)
     end
     return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
@@ -114,9 +115,7 @@ image convention can be applied. See [`replicate`](@ref).
 # Returns
 - `total_energy::Float64`: The total guest-host or guest-guest van der Waals energy
 """
-function total_vdw_energy(framework::Framework,
-                          molecules::Array{Molecule, 1},
-                          ljff::LJForceField)
+function total_vdw_energy(framework::Framework, molecules::Array{Molecule, 1}, ljff::LJForceField)
     total_energy = 0.0
     for molecule in molecules
         total_energy += vdw_energy(framework, molecule, ljff)
@@ -136,15 +135,16 @@ end
 Assumes unit cell box is a unit cube and no periodic boundary conditions
 are applied.
 """
-function vdw_energy_no_PBC(molecule::Molecule, atoms::Array{LJSphere, 1}, ljff::LJForceField)
-    energy = 0.0 
-    for matom in molecule.atoms
-        for atom in atoms
-            dx = matom.xf - atom.xf
+function vdw_energy_no_PBC(molecule::Molecule, atoms::Atoms, ljff::LJForceField)
+    energy = 0.0
+    for i = 1:molecule.atoms.n_atoms # loop over all atoms in molecule
+        for j = 1:atoms.n_atoms
+            dx = molecule.atoms.xf[:, i] - atoms.xf[:, j]
             r² = dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3]
-            energy += lennard_jones(r², ljff.σ²[matom.species][atom.species], 
-                ljff.ϵ[matom.species][atom.species])
+            energy += lennard_jones(r², 
+                ljff.σ²[molecule.atoms.species[i]][atoms.species[j]],
+                 ljff.ϵ[molecule.atoms.species[i]][atoms.species[j]])
         end
     end
-    return energy
+	return energy
 end

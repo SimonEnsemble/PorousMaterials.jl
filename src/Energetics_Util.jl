@@ -34,13 +34,13 @@ Base.sqrt(u::PotentialEnergy) = PotentialEnergy(sqrt(u.vdw), sqrt(u.coulomb))
 function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=true, atol::Float64=1e-6)
     if ! isapprox(u.vdw, v.vdw, atol=atol)
         if verbose
-            warn("vdw energy mismatch")
+            @warn "vdw energy mismatch"
         end
         return false
     end
     if ! isapprox(u.coulomb, v.coulomb, atol=atol)
         if verbose
-            warn("coulomb energy mismatch")
+            @warn "coulomb energy mismatch"
         end
         return false
     end
@@ -86,11 +86,11 @@ square(u::SystemPotentialEnergy) = SystemPotentialEnergy(square(u.guest_host), s
 function Base.isapprox(u::SystemPotentialEnergy, v::SystemPotentialEnergy;
                        verbose::Bool=true, atol::Float64=1e-6)
     if ! isapprox(u.guest_host, v.guest_host, verbose=verbose, atol=atol)
-        warn("(guest-host mismatch)")
+        @warn "(guest-host mismatch)"
         return false
     end
     if ! isapprox(u.guest_guest, v.guest_guest, verbose=verbose, atol=atol)
-        warn("(guest-guest mismatch)")
+        @warn "(guest-guest mismatch)"
         return false
     end
     return true

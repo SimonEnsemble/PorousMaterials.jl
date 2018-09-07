@@ -33,9 +33,9 @@ function read_xyz(filename::AbstractString)
 end
 
 """
-    write_to_xyz(atoms, x, filename; comment="")
-    write_to_xyz(molecules, box, filename; comment="")
-    write_to_xyz(framework, filename; comment="")
+    write_xyz(atoms, x, filename; comment="")
+    write_xyz(molecules, box, filename; comment="")
+    write_xyz(framework, filename; comment="", center=false)
 
 Write a molecule, framework, or array of atoms & positions to an .xyz file.
 
@@ -48,11 +48,12 @@ Write a molecule, framework, or array of atoms & positions to an .xyz file.
 - `filename::AbstractString`: The filename of the .xyz file. (".xyz" appended automatically
 if the extension is not provided.) (absolute path)
 - `comment::AbstractString`: comment if you'd like to write to the file.
+- `center::Bool`: shift atoms so that origin is the center of the `framework.box`
 """
-function write_to_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
+function write_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
     filename::AbstractString; comment::AbstractString="")
 
-    if ! contains(filename, ".xyz")
+    if ! occursin(".xyz", filename)
         filename *= ".xyz"
     end
 

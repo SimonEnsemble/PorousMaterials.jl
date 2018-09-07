@@ -1,7 +1,5 @@
-"""
-Calculates the properties of a real gas, such as the compressibility factor, fugacity,
-and molar volume.
-"""
+# Calculates the properties of a real gas, such as the compressibility factor, fugacity,
+#   and molar volume.
 
 # Universal gas constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
@@ -41,7 +39,7 @@ function compressibility_factor(gas::PengRobinsonGas, T::Float64, P::Float64)
     # select real roots only.
     z_factor = z_roots[isreal.(z_roots)]
     # find the index of the root that is closest to unity
-    id_closest_to_unity = indmin(abs.(z_factor - 1.0))
+    id_closest_to_unity = argmin(abs.(z_factor .- 1.0))
     # return root closest to unity.
     return real(z_factor[id_closest_to_unity])
 end
@@ -97,14 +95,14 @@ end
 """
     gas = PengRobinsonGas(gas)
 
-Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol` 
-from the properties .csv file `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"` 
+Reads in critical temperature, critical pressure, and acentric factor of the `gas::Symbol`
+from the properties .csv file `PorousMaterials.PATH_TO_DATA * "PengRobinsonGasProps.csv"`
 and returns a complete `PengRobinsonGas` data structure.
 **NOTE: Do not delete the last three comment lines in PengRobinsonGasProps.csv
 
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
-""" 
+"""
 function PengRobinsonGas(gas::Symbol)
     df = CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv"; footerskip=3)
     if ! (string(gas) in df[:gas])
