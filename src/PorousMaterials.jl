@@ -52,7 +52,7 @@ export
        read_xyz, read_cpk_colors, read_atomic_radii, write_xyz,
 
        # Crystal.jl
-       Framework, read_crystal_structure_file, remove_overlapping_atoms,
+       Framework, read_crystal_structure_file, remove_overlapping_atoms_and_charges,
        strip_numbers_from_atom_labels!, chemical_formula, molecular_weight, crystal_density,
        construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges,
 
@@ -71,7 +71,8 @@ export
        lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
        # ElectrostaticEnergetics.jl
-       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, Eikr,
+       electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
+       setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
 
        # MChelpers.jl
        insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,

@@ -113,7 +113,6 @@ end
 This function generates a unit cube, each side is 1.0 Angstrom long, and all the
 corners are right angles.
 """
-
 UnitCube() = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
 
 """

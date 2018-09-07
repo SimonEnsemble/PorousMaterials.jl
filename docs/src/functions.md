@@ -76,8 +76,8 @@ This page contains all of the functions exported by PorousMaterials. They are so
 
 ##Matter.jl
 ```@docs
-    LJSphere
-    PtCharge
+    Atoms
+    Charges
 ```
 
 ##MChelpers.jl
@@ -95,7 +95,7 @@ This page contains all of the functions exported by PorousMaterials. They are so
     read_cpk_colors
     read_atomic_radii
     read_atomic_masses
-    write_to_xyz
+    write_xyz
 ```
 
 ##Molecules.jl
@@ -110,8 +110,6 @@ This page contains all of the functions exported by PorousMaterials. They are so
 ##NearestImage.jl
 ```@docs
     nearest_image!
-    nearest_r²
-    nearest_r
 ```
 
 ##VdWEnergetics.jl

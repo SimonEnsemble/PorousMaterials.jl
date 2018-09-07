@@ -8,3 +8,4 @@ VisualizeTester.jl
 *.sh
 *.jld2
 docs/build/
+docs/site/

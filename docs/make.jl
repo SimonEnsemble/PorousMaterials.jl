@@ -6,6 +6,25 @@ using Documenter, PorousMaterials
         pages = [
                 "Home" => "index.md"
                 "Functions" => "functions.md"
+#=
+                ["functions.md"
+                "Box.jl" => "box.md"
+                "Crystal.jl" => "crystal.md"
+                "ElectrostaticsEnergetics.jl" => "electrostatic_energetics.md"
+                "Energetics_Util.jl" => "energetics_util.md"
+                "EOS.jl" => "eos.md"
+                "Forcefield.jl" => "forcefield.md"
+                "GCMC.jl" => "gcmc.md"
+                "Grid.jl" => "grid.md"
+                "Henry.jl" => "henry.md"
+                "Matter.jl" => "matter.md"
+                "MChelpers.jl" => "mchelpers.md"
+                "Misc.jl" => "misc.md"
+                "Molecules.jl" => "molecules.md"
+                "NearestImage.jl" => "nearest_image.md"
+                "VdWEnergetics.jl" => "vdw_energetics.md"
+                ]
+=#
                 # Any other pages go here
                 ]
     )
