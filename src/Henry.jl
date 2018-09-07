@@ -35,12 +35,8 @@ the replication factors in reciprocal space.
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
-<<<<<<< HEAD
-                           autosave::Bool=true)
-=======
                            autosave::Bool=true, filename_comment::AbstractString="")
     time_start = time()
->>>>>>> a8b6963cdeff013cad5112685d0c37d68af27ffe
     if verbose
         print("Simulating Henry coefficient of ")
         printstyled(molecule_.species; color=:green)
@@ -89,21 +85,6 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
 
-<<<<<<< HEAD
-    # determine the number of insertions based on the unit cell volume of the crystal
-    nb_insertions = insertions_per_volume * framework.box.Ω
-    if verbose
-        @printf("\t%d total Widom insertions\n", nb_insertions)
-    end
-
-    # partition total insertions among blocks.
-    if nprocs() > N_BLOCKS
-        error("Use $N_BLOCKS cores or less for Henry coefficient calculations to match the number of blocks")
-    end
-    nb_insertions_per_block = ceil(Int, nb_insertions / N_BLOCKS)
-
-=======
->>>>>>> a8b6963cdeff013cad5112685d0c37d68af27ffe
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
     # set up function to take a tuple of arguments, the number of insertions to
     # perform and the molecule to move around/rotate. each core needs a different
@@ -113,11 +94,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                                             temperature, ljforcefield, x[1],
                                             charged_system, ewald_precision, verbose)
 
-<<<<<<< HEAD
-    # parallelize insertions across the cores
-=======
     # parallelize insertions across the cores; keep nb_insertions_per_block same
->>>>>>> a8b6963cdeff013cad5112685d0c37d68af27ffe
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
 
     # unpack the boltzmann factor sum and weighted energy sum from each block
@@ -154,10 +131,6 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     result["henry coefficient [mmol/(g-bar)]"] = result["henry coefficient [mol/(m³-bar)]"] / ρ
     result["err henry coefficient [mmol/(g-bar)]"] = err_kh / ρ
     result["henry coefficient [mol/(kg-Pa)]"] = result["henry coefficient [mmol/(g-bar)]"] / 100000.0
-<<<<<<< HEAD
-
-=======
->>>>>>> a8b6963cdeff013cad5112685d0c37d68af27ffe
     # note assumes same # insertions per core.
     result["⟨U, vdw⟩ (K)"] = mean([average_energies[b].vdw for b = 1:N_BLOCKS])
     result["⟨U, Coulomb⟩ (K)"] = mean([average_energies[b].coulomb for b = 1:N_BLOCKS])
@@ -272,7 +245,7 @@ describes what it holds.
 - `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
 - `ljforcefield::LJForceField`: The molecular model being used in the simulation
     to describe the intermolecular Van der Waals forces
-- `insertions_per_volume::Int`: 
+- `insertions_per_volume::Int`:
 """
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
                                ljforcefield::LJForceField, insertions_per_volume::Union{Int, Float64}; comment::AbstractString="")
