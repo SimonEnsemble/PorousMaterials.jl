@@ -1,16 +1,17 @@
+<meta charset="UTF-8">
 A pure-[Julia](https://julialang.org/) package for classical molecular modeling of adsorption in porous crystals such as metal-organic frameworks (MOFs).
 
-:hammer: Compute the potential energy of a molecule at particular position and orientation inside of a porous crystal
+🔨 Compute the potential energy of a molecule at particular position and orientation inside of a porous crystal
 
-:hammer: Write a potential energy grid of a molecule inside a porous material to visualize binding sites
+🔨 Write a potential energy grid of a molecule inside a porous material to visualize binding sites
 
-:hammer: Compute the Henry coefficient of a gas in a porous crystal
+🔨 Compute the Henry coefficient of a gas in a porous crystal
 
-:hammer: Run grand-canonical Monte Carlo simulations of gas adsorption in a porous crystal
+🔨 Run grand-canonical Monte Carlo simulations of gas adsorption in a porous crystal
 
 Designed for high-throughput computations to minimize input files and querying results from output files. User-friendly. Instructive error messages thrown when they should be. Well-documented (eventually). Easy to install (eventually).
 
-*In development, please contribute, post issues :bug:, and improve!*
+*In development, please contribute, post issues 🐛, and improve!*
 
 ## Quick demos
 
@@ -244,7 +245,7 @@ box = Box(10.0, 10.0, 10.0, π/2, π/2, π/2) # make a box
 set_fractional_coords!(molecule, box)
 ```
 
-#### van der Waals
+#### Van der Waals
 
 What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at `[0.0, 1.0, 3.0]` Cartesian coordinates using the UFF as a molecular model?
 
@@ -379,7 +380,8 @@ obabel -icif non-P1.cif -ocif -O P1.cif --fillUC strict
     * `nearest_image!`, `nearest_r` in `src/NearestImage.jl`
     * Ewald sums in `src/Electrostatics.jl`. (electrostatics are a huge bottleneck.)
     * `src/VdWEnergetics.jl`
-    The scripts `test/vdw_timing.jl` and `test/ewald_timing.jl` time the functions for benchmarking.
+    * The scripts `test/vdw_timing.jl` and `test/ewald_timing.jl` time the functions for benchmarking.
+
 * consolidate `eikar`, `eikbr`, `eikcr` somehow without slowing down the Ewald sum.
 * more tests added to `tests/runtests.jl`, `tests/henry_tests.jl`, `tests/gcmc_tests.jl`
 * code coverage badge

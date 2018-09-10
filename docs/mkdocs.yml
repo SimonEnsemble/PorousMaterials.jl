@@ -1,0 +1,43 @@
+site_name:        PorousMaterials.jl
+repo_url:         https://github.com/SimonEnsemble/PorousMaterials.jl
+site_description: Documentation for the julia package PorousMaterials.jl
+site_author:      SimonEnsemble
+
+#theme: readthedocs
+theme: cinder
+
+extra_css:
+  - assets/Documenter.css
+
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML
+  - assets/mathjaxhelper.js
+  - mathjax-config.js
+
+markdown_extensions:
+  - pymdownx.arithmatex
+  - extra
+  - tables
+  - fenced_code
+  #- mdx_math
+
+docs_dir: 'build'
+
+nav:
+  - Home: index.md
+  - Functions: functions.md
+#    - Box.jl: box.md
+#    - Crystal.jl: crystal.md
+#    - ElectrostaticsEnergetics.jl: electrostatic_energetics.md
+#    - Energetics_Util.jl: energetics_util.md
+#    - EOS.jl: eos.md
+#    - Forcefield.jl: forcefield.md
+#    - GCMC.jl: gcmc.md
+#    - Grid.jl: grid.md
+#    - Henry.jl: henry.md
+#    - Matter.jl: matter.md
+#    - MChelpers.jl: mchelpers.md
+#    - Misc.jl: misc.md
+#    - Molecules.jl: molecules.md
+#    - NearestImage.jl: nearest_image.md
+#    - VdWEnergetics.jl: vdw_energetics.md
