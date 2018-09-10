@@ -8,6 +8,8 @@ using JLD2
 using Statistics
 using Random
 
+set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
+
 @testset "Crystal Tests" begin
     framework = Framework("test_structure2.cif")
     strip_numbers_from_atom_labels!(framework)
@@ -29,7 +31,7 @@ using Random
     @test isapprox(framework.atoms, framework2.atoms) && isapprox(framework.charges, framework2.charges)
 
     # test .cif writer; write, read in, assert equal
-    write_cif(framework, "data/crystals/rewritten_test_structure2.cif")
+    write_cif(framework, PorousMaterials.PATH_TO_DATA * "crystals/rewritten_test_structure2.cif")
     framework_rewritten = Framework("rewritten_test_structure2.cif")
     @test isapprox(framework, framework_rewritten)
 

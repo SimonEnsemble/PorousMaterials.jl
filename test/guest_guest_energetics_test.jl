@@ -8,6 +8,8 @@ using JLD2
 using Statistics
 using Random
 
+set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
+
 @testset "Guest-guest Energetics Tests" begin
     # TODO put these with VdWEnergetics
     ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)

@@ -8,6 +8,8 @@ using JLD2
 using Statistics
 using Random
 
+set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
+
 @testset "ElectrostaticEnergetics Tests" begin
     framework = Framework("NU-1000_Greg.cif")
     sr_cutoff_r = 12.5
@@ -55,7 +57,7 @@ using Random
     # loop over all four configurations provided by NIST
     for c = 1:length(energies_should_be)
         # read in positions of atoms provided by NIST ("X" atoms)
-        posfile = open("nist/electrostatics/spce_sample_config_periodic$c.txt")
+        posfile = open(PorousMaterials.PATH_TO_DATA * "../nist/electrostatics/spce_sample_config_periodic$c.txt")
         lines = readlines(posfile)
         # first line is dims of unit cell box
         dims = parse.(Float64, split(lines[1]))

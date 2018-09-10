@@ -8,6 +8,8 @@ using JLD2
 using Statistics
 using Random
 
+set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
+
 @testset "EOS Tests" begin
     # Peng-Robinsion EOS test for methane.
     gas = PengRobinsonGas(:CH4)

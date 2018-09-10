@@ -8,6 +8,8 @@ using JLD2
 using Statistics
 using Random
 
+set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
+
 @testset "Box Tests" begin
     framework = Framework("SBMOF-1_cory.cif")
     @test isapprox(framework.box, Box(framework.box.f_to_c))

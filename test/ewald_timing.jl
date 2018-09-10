@@ -4,6 +4,8 @@ using BenchmarkTools
 using Profile
  # using ProfileView
 
+change_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
+
 framework = Framework("NU-1000_Greg.cif")
 
  # kreps = (11, 11, 9)
