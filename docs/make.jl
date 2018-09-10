@@ -1,6 +1,7 @@
 using Documenter, PorousMaterials
 
     makedocs(
+        root = joinpath(dirname(pathof(PorousMaterials)), "..", "docs"),
         modules = [PorousMaterials],
         sitename = "PorousMaterials.jl",
         pages = [
@@ -16,6 +17,6 @@ using Documenter, PorousMaterials
         target = "build",
         julia = "1.0",
         osname = "linux",
-        deps = Deps.pip("mkdocs"), # These are dependencies for the site, not the package
+        deps = Deps.pip("mkdocs", "mkdocs-cinder"), # These are dependencies for the site, not the package
         make = nothing
     )

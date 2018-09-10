@@ -1,4 +1,4 @@
-<meta charset="UTF-8">
+![PorousMaterials.jl](assets/PMlogo.png)
 A pure-[Julia](https://julialang.org/) package for classical molecular modeling of adsorption in porous crystals such as metal-organic frameworks (MOFs).
 
 🔨 Compute the potential energy of a molecule at particular position and orientation inside of a porous crystal
@@ -15,7 +15,7 @@ Designed for high-throughput computations to minimize input files and querying r
 
 ## Quick demos
 
-### Henry coefficients
+<b>Henry coefficients</b>
 
 Compute the Henry coefficient of CO<sub>2</sub> in CAXVII\_clean (Fe<sub>2</sub>(dobdc)) at 298 K using the Dreiding force field:
 
@@ -46,7 +46,7 @@ results["henry coefficient [mol/(kg-Pa)]"] # 2.88e-05
 
 The simulation is parallelized across a maximum of 5 cores.
 
-### Grand-canonical Monte Carlo simulations
+<b>Grand-canonical Monte Carlo simulations</b>
 
 Simulate the adsorption of CO<sub>2</sub> in FIQCEN\_clean\_min\_charges (CuBTC) at 298 K at 1 bar using the Universal Force Field:
 
@@ -96,7 +96,7 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
             n_burn_cycles=1000, n_sample_cycles=5000)
 ```
 
-### Potential Energy Grid
+<b>Potential Energy Grid</b>
 
 Superimpose a grid of points about the unit cell of SBMOF-1. Compute the potential energy of xenon at each point and store as a grid.
 
@@ -125,7 +125,7 @@ Just fire up Julia and type in:
 using PorousMaterials
 ```
 
-### Matter
+<b>Matter</b>
 
 In `PorousMaterials.jl`, crystals and molecules are composed of Lennard-Jones spheres and point charges.
 
@@ -143,7 +143,7 @@ ptc.q # 1.0
 ptc.xf # [0.1, 0.2, 0.5]
 ```
 
-### Bravais lattice
+<b>Bravais lattice</b>
 
 We later apply periodic boundary conditions to mimic a crystal of infinite extent. A `Box` describes a [Bravais lattice](https://en.wikipedia.org/wiki/Bravais_lattice).
 
@@ -165,7 +165,7 @@ box = replicate(box, (2, 2, 2)) # new box replicated 2 by 2 by 2
 box.a # 20 Å
 ```
 
-### Porous Crystals
+<b>Porous Crystals</b>
 
 ```julia
 using PorousMaterials
@@ -198,7 +198,7 @@ framework = replicate(framework, (3, 3, 3))
 write_to_xyz(framework, "SBMOF-1.xyz")
 ```
 
-### Lennard-Jones forcefields
+<b>Lennard-Jones forcefields</b>
 
 ```julia
 # read in Lennard-Jones force field parameters from the Universal Force Field
@@ -213,7 +213,7 @@ forcefield.ϵ[:Xe][:C] # K
 forcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
 ```
 
-### Molecules
+<b>Molecules</b>
 
 ```julia
 molecule = Molecule("CO2") # fractional coords in terms of unit cube box
@@ -232,7 +232,7 @@ translate_by!(molecule, [0.1, 0.0, 0.0])
 rotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of a unit cube
 ```
 
-### Potential energies
+<b>Potential energies</b>
 
 First, set the fractional coordinates of the molecule in the context of some unit cell box.
 
@@ -245,7 +245,7 @@ box = Box(10.0, 10.0, 10.0, π/2, π/2, π/2) # make a box
 set_fractional_coords!(molecule, box)
 ```
 
-#### Van der Waals
+<i>Van der Waals</i>
 
 What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at `[0.0, 1.0, 3.0]` Cartesian coordinates using the UFF as a molecular model?
 
@@ -264,7 +264,7 @@ translate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're tal
 energy = vdw_energy(framework, molecule, forcefield) # K
 ```
 
-#### Electrostatics
+<i>Electrostatics</i>
 
 What is the electrostatic potential energy of a CO<sub>2</sub> adsorbate inside CAXVII\_clean at `[0.0, 1.0, 0.0]` Cartesian coordinate?
 
@@ -286,7 +286,7 @@ eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)
 energy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)
 ```
 
-#### Equations of state
+<i>Equations of state</i>
 
 Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:
 ```julia
@@ -301,15 +301,15 @@ Pass `eos=:PengRobinson` to `gcmc_simulation` to automatically convert pressure 
 
 All input files are stored in the path `PorousMaterials.PATH_TO_DATA` (type into Julia). By default, this path is set to be in the present working directory (type `pwd()` into Julia) in a folder `data/`. Go inside `PorousMaterials.jl/test/data` to see example input files for each case below.
 
-#### Crystals
+<i>Crystals</i>
 
 Place `.cif` and `.cssr` crystal structure files in `data/crystals`. `PorousMaterials.jl` currently takes crystals in P1 symmetry only.
 
-#### Molecules/Adsorbates
+<i>Molecules/Adsorbates</i>
 
 Molecule input files are stored in `data/molecules`. Each molecule possesses its own directory and contains two files: `point_charges.csv` and `lennard_jones_spheres.csv`, comma-separated-value files describing the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom; units of charges are electrons.
 
-#### Force field parameters
+<i>Force field parameters</i>
 
 Lennard-Jones forcefield parameters are stored in comma-separated-value format in `data/forcefields/`.
 
@@ -319,11 +319,11 @@ Interaction of an adsorbate with the framework is modeled as pair-wise additive 
 
 The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, e.g., in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in `PorousMaterials.jl`.
 
-#### Atomic masses
+<i>Atomic masses</i>
 
 Add fancy pseudo-atoms to `data/atomic_masses.csv`.
 
-#### Peng-Robinson gas parameters
+<i>Peng-Robinson gas parameters</i>
 
 Critical temperatures and pressures and acentric factors are stored in `data/PengRobinsonGasProps.csv`.
 

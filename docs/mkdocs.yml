@@ -4,7 +4,7 @@ site_description: Documentation for the julia package PorousMaterials.jl
 site_author:      SimonEnsemble
 
 #theme: readthedocs
-theme: cinder
+theme: cinder #cosmo #cyborg #readable #flatly #simplex
 
 extra_css:
   - assets/Documenter.css
@@ -19,12 +19,22 @@ markdown_extensions:
   - extra
   - tables
   - fenced_code
+  - toc:
+      baselevel: 1
   #- mdx_math
 
 docs_dir: 'build'
 
 nav:
   - Home: index.md
+#    - PorousMaterials.jl: index.md
+#    - Quick Demos: guides/quick_demos.md
+#    - Building Blocks: guides/building_blocks.md
+#    - Input Files: guides/input_files.md
+#    - Installation: guides/installation.md
+#    - Tests: guides/tests.md
+#    - FAQ: guides/faq.md
+#    - Help Wanted: guides/help_wanted.md
   - Functions: functions.md
 #    - Box.jl: box.md
 #    - Crystal.jl: crystal.md
