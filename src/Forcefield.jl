@@ -92,6 +92,8 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
 		end
 	end
 
+    @printf("Finished loading %s from %s.\n", forcefieldfile, PATH_TO_DATA * "forcefields/")
+
 	return ljff
 end
 
@@ -176,7 +178,7 @@ function check_forcefield_coverage(f_or_m::Union{Framework, Molecule}, ljff::LJF
     all_covered = true
     for species in unique_species
         if !(species in keys(ljff.pure_ϵ))
-            @warn @sprintf("\t%s in %s missing from %s force field.", species, 
+            @warn @sprintf("\t%s in %s missing from %s force field.", species,
                 isa(f_or_m, Framework) ? f_or_m.name : f_or_m.species, ljff.name)
             all_covered = false
         end

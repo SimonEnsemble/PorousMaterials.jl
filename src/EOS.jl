@@ -111,6 +111,7 @@ function PengRobinsonGas(gas::Symbol)
     Tc = df[df[:gas].== string(gas), Symbol("Tc(K)")][1]
     Pc = df[df[:gas].== string(gas), Symbol("Pc(bar)")][1]
     ω = df[df[:gas].== string(gas), Symbol("acentric_factor")][1]
+    @printf("Finished loading %s from %s.\n", gas, PATH_TO_DATA)
     return PengRobinsonGas(gas, Tc, Pc, ω)
 end
 

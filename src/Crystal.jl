@@ -216,6 +216,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
     end
 
+    @printf("Finished loading %s from %s.\n", filename, PATH_TO_DATA * "crystals/")
+
     return framework
 end
 

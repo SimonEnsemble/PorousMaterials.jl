@@ -40,7 +40,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         error(@sprintf("No directory created for %s in %s\n", species,
                        PATH_TO_DATA * "molecules/"))
     end
-    
+
     ###
     #  Read in Lennard Jones spheres
     ###
@@ -73,7 +73,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     x_com /= total_mass
     # construct atoms attribute of molecule
     atoms = Atoms(atom_species, atom_coords)
-    
+
     ###
     #  Read in point charges
     ###
@@ -94,7 +94,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     end
     # construct charges attribute of molecule
     charges = Charges(charge_vals, charge_coords)
-    
+
     # construct molecule
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
@@ -105,6 +105,8 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
             `assert_charge_neutrality=false` to ignore this error message.", species))
         end
     end
+
+    @sprintf("Finished loading %s from %s", species, PATH_TO_DATA)
 
     return molecule
 end
@@ -373,5 +375,5 @@ end
 Ion(q::Float64, xf::Array{Float64, 1}, species::Symbol=:ion) = Molecule(
     species,
     Atoms(0, Symbol[], zeros(0, 0)),
-    Charges(1, [q], reshape(xf, (3, 1))), 
+    Charges(1, [q], reshape(xf, (3, 1))),
     xf)
