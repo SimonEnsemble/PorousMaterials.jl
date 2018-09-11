@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "Box Tests" begin
     framework = Framework("SBMOF-1_cory.cif")
     @test isapprox(framework.box, Box(framework.box.f_to_c))

@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "EOS Tests" begin
     # Peng-Robinsion EOS test for methane.
     gas = PengRobinsonGas(:CH4)

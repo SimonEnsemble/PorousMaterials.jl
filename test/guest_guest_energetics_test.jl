@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "Guest-guest Energetics Tests" begin
     # TODO put these with VdWEnergetics
     ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5)

@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "GCMC Checkpoint Tests" begin
     # idea here: run a simulation with 20 burn, 5 sample shld hv same result as 3 simulations:
     #  (1)                    5 sample, 10 burn, dump checkpoint

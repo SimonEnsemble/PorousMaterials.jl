@@ -18,7 +18,7 @@ import Base.push!
 # this runs everytime PorousMaterials is loaded, so if the user changes directory
 #   then the PATH_TO_DATA will change as well
 function __init__()
-    # will set the data folder in the current directory as the path to data
+    # this is the directory where crystal structures, forcefields, and molecules data is stored
     global PATH_TO_DATA = pwd() * "/data/"
     if ! isdir(PATH_TO_DATA)
         @warn "No data folder found in the current directory.\nPorousMaterials has no files to load."

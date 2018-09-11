@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "Molecules Tests" begin
     molecule = Molecule("CO2")
     rotate!(molecule, UnitCube())

@@ -92,8 +92,6 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
 		end
 	end
 
-    @printf("Finished loading %s from %s.\n", forcefieldfile, PATH_TO_DATA * "forcefields/")
-
 	return ljff
 end
 

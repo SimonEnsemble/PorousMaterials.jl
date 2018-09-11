@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "VdwEnergetics Tests" begin
     # Xe in SBMOF-1 tests, comparing to RASPA
     ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
@@ -33,7 +32,7 @@ using Random
     energies_should_be = [-4.3515E+03, -6.9000E+02, -1.1467E+03, -1.6790E+01]
     for c = 1:4 # four configurations
         # read in positions of atoms provided by NIST ("X" atoms)
-        posfile = open(PorousMaterials.PATH_TO_DATA * "../nist/lennardjones/lj_sample_config_periodic$c.txt")
+        posfile = open("nist/lennardjones/lj_sample_config_periodic$c.txt")
         lines = readlines(posfile)
         # first line is dims of unit cell box
         dims = parse.(Float64, split(lines[1]))
@@ -68,7 +67,7 @@ using Random
     ljff = LJForceField("UFF.csv")
     # energy with PBC but padded so effetive periodic interactions are zero, bc beyond cutoff
     energy = vdw_energy(f, co2, ljff)
-    atoms, x = read_xyz(PorousMaterials.PATH_TO_DATA * "../data/crystals/CB5.xyz") # raw .xyz of cage
+    atoms, x = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
     ljspheres = Atoms(atoms, x .+ [50.0, 50.0, 50.0]) #for i = 1:length(atoms) # cage as LJSphere array
     co2 = Molecule("CO2")
     translate_to!(co2, [50.0, 50.0, 50.0])

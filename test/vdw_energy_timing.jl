@@ -4,7 +4,6 @@ using Test
 using Random
 using Printf
 
-
 ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 
 # Xe in SBMOF-1 tests, comparing to RASPA

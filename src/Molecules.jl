@@ -106,8 +106,6 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         end
     end
 
-    @sprintf("Finished loading %s from %s", species, PATH_TO_DATA)
-
     return molecule
 end
 

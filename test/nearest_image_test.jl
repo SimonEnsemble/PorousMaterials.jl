@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "NearestImage Tests" begin
     dxf = [-0.8, -0.4, 0.7]
     nearest_image!(dxf)

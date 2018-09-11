@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-
 @testset "Energetics_Util Tests" begin
     # data types for potential energies
     u = PotentialEnergy(10.0, 30.0)
