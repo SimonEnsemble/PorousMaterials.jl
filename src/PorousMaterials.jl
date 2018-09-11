@@ -59,7 +59,7 @@ export
        # Molecules.jl
        Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
        translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged,
-       pairwise_atom_distances, pairwise_charge_distances, Ion,
+       pairwise_atom_distances, pairwise_charge_distances, Ion, bond_length_drift,
 
        # Forcefield.jl
        LJForceField, replication_factors, check_forcefield_coverage,
