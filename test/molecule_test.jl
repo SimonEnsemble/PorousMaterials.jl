@@ -106,8 +106,9 @@ using Random
     for i = 1:1000
         rotate!(ms[rand(1:2)], UnitCube())
     end
-    @test ! bond_length_drift(ms[1], Molecule("H2S"), UnitCube(), atol=1e-12)
-    @test ! bond_length_drift(ms[2], Molecule("H2S"), UnitCube())
+    for m in ms
+        @test ! bond_length_drift(m, Molecule("H2S"), UnitCube(), atol=1e-12)
+    end
     @test isapprox(ms[1].xf_com, ms[2].xf_com, atol=1e-12)
     
     ms = [Molecule("H2S") for i = 1:2]
