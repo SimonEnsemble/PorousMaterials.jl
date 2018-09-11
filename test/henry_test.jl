@@ -2,7 +2,6 @@ using PorousMaterials
 using Test
 using Distributed
 
-@everywhere change_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @warn "This will take a while..."
 

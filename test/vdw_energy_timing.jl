@@ -4,7 +4,6 @@ using Test
 using Random
 using Printf
 
-change_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 

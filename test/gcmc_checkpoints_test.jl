@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "GCMC Checkpoint Tests" begin
     # idea here: run a simulation with 20 burn, 5 sample shld hv same result as 3 simulations:

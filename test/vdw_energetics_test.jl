@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "VdwEnergetics Tests" begin
     # Xe in SBMOF-1 tests, comparing to RASPA

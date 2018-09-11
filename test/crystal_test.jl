@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "Crystal Tests" begin
     framework = Framework("test_structure2.cif")

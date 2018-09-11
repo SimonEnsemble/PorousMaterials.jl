@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "MCHelpers Tests" begin
     sim_box = Framework("SBMOF-1.cif").box

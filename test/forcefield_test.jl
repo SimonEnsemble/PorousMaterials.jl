@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "Forcefield Tests" begin
     ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5,

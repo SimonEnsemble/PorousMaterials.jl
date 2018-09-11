@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "NearestImage Tests" begin
     dxf = [-0.8, -0.4, 0.7]

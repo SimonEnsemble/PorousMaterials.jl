@@ -8,7 +8,6 @@ using JLD2
 using Statistics
 using Random
 
-set_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 @testset "ElectrostaticEnergetics Tests" begin
     framework = Framework("NU-1000_Greg.cif")

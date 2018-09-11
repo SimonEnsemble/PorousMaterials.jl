@@ -6,7 +6,6 @@ using DataFrames
 using JLD2
 using Printf
 
-@everywhere change_path_to_data(dirname(pathof(PorousMaterials)) * "/../test/data")
 
 ig_tests = false
 xe_in_sbmof1_tests = false
