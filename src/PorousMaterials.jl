@@ -26,13 +26,11 @@ function __init__()
 end
 
 function reset_path_to_data()
-    new_path = pwd() * "/data/"
-    if ! isdir(new_path)
-        @error "The directory $new_path does not exist. Not changing the current PATH_TO_DATA"
-    else
-        global PATH_TO_DATA = new_path
-        @printf("PATH_TO_DATA set to %s", PATH_TO_DATA)
+    global PATH_TO_DATA = pwd() * "/data/"
+    if ! isdir(PATH_TO_DATA)
+        @warn "The directory $new_path does not exist.\nPorousMaterials has no files to load."
     end
+    @printf("PATH_TO_DATA set to %s", PATH_TO_DATA)
 end
 
 function set_tutorial_mode()
