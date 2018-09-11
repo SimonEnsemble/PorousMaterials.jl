@@ -123,10 +123,10 @@ using Random
     # test unit vector on sphere generator
     ms = [Molecule("He") for i = 1:10000]
     for m in ms
-        translate_to!(m, rand_point_on_unit_sphere())
+        translate_to!(m, rand_point_on_unit_sphere(), UnitCube())
     end
     @test all(isapprox.([norm(m.atoms.xf[:, 1]) for m in ms], 1.0))
-    write_xyz(ms, box, "random_vectors_on_sphere")
+    write_xyz(ms, UnitCube(), "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
 
     # Test to see if rotation_matrix() is random and uniform on sphere surface
