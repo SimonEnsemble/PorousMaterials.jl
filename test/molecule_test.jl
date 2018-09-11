@@ -101,6 +101,31 @@ using Random
                    pairwise_atom_distances(Molecule("H2S"), UnitCube()))
     @test isapprox(pairwise_charge_distances(ms[2], box),
                    pairwise_charge_distances(Molecule("H2S"), UnitCube()))
+
+    ms = [Molecule("H2S") for i = 1:2]
+    for i = 1:1000
+        rotate!(ms[rand(1:2)], UnitCube())
+    end
+    @test ! bond_length_drift(ms[1], Molecule("H2S"), UnitCube(), atol=1e-12)
+    @test ! bond_length_drift(ms[2], Molecule("H2S"), UnitCube())
+    @test isapprox(ms[1].xf_com, ms[2].xf_com, atol=1e-12)
+    
+    ms = [Molecule("H2S") for i = 1:2]
+    box = Framework("SBMOF-1.cif").box
+    for m in ms
+        translate_to!(m, [1.0, 2.0, 3.0])
+        set_fractional_coords!(m, box)
+        translate_to!(m, [3.0, 4.0, 5.0])
+    end
+    for i = 1:1000
+        rotate!(ms[rand(1:2)], box)
+    end
+    ref_molecule = Molecule("H2S")
+    set_fractional_coords!(ref_molecule, box)
+    for m in ms
+        @test ! bond_length_drift(m, ref_molecule, box, atol=1e-12)
+    end
+    @test isapprox(ms[1].xf_com, ms[2].xf_com, atol=1e-12)
     
     # bond drift
     m1 = Molecule("CO2")
@@ -222,6 +247,7 @@ using Random
     m2_old = deepcopy(m2)
     rotate!(m2, box)
     @test ! isapprox(m2_old, m2)
+    @test isapprox(m2_old.xf_com, m2.xf_com) # center of mass shld not change
     # visually inspect
     ms = [Molecule("CO2") for i = 1:1000]
     for m in ms
