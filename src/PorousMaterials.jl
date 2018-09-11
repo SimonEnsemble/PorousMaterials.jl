@@ -14,46 +14,35 @@ using Printf
 using LinearAlgebra
 import Base.push!
 
-global const PATH_TO_PACKAGE_DATA = dirname(pathof(PorousMaterials)) * "/../data/"
 
 # this runs everytime PorousMaterials is loaded, so if the user changes directory
 #   then the PATH_TO_DATA will change as well
 function __init__()
-    # every time PorousMaterials is started, the PATH_TO_DATA defaults to using the
-    #   packages data, but can be changed with the set_path_to_data and reset_path_to_data function
-    global PATH_TO_DATA = PATH_TO_PACKAGE_DATA
-    global USING_PACKAGE_DATA = true
+    # will set the data folder in the current directory as the path to data
+    global PATH_TO_DATA = pwd() * "/data/"
+    if ! isdir(PATH_TO_DATA)
+        @warn "No data folder found in the current directory.\nPorousMaterials has no files to load."
+    end
 end
 
 function reset_path_to_data()
-    global PATH_TO_DATA
-    global USING_PACKAGE_DATA
-    USING_PACKAGE_DATA = true
-    PATH_TO_DATA = PATH_TO_PACKAGE_DATA
-    @printf("Current PATH_TO_DATA: %s\n", PATH_TO_DATA)
-end
-
-function set_path_to_data()
-    global PATH_TO_DATA
-    global USING_PACKAGE_DATA
-    USING_PACKAGE_DATA = false
-    PATH_TO_DATA = pwd() * "/"
-    @printf("Current PATH_TO_DATA: %s\n", PATH_TO_DATA)
-end
-
-function set_path_to_data(new_path::AbstractString)
-    global PATH_TO_DATA
-    global USING_PACKAGE_DATA
-    if isdir(new_path)
-        if new_path[end] != "/"
-            new_path = new_path * "/"
-        end
-        USING_PACKAGE_DATA = false
-        PATH_TO_DATA = new_path
+    new_path = pwd() * "/data/"
+    if ! isdir(new_path)
+        @error "The directory $new_path does not exist. Not changing the current PATH_TO_DATA"
     else
-        error(@sprintf("The path %s does not exist", new_path))
+        global PATH_TO_DATA = new_path
+        @printf("PATH_TO_DATA set to %s", PATH_TO_DATA)
     end
-    @printf("Current PATH_TO_DATA: %s\n", PATH_TO_DATA)
+end
+
+function set_tutorial_mode()
+    new_path = dirname(pathof(PorousMaterials)) * "/../test/data/"
+    if ! isdir(new_path)
+        @error @sprintf("Directory for testing data %s does not exist.\nNot entering Tutorial Mode.", new_path)
+    else
+        global PATH_TO_DATA = new_path
+        @warn "PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\nTo get access to your own data use: reset_path_to_data()"
+    end
 end
 
 include("Box.jl")
@@ -74,7 +63,7 @@ include("GCMC.jl")
 
 export
     # PorousMaterials.jl
-    reset_path_to_data, set_path_to_data,
+    reset_path_to_data, set_tutorial_mode,
 
     # Box.jl
     Box, replicate, UnitCube, write_vtk,
