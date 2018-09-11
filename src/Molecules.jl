@@ -117,12 +117,8 @@ to a unit cell box that is a unit cube. This function adjusts the fractional coo
 of the molecule to be consistent with a different box.
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] = box.c_to_f * molecule.atoms.xf[:, i]
-    end
-    for j = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, j] = box.c_to_f * molecule.charges.xf[:, j]
-    end
+    molecule.atoms.xf[:] = box.c_to_f * molecule.atoms.xf
+    molecule.charges.xf[:] = box.c_to_f * molecule.charges.xf
     molecule.xf_com[:] = box.c_to_f * molecule.xf_com
     return nothing
 end
@@ -152,16 +148,12 @@ Translate a molecule by vector `dxf` in fractional coordinate space or by vector
 Cartesian coordinate space. For the latter, a unit cell box is required for context.
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
-    # move LJSphere's
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] += dxf
-    end
-    # move PtCharge's
-    for j = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, j] .+= dxf
-    end
+    # translate both atoms and charges
+    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, dxf)
+    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, dxf)
     # adjust center of mass
     molecule.xf_com[:] += dxf
+    return nothing
 end
 
 function translate_by!(molecule::Molecule, dx::Array{Float64, 1}, box::Box)
