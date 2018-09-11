@@ -21,25 +21,58 @@ function __init__()
     # this is the directory where crystal structures, forcefields, and molecules data is stored
     global PATH_TO_DATA = pwd() * "/data/"
     if ! isdir(PATH_TO_DATA)
-        @warn "No data folder found in the current directory.\nPorousMaterials has no files to load."
+        @warn @sprintf("Directory for input data, \"/data/\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
     end
 end
 
-function reset_path_to_data()
+"""
+    set_path_to_data("user/path/to/data")
+    set_path_to_data()
+
+Sets PorousMaterials PATH_TO_DATA variable which dictates where crystal, forcefield,
+and molecule files are loaded from. This function allows the user to set PATH_TO_DATA
+manually to any directory or to a "/data/" folder within their current directory.
+This function WILL change the PATH_TO_DATA regardless of whether or not the path
+exists, but will give a warning alerting the user that PorousMaterials cannot load
+files from the chosen path.
+
+# Arguments
+- `new_path_to_data::String`: The desired PATH_TO_DATA in string form.
+"""
+function set_path_to_data(new_path_to_data::String)
+    if new_path_to_data[end] != '/'
+        new_path_to_data = new_path_to_data * "/"
+    end
+    global PATH_TO_DATA = new_path_to_data
+    if ! isdir(PATH_TO_DATA)
+        @warn @sprintf("The directory %s does not exist.\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", new_path_to_data)
+    end
+    @printf("PATH_TO_DATA set to %s\n", PATH_TO_DATA)
+end
+
+function set_path_to_data()
     global PATH_TO_DATA = pwd() * "/data/"
     if ! isdir(PATH_TO_DATA)
-        @warn "The directory $new_path does not exist.\nPorousMaterials has no files to load."
+        @warn @sprintf("Directory for input data, \"/data/\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
     end
-    @printf("PATH_TO_DATA set to %s", PATH_TO_DATA)
+    @printf("PATH_TO_DATA set to %s\n", PATH_TO_DATA)
 end
 
+"""
+    set_tutorial_mode()
+
+Places PorousMaterials in "Tutorial Mode". It changes the PATH_TO_DATA variable to
+the directory where the PorousMaterials test data is stored. It can be used to
+follow examples shown in the README. It displays a warning so that the user knows
+They are no longer using their own data.
+"""
 function set_tutorial_mode()
     new_path = dirname(pathof(PorousMaterials)) * "/../test/data/"
     if ! isdir(new_path)
-        @error @sprintf("Directory for testing data %s does not exist.\nNot entering Tutorial Mode.", new_path)
+        @error @sprintf("Directory for testing data %s does not exist.\nNot entering Tutorial Mode.\n", new_path)
     else
         global PATH_TO_DATA = new_path
-        @warn "PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\nTo get access to your own data use: reset_path_to_data()"
+        @warn "PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\nTo get access to your own data use: reset_path_to_data()\n"
     end
 end
 
@@ -61,7 +94,7 @@ include("GCMC.jl")
 
 export
     # PorousMaterials.jl
-    reset_path_to_data, set_tutorial_mode,
+    set_path_to_data, set_tutorial_mode,
 
     # Box.jl
     Box, replicate, UnitCube, write_vtk,
