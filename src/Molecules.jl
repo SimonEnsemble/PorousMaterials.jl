@@ -259,13 +259,16 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
-    # TODO change this to use broadcasting
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
-    end
-    for i = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, i] = molecule.xf_com + r * (molecule.charges.xf[:, i] - molecule.xf_com)
-    end
+    # shift to origin
+    molecule.atoms.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
+    molecule.charges.xf[:] = broadcast(-, molecule.charges.xf, molecule.xf_com)
+    # conduct the rotation
+    molecule.atoms.xf[:] = r * molecule.atoms.xf
+    molecule.charges.xf[:] = r * molecule.charges.xf
+    # shift back to center of mass
+    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, molecule.xf_com)
+    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, molecule.xf_com)
+    return nothing
 end
 
 """
