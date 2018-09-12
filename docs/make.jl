@@ -33,6 +33,7 @@ using Documenter, PorousMaterials
                 "manual/other/docs.md"
                 "manual/other/about.md"
 
+                "guides/faq.md"
                 "guides/help_wanted.md"
                 ]
     )

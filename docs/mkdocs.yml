@@ -53,4 +53,5 @@ nav:
     - Other:
       - About: manual/other/about.md
       - Documentation: manual/other/docs.md
+  - FAQ: guides/faq.md
   - Help Wanted: guides/help_wanted.md

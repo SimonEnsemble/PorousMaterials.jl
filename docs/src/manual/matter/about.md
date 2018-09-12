@@ -12,14 +12,24 @@ dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[i])
 
 This calculates the distance between one atom in a molecule and every atom in the framework.
 
-## Atoms
+### Matter
 
-The `Atoms` struct has three attributes: `species`, `xf`, and `n_atoms`. The `species` field is a 1D array of `Symbol`s that stores the species of the different atoms in this collection. The `xf` field is a 2D array of `Float64`s that stores the location of atoms in 3D space. Each column represents the x, y, and z coordinates of an atom in this collection. The `n_atoms` field is an `Int` that is used for looping through the atoms deifned by this object. It does not need to be passed in when creating and `Atoms` object, instead it is calculated.
+In `PorousMaterials.jl`, crystals and molecules are composed of `Atoms` and `Charges`
 
-The `xf` and `species` arrays line up, so each species corresponds to a column in `xf` and thus has a location in 3D space.
+To create a carbon atom at `[0.1, 0.2, 0.5]` fractional coordinates (in the context of some Bravais lattice):
+```julia
+xf = Array{Float64, 2}(undef, 3, 0)
+xf = [xf [0.1, 0.2, 0.5]]
+atoms = Atoms([:C], xf) # constructor
+atoms.species[1] # :C
+atoms.xf[:, 1] # [0.1, 0.2, 0.5]
+```
 
-## Charges
-
-The `Charges` struct is similar to the `Atoms` struct because it also has three attributes: `q`, `xf`, and `n_charges`. `q` is a 1D array of `Float64`s that stores the charge values for different point charges. The `xf` field is the same as the one in `Atoms`, it is a 2D array that stores the location of the charges in 3D space. `n_charges` is an `Int` that is used for looping through the point charges defined by this object. As with `Atoms` the `n_charges` value doesn't need to be passed in, it will be automatically calculated by a constructor.
-
-The `xf` and `q` arrays line up, so each charge corresponds to a column in `xf`, and thus has a location in 3D space.
+To create a point charge of +1 at `[0.1, 0.2, 0.5]` fractional coordinates (in the context of some Bravais lattice):
+```julia
+xf = Array{Float64, 2}(undef, 3, 0)
+xf = [xf [0.1, 0.2, 0.5]]
+charges = Charges([1.0], xf)
+charges.q[1] # 1.0
+charges.xf[:, 1] # [0.1, 0.2, 0.5]
+```

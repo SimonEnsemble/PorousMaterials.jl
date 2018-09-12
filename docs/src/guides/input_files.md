@@ -4,23 +4,14 @@ All input files are stored in the path `PorousMaterials.PATH_TO_DATA` (type into
 
 There will be example code snippets through the documentation showing how to load in various files. To get a feel for this we have included a Tutorial Mode in `PorousMaterials.jl` that sets the `PorousMaterial.PATH_TO_DATA` to the data folder in our testing directory. To follow along with the examples without downloading your own data simply do the following:
 
+```julia
+using PorousMaterials
+
+set_tutorial_mode()
+    ┌ Warning: PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.
+    │ To get access to your own data use: reset_path_to_data()
+    └ @ PorousMaterials ~/git_files/PorousMaterials.jl/src/PorousMaterials.jl:75
 ```
-
-```
-
-#### Molecules/Adsorbates
-
-Molecule input files are stored in `data/molecules`. Each molecule possesses its own directory and contains two files: `point_charges.csv` and `lennard_jones_spheres.csv`, comma-separated-value files describing the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom; units of charges are electrons.
-
-#### Force field parameters
-
-Lennard-Jones forcefield parameters are stored in comma-separated-value format in `data/forcefields/`.
-
-Interaction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:
-
-`V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ]`, where `x = sigma / r`
-
-The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, e.g., in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in `PorousMaterials.jl`.
 
 #### Atomic masses
 
