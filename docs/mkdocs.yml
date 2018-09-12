@@ -1,10 +1,10 @@
-site_name:        PorousMaterials.jl
+#site_name:        PorousMaterials.jl
+site_name:        ""
 repo_url:         https://github.com/SimonEnsemble/PorousMaterials.jl
 site_description: Documentation for the julia package PorousMaterials.jl
 site_author:      SimonEnsemble
 
-#theme: readthedocs
-theme: cinder #cosmo #cyborg #readable #flatly #simplex
+theme: windmill
 
 extra_css:
   - assets/Documenter.css
@@ -20,34 +20,37 @@ markdown_extensions:
   - tables
   - fenced_code
   - toc:
-      baselevel: 1
+      permalink: '#'
+  #- toc:
+  #    baselevel: 1
   #- mdx_math
+extra:
+  logo: assets/PMlogo.png
+  history_buttons: false
+
 
 docs_dir: 'build'
 
 nav:
-  - Home: index.md
-#    - PorousMaterials.jl: index.md
-#    - Quick Demos: guides/quick_demos.md
-#    - Building Blocks: guides/building_blocks.md
-#    - Input Files: guides/input_files.md
-#    - Installation: guides/installation.md
-#    - Tests: guides/tests.md
-#    - FAQ: guides/faq.md
-#    - Help Wanted: guides/help_wanted.md
-  - Functions: functions.md
-#    - Box.jl: box.md
-#    - Crystal.jl: crystal.md
-#    - ElectrostaticsEnergetics.jl: electrostatic_energetics.md
-#    - Energetics_Util.jl: energetics_util.md
-#    - EOS.jl: eos.md
-#    - Forcefield.jl: forcefield.md
-#    - GCMC.jl: gcmc.md
-#    - Grid.jl: grid.md
-#    - Henry.jl: henry.md
-#    - Matter.jl: matter.md
-#    - MChelpers.jl: mchelpers.md
-#    - Misc.jl: misc.md
-#    - Molecules.jl: molecules.md
-#    - NearestImage.jl: nearest_image.md
-#    - VdWEnergetics.jl: vdw_energetics.md
+  - PorousMaterials: index.md
+  - Loading Data: guides/input_files.md
+  - Manual:
+    - Matter:
+      - About: manual/matter/about.md
+      - Documentation: manual/matter/docs.md
+    - Boxes, Crystals, and Grids:
+      - About: manual/boxes_crystals_grids/about.md
+      - Documentation: manual/boxes_crystals_grids/docs.md
+    - Molecules:
+      - About: manual/molecules/about.md
+      - Documentation: manual/molecules/docs.md
+    - Atomic Interactions:
+      - About: manual/atomic_interactions/about.md
+      - Documentation: manual/atomic_interactions/docs.md
+    - MOF Simulations:
+      - About: manual/mof_simulations/about.md
+      - Documentation: manual/mof_simulations/docs.md
+    - Other:
+      - About: manual/other/about.md
+      - Documentation: manual/other/docs.md
+  - Help Wanted: guides/help_wanted.md
