@@ -169,7 +169,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
     end
 
     rotations_required = rotatable(molecule)
-    charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
+    charged_system = charged(framework) && charged(molecule)
     if rotations_required & isnan(temperature)
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
@@ -240,4 +240,54 @@ function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
             isapprox(g1.data, g2.data, rtol=rtol) &&
             (g1.units == g2.units) &&
             isapprox(g1.origin, g2.origin))
+end
+
+function _flood_fill!(grid::Grid, segmented_grid::Grid, i::Int, j::Int, k::Int, energy_tol::Float64)
+    # look left, right, up, down "_s" for shift
+    for i_s = -1:1, j_s = -1:1, k_s = -1:1
+        ind = (i + i_s, j + j_s, k + k_s)
+        # well already know segmented_grid[i, j, k]
+        if ind == (0, 0, 0)
+            continue
+        end
+        # avoid out of bounds
+        if any(ind .<= (0, 0, 0)) || any(ind .> grid.n_pts)
+            continue
+        end
+        # if already assigned, continue
+        if segmented_grid.data[ind...] != 0
+            continue
+        end
+        # if accessible, assign same segment ID and keep looking to left and right.
+        if grid.data[ind...] < energy_tol
+            segmented_grid.data[ind...] = segmented_grid.data[i, j, k]
+            # recursively look to left, right, up, down
+            _flood_fill!(grid, segmented_grid, ind..., energy_tol)
+        end
+    end
+end
+
+function _segment_grid(grid::Grid, energy_tol::Float64=0.0, verbose::Bool=true)
+    # grid of Int's corresponding to each original grid point.
+    # let "0" be "unsegmented"
+    # let "-1" be "not accessible"
+    segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts...), :Segment_No, grid.origin)
+    segment_no = 0
+    for i = 1:grid.n_pts[1], j = 1:grid.n_pts[2], k = 1:grid.n_pts[3]
+        if segmented_grid.data[i, j, k] == 0 # not yet assigned segment 
+            if grid.data[i, j, k] > energy_tol # not accessible
+                segmented_grid.data[i, j, k] = -1
+            else # accessible
+                # start a new segment!
+                segment_no += 1
+                segmented_grid.data[i, j, k] = segment_no
+                _flood_fill!(grid, segmented_grid, i, j, k, energy_tol)
+            end
+        else # already segmented
+            nothing
+        end
+    end
+    @assert sum(segmented_grid.data == 0) == 0 "some points were unsegmented!"
+    verbose ? @printf("Found %d segments\n", segment_no) : nothing
+    return segmented_grid
 end
