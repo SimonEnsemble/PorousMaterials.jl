@@ -1,6 +1,6 @@
 ## Help wanted and needed
 * the speed of a GCMC or Henry simulation is determined primarily by how fast `PorousMaterials.jl` can compute the electrostatic and vdw potential energy. Some core functions that can speed up this are:
-    * `nearest_image!`, `nearest_r` in `src/NearestImage.jl`
+    * `nearest_image!` in `src/NearestImage.jl`
     * Ewald sums in `src/Electrostatics.jl`. (electrostatics are a huge bottleneck.)
     * `src/VdWEnergetics.jl`
     * The scripts `test/vdw_timing.jl` and `test/ewald_timing.jl` time the functions for benchmarking.
