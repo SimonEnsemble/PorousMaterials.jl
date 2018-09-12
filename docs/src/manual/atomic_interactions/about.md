@@ -24,9 +24,7 @@ PorousMaterials will the output information about the forcefield file you just l
 
 This also prints all of the atoms included in the loaded forcefield with their given ϵ and σ. This was excluded because it would use too much space on this page.
 
-## Building Blocks of PorousMaterials
-
-### Lennard-Jones forcefields
+## Building Blocks of PorousMaterials: Lennard-Jones forcefields
 
 ```julia
 # read in Lennard-Jones force field parameters from the Universal Force Field
@@ -41,7 +39,7 @@ forcefield.ϵ[:Xe][:C] # K
 forcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
 ```
 
-### Potential energies
+## Building Blocks of PorousMaterials: Potential energies
 
 First, set the fractional coordinates of the molecule in the context of some unit cell box.
 
@@ -54,7 +52,7 @@ box = Box(10.0, 10.0, 10.0, π/2, π/2, π/2) # make a box
 set_fractional_coords!(molecule, box)
 ```
 
-#### Van der Waals
+#### Potential Energies: Van der Waals
 
 What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at `[0.0, 1.0, 3.0]` Cartesian coordinates using the UFF as a molecular model?
 
@@ -73,7 +71,7 @@ translate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're tal
 energy = vdw_energy(framework, molecule, forcefield) # K
 ```
 
-#### Electrostatics
+#### Potential Energies: Electrostatics
 
 What is the electrostatic potential energy of a CO<sub>2</sub> adsorbate inside CAXVII\_clean at `[0.0, 1.0, 0.0]` Cartesian coordinate?
 
@@ -95,7 +93,7 @@ eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)
 energy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)
 ```
 
-#### Equations of state
+#### Potential Energies: Equations of state
 
 Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:
 ```julia

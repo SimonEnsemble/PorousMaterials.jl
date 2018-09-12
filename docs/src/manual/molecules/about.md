@@ -24,10 +24,7 @@ Point charges:
         charge = -0.350000, xf = [1.160, 0.000, 0.000]
 ```
 
-
-## Building Blocks of PorousMaterials
-
-### Molecules
+## Building Blocks of PorousMaterials: Molecules
 
 ```julia
 molecule = Molecule("CO2") # fractional coords in terms of unit cube box

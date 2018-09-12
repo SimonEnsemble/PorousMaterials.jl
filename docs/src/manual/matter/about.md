@@ -10,9 +10,7 @@ dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[i])
 
 This calculates the distance between one atom in a molecule and every atom in the framework.
 
-## Building Blocks of PorousMaterials
-
-### Matter
+## Building Blocks of PorousMaterials: Matter
 
 In `PorousMaterials.jl`, crystals and molecules are composed of `Atoms` and `Charges`
 

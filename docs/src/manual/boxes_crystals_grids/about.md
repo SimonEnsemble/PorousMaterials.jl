@@ -22,9 +22,7 @@ Number of charges = 0
 Chemical formula: Dict(:H=>8,:S=>1,:Ca=>1,:O=>6,:C=>14)
 ```
 
-## Building Blocks of PorousMaterials
-
-### Bravais lattice
+## Building Blocks of PorousMaterials: Bravais lattice
 
 We later apply periodic boundary conditions to mimic a crystal of infinite extent. A `Box` describes a [Bravais lattice](https://en.wikipedia.org/wiki/Bravais_lattice).
 
@@ -46,7 +44,7 @@ box = replicate(box, (2, 2, 2)) # new box replicated 2 by 2 by 2
 box.a # 20 Å
 ```
 
-### Porous Crystals
+## Building Blocks of PorousMaterials: Porous Crystals
 
 ```julia
 using PorousMaterials
