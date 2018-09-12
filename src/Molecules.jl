@@ -23,7 +23,7 @@ end
 """
     molecule = Molecule(species, assert_charge_neutrality=true)
 
-Reads molecule files in the directory `joinpath(PorousMaterials.PATH_TO_DATA, "molecule", species)`.
+Reads molecule files in the directory `joinpath(PorousMaterials.PATH_TO_DATA, "molecules", species)`.
 Center of mass assigned using atomic masses from `read_atomic_masses()`. The fractional
 coordinates are determined assuming a unit cube box. These must be adjusted later for
 simulations using `set_fractional_coords!(molecule, box)`.
@@ -38,7 +38,7 @@ simulations using `set_fractional_coords!(molecule, box)`.
 function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     if ! isdir(joinpath(PATH_TO_DATA, "molecules", species))
         error(@sprintf("No directory created for %s in %s\n", species,
-                       PATH_TO_DATA * "molecules/"))
+                       joinpath(PATH_TO_DATA, "molecules")))
     end
     
     ###
