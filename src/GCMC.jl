@@ -735,8 +735,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
 
     if autosave
-        if ! isdir(PATH_TO_DATA * "gcmc_sims")
-            mkdir(PATH_TO_DATA * "gcmc_sims")
+        if ! isdir(joinpath(PATH_TO_DATA, "gcmc_sims"))
+            mkdir(joinpath(PATH_TO_DATA, "gcmc_sims"))
         end
 
         save_results_filename = joinpath(PATH_TO_DATA, "gcmc_sims", gcmc_result_savename(framework.name,
