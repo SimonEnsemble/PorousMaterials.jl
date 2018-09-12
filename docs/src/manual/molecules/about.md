@@ -1,5 +1,3 @@
-# Molecules
-
 ## Loading in Molecule Files
 
 Molecule input files are stored in `data/molecules`. Each molecule possesses its own directory and contains two files: `point_charges.csv` and `lennard_jones_spheres.csv`, comma-separated-value files describing the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom; units of charges are electrons.
@@ -8,20 +6,24 @@ Molecule input files are stored in `data/molecules`. Each molecule possesses its
 using PorousMaterials
 
 m = Molecule("CO2")
-    Molecule species: CO2
-    Center of mass (fractional coords): [0.0, 0.0, 0.0]
-    Atoms:
-
-            atom = C_CO2, xf = [0.000, 0.000, 0.000]
-            atom = O_CO2, xf = [-1.160, 0.000, 0.000]
-            atom = O_CO2, xf = [1.160, 0.000, 0.000]
-    Point charges:
-            charge = 0.700000, xf = [0.000, 0.000, 0.000]
-            charge = -0.350000, xf = [-1.160, 0.000, 0.000]
-            charge = -0.350000, xf = [1.160, 0.000, 0.000]
 ```
 
-This loads in a molecule that can be used as a template. The next section discusses ways of translating and rotating a molecule.
+PorousMaterials will then output information about the molecule you just loaded:
+
+```julia
+Molecule species: CO2
+Center of mass (fractional coords): [0.0, 0.0, 0.0]
+Atoms:
+
+        atom = C_CO2, xf = [0.000, 0.000, 0.000]
+        atom = O_CO2, xf = [-1.160, 0.000, 0.000]
+        atom = O_CO2, xf = [1.160, 0.000, 0.000]
+Point charges:
+        charge = 0.700000, xf = [0.000, 0.000, 0.000]
+        charge = -0.350000, xf = [-1.160, 0.000, 0.000]
+        charge = -0.350000, xf = [1.160, 0.000, 0.000]
+```
+
 
 ## Building Blocks of PorousMaterials
 

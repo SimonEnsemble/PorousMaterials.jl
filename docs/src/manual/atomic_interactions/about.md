@@ -1,5 +1,3 @@
-# Atomic Interactions
-
 ## Loading in Forcefield Files
 
 Lennard-Jones forcefield parameters are stored in comma-separated-value format in `data/forcefields/`.
@@ -14,6 +12,11 @@ The Lennard Jones force field input files, e.g. `UFF.csv` contain a list of pure
 using PorousMaterials
 
 ljff = LJForceField("UFF.csv")
+```
+
+PorousMaterials will the output information about the forcefield file you just loaded:
+
+```julia
     Force field: UFF.csv
     Number of atoms included: 106
     Cut-off radius (Å) = 14.0    

@@ -26,7 +26,6 @@ markdown_extensions:
   #- mdx_math
 extra:
   logo: assets/PMlogo.png
-  history_buttons: false
 
 
 docs_dir: 'build'
@@ -36,22 +35,22 @@ nav:
   - Loading Data: guides/input_files.md
   - Manual:
     - Matter:
-      - About: manual/matter/about.md
-      - Documentation: manual/matter/docs.md
+      - Matter: manual/matter/about.md
+      - Matter Documentation: manual/matter/docs.md
     - Boxes, Crystals, and Grids:
-      - About: manual/boxes_crystals_grids/about.md
-      - Documentation: manual/boxes_crystals_grids/docs.md
+      - Boxes, Crystals, and Grids: manual/boxes_crystals_grids/about.md
+      - Boxes, Crystals, and Grids Documentation: manual/boxes_crystals_grids/docs.md
     - Molecules:
-      - About: manual/molecules/about.md
-      - Documentation: manual/molecules/docs.md
+      - Molecules: manual/molecules/about.md
+      - Molecules Documentation: manual/molecules/docs.md
     - Atomic Interactions:
-      - About: manual/atomic_interactions/about.md
-      - Documentation: manual/atomic_interactions/docs.md
+      - Atomic Interactions: manual/atomic_interactions/about.md
+      - Atomic Interactions Documentation: manual/atomic_interactions/docs.md
     - MOF Simulations:
-      - About: manual/mof_simulations/about.md
-      - Documentation: manual/mof_simulations/docs.md
+      - MOF Simulations: manual/mof_simulations/about.md
+      - MOF Simulations Documentation: manual/mof_simulations/docs.md
     - Other:
-      - About: manual/other/about.md
-      - Documentation: manual/other/docs.md
+      - Other: manual/other/about.md
+      - Other Documentation: manual/other/docs.md
   - FAQ: guides/faq.md
   - Help Wanted: guides/help_wanted.md

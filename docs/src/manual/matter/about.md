@@ -1,5 +1,3 @@
-# Matter
-
 Matter is the foundation for every data type defined in PorousMaterials. Two structs are used to define all atomic structures: `Atoms` and `Charges`. Every atom, molecule, or crystal structure can be simulated by understanding its atoms and its point charges.
 
 We chose to store each collection as a single object (Atoms) rather than an array of objects (Array{Atom}) because it allows us to store the locations in contiguous memory. We found significant speed increases when storing each collection as a single object.
@@ -11,6 +9,8 @@ dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[i])
 ```
 
 This calculates the distance between one atom in a molecule and every atom in the framework.
+
+## Building Blocks of PorousMaterials
 
 ### Matter
 

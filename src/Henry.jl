@@ -3,9 +3,11 @@ const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
 using Distributed
 
 """
-   result = henry_coefficient(framework, molecule, temperature, ljforcefield,
-                             nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
-                             autosave=true)
+```
+result = henry_coefficient(framework, molecule, temperature, ljforcefield,
+                            nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
+                            autosave=true)
+```
 
 Conduct particle insertions to compute the Henry coefficient Kₕ of a molecule in a framework.
 Also, for free, the heat of adsorption and ensemble average energy of adsorption is computed.

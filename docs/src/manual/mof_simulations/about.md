@@ -1,5 +1,3 @@
-# MOF Simulations
-
 ## Demo of Henry coefficients Calculation
 
 Compute the Henry coefficient of CO<sub>2</sub> in CAXVII\_clean (Fe<sub>2</sub>(dobdc)) at 298 K using the Dreiding force field:
