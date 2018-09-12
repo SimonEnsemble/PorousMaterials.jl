@@ -108,17 +108,17 @@ using Random
     @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-15)
     rotate!(m1, UnitCube())
     rotate!(m2, UnitCube())
-    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-15)
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-14)
     m1.atoms.xf[:, 1] += [1e-10, 1e-9, 1e-10]
-    @test bond_length_drift(m1, m2, UnitCube(), atol=1e-15, throw_warning=false)
+    @test bond_length_drift(m1, m2, UnitCube(), atol=1e-14, throw_warning=false)
     m1.atoms.xf[:, 1] -= [1e-10, 1e-9, 1e-10]
-    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-15)
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-14)
     m2.charges.xf[:, 1] += [1e-10, 1e-9, 1e-10]
-    @test bond_length_drift(m1, m2, UnitCube(), atol=1e-15, throw_warning=false)
+    @test bond_length_drift(m1, m2, UnitCube(), atol=1e-14, throw_warning=false)
     m1 = Molecule("Xe")
     m2 = Molecule("Xe")
     translate_to!(m1, rand(3))
-    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-15)
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-14)
 
     # test unit vector on sphere generator
     ms = [Molecule("He") for i = 1:10000]
