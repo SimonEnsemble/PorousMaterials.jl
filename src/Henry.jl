@@ -147,11 +147,11 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     result["elapsed time (min)"] = elapsed_time / 60
 
     if autosave
-        if ! isdir(PATH_TO_DATA * "henry_sims")
-            mkdir(PATH_TO_DATA * "henry_sims")
+        if ! isdir(joinpath(PATH_TO_DATA, "henry_sims"))
+            mkdir(joinpath(PATH_TO_DATA, "henry_sims"))
         end
-        savename = PATH_TO_DATA * "henry_sims/" * henry_result_savename(framework, molecule, temperature,
-                               ljforcefield, insertions_per_volume, comment=filename_comment)
+        savename = joinpath(PATH_TO_DATA, "henry_sims", henry_result_savename(framework, molecule, temperature,
+                               ljforcefield, insertions_per_volume, comment=filename_comment))
         @save savename result
         if verbose
             println("\tResults saved in: ", savename)

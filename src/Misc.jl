@@ -96,7 +96,7 @@ the atomic radii of carbon (10.87 Angstrom).
 """
 function read_atomic_radii()
     atomic_radii = Dict{Symbol, Float64}()
-    df_props = CSV.read(PATH_TO_DATA * "atom_properties.csv")
+    df_props = CSV.read(joinpath(PATH_TO_DATA, "atom_properties.csv"))
     for row in eachrow(df_props)
         if ! ismissing(row[Symbol("atomicradius[Angstrom]")])
             atomic_radii[Symbol(row[:atom])] = row[Symbol("atomicradius[Angstrom]")]
@@ -119,7 +119,7 @@ function read_atomic_masses()
         error("Cannot find atomicmasses.csv file in your data folder\n")
     end
 
-    df_am = CSV.read(PATH_TO_DATA * "atomicmasses.csv")
+    df_am = CSV.read(joinpath(PATH_TO_DATA, "atomicmasses.csv"))
 
     atomic_masses = Dict{Symbol, Float64}()
 

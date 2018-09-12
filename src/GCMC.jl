@@ -299,9 +299,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         error("A checkpoint dictionary was provided AND load_checkpoint_file=true.\n
         Unclear which checkpoint to start with.\n")
     end
-    checkpoint_filename = PATH_TO_DATA * "gcmc_checkpoints/" * gcmc_result_savename(
+    checkpoint_filename = joinpath(PATH_TO_DATA, "gcmc_checkpoints", gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure,
-        n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint") # path to checkpoint file
+        n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint")) # path to checkpoint file
     if load_checkpoint_file
         if isfile(checkpoint_filename)
             @load checkpoint_filename checkpoint
@@ -623,8 +623,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             for m in checkpoint["molecules"]
                 set_fractional_coords_to_unit_cube!(m, framework.box)
             end
-            if ! isdir(PATH_TO_DATA * "/gcmc_checkpoints")
-                mkdir(PATH_TO_DATA * "/gcmc_checkpoints")
+            if ! isdir(joinpath(PATH_TO_DATA, "gcmc_checkpoints"))
+                mkdir(joinpath(PATH_TO_DATA, "gcmc_checkpoints"))
             end
             @save checkpoint_filename checkpoint
         end # write checkpoint
@@ -739,8 +739,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             mkdir(PATH_TO_DATA * "gcmc_sims")
         end
 
-        save_results_filename = PATH_TO_DATA * "gcmc_sims/" * gcmc_result_savename(framework.name,
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, comment=filename_comment)
+        save_results_filename = joinpath(PATH_TO_DATA, "gcmc_sims", gcmc_result_savename(framework.name,
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, comment=filename_comment))
 
         #JLD.save(save_results_filename, "results", results)
         @save save_results_filename results
