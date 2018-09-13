@@ -267,7 +267,7 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid, i::Int, j::Int, k::Int, 
     end
 end
 
-function _segment_grid(grid::Grid, energy_tol::Float64=0.0, verbose::Bool=true)
+function _segment_grid(grid::Grid; energy_tol::Float64=0.0, verbose::Bool=true)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
     # let "-1" be "not accessible"
@@ -292,60 +292,74 @@ function _segment_grid(grid::Grid, energy_tol::Float64=0.0, verbose::Bool=true)
     return segmented_grid
 end
 
+function _check_and_merge_if_applicable!(segmented_grid::Grid, left_segment_no::Int,
+    right_segment_no::Int)
+    # if unaccessible, do no merging.
+    if (left_segment_no == -1) || (right_segment_no == -1)
+        return nothing
+    end
+    # at this point, we're only looking at accessible points.
+
+    #  if not the same segment... and accessible... these two segments are connected
+    #     and should be merged into one segment with the same segment ID
+    if left_segment_no != right_segment_no
+        # doesn't matter which we overwrite.
+        @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
+            left_segment_no, right_segment_no)
+        segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
+    end
+end
+
+function _rename_accessible_segments!(segmented_grid::Grid)
+    unique_segments = unique(segmented_grid.data)
+    nb_unique_segments = length(unique_segments)
+    sort!(unique_segments)
+    @printf("Now %d unique segments.\n", nb_unique_segments)
+    println("\tUnique segments: ", unique_segments)
+
+    nb_accessible_segments = length(unique_segments)
+    # exclude -1
+    if -1 in unique_segments
+        nb_accessible_segments -= 1
+    end
+
+    # rename so that accessible segments are 1, 2, ..., n_unique_segments
+    for s = 1:nb_accessible_segments
+        if s in unique_segments
+            # segment already there, no need to rename
+            continue
+        end
+        # pop largest segment from stack
+        replace_segment = pop!(unique_segments)
+        # rename this segment 
+        @printf("... renaming segment %d to %d\n", replace_segment, s)
+        segmented_grid.data[segmented_grid.data .== replace_segment] .= s
+    end
+    
+    new_unique_segments = unique(segmented_grid.data)
+    println("new unique segments: ", new_unique_segments)
+    @assert(maximum(new_unique_segments) == nb_accessible_segments)
+    @assert(length(new_unique_segments) == nb_unique_segments)
+end
+
 # find all segment pairs connected across the unit cell boundary
 function _merge_segments_connected_across_periodic_boundary!(segmented_grid::Grid)
     # loop over faces of unit cell.
     for i = 1:segmented_grid.n_pts[1], j = 1:segmented_grid.n_pts[2]
-        left_segment_no  = segmented_grid.data[i, j, 1]
-        right_segment_no = segmented_grid.data[i, j, end]
-
-        # if unaccessible, do no merging.
-        if (left_segment_no == -1) || (right_segment_no == -1)
-            continue
-        end
-        # at this point, we're only looking at accessible points.
-
-        #  if not the same segment... merge these segments
-        if left_segment_no != right_segment_no
-            # doesn't matter which we overwrite.
-            @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
-                left_segment_no, right_segment_no)
-            segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
-        end
+        _check_and_merge_if_applicable!(segmented_grid, 
+            segmented_grid.data[i, j, 1], segmented_grid.data[i, j, end])
     end
     for j = 1:segmented_grid.n_pts[2], k = 1:segmented_grid.n_pts[3]
-        left_segment_no  = segmented_grid.data[1,   j, k]
-        right_segment_no = segmented_grid.data[end, j, k]
-        # if unaccessible, do no merging.
-        if (left_segment_no == -1) || (right_segment_no == -1)
-            continue
-        end
-        # at this point, we're only looking at accessible points.
-
-        #  if not the same segment... merge these segments
-        if left_segment_no != right_segment_no
-            # doesn't matter which we overwrite.
-            @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
-                left_segment_no, right_segment_no)
-            segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
-        end
+        _check_and_merge_if_applicable!(segmented_grid, 
+            segmented_grid.data[1, j, k], segmented_grid.data[end, j, k])
     end
     for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
-        left_segment_no  = segmented_grid.data[i, 1,   k]
-        right_segment_no = segmented_grid.data[i, end, k]
-        # if unaccessible, do no merging.
-        if (left_segment_no == -1) || (right_segment_no == -1)
-            continue
-        end
-        # at this point, we're only looking at accessible points.
-
-        #  if not the same segment... merge these segments
-        if left_segment_no != right_segment_no
-            # doesn't matter which we overwrite.
-            @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
-                left_segment_no, right_segment_no)
-            segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
-        end
+        _check_and_merge_if_applicable!(segmented_grid, 
+            segmented_grid.data[i, 1, k], segmented_grid.data[i, end, k])
     end
+    
+    # so 1 2 3 4 not e.g. 6 19
+    _rename_accessible_segments!(segmented_grid)
+
     return segmented_grid
 end
