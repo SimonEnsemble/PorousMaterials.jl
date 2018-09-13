@@ -365,7 +365,7 @@ function pairwise_charge_distances(molecule::Molecule, box::Box)
 end
 
 """
-    bond_length_drift(molecule, reference_molecule, box, atol=1e-15, throw_warning=true)
+    bond_length_drift(molecule, reference_molecule, box, atol=1e-14, throw_warning=true)
 
 Compute pairwise atom & charge distances of `molecule` and compare to those in a reference 
 molecule to determine if the pairwise atom & charge distances differ within a tolerance 
