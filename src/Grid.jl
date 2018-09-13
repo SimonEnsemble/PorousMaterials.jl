@@ -291,3 +291,61 @@ function _segment_grid(grid::Grid, energy_tol::Float64=0.0, verbose::Bool=true)
     verbose ? @printf("Found %d segments\n", segment_no) : nothing
     return segmented_grid
 end
+
+# find all segment pairs connected across the unit cell boundary
+function _merge_segments_connected_across_periodic_boundary!(segmented_grid::Grid)
+    # loop over faces of unit cell.
+    for i = 1:segmented_grid.n_pts[1], j = 1:segmented_grid.n_pts[2]
+        left_segment_no  = segmented_grid.data[i, j, 1]
+        right_segment_no = segmented_grid.data[i, j, end]
+
+        # if unaccessible, do no merging.
+        if (left_segment_no == -1) || (right_segment_no == -1)
+            continue
+        end
+        # at this point, we're only looking at accessible points.
+
+        #  if not the same segment... merge these segments
+        if left_segment_no != right_segment_no
+            # doesn't matter which we overwrite.
+            @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
+                left_segment_no, right_segment_no)
+            segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
+        end
+    end
+    for j = 1:segmented_grid.n_pts[2], k = 1:segmented_grid.n_pts[3]
+        left_segment_no  = segmented_grid.data[1,   j, k]
+        right_segment_no = segmented_grid.data[end, j, k]
+        # if unaccessible, do no merging.
+        if (left_segment_no == -1) || (right_segment_no == -1)
+            continue
+        end
+        # at this point, we're only looking at accessible points.
+
+        #  if not the same segment... merge these segments
+        if left_segment_no != right_segment_no
+            # doesn't matter which we overwrite.
+            @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
+                left_segment_no, right_segment_no)
+            segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
+        end
+    end
+    for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
+        left_segment_no  = segmented_grid.data[i, 1,   k]
+        right_segment_no = segmented_grid.data[i, end, k]
+        # if unaccessible, do no merging.
+        if (left_segment_no == -1) || (right_segment_no == -1)
+            continue
+        end
+        # at this point, we're only looking at accessible points.
+
+        #  if not the same segment... merge these segments
+        if left_segment_no != right_segment_no
+            # doesn't matter which we overwrite.
+            @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
+                left_segment_no, right_segment_no)
+            segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
+        end
+    end
+    return segmented_grid
+end

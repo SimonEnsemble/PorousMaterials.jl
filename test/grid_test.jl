@@ -20,5 +20,12 @@ using Random
     molecule = Molecule("Xe")
     forcefield = LJForceField("UFF.csv")
     grid = energy_grid(framework, molecule, forcefield, n_pts=(10, 10, 10))
+
+    # endpoints included, ensure periodic since endpoints of grid pts included
+    #   first cut out huge values. 1e46 == 1.00001e46
+    grid.data[grid.data .> 1000.0] .= 0.0
+    @test isapprox(grid.data[1, :, :], grid.data[end, :, :], atol=1e-7)
+    @test isapprox(grid.data[:, 1, :], grid.data[:, end, :], atol=1e-7)
+    @test isapprox(grid.data[:, :, 1], grid.data[:, :, end], atol=1e-7)
 end
 end
