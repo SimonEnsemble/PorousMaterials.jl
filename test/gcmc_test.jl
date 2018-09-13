@@ -101,7 +101,7 @@ if co2_tests
 
     # make sure bond lenghts are preserved
     bls = pairwise_atom_distances(co2, UnitCube())
-    results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff, 
+    results, molecules = gcmc_simulation(zif71, co2, 298.0, 1.0, ff,
                         n_burn_cycles=25, n_sample_cycles=25, verbose=false)
     @printf("Testing that bond lenghts are preserved for %d molecules.\n", length(molecules))
     for m in molecules
