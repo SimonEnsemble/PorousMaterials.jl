@@ -476,3 +476,9 @@ function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1})
     # if we made it to here, there is no surrounding point that is accessible.
     return false
 end
+
+# when rep factors are used in the simulation so fractional coord system in grid does not match
+#   that in the simulation.
+function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
+    return accessible(accessibility_grid, mod.(xf .* repfactors, 1.0))
+end

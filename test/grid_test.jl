@@ -64,6 +64,9 @@ using Random
             xf = rand(3)
             if accessible(accessibility_grid, xf)
                 x = hcat(x, framework.box.f_to_c * xf)
+                @assert accessible(accessibility_grid, xf, (1, 1, 1))
+            else
+                @assert ! accessible(accessibility_grid, xf, (1, 1, 1))
             end
         end
         if zeolite == "SOD"
@@ -75,5 +78,29 @@ using Random
             println("See ", xyzfilename)
         end
     end
+
+    # test accessibility interpolator when there are replications
+    framework = Framework("LTA.cif")
+    molecule = Molecule("CH4")
+    forcefield = LJForceField("UFF.csv")
+    accessibility_grid, some_pockets_were_blocked = write_accessibility_grid(framework, 
+        molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false, 
+        write_b4_after_grids=true)
+    # replicate framework and build accessibility grid that includes the other accessibility grid in a corner
+    repfactors = (2, 3, 1)
+    framework = replicate(framework, repfactors)
+    rep_accessibility_grid, rep_some_pockets_were_blocked = write_accessibility_grid(framework, 
+        molecule, forcefield, n_pts=(20 * 2 - 1, 20 * 3 - 2, 20), energy_tol=0.0, verbose=false, 
+        write_b4_after_grids=true)
+    @test all(accessibility_grid.data .== rep_accessibility_grid.data[1:20, 1:20, 1:20])
+    @test rep_some_pockets_were_blocked
+    same_accessibility_repfactors = true
+    for i = 1:10000
+        xf = rand(3) # in (2, 3, 1) box
+        if ! (accessible(rep_accessibility_grid, xf) == accessible(accessibility_grid, xf, repfactors))
+            same_accessibility_repfactors = false
+        end
+    end
+    @test same_accessibility_repfactors
 end
 end
