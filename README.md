@@ -107,7 +107,7 @@ Superimpose a grid of points about the unit cell of SBMOF-1. Compute the potenti
 ```julia
 using PorousMaterials
 
-framework = Framework("SBMOF-1_cory.cif")
+framework = Framework("SBMOF-1.cif")
 molecule = Molecule("Xe")
 forcefield = LJForceField("UFF.csv")
 
