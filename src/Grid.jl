@@ -413,5 +413,7 @@ function write_accessibility_grid(framework::Framework, probe::Molecule, forcefi
             probe.species, framework.name, energy_tol)
     end
 
-    return segmented_grid
+    some_pockets_were_blocked = any(segment_classifications .== 0)
+
+    return segmented_grid, some_pockets_were_blocked
 end
