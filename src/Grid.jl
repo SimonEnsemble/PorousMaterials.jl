@@ -315,7 +315,7 @@ function _count_segments(segmented_grid::Grid)
 end
 
 # obtain set of Segment Connections
-function _build_connectivity_graph(segmented_grid::Grid)
+function _build_connectivity_graph(segmented_grid::Grid; verbose::Bool=true)
     nb_segments = _count_segments(segmented_grid)
     
     graph = DiGraph(nb_segments)
@@ -334,9 +334,11 @@ function _build_connectivity_graph(segmented_grid::Grid)
     end
     
     # note connections
-    for edge in edges(graph)
-        @printf("Noted seg. %d --> %d connection across unit cell boundary.\n", 
-            src(edge), dst(edge))
+    if verbose
+        for edge in edges(graph)
+            @printf("Noted seg. %d --> %d connection across unit cell boundary.\n", 
+                src(edge), dst(edge))
+        end
     end
 
     return graph
@@ -361,12 +363,16 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64})
     return segment_classifiction
 end
 
-function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_classifiction::Array{Int, 1})
+function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_classifiction::Array{Int, 1}; verbose::Bool=true)
     for s = 1:length(segment_classifiction)
         if segment_classifiction[s] == 1
-            @printf("Segment %s classified as accessible channel.\n", s)
+            if verbose
+                @printf("Segment %s classified as accessible channel.\n", s)
+            end
         else
-            @printf("Segment %s classified as inaccessible pocket. Overwriting.\n", s)
+            if verbose
+                @printf("Segment %s classified as inaccessible pocket. Overwriting.\n", s)
+            end
             segmented_grid.data[segmented_grid.data .== s] .= -1
         end
     end
@@ -392,13 +398,13 @@ function write_accessibility_grid(framework::Framework, probe::Molecule, forcefi
     end
     
     # get graph describing connectivity of segments across unit cell boundary
-    graph = _build_connectivity_graph(segmented_grid)
+    graph = _build_connectivity_graph(segmented_grid, verbose=verbose)
 
     # get classifications of the segments
     segment_classifications = _classify_segments(segmented_grid, graph)
 
     # assign inaccessible pockets minus one if cycle not found in graph
-    _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications)
+    _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications, verbose=verbose)
     
     # -1 for not accessible, 1 for accessible
     segmented_grid.data[segmented_grid.data .!= -1] .= 1
@@ -409,14 +415,64 @@ function write_accessibility_grid(framework::Framework, probe::Molecule, forcefi
             replace(forcefield.name, ".csv" => ""))
         write_cube(segmented_grid, gridfilename)
     end
-
-
+    
+    # print warning if there is no use in running a simulation since all pockets are inaccessible
     if all(segmented_grid.data .== -1)
-        @warn @sprintf("%d cannot enter the pores of %d with %d K energy tolerance.",
+        @warn @sprintf("%s cannot enter the pores of %s with %f K energy tolerance.",
             probe.species, framework.name, energy_tol)
     end
-
+    
+    # boolean for easy checking if any pockets were blocked.
     some_pockets_were_blocked = any(segment_classifications .== 0)
 
-    return segmented_grid, some_pockets_were_blocked
+    # instead of returning grid of int's return a boolean grid for storage efficiency
+    accessibility_grid = Grid{Bool}(segmented_grid.box, segmented_grid.n_pts,
+        segmented_grid.data .== 1, :accessibility, segmented_grid.origin)
+    
+    if verbose
+        @printf("\tPorosity of %s computed from accessibility grid: %f\n", framework.name,
+            sum(accessibility_grid.data) / length(accessibility_grid.data))
+    end
+
+    if some_pockets_were_blocked
+        @sprintf("%d pockets in %s were found to be inaccessible to %s and blocked.\n",
+            sum(segment_classifications .== 0), framework.name, probe.species)
+    end
+
+    return accessibility_grid, some_pockets_were_blocked
+end
+
+# return ID that is the nearest neighbor.
+function _arg_nearest_neighbor(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
+    return 1 .+ round.(Int, xf .* (n_pts .- 1))
+end
+
+function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
+    for k = 1:3
+        if id[k] == 0
+            id[k] = n_pts[k]
+        end
+        if id[k] == n_pts[k] + 1
+            id[k] = 1
+        end
+    end
+    return nothing
+end
+
+function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1})
+    # find ID of nearest neighbor
+    id_nearest_neighbor = _arg_nearest_neighbor(accessibility_grid.n_pts, xf)
+    # the point is inaccessible if and only if ALL surrounding points are inaccessible;
+    #   if at the boundary, let the energy be computed and automatically address
+    #   accessibility during a simulation
+    for i = -1:1, j = -1:1, k = -1:1
+        id_neighbor = id_nearest_neighbor .+ [i, j, k]
+        _apply_pbc_to_index!(id_neighbor, accessibility_grid.n_pts)
+        # again, if ANY surrounding point is accessible, let the energy computation go on
+        if accessibility_grid.data[id_neighbor...]
+            return true
+        end
+    end
+    # if we made it to here, there is no surrounding point that is accessible.
+    return false
 end

@@ -1,6 +1,6 @@
 using PorousMaterials
 
-framework = Framework("SOD.cif")
+framework = Framework("LTA.cif")
 molecule = Molecule("CH4")
 forcefield = LJForceField("UFF.csv")
 grid = energy_grid(framework, molecule, forcefield, n_pts=(20, 20, 20))
@@ -12,4 +12,4 @@ segment_classifications = PorousMaterials._classify_segments(segmented_grid, gra
 PorousMaterials._assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications)
 write_cube(segmented_grid, "segmented_grid_LTA_after.cube")
 
-write_accessibility_grid(framework, molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=true, write_b4_after_grids=true)
+accessibility_grid, some_pockets_were_blocked = write_accessibility_grid(framework, molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=true, write_b4_after_grids=true)
