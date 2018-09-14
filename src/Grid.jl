@@ -378,15 +378,18 @@ function write_accessibility_grid(framework::Framework, probe::Molecule, forcefi
     
     # write potential energy grid
     grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose)
-    if write_b4_after_grids
-        gridfilename = @sprintf("%s_in_%s_%s_b4_pocket_blocking.cube", probe.species,
-            replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
-            replace(forcefield.name, ".csv" => ""))
-        write_cube(grid, gridfilename)
-    end
     
     # flood fill and label segments
     segmented_grid = _segment_grid(grid, energy_tol=energy_tol, verbose=verbose)
+
+    if write_b4_after_grids
+        _segmented_grid = deepcopy(segmented_grid)
+        _segmented_grid.data[segmented_grid.data .!= -1] .= 1
+        gridfilename = @sprintf("%s_in_%s_%s_b4_pocket_blocking.cube", probe.species,
+            replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
+            replace(forcefield.name, ".csv" => ""))
+        write_cube(_segmented_grid, gridfilename)
+    end
     
     # get graph describing connectivity of segments across unit cell boundary
     graph = _build_connectivity_graph(segmented_grid)
@@ -397,16 +400,16 @@ function write_accessibility_grid(framework::Framework, probe::Molecule, forcefi
     # assign inaccessible pockets minus one if cycle not found in graph
     _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications)
     
+    # -1 for not accessible, 1 for accessible
+    segmented_grid.data[segmented_grid.data .!= -1] .= 1
+    
     if write_b4_after_grids
-        grid.data[segmented_grid.data .== -1] .= Inf
         gridfilename = @sprintf("%s_in_%s_%s_after_pocket_blocking.cube", probe.species,
             replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
             replace(forcefield.name, ".csv" => ""))
-        write_cube(grid, gridfilename)
+        write_cube(segmented_grid, gridfilename)
     end
 
-    # -1 for not accessible, 1 for accessible
-    segmented_grid.data[segmented_grid.data .!= -1] .= 1
 
     if all(segmented_grid.data .== -1)
         @warn @sprintf("%d cannot enter the pores of %d with %d K energy tolerance.",
