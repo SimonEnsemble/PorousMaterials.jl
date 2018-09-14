@@ -40,7 +40,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
         error(@sprintf("No directory created for %s in %s\n", species,
                        joinpath(PATH_TO_DATA, "molecules")))
     end
-    
+
     ###
     #  Read in Lennard Jones spheres
     ###
@@ -73,7 +73,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     x_com /= total_mass
     # construct atoms attribute of molecule
     atoms = Atoms(atom_species, atom_coords)
-    
+
     ###
     #  Read in point charges
     ###
@@ -94,7 +94,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     end
     # construct charges attribute of molecule
     charges = Charges(charge_vals, charge_coords)
-    
+
     # construct molecule
     molecule = Molecule(Symbol(species), atoms, charges, x_com)
 
@@ -117,12 +117,8 @@ to a unit cell box that is a unit cube. This function adjusts the fractional coo
 of the molecule to be consistent with a different box.
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] = box.c_to_f * molecule.atoms.xf[:, i]
-    end
-    for j = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, j] = box.c_to_f * molecule.charges.xf[:, j]
-    end
+    molecule.atoms.xf[:] = box.c_to_f * molecule.atoms.xf
+    molecule.charges.xf[:] = box.c_to_f * molecule.charges.xf
     molecule.xf_com[:] = box.c_to_f * molecule.xf_com
     return nothing
 end
@@ -152,16 +148,12 @@ Translate a molecule by vector `dxf` in fractional coordinate space or by vector
 Cartesian coordinate space. For the latter, a unit cell box is required for context.
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
-    # move LJSphere's
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] += dxf
-    end
-    # move PtCharge's
-    for j = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, j] .+= dxf
-    end
+    # translate both atoms and charges
+    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, dxf)
+    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, dxf)
     # adjust center of mass
     molecule.xf_com[:] += dxf
+    return nothing
 end
 
 function translate_by!(molecule::Molecule, dx::Array{Float64, 1}, box::Box)
@@ -259,13 +251,16 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
-    # TODO change this to use broadcasting
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
-    end
-    for i = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, i] = molecule.xf_com + r * (molecule.charges.xf[:, i] - molecule.xf_com)
-    end
+    # shift to origin
+    molecule.atoms.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
+    molecule.charges.xf[:] = broadcast(-, molecule.charges.xf, molecule.xf_com)
+    # conduct the rotation
+    molecule.atoms.xf[:] = r * molecule.atoms.xf
+    molecule.charges.xf[:] = r * molecule.charges.xf
+    # shift back to center of mass
+    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, molecule.xf_com)
+    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, molecule.xf_com)
+    return nothing
 end
 
 """
@@ -369,9 +364,40 @@ function pairwise_charge_distances(molecule::Molecule, box::Box)
     return bond_lengths
 end
 
+"""
+    bond_length_drift(molecule, reference_molecule, box, atol=1e-14, throw_warning=true)
+
+Compute pairwise atom & charge distances of `molecule` and compare to those in a reference 
+molecule to determine if the pairwise atom & charge distances differ within a tolerance 
+`atol`. This is useful for checking for drift in the course of the simulation, during 
+which rotations and translations are performed.
+"""
+function bond_length_drift(molecule::Molecule, ref_molecule::Molecule, box::Box;
+    atol::Float64=1e-14, throw_warning::Bool=true)
+    @assert molecule.species == ref_molecule.species
+
+    we_have_drift = false
+
+    if ! isapprox(pairwise_atom_distances(ref_molecule, box),
+                  pairwise_atom_distances(molecule, box), atol=atol)
+        we_have_drift = true
+    end
+
+    if ! isapprox(pairwise_charge_distances(ref_molecule, box),
+                  pairwise_charge_distances(molecule, box), atol=atol)
+        we_have_drift = true
+    end
+
+    if throw_warning && we_have_drift
+        @warn @sprintf("pairwise charge/atom distances in %s drifted beyond %e tolerance.\n",
+            molecule.species, atol)
+    end
+    return we_have_drift # if made it this far, no bond length drift
+end
+
 # facilitate constructing a point charge
 Ion(q::Float64, xf::Array{Float64, 1}, species::Symbol=:ion) = Molecule(
     species,
     Atoms(0, Symbol[], zeros(0, 0)),
-    Charges(1, [q], reshape(xf, (3, 1))), 
+    Charges(1, [q], reshape(xf, (3, 1))),
     xf)
