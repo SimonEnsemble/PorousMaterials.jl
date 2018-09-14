@@ -292,74 +292,126 @@ function _segment_grid(grid::Grid; energy_tol::Float64=0.0, verbose::Bool=true)
     return segmented_grid
 end
 
-function _check_and_merge_if_applicable!(segmented_grid::Grid, left_segment_no::Int,
-    right_segment_no::Int)
-    # if unaccessible, do no merging.
-    if (left_segment_no == -1) || (right_segment_no == -1)
+function _note_connection!(segment_1::Int, segment_2::Int, graph::SimpleDiGraph{Int64})
+    if (segment_1 == -1) || (segment_2 == -1)
         return nothing
     end
-    # at this point, we're only looking at accessible points.
 
-    #  if not the same segment... and accessible... these two segments are connected
-    #     and should be merged into one segment with the same segment ID
-    if left_segment_no != right_segment_no
-        # doesn't matter which we overwrite.
-        @printf("Merging segments %d and %d (%d --> %d)\n", left_segment_no, right_segment_no,
-            left_segment_no, right_segment_no)
-        segmented_grid.data[segmented_grid.data .== left_segment_no] .= right_segment_no
-    end
+    add_edge!(graph, segment_1, segment_2)
+
+    return nothing
 end
 
-function _rename_accessible_segments!(segmented_grid::Grid)
+# this returns number of segments in a segmented grid.
+#  it excludes the inaccessible portions -1.
+function _count_segments(segmented_grid::Grid)
     unique_segments = unique(segmented_grid.data)
-    nb_unique_segments = length(unique_segments)
-    sort!(unique_segments)
-    @printf("Now %d unique segments.\n", nb_unique_segments)
-    println("\tUnique segments: ", unique_segments)
-
-    nb_accessible_segments = length(unique_segments)
-    # exclude -1
+    nb_segments = length(unique_segments)
     if -1 in unique_segments
-        nb_accessible_segments -= 1
+        nb_segments -= 1
     end
-
-    # rename so that accessible segments are 1, 2, ..., n_unique_segments
-    for s = 1:nb_accessible_segments
-        if s in unique_segments
-            # segment already there, no need to rename
-            continue
-        end
-        # pop largest segment from stack
-        replace_segment = pop!(unique_segments)
-        # rename this segment 
-        @printf("... renaming segment %d to %d\n", replace_segment, s)
-        segmented_grid.data[segmented_grid.data .== replace_segment] .= s
-    end
-    
-    new_unique_segments = unique(segmented_grid.data)
-    println("new unique segments: ", new_unique_segments)
-    @assert(maximum(new_unique_segments) == nb_accessible_segments)
-    @assert(length(new_unique_segments) == nb_unique_segments)
+    @assert(nb_segments == maximum(segmented_grid.data))
+    return nb_segments
 end
 
-# find all segment pairs connected across the unit cell boundary
-function _merge_segments_connected_across_periodic_boundary!(segmented_grid::Grid)
-    # loop over faces of unit cell.
+# obtain set of Segment Connections
+function _build_connectivity_graph(segmented_grid::Grid)
+    nb_segments = _count_segments(segmented_grid)
+    
+    graph = DiGraph(nb_segments)
+
+    # loop over faces of unit cell
     for i = 1:segmented_grid.n_pts[1], j = 1:segmented_grid.n_pts[2]
-        _check_and_merge_if_applicable!(segmented_grid, 
-            segmented_grid.data[i, j, 1], segmented_grid.data[i, j, end])
+        _note_connection!(segmented_grid.data[i, j, 1], segmented_grid.data[i, j, end], graph)
     end
+
     for j = 1:segmented_grid.n_pts[2], k = 1:segmented_grid.n_pts[3]
-        _check_and_merge_if_applicable!(segmented_grid, 
-            segmented_grid.data[1, j, k], segmented_grid.data[end, j, k])
-    end
-    for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
-        _check_and_merge_if_applicable!(segmented_grid, 
-            segmented_grid.data[i, 1, k], segmented_grid.data[i, end, k])
+        _note_connection!(segmented_grid.data[1, j, k], segmented_grid.data[end, j, k], graph)
     end
     
-    # so 1 2 3 4 not e.g. 6 19
-    _rename_accessible_segments!(segmented_grid)
+    for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
+        _note_connection!(segmented_grid.data[i, 1, k], segmented_grid.data[i, end, k], graph)
+    end
+    
+    # note connections
+    for edge in edges(graph)
+        @printf("Noted seg. %d --> %d connection across unit cell boundary.\n", 
+            src(edge), dst(edge))
+    end
+
+    return graph
+end
+
+function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64})
+    nb_segments = _count_segments(segmented_grid)
+
+    # 0 = inaccessible, 1 = accessible. start out with assuming inaccessible.
+    segment_classifiction = zeros(Int, nb_segments)
+    
+    # look for simple cycles in the graph
+    all_cycles = simplecycles(graph)
+
+    # all edges involved in a cycle are connected together and are accessible channels
+    for cyc in all_cycles
+        for s in cyc
+            segment_classifiction[s] = 1
+        end
+    end
+
+    return segment_classifiction
+end
+
+function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_classifiction::Array{Int, 1})
+    for s = 1:length(segment_classifiction)
+        if segment_classifiction[s] == 1
+            @printf("Segment %s classified as accessible channel.\n", s)
+        else
+            @printf("Segment %s classified as inaccessible pocket. Overwriting.\n", s)
+            segmented_grid.data[segmented_grid.data .== s] .= -1
+        end
+    end
+end
+
+function write_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
+    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=298.0, verbose::Bool=true,
+    write_b4_after_grids::Bool=true)
+    
+    # write potential energy grid
+    grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose)
+    if write_b4_after_grids
+        gridfilename = @sprintf("%s_in_%s_%s_b4_pocket_blocking.cube", probe.species,
+            replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
+            replace(forcefield.name, ".csv" => ""))
+        write_cube(grid, gridfilename)
+    end
+    
+    # flood fill and label segments
+    segmented_grid = _segment_grid(grid, energy_tol=energy_tol, verbose=verbose)
+    
+    # get graph describing connectivity of segments across unit cell boundary
+    graph = _build_connectivity_graph(segmented_grid)
+
+    # get classifications of the segments
+    segment_classifications = _classify_segments(segmented_grid, graph)
+
+    # assign inaccessible pockets minus one if cycle not found in graph
+    _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications)
+    
+    if write_b4_after_grids
+        grid.data[segmented_grid.data .== -1] .= Inf
+        gridfilename = @sprintf("%s_in_%s_%s_after_pocket_blocking.cube", probe.species,
+            replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
+            replace(forcefield.name, ".csv" => ""))
+        write_cube(grid, gridfilename)
+    end
+
+    # -1 for not accessible, 1 for accessible
+    segmented_grid.data[segmented_grid.data .!= -1] .= 1
+
+    if all(segmented_grid.data .== -1)
+        @warn @sprintf("%d cannot enter the pores of %d with %d K energy tolerance.",
+            probe.species, framework.name, energy_tol)
+    end
 
     return segmented_grid
 end
