@@ -345,7 +345,7 @@ Electrostatic potential at point x due to charges
     
     # loop over kevectors
     for kvec in eparams.kvecs
-    kvec_pot = 0.0
+        kvec_pot = 0.0 # total ϕ arising from this k-vector. multiply by shared kvector weight later.
         # cos( i * this_k * r) = real part of:
         #     e^{i ka r * vec(ka)} *
         #     e^{i kb r * vec(kb)} *
