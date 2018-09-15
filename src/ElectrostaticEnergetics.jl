@@ -345,14 +345,16 @@ Electrostatic potential at point x due to charges
     
     # loop over kevectors
     for kvec in eparams.kvecs
+    kvec_pot = 0.0
         # cos( i * this_k * r) = real part of:
         #     e^{i ka r * vec(ka)} *
         #     e^{i kb r * vec(kb)} *
         #     e^{i kb r * vec(kc)} where r = x - xᵢ
         #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
         @simd for c = 1:charges.n_charges
-            @inbounds pot.lr += kvec.wt * charges.q[c] * real(eikr.eikar[c, kvec.ka] * eikr.eikbr[c, kvec.kb] * eikr.eikcr[c, kvec.kc])
+            @inbounds kvec_pot += charges.q[c] * real(eikr.eikar[c, kvec.ka] * eikr.eikbr[c, kvec.kb] * eikr.eikcr[c, kvec.kc])
         end
+        pot.lr += kvec.wt * kvec_pot
     end
 
     ###
