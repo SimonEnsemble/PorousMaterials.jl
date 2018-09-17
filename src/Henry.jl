@@ -17,11 +17,9 @@ The Henry coefficient is a model for adsorption at infinite dilution (low covera
 Kₕ = β ⟨e^{-β U}⟩, where the average is over positions and orientations of the molecule
 in the framework.
 
-Returns a dictionary of results.
-
 # Arguments
 - `framework::Framework`: the porous crystal in which we seek to simulate adsorption
-- `molecule::molecule`: the adsorbate molecule
+- `molecule::Molecule`: the adsorbate molecule
 - `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
     in the porous material. units: Kelvin (K)
 - `ljforcefield::LJForceField`: the molecular model used to describe the
@@ -33,6 +31,9 @@ average, per unit cell volume (Å³)
 the replication factors in reciprocal space.
 - `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
+
+# Returns
+- `result::Dict{String, Float64}`: A dictionary containing all the results from the Henry coefficient simulation
 """
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
@@ -245,7 +246,8 @@ end
 
 """
     save_name = henry_result_savename(framework, molecule, temperature,
-                                   ljforcefield, insertions_per_volume)
+                                   ljforcefield, insertions_per_volume;
+                                   comment="")
 
 Determine the name of files saved while calculating the henry coefficient. It uses
 many pieces of information from the simulation to ensure the file name accurately
@@ -257,8 +259,9 @@ describes what it holds.
 - `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
 - `ljforcefield::LJForceField`: The molecular model being used in the simulation
     to describe the intermolecular Van der Waals forces
-- `insertions_per_volume::Int`: The number of widom insertions per unit volume.
+- `insertions_per_volume::Union{Int, Float64}`: The number of widom insertions per unit volume.
     Will be scaled according to the framework we're working with
+- `comment::AbstractString`: An optional comment that will be appended to the filename
 """
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
                                ljforcefield::LJForceField, insertions_per_volume::Union{Int, Float64}; comment::AbstractString="")
