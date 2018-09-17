@@ -2,7 +2,7 @@ using Test
 
 # Data structure for a framework; user-friendly constructor below
 struct Framework
-    name::String
+    name::AbstractString
     box::Box
     atoms::Atoms
     charges::Charges
@@ -22,16 +22,16 @@ or construct a `Framework` data structure directly.
 - `check_charge_neutrality::Bool`: check for charge neutrality
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
-- `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element and overlap.
+- `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
 
 # Attributes
-- `name::String`: name of crystal structure
+- `name::AbstractString`: name of crystal structure
 - `box::Box`: unit cell (Bravais Lattice)
-- `atoms::Array{LJSphere, 1}`: list of Lennard-Jones spheres in crystal unit cell
-- `charges::Array{PtCharge, 1}`: list of point charges in crystal unit cell
+- `atoms::Atoms`: list of Atoms in crystal unit cell
+- `charges::Charges`: list of point charges in crystal unit cell
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
@@ -290,7 +290,7 @@ end
 """
     is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
 
-Return true iff any two `LJSphere`'s in the crystal overlap by calculating the distance
+Return true iff any two `Atoms` in the crystal overlap by calculating the distance
 between every pair of atoms and ensuring distance is greater than
 `overlap_tol`. If verbose, print the pair of atoms which are culprits.
 
@@ -342,7 +342,7 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
     return overlap
 end
 
-# determine if two lennard-jones spheres overlap, returns the number of Atoms that
+# determine if two atoms overlap, returns the number of Atoms that
 #   do overlap, and can then use that number to determine if they overlap or are repeats
 function _overlap(xf_1::Array{Float64, 1}, xf_2::Array{Float64, 1},
                   box::Box, overlap_tol::Float64)
@@ -499,12 +499,13 @@ end
 write_vtk(framework::Framework) = write_vtk(framework.box, split(framework.name, ".")[1])
 
 """
-    formula = chemical_formula(framework)
+    formula = chemical_formula(framework, verbose=false)
 
 Find the irreducible chemical formula of a crystal structure.
 
 # Arguments
 - `framework::Framework`: The framework containing the crystal structure information
+- `verbose::Bool`: If `true`, will print the chemical formula as well
 
 # Returns
 - `formula::Dict{Symbol, Int}`: A dictionary with the irreducible chemical formula of a crystal structure
@@ -579,10 +580,10 @@ end
 """
     write_cif(framework, filename)
 
-Write a `framework::Framework` to a .cif file with `filename::String`. If `filename` does
+Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does
 not include the .cif extension, it will automatically be added.
 """
-function write_cif(framework::Framework, filename::String)
+function write_cif(framework::Framework, filename::AbstractString)
     if charged(framework) && (framework.atoms.n_atoms != framework.charges.n_charges)
         error("write_cif assumes equal numbers of Charges and Atoms (or zero charges)")
     end
@@ -632,8 +633,8 @@ end
 """
     new_framework = assign_charges(framework, charges, net_charge_tol=1e-5)
 
-Assign charges to the atoms (represented by `LJSphere`s in `framework.atoms`) present in
-the framework. Pass a dictionary of charges that place charges according to the species
+Assign charges to the atoms present in the framework.
+Pass a dictionary of charges that place charges according to the species
 of the atoms or pass an array of charges to assign to each atom, with the order of the
 array consistent with the order of `framework.atoms`.
 
