@@ -1,21 +1,22 @@
 import Base: +, -, /, *
 
 """
+    pe = PotentialEnergy()
+
+
 Data structure to store potential energy, partitioned into van der Waals (`energy.vdw`)
 and electrostatic (`energy.coulomb`) interactions, both `Float64`.
-
-# Default constructor
-    PotentialEnergy()
 
 This returns a PotentialEnergy data type where the vdw and coulomb attributes are
 set to 0.0
 
-# Example use
-    pe = PotentialEnergy()
+# Returns
+- `pe::PotentialEnergy`: A structure containing van der Waals and electrostatic energies, initialized at 0.0
 
-# Arguments
+# Attributes
 - `vdw::Float64`: The potential energy contributions from Van der Waals interactions
 - `coulomb::Float64`: The potential energy contributions from electrostatic interactions
+
 """
 mutable struct PotentialEnergy
     vdw::Float64 # contribution from van der Waals interactions
@@ -48,17 +49,17 @@ function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=tru
 end
 
 """
+    system_potential_energy = SystemPotentialEnergy()
+
 Data structure to facilitate storing/partitioning potential energy of a system. It
 stores the potential energy from guest-host and guest-guest interactions separately.
-
-# Default constructor
-    SystemPotentialEnergy()
 
 This initializes guest_host and guest_guest with PotentialEnergy(), so when it is
 created the total energy recorded is 0.0
 
-# Example use
-    system_potential_energy = SystemPotentialEnergy()
+# Returns
+- `system_potential_energy::SystemPotentialEnergy`: A structure containing the potential energy of the system,
+    broken down into guest-guest and guest-host interactions
 
 # Attributes
 - `guest_host::PotentialEnergy`: The total potential energy from all guest-host
