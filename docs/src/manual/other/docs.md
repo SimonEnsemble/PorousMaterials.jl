@@ -1,8 +1,7 @@
 ## PATH\_TO\_DATA Control
-
-Appearing soon!
 ```@docs
-
+    set_path_to_data
+    set_tutorial_mode
 ```
 
 ## Reading in Atomic Values

@@ -257,7 +257,8 @@ describes what it holds.
 - `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
 - `ljforcefield::LJForceField`: The molecular model being used in the simulation
     to describe the intermolecular Van der Waals forces
-- `insertions_per_volume::Int`:
+- `insertions_per_volume::Int`: The number of widom insertions per unit volume.
+    Will be scaled according to the framework we're working with
 """
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
                                ljforcefield::LJForceField, insertions_per_volume::Union{Int, Float64}; comment::AbstractString="")

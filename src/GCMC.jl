@@ -752,7 +752,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 end # gcmc_simulation
 
 """
-    file_save_name = gcmc_result_savename(framework_name, molecule_species
+    file_save_name = gcmc_result_savename(framework_name, molecule_species,
                                         ljforcefield_name, temperature, pressure,
                                         n_burn_cycles, n_sample_cycles)
 
