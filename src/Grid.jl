@@ -30,14 +30,14 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 - `verbose::Bool`: print name of file after writing.
 """
 function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
-    if ! isdir(PATH_TO_DATA * "grids/")
-        mkdir(PATH_TO_DATA * "grids/")
+    if ! isdir(joinpath(PATH_TO_DATA, "grids"))
+        mkdir(joinpath(PATH_TO_DATA, "grids"))
     end
 
     if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
-    cubefile = open(PATH_TO_DATA * "grids/" * filename, "w")
+    cubefile = open(joinpath(PATH_TO_DATA, "grids", filename), "w")
 
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
@@ -65,7 +65,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     end # loop over x points
     close(cubefile)
     if verbose
-        println("See ", PATH_TO_DATA * "grids/" * filename)
+        println("See ", joinpath(PATH_TO_DATA, "grids", filename))
     end
     return
 end
@@ -86,7 +86,7 @@ function read_cube(filename::AbstractString)
         filename *= ".cube"
     end
 
-    cubefile = open(PATH_TO_DATA * "grids/" * filename)
+    cubefile = open(joinpath(PATH_TO_DATA, "grids", filename))
 
     # waste two lines
     line = readline(cubefile)

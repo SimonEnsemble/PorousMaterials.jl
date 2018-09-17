@@ -339,6 +339,9 @@ Critical temperatures and pressures and acentric factors are stored in `data/Pen
 
 ```julia
 using Pkg
+# if you want the officially registered package
+Pkg.add("PorousMaterials")
+# if you want the bleeding edge master branch
 Pkg.add(PackageSpec(url="https://github.com/SimonEnsemble/PorousMaterials.jl"))
 Pkg.test("PorousMaterials") # run tests
 ```

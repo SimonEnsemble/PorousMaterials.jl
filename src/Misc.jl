@@ -78,7 +78,7 @@ https://en.wikipedia.org/wiki/CPK_coloring
 """
 function read_cpk_colors()
     atom_colors = Dict{Symbol, Tuple{Int, Int, Int}}()
-    df_colors = CSV.read(PATH_TO_DATA * "cpk_atom_colors.csv")
+    df_colors = CSV.read(joinpath(PATH_TO_DATA, "cpk_atom_colors.csv"))
     for row in eachrow(df_colors)
         atom_colors[Symbol(row[:atom])] = (row[:R], row[:G], row[:B])
     end
@@ -96,7 +96,7 @@ the atomic radii of carbon (10.87 Angstrom).
 """
 function read_atomic_radii()
     atomic_radii = Dict{Symbol, Float64}()
-    df_props = CSV.read(PATH_TO_DATA * "atom_properties.csv")
+    df_props = CSV.read(joinpath(PATH_TO_DATA, "atom_properties.csv"))
     for row in eachrow(df_props)
         if ! ismissing(row[Symbol("atomicradius[Angstrom]")])
             atomic_radii[Symbol(row[:atom])] = row[Symbol("atomicradius[Angstrom]")]
@@ -115,11 +115,11 @@ masses in amu.
 - `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
 """
 function read_atomic_masses()
-    if ! isfile(PATH_TO_DATA * "atomicmasses.csv")
+    if ! isfile(joinpath(PATH_TO_DATA, "atomicmasses.csv"))
         error("Cannot find atomicmasses.csv file in your data folder\n")
     end
 
-    df_am = CSV.read(PATH_TO_DATA * "atomicmasses.csv")
+    df_am = CSV.read(joinpath(PATH_TO_DATA, "atomicmasses.csv"))
 
     atomic_masses = Dict{Symbol, Float64}()
 

@@ -149,11 +149,11 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     result["elapsed time (min)"] = elapsed_time / 60
 
     if autosave
-        if ! isdir(PATH_TO_DATA * "henry_sims")
-            mkdir(PATH_TO_DATA * "henry_sims")
+        if ! isdir(joinpath(PATH_TO_DATA, "henry_sims"))
+            mkdir(joinpath(PATH_TO_DATA, "henry_sims"))
         end
-        savename = PATH_TO_DATA * "henry_sims/" * henry_result_savename(framework, molecule, temperature,
-                               ljforcefield, insertions_per_volume, comment=filename_comment)
+        savename = joinpath(PATH_TO_DATA, "henry_sims", henry_result_savename(framework, molecule, temperature,
+                               ljforcefield, insertions_per_volume, comment=filename_comment))
         @save savename result
         if verbose
             println("\tResults saved in: ", savename)
@@ -176,10 +176,9 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
                                    ewald_precision::Float64, verbose::Bool)
-    # compute pairwise atom & charge distances to later ensure these do not drift in the
-    #   course of the simulation (rotations and translations)
-    atom_distances = pairwise_atom_distances(molecule, framework.box)
-    charge_distances = pairwise_charge_distances(molecule, framework.box)
+    # copy the molecule in case we need to reset it when bond lengths drift
+    bond_length_drift_check_frequency = 5000 # every how many insertions check for drift
+    ref_molecule = deepcopy(molecule)
 
     # define Ewald summation params; this must be done on each core since they cannot share eikar for race condition possibility
     # pre-compute weights on k-vector contributions to long-rage interactions in
@@ -222,12 +221,23 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
             wtd_energy_sum += boltzmann_factor * energy
         end
         # else add 0.0 b/c lim E --> ∞ of E exp(-b * E) is zero.
-    end
 
-    # assert no significant drift in atom distances (e.g. bond lengths) upon rotations
-    if ! isapprox(atom_distances, pairwise_atom_distances(molecule, framework.box), atol=1e-10) ||
-       ! isapprox(charge_distances, pairwise_charge_distances(molecule, framework.box), atol=1e-10)
-        error("significant drift in bond lenghts during rotations/translations")
+        # check for drift in bond lengths
+        if i % bond_length_drift_check_frequency == 0
+            # assert bond length drift not so severe as to not trust results
+            if bond_length_drift(molecule, ref_molecule, framework.box,
+                    atol=1e-8, throw_warning=true)
+                error("significant bond length drift observed after $i insertions.
+                Change `bond_length_drift_check_frequency` to restart the molecule configuration
+                more frequently.")
+            end
+            # reset molecule if bond length drift observed but not too severe
+            if bond_length_drift(molecule, ref_molecule, framework.box,
+                    atol=1e-12, throw_warning=true)
+                @warn "... resetting molecule coordinates with fresh copy after $i insertions"
+                molecule = deepcopy(ref_molecule)
+            end
+        end
     end
 
     return boltzmann_factor_sum, wtd_energy_sum
@@ -247,7 +257,8 @@ describes what it holds.
 - `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
 - `ljforcefield::LJForceField`: The molecular model being used in the simulation
     to describe the intermolecular Van der Waals forces
-- `insertions_per_volume::Int`:
+- `insertions_per_volume::Int`: The number of widom insertions per unit volume.
+    Will be scaled according to the framework we're working with
 """
 function henry_result_savename(framework::Framework, molecule::Molecule, temperature::Float64,
                                ljforcefield::LJForceField, insertions_per_volume::Union{Int, Float64}; comment::AbstractString="")

@@ -145,5 +145,9 @@ rotating a single atom isn't necessary.
 # Arguments
 - `molecule::Molecule`: The molecule being tested. This function determines if a
     rotation of this molecule will do anything.
+
+# Returns
+- `is_rotatable::Bool`: A boolean describing whether or not rotating the molecule
+    will alter its interactions with other molecules 
 """
 rotatable(molecule::Molecule) = (molecule.atoms.n_atoms + molecule.charges.n_charges > 1)::Bool

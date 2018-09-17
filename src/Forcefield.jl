@@ -45,7 +45,7 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    forcefield_file_path = PATH_TO_DATA * "forcefields/" * forcefieldfile
+    forcefield_file_path = joinpath(PATH_TO_DATA, "forcefields", forcefieldfile)
 
     df = CSV.read(forcefield_file_path) # from DataFrames
 
@@ -176,7 +176,7 @@ function check_forcefield_coverage(f_or_m::Union{Framework, Molecule}, ljff::LJF
     all_covered = true
     for species in unique_species
         if !(species in keys(ljff.pure_ϵ))
-            @warn @sprintf("\t%s in %s missing from %s force field.", species, 
+            @warn @sprintf("\t%s in %s missing from %s force field.", species,
                 isa(f_or_m, Framework) ? f_or_m.name : f_or_m.species, ljff.name)
             all_covered = false
         end

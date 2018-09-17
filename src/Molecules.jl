@@ -23,7 +23,7 @@ end
 """
     molecule = Molecule(species, assert_charge_neutrality=true)
 
-Reads molecule files in the directory `PorousMaterials.PATH_TO_DATA * "/molecule/" * species * "/"`.
+Reads molecule files in the directory `joinpath(PorousMaterials.PATH_TO_DATA, "molecules", species)`.
 Center of mass assigned using atomic masses from `read_atomic_masses()`. The fractional
 coordinates are determined assuming a unit cube box. These must be adjusted later for
 simulations using `set_fractional_coords!(molecule, box)`.
@@ -36,15 +36,15 @@ simulations using `set_fractional_coords!(molecule, box)`.
 - `molecule::Molecule`: A fully constructed molecule data structure
 """
 function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
-    if ! isdir(PATH_TO_DATA * "molecules/" * species)
+    if ! isdir(joinpath(PATH_TO_DATA, "molecules", species))
         error(@sprintf("No directory created for %s in %s\n", species,
-                       PATH_TO_DATA * "molecules/"))
+                       joinpath(PATH_TO_DATA, "molecules")))
     end
 
     ###
     #  Read in Lennard Jones spheres
     ###
-    atomsfilename = PATH_TO_DATA * "molecules/" * species * "/lennard_jones_spheres.csv"
+    atomsfilename = joinpath(PATH_TO_DATA, "molecules", species, "lennard_jones_spheres.csv")
     if ! isfile(atomsfilename)
         error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in
         %s, include a .csv file with the proper headers but no rows.", species, atomsfilename))
@@ -77,7 +77,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     ###
     #  Read in point charges
     ###
-    chargesfilename = PATH_TO_DATA * "molecules/" * species * "/point_charges.csv"
+    chargesfilename = joinpath(PATH_TO_DATA, "molecules", species, "point_charges.csv")
     if ! isfile(chargesfilename)
         error(@sprintf("No file %s exists. Even if there are no point charges in %s,
         include a .csv file with the proper headers but no rows.", species,
@@ -117,12 +117,8 @@ to a unit cell box that is a unit cube. This function adjusts the fractional coo
 of the molecule to be consistent with a different box.
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] = box.c_to_f * molecule.atoms.xf[:, i]
-    end
-    for j = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, j] = box.c_to_f * molecule.charges.xf[:, j]
-    end
+    molecule.atoms.xf[:] = box.c_to_f * molecule.atoms.xf
+    molecule.charges.xf[:] = box.c_to_f * molecule.charges.xf
     molecule.xf_com[:] = box.c_to_f * molecule.xf_com
     return nothing
 end
@@ -152,16 +148,12 @@ Translate a molecule by vector `dxf` in fractional coordinate space or by vector
 Cartesian coordinate space. For the latter, a unit cell box is required for context.
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
-    # move LJSphere's
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] += dxf
-    end
-    # move PtCharge's
-    for j = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, j] .+= dxf
-    end
+    # translate both atoms and charges
+    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, dxf)
+    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, dxf)
     # adjust center of mass
     molecule.xf_com[:] += dxf
+    return nothing
 end
 
 function translate_by!(molecule::Molecule, dx::Array{Float64, 1}, box::Box)
@@ -259,13 +251,16 @@ function rotate!(molecule::Molecule, box::Box)
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
-    # TODO change this to use broadcasting
-    for i = 1:molecule.atoms.n_atoms
-        molecule.atoms.xf[:, i] = molecule.xf_com + r * (molecule.atoms.xf[:, i] - molecule.xf_com)
-    end
-    for i = 1:molecule.charges.n_charges
-        molecule.charges.xf[:, i] = molecule.xf_com + r * (molecule.charges.xf[:, i] - molecule.xf_com)
-    end
+    # shift to origin
+    molecule.atoms.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
+    molecule.charges.xf[:] = broadcast(-, molecule.charges.xf, molecule.xf_com)
+    # conduct the rotation
+    molecule.atoms.xf[:] = r * molecule.atoms.xf
+    molecule.charges.xf[:] = r * molecule.charges.xf
+    # shift back to center of mass
+    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, molecule.xf_com)
+    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, molecule.xf_com)
+    return nothing
 end
 
 """
@@ -372,6 +367,37 @@ function pairwise_charge_distances(molecule::Molecule, box::Box)
         end
     end
     return bond_lengths
+end
+
+"""
+    bond_length_drift(molecule, reference_molecule, box, atol=1e-14, throw_warning=true)
+
+Compute pairwise atom & charge distances of `molecule` and compare to those in a reference 
+molecule to determine if the pairwise atom & charge distances differ within a tolerance 
+`atol`. This is useful for checking for drift in the course of the simulation, during 
+which rotations and translations are performed.
+"""
+function bond_length_drift(molecule::Molecule, ref_molecule::Molecule, box::Box;
+    atol::Float64=1e-14, throw_warning::Bool=true)
+    @assert molecule.species == ref_molecule.species
+
+    we_have_drift = false
+
+    if ! isapprox(pairwise_atom_distances(ref_molecule, box),
+                  pairwise_atom_distances(molecule, box), atol=atol)
+        we_have_drift = true
+    end
+
+    if ! isapprox(pairwise_charge_distances(ref_molecule, box),
+                  pairwise_charge_distances(molecule, box), atol=atol)
+        we_have_drift = true
+    end
+
+    if throw_warning && we_have_drift
+        @warn @sprintf("pairwise charge/atom distances in %s drifted beyond %e tolerance.\n",
+            molecule.species, atol)
+    end
+    return we_have_drift # if made it this far, no bond length drift
 end
 
 # facilitate constructing a point charge

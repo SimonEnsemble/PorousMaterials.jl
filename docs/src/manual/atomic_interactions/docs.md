@@ -18,6 +18,7 @@
 
 ## Electrostatics Energy
 ```@docs
+    Eikr
     electrostatic_potential_energy
     precompute_kvec_wts
     setup_Ewald_sum
