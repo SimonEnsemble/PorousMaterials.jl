@@ -75,16 +75,16 @@ end
 #  so they are passed as reference. These are OffsetArrays, which changes indexing scheme.
 # different sizes for guest-guest and guest-host
 """
-    eikr = Eikr(eikra, eikrb, eikrc)
+    eikr = Eikr(eikar, eikbr, eikcr)
 
 mutable struct for holding the eikr vectors
 
 # Attributes
-- `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
+- `eikar::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
     0:kreps[1] and corresponds to recip. vectors in a-direction
-- `eikrb::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
+- `eikbr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
     -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
-- `eikra::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
+- `eikcr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
     -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 """
 mutable struct Eikr
@@ -305,8 +305,8 @@ columns of eikr correspond to different k's; rows are charges
     return nothing
 end
 """
-    ϕ = electrostatic_potential_energy(framework, molecule, eparams, kvectors,
-                                       eikar, eikbr, eikcr)
+    ϕ = electrostatic_potential_energy(framework, molecule, eparams, eikr)
+
 
 Compute the electrostatic potential energy of a molecule inside a framework.
 
@@ -322,11 +322,11 @@ image convention can be applied for the short-range cutoff radius supplied in
 # Arguments
 - `framework::Framework`: Crystal structure (see `framework.charges` for charges)
 - `molecule::Molecule`: The molecule being compared to the atoms in the framework.
-* `eparams::EwaldParams`: data structure containing Ewald summation settings
-* `eikr::Eikr`: Stores the eikra, eikrb, and eikrc OffsetArrays used in this calculation.
+- `eparams::EwaldParams`: data structure containing Ewald summation settings
+- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 
 # Returns
-electrostatic potential inside `framework` at point `x` (units: K)
+- `pot::EwaldSum`: Electrostatic potential between `framework` and `molecule` (units: K)
 """
 function electrostatic_potential_energy(framework::Framework,
                                         molecule::Molecule,
@@ -407,7 +407,7 @@ function _intramolecular_energy(molecule::Molecule, eparams::EwaldParams, box::B
 end
 
 """
-    ϕ = electrostatic_potential_energy(molecules, eparams, kvectors, eikar, eikbr, eikcr)
+    ϕ = electrostatic_potential_energy(molecules, eparams, box, eikr)
 
 Compute the electrostatic potential energy of a system comprised of an array of `Molecule`s.
 
@@ -422,9 +422,12 @@ Units of energy: Kelvin
 
 # Arguments
 - `molecules::Array{Molecules, 1}`: array of molecules comprising the system.
-* `eparams::EwaldParams`: data structure containing Ewald summation settings
-* `box::Box`: the box the energy is being computed in
-* `eikr::Eikr`: Stores the eikra, eikrb, and eikrc OffsetArrays used in this calculation.
+- `eparams::EwaldParams`: data structure containing Ewald summation settings
+- `box::Box`: the box the energy is being computed in
+- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
+
+# Returns
+- `ϕ::GGEwaldSum`: The total electrostatic potential energy
 """
 function electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                         eparams::EwaldParams, box::Box,
@@ -509,16 +512,20 @@ end
 
 # incremented
 """
-    total_ϕ = total_electrostatic_potential_energy(molecules, eparams, kvectors,
-                                                  eikar, eikbr, eikcr)
+    total_ϕ = total_electrostatic_potential_energy(molecules, eparams, box, eikr)
 
-Explanation of total_electrostatic_potential_energy that doesn't use framework
+
+Calculates the total electrostatic potential energy of an array of `Molecule`s using a Grand Canonical Monte Carlo (GCMC) algorithm.
+#TODO add to this
 
 # Arguments
 - `molecules::Array{Molecule, 1}`: The molecules comprising the system.
 - `eparams::EwaldParams`: data structure containing Ewald summation settings
 - `box::Box`: The box the energy is being computed in.
-- `eikar::Eikr`: Stores the eikra, eikrb, and eikrc OffsetArrays used in this calculation.
+- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
+
+# Returns
+- `ϕ::GGEwaldSum`: The total electrostatic potential energy
 """
 function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
                                               eparams::EwaldParams,
@@ -535,8 +542,8 @@ function total_electrostatic_potential_energy(molecules::Array{Molecule, 1},
 end
 
 """
-    total_ϕ = total_electrostatic_potential_energy(framework, molecules, eparams,
-                                                  kvectors, eikar, eikbr, eikcr)
+    total_ϕ = total_electrostatic_potential_energy(framework, molecules, eparams, eikr)
+
 
 Explanation of total_electrostatic_potential_energy that uses framework
 
@@ -544,7 +551,7 @@ Explanation of total_electrostatic_potential_energy that uses framework
 - `framework::Framework`: Crystal structure (see `framework.charges` for charges)
 - `molecules::Array{Molecule, 1}`: The molecules comprising the system.
 - `eparams::EwaldParams`: data structure containing Ewald summation settings
-- `eikr::Eikr`: Stores the eikra, eikrb, and eikrc OffsetArrays used in this calculation.
+- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 """
 function total_electrostatic_potential_energy(framework::Framework,
                                               molecules::Array{Molecule, 1},
