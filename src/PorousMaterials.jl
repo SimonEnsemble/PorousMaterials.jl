@@ -136,7 +136,7 @@ export
 
     # Grid.jl
     apply_periodic_boundary_condition!,
-    Grid, write_cube, read_cube, energy_grid, write_accessibility_grid, accessible,
+    Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
 
     # EOS.jl
     calculate_properties, PengRobinsonGas,

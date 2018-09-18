@@ -245,11 +245,13 @@ end
 function _flood_fill!(grid::Grid, segmented_grid::Grid, i::Int, j::Int, k::Int, energy_tol::Float64)
     # look left, right, up, down "_s" for shift
     for i_s = -1:1, j_s = -1:1, k_s = -1:1
-        ind = (i + i_s, j + j_s, k + k_s)
         # well already know segmented_grid[i, j, k]
-        if ind == (0, 0, 0)
+        if (i_s, j_s, k_s) == (0, 0, 0)
             continue
         end
+
+        ind = (i + i_s, j + j_s, k + k_s)
+        
         # avoid out of bounds
         if any(ind .<= (0, 0, 0)) || any(ind .> grid.n_pts)
             continue
@@ -258,13 +260,18 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid, i::Int, j::Int, k::Int, 
         if segmented_grid.data[ind...] != 0
             continue
         end
-        # if accessible, assign same segment ID and keep looking to left and right.
+
+        # if accessible, assign same segment ID and keep looking at surrounding points
         if grid.data[ind...] < energy_tol
             segmented_grid.data[ind...] = segmented_grid.data[i, j, k]
             # recursively look to left, right, up, down
             _flood_fill!(grid, segmented_grid, ind..., energy_tol)
+        else
+            # if not accessible, assign -1 and don't call recursive algo.
+            segmented_grid.data[ind...] = -1
         end
     end
+    return nothing
 end
 
 function _segment_grid(grid::Grid; energy_tol::Float64=0.0, verbose::Bool=true)
@@ -378,7 +385,30 @@ function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_c
     end
 end
 
-function write_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
+"""
+    accessibility_grid, some_pockets_were_blocked = accessibility_grid(framework, 
+    probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=298.0, verbose=true,
+    write_b4_after_grids=true)
+
+Overlay a grid of points about the unit cell. Compute the potential energy of a probe
+molecule at each point. If the potential energy is less than `energy_tol`, the grid point
+is declared as accessible to an adsorbate; otherwise inaccessible.
+
+Then perform a flood fill algorithm to label disparate (unconnected) segments in the grid.
+
+Then build a graph whose vertices are the unconnected segments in the flood-filled grid and
+whose edges are the connections between the segments across the periodic boundary.
+
+Then find any simple cycles in the grid. Any vertex that is involved in a simple cycle is
+considered accessible since a molecule can travel from that segment in the home unit cell
+to the same segment but in a different unit cell. If any vertex is not involved in a cycle,
+the segment is declared as inaccessible and all grid points in this segment are re-labeled
+as inaccessible.
+
+Returns `accessibility_grid::Grid{Bool}` and `some_pockets_were_blocked`, the latter representing
+whether any inaccessible pockets were found.
+"""
+function compute_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
     n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=298.0, verbose::Bool=true,
     write_b4_after_grids::Bool=true)
     
@@ -459,6 +489,23 @@ function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
     return nothing
 end
 
+"""
+    accessible(accessibility_grid, xf)
+    accessible(accessibility_grid, xf, repfactors)
+
+Using `accessibility_grid`, determine if fractional coordinate `xf` (relative to 
+`accessibility_grid.box` is accessible or not. Here, we search for the nearest grid point.
+We then look at the accessibility of this nearest grid point and all surroudning 9 other 
+grid points. The point `xf` is declared inaccessible if and only if all 10 of these grid
+points are inaccessible. We take this approach because, if the grid is coarse, we can allow
+energy computations to automatically determine accessibility at the boundary of 
+accessibility e.g. during a molecular simulation where inaccessible pockets are blocked.
+
+If a tuple of replication factors are also passed, it is assumed that the passed `xf` is 
+relative to a replicated `accessibility_grid.box` so that `xf` is scaled by these rep. 
+factors. So `xf = [0.5, 0.25, 0.1]` with `repfactors=(1, 2, 4)` actually is, relative to
+`accessibility_grid.box`, fractional coordinate `[0.5, 0.5, 0.4]`.
+"""
 function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1})
     # find ID of nearest neighbor
     id_nearest_neighbor = _arg_nearest_neighbor(accessibility_grid.n_pts, xf)

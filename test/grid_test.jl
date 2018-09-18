@@ -46,7 +46,7 @@ using Random
         @test isapprox(grid.data[:, 1, :], grid.data[:, end, :], atol=1e-7)
         @test isapprox(grid.data[:, :, 1], grid.data[:, :, end], atol=1e-7)
 
-        accessibility_grid, some_pockets_were_blocked = write_accessibility_grid(framework, 
+        accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
             molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false, 
             write_b4_after_grids=true)
         @test some_pockets_were_blocked
@@ -83,13 +83,13 @@ using Random
     framework = Framework("LTA.cif")
     molecule = Molecule("CH4")
     forcefield = LJForceField("UFF.csv")
-    accessibility_grid, some_pockets_were_blocked = write_accessibility_grid(framework, 
+    accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
         molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false, 
         write_b4_after_grids=true)
     # replicate framework and build accessibility grid that includes the other accessibility grid in a corner
     repfactors = (2, 3, 1)
     framework = replicate(framework, repfactors)
-    rep_accessibility_grid, rep_some_pockets_were_blocked = write_accessibility_grid(framework, 
+    rep_accessibility_grid, rep_some_pockets_were_blocked = compute_accessibility_grid(framework, 
         molecule, forcefield, n_pts=(20 * 2 - 1, 20 * 3 - 2, 20), energy_tol=0.0, verbose=false, 
         write_b4_after_grids=true)
     @test all(accessibility_grid.data .== rep_accessibility_grid.data[1:20, 1:20, 1:20])
