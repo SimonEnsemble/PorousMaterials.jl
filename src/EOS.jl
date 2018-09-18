@@ -127,12 +127,12 @@ function calculate_properties(gas::VDWFluid, T::Float64, P::Float64; verbose::Bo
     rho = rho[indmin(rho)]
     #specifies that molar volume is the reciprocal of the density
     # In units of L/mol
-    vm = (1./ rho) * 1000
+    vm = (1 ./ rho) * 1000
     #specifies the compressibility factor
-    z = (P * (1./ rho))./ (R * T)
+    z = (P * (1 ./ rho))./ (R * T)
 
     #Finds fugacity using the derivation from the Van der Waals
-    fug = P .* exp. (- log. (((1 ./ rho) - gas.b) * P./(R * T))+(gas.b ./ ((1 ./ rho)-gas.b) - 2*gas.a*rho/(R*T)))
+    fug = P .* exp.(- log. (((1 ./ rho) - gas.b) * P ./ (R * T)) + (gas.b ./ ((1 ./ rho) - gas.b) - 2 * gas.a * rho / (R * T)))
     #defines the fugacity coefficient as fugacity over pressure
     ϕ = fug ./ P
 
