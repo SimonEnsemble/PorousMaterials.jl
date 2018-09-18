@@ -1,63 +1,64 @@
-molecule,a(m6bar/mol),b(m3/mol)
-Acetic acid,0.00001771,0.0001065
-Acetic anhydride,0.000020158,0.0001263
-Acetone,0.00001602,0.0001124
-Acetonitrile,0.00001781,0.0001168
-Acetylene,0.000004516,0.0000522
-Ammonia,0.000004225,0.0000371
-Argon,0.000001355,0.00003201
-Benzene,0.00001824,0.0001154
-Bromobenzene,0.00002894,0.0001539
-Butane,0.00001466,0.0001226
-Carbon dioxide,0.00000364,0.00004267
-Carbon disulfide,0.00001177,0.00007685
-Carbon monoxide,0.000001505,0.00003985
-Carbon tetrachloride,1.97483E-05,0.0001281
-Chlorine,0.000006579,0.00005622
-Chlorobenzene,0.00002577,0.0001453
-Chloroethane,0.00001105,0.00008651
-Chloromethane,0.00000757,0.00006483
-Cyanogen,0.000007769,0.00006901
-Cyclohexane,0.00002311,0.0001424
-Diethyl ether,0.00001761,0.0001344
-Diethyl sulfide,0.000019,0.0001214
-Dimethyl ether,0.00000818,0.00007246
-Dimethyl sulfide,0.00001304,0.00009213
-Ethane,0.000005562,0.0000638
-Ethanethiol,0.00001139,0.00008098
-Ethanol,0.00001218,0.00008407
-Ethyl acetate,0.00002072,0.0001412
-Ethylamine,0.00001074,0.00008409
-Fluorobenzene,0.00002019,0.0001286
-Fluoromethane,0.000004692,0.00005264
-Freon,0.00001078,0.0000998
-Germanium tetrachloride,0.0000229,0.0001485
-Helium,3.46E-08,0.0000238
-Hexane,0.00002471,0.0001735
-Hydrogen,2.476E-07,0.00002661
-Hydrogen bromide,0.00000451,0.00004431
-Hydrogen chloride,0.000003716,0.00004081
-Hydrogen selenide,0.000005338,0.00004637
-Hydrogen sulfide,0.00000449,0.00004287
-Iodobenzene,0.00003352,0.0001656
-Krypton,0.000002349,0.00003978
-Mercury,0.0000082,0.00001696
-Methane,0.000002283,0.00004278
-Methanol,0.000009649,0.00006702
-Neon,2.135E-07,0.00001709
-Nitric oxide,0.000001358,0.00002789
-Nitrogen,0.00000137,0.0000387
-Nitrogen dioxide,0.000005354,0.00004424
-Nitrous oxide,0.000003832,0.00004415
-Oxygen,0.000001382,0.00003186
-Pentane,0.00001926,0.000146
-Phosphine,0.000004692,0.00005156
-Propane,0.000008779,0.00008445
-Radon,0.000006601,0.00006239
-Silane,0.000004377,0.00005786
-Silicon tetrafluoride,0.000004251,0.00005571
-Sulfur dioxide,0.000006803,0.00005636
-Tin tetrachloride,0.00002727,0.0001642
-Toluene,0.00002438,0.0001463
-Water,0.000005536,0.00003049
-Xenon,0.00000425,0.00005105
+molecule,a (L2bar/mol2),b (L/mol)
+Acetic acid,17.71,0.1065
+Acetic anhydride,20.158,0.1263
+Acetone,16.02,0.1124
+Acetonitrile,17.81,0.1168
+Acetylene,4.516,0.0522
+Ammonia,4.225,0.0371
+Argon,1.355,0.03201
+Benzene,18.24,0.1154
+Bromobenzene,28.94,0.1539
+Butane,14.66,0.1226
+Carbon dioxide,3.64,0.04267
+Carbon disulfide,11.77,0.07685
+Carbon monoxide,1.505,0.03985
+Carbon tetrachloride,19.7483,0.1281
+Chlorine,6.579,0.05622
+Chlorobenzene,25.77,0.1453
+Chloroethane,11.05,0.08651
+Chloromethane,7.57,0.06483
+Cyanogen,7.769,0.06901
+Cyclohexane,23.11,0.1424
+Diethyl ether,17.61,0.1344
+Diethyl sulfide,19,0.1214
+Dimethyl ether,8.18,0.07246
+Dimethyl sulfide,13.04,0.09213
+Ethane,5.562,0.0638
+Ethanethiol,11.39,0.08098
+Ethanol,12.18,0.08407
+Ethyl acetate,20.72,0.1412
+Ethylamine,10.74,0.08409
+Fluorobenzene,20.19,0.1286
+Fluoromethane,4.692,0.05264
+Freon,10.78,0.0998
+Germanium tetrachloride,22.9,0.1485
+Helium,0.0346,0.0238
+Hexane,24.71,0.1735
+Hydrogen,0.2476,0.02661
+Hydrogen bromide,4.51,0.04431
+Hydrogen chloride,3.716,0.04081
+Hydrogen selenide,5.338,0.04637
+Hydrogen sulfide,4.49,0.04287
+Iodobenzene,33.52,0.1656
+Krypton,2.349,0.03978
+Mercury,8.2,0.01696
+Methane,2.283,0.04278
+Methanol,9.649,0.06702
+Neon,0.2135,0.01709
+Nitric oxide,1.358,0.02789
+Nitrogen,1.37,0.0387
+Nitrogen dioxide,5.354,0.04424
+Nitrous oxide,3.832,0.04415
+Oxygen,1.382,0.03186
+Pentane,19.26,0.146
+Phosphine,4.692,0.05156
+Propane,8.779,0.08445
+Radon,6.601,0.06239
+Silane,4.377,0.05786
+Silicon tetrafluoride,4.251,0.05571
+Sulfur dioxide,6.803,0.05636
+Tin tetrachloride,27.27,0.1642
+Toluene,24.38,0.1463
+Water,5.536,0.03049
+Xenon,4.25,0.05105
+>>>>>>> almost finished EOS_VDW

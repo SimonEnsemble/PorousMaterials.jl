@@ -18,6 +18,7 @@ end
 #Reads VDW CSV and returns the VDW constants for later use
 #STILL NEED TO FIGURE OUT HOW TO READ FILE WITHOUT SPECIFIYING PATH DIRECTLY
 #IE CSV.read("vdw_constants")
+
 function VDWGas(gas::Symbol)
 
         gas = string(gas)
@@ -45,7 +46,7 @@ function compute_properties(T,P,vdw)
 
         #Finds fugacity using the derivation from the vander waals
         fug = P .* exp. (- log. (((1 ./ rho) - vdw.b) * P./(R * T))+(vdw.b ./ ((1 ./ rho)-vdw.b) - 2*vdw.a*rho/(R*T)))
-        Dict("D" => rho, 'F' => fug)
+        Dict('D' => rho, 'F' => fug)
 end
 
 end
