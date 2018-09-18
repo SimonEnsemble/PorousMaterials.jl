@@ -17,7 +17,7 @@ using Random
     @test isapprox(props["fugacity (bar)"], 65.0 * 0.8729028157628362, atol=1e-4)
     @test isapprox(props["density (mol/m³)"], 3000.054418, atol=0.2)
     @test isapprox(props["molar volume (L/mol)"], 0.333327, atol=1e-4)
-    
+
     #Van der Waals EOS test for Hydrogen
     gas = VDWFluid(:H2)
     props = calculate_properties(gas, 300.0, 65.0)

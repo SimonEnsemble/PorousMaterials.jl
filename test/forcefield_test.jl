@@ -28,9 +28,8 @@ using Random
 
     # test check for force field coverage
     @test check_forcefield_coverage(Molecule("CO2"), ljforcefield)
-    framework = Framework("SBMOF-1_cory.cif")
-    @test check_forcefield_coverage(framework, ljforcefield)
-    push!(framework.atoms, LJSphere(:bogus_atom, [rand(), rand(), rand()]))
-    @test !check_forcefield_coverage(framework, ljforcefield)
+    @test check_forcefield_coverage(Framework("SBMOF-1.cif"), ljforcefield)
+    @test ! check_forcefield_coverage(Molecule("CO2"), LJForceField("bogus.csv"))
+    @test ! check_forcefield_coverage(Framework("SBMOF-1.cif"), LJForceField("bogus.csv"))
 end
 end

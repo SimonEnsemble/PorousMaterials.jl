@@ -160,7 +160,7 @@ and returns a complete `VDWFluid` data structure.
 - `VDWFluid::struct`: Data structure containing Van der Waals gas parameters.
 """
 function VDWFluid(gas::Symbol)
-    vdwfile = CSV.read(PATH_TO_DATA * "vdw_constants.csv")
+    vdwfile = CSV.read(joinpath(PATH_TO_DATA, "vdw_constants.csv"))
     if ! (string(gas) in vdwfile[:molecule])
           error(@sprintf("Gas %s properties not found in %sVDW_Constants.csv", gas, PATH_TO_DATA))
     end
@@ -182,7 +182,7 @@ and returns a complete `PengRobinsonFluid` data structure.
 - `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson gas parameters.
 """
 function PengRobinsonFluid(gas::Symbol)
-    df = CSV.read(PATH_TO_DATA * "PengRobinsonGasProps.csv"; footerskip=3)
+    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinsonGasProps.csv"); footerskip=3)
     if ! (string(gas) in df[:gas])
         error(@sprintf("Gas %s properties not found in %sPengRobinsonGasProps.csv", gas, PATH_TO_DATA))
     end
@@ -198,13 +198,6 @@ function Base.show(io::IO, gas::PengRobinsonFluid)
     println(io, "Critical temperature (K): ", gas.Tc)
     println(io, "Critical pressure (bar): ", gas.Pc)
     println(io, "Acenteric factor: ", gas.ω)
-end
-
-# Prints resulting values for Van der Waals gas properties
-function Base.show(io::IO, gas::VDWFluid)
-    println(io, "\tGas species: ", gas.gas)
-    println(io, "\tVan der Waals constant a (m⁶bar/mol²): ", gas.a)
-    println(io, "\tVan der Waals constant b (m³/mol): ", gas.b)
 end
 
 # Prints resulting values for Van der Waals gas properties
