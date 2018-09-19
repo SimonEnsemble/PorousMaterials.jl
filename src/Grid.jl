@@ -242,7 +242,9 @@ function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
             isapprox(g1.origin, g2.origin))
 end
 
-function _flood_fill!(grid::Grid, segmented_grid::Grid, i::Int, j::Int, k::Int, energy_tol::Float64)
+function _flood_fill!(grid::Grid, segmented_grid::Grid, 
+            queue_of_grid_pts::Array{Tuple{Int, Int, Int}, 1},
+            i::Int, j::Int, k::Int, energy_tol::Float64)
     # look left, right, up, down "_s" for shift
     for i_s = -1:1, j_s = -1:1, k_s = -1:1
         # well already know segmented_grid[i, j, k]
@@ -264,8 +266,9 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid, i::Int, j::Int, k::Int, 
         # if accessible, assign same segment ID and keep looking at surrounding points
         if grid.data[ind...] < energy_tol
             segmented_grid.data[ind...] = segmented_grid.data[i, j, k]
-            # recursively look to left, right, up, down
-            _flood_fill!(grid, segmented_grid, ind..., energy_tol)
+            # look to left, right, up, down; add grid pt. to queue.
+            # originally had recursive algo but get stack overflow
+            push!(queue_of_grid_pts, ind)
         else
             # if not accessible, assign -1 and don't call recursive algo.
             segmented_grid.data[ind...] = -1
@@ -278,7 +281,8 @@ function _segment_grid(grid::Grid; energy_tol::Float64=0.0, verbose::Bool=true)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
     # let "-1" be "not accessible"
-    segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts...), :Segment_No, grid.origin)
+    segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts...),
+        :Segment_No, grid.origin)
     segment_no = 0
     for i = 1:grid.n_pts[1], j = 1:grid.n_pts[2], k = 1:grid.n_pts[3]
         if segmented_grid.data[i, j, k] == 0 # not yet assigned segment 
@@ -287,8 +291,19 @@ function _segment_grid(grid::Grid; energy_tol::Float64=0.0, verbose::Bool=true)
             else # accessible
                 # start a new segment!
                 segment_no += 1
-                segmented_grid.data[i, j, k] = segment_no
-                _flood_fill!(grid, segmented_grid, i, j, k, energy_tol)
+                # initiate a queue of grid points
+                queue_of_grid_pts = [(i, j, k)]
+                while length(queue_of_grid_pts) != 0
+                    # take first index in line
+                    id = queue_of_grid_pts[1]
+                    # assign segment number
+                    segmented_grid.data[id...] = segment_no
+                    # look at surroudning points
+                    _flood_fill!(grid, segmented_grid, queue_of_grid_pts,
+                        id..., energy_tol)
+                    # handled first one in queue, remove from queue
+                    deleteat!(queue_of_grid_pts, 1)
+                end
             end
         else # already segmented
             nothing
@@ -414,6 +429,8 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
     
     # write potential energy grid
     grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose)
+    if verbose
+    end
     
     # flood fill and label segments
     segmented_grid = _segment_grid(grid, energy_tol=energy_tol, verbose=verbose)
@@ -458,15 +475,14 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
     # instead of returning grid of int's return a boolean grid for storage efficiency
     accessibility_grid = Grid{Bool}(segmented_grid.box, segmented_grid.n_pts,
         segmented_grid.data .== 1, :accessibility, segmented_grid.origin)
-    
-    if verbose
-        @printf("\tPorosity of %s computed from accessibility grid: %f\n", framework.name,
-            sum(accessibility_grid.data) / length(accessibility_grid.data))
-    end
 
     if some_pockets_were_blocked
         @sprintf("%d pockets in %s were found to be inaccessible to %s and blocked.\n",
             sum(segment_classifications .== 0), framework.name, probe.species)
+        @printf("Porosity of %s b4 pocket blocking is %f\n", framework.name,
+            sum(grid.data .< energy_tol) / length(grid.data))
+        @printf("Porosity of %s after pocket blocking is %f\n", framework.name,
+            sum(accessibility_grid.data) / length(accessibility_grid.data))
     end
 
     return accessibility_grid, some_pockets_were_blocked

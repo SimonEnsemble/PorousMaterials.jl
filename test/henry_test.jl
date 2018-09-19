@@ -45,7 +45,7 @@ insertions_per_volume = 500
     result = henry_coefficient(framework, molecule, temperature, ljff,
                                insertions_per_volume=insertions_per_volume, verbose=true)
 
-    accessibility_grid, some_pockets_were_blocked = write_accessibility_grid(framework, 
+    accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
         molecule, ljff, n_pts=(50, 50, 50), energy_tol=3.0 * temperature, verbose=true, 
         write_b4_after_grids=false)
     @test some_pockets_were_blocked
