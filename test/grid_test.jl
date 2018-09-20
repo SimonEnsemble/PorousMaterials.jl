@@ -9,6 +9,10 @@ using Statistics
 using Random
 
 @testset "Grid Tests" begin
+    # required number of pts
+    box = Box(1.0, 10.0, 5.0, π/2, π/2, π/2)
+    @test required_n_pts(box, 0.1) == (11, 101, 51)
+
     # test read and write
     grid = Grid(Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7), (3, 3, 3), rand(Float64, (3, 3, 3)),
         :kJ_mol, [1., 2., 3.])

@@ -18,6 +18,22 @@ struct Grid{T}
 end
 
 """
+    n_pts = required_n_pts(box, dx)
+
+Calculate the required number of grid pts in a, b, c unit cell directions required to keep
+distances between grid points less than `dx` apart.
+"""
+function required_n_pts(box::Box, dx::Float64)
+    # columns of f_to_c are the unit cell lattice vectors.
+    cell_vector_norms = [norm(box.f_to_c[:, i]) for i = 1:3]
+    n_pts = zeros(Int, 3)
+    for i = 1:3
+        n_pts[i] = ceil(Int, cell_vector_norms[i] / dx) + 1
+    end
+    return Tuple(n_pts)
+end
+
+"""
     write_cube(grid, filename, verbose=true)
 
 Write grid to a .cube file format. This format is described here:
