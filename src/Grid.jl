@@ -417,7 +417,7 @@ function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_c
 end
 
 """
-    accessibility_grid, some_pockets_were_blocked = accessibility_grid(framework, 
+    accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
     probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=298.0, verbose=true,
     write_b4_after_grids=true)
 
@@ -438,6 +438,19 @@ as inaccessible.
 
 Returns `accessibility_grid::Grid{Bool}` and `some_pockets_were_blocked`, the latter representing
 whether any inaccessible pockets were found.
+
+# Arguments
+* `framework::Framework`: the crystal for which we seek to compute an accessibility grid.
+* `probe_molecule::Molecule` a molecule serving as a probe to determine whether a given 
+point can be occupied and accessed.
+* `LJForceField::LJForceField`: the force field used to compute the potential energy of 
+the probe molecule
+* `n_pts::Tuple{Int, Int, Int}`: number of grid points in a, b, c directions
+* `energy_tol::Float64`: if the computed potential energy is less than this, we declare the
+grid point to be occupiable. Also this is the energy barrier beyond which we assume the
+probe adsorbate cannot pass.
+* `write_b4_after_grids::Bool`: write a .cube file of occupiability for visualization both
+before and after flood fill/blocking inaccessible pockets
 """
 function compute_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
     n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=298.0, verbose::Bool=true,
