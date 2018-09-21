@@ -18,6 +18,22 @@ struct Grid{T}
 end
 
 """
+    n_pts = required_n_pts(box, dx)
+
+Calculate the required number of grid pts in a, b, c unit cell directions required to keep
+distances between grid points less than `dx` apart, where `dx` is in units of Angstrom.
+"""
+function required_n_pts(box::Box, dx::Float64)
+    # columns of f_to_c are the unit cell lattice vectors.
+    cell_vector_norms = [norm(box.f_to_c[:, i]) for i = 1:3]
+    n_pts = zeros(Int, 3)
+    for i = 1:3
+        n_pts[i] = ceil(Int, cell_vector_norms[i] / dx) + 1
+    end
+    return Tuple(n_pts)
+end
+
+"""
     write_cube(grid, filename, verbose=true)
 
 Write grid to a .cube file format. This format is described here:
@@ -169,7 +185,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
     end
 
     rotations_required = rotatable(molecule)
-    charged_system = (length(framework.charges) > 1) && (length(molecule.charges) > 1)
+    charged_system = charged(framework) && charged(molecule)
     if rotations_required & isnan(temperature)
         error("Must pass temperature (K) for Boltzmann weighted rotations.\n")
     end
@@ -240,4 +256,319 @@ function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
             isapprox(g1.data, g2.data, rtol=rtol) &&
             (g1.units == g2.units) &&
             isapprox(g1.origin, g2.origin))
+end
+
+function _flood_fill!(grid::Grid, segmented_grid::Grid, 
+            queue_of_grid_pts::Array{Tuple{Int, Int, Int}, 1},
+            i::Int, j::Int, k::Int, energy_tol::Float64)
+    # look left, right, up, down "_s" for shift
+    for i_s = -1:1, j_s = -1:1, k_s = -1:1
+        # well already know segmented_grid[i, j, k]
+        if (i_s, j_s, k_s) == (0, 0, 0)
+            continue
+        end
+
+        ind = (i + i_s, j + j_s, k + k_s)
+        
+        # avoid out of bounds
+        if any(ind .<= (0, 0, 0)) || any(ind .> grid.n_pts)
+            continue
+        end
+        # if already assigned, continue
+        if segmented_grid.data[ind...] != 0
+            continue
+        end
+
+        # if accessible, assign same segment ID and keep looking at surrounding points
+        if grid.data[ind...] < energy_tol
+            segmented_grid.data[ind...] = segmented_grid.data[i, j, k]
+            # look to left, right, up, down; add grid pt. to queue.
+            # originally had recursive algo but get stack overflow
+            push!(queue_of_grid_pts, ind)
+        else
+            # if not accessible, assign -1 and don't call recursive algo.
+            segmented_grid.data[ind...] = -1
+        end
+    end
+    return nothing
+end
+
+function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
+    # grid of Int's corresponding to each original grid point.
+    # let "0" be "unsegmented"
+    # let "-1" be "not accessible"
+    segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts...),
+        :Segment_No, grid.origin)
+    segment_no = 0
+    for i = 1:grid.n_pts[1], j = 1:grid.n_pts[2], k = 1:grid.n_pts[3]
+        if segmented_grid.data[i, j, k] == 0 # not yet assigned segment 
+            if grid.data[i, j, k] > energy_tol # not accessible
+                segmented_grid.data[i, j, k] = -1
+            else # accessible
+                # start a new segment!
+                segment_no += 1
+                # initiate a queue of grid points
+                queue_of_grid_pts = [(i, j, k)]
+                while length(queue_of_grid_pts) != 0
+                    # take first index in line
+                    id = queue_of_grid_pts[1]
+                    # assign segment number
+                    segmented_grid.data[id...] = segment_no
+                    # look at surroudning points
+                    _flood_fill!(grid, segmented_grid, queue_of_grid_pts,
+                        id..., energy_tol)
+                    # handled first one in queue, remove from queue
+                    deleteat!(queue_of_grid_pts, 1)
+                end
+            end
+        else # already segmented
+            nothing
+        end
+    end
+    @assert sum(segmented_grid.data == 0) == 0 "some points were unsegmented!"
+    verbose ? @printf("Found %d segments\n", segment_no) : nothing
+    return segmented_grid
+end
+
+function _note_connection!(segment_1::Int, segment_2::Int, graph::SimpleDiGraph{Int64})
+    if (segment_1 == -1) || (segment_2 == -1)
+        return nothing
+    end
+
+    add_edge!(graph, segment_1, segment_2)
+
+    return nothing
+end
+
+# this returns number of segments in a segmented grid.
+#  it excludes the inaccessible portions -1.
+function _count_segments(segmented_grid::Grid)
+    unique_segments = unique(segmented_grid.data)
+    nb_segments = length(unique_segments)
+    if -1 in unique_segments
+        nb_segments -= 1
+    end
+    @assert(nb_segments == maximum(segmented_grid.data))
+    return nb_segments
+end
+
+# obtain set of Segment Connections
+function _build_connectivity_graph(segmented_grid::Grid; verbose::Bool=true)
+    nb_segments = _count_segments(segmented_grid)
+    
+    graph = DiGraph(nb_segments)
+
+    # loop over faces of unit cell
+    for i = 1:segmented_grid.n_pts[1], j = 1:segmented_grid.n_pts[2]
+        _note_connection!(segmented_grid.data[i, j, 1], segmented_grid.data[i, j, end], graph)
+    end
+
+    for j = 1:segmented_grid.n_pts[2], k = 1:segmented_grid.n_pts[3]
+        _note_connection!(segmented_grid.data[1, j, k], segmented_grid.data[end, j, k], graph)
+    end
+    
+    for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
+        _note_connection!(segmented_grid.data[i, 1, k], segmented_grid.data[i, end, k], graph)
+    end
+    
+    # note connections
+    if verbose
+        for edge in edges(graph)
+            @printf("Noted seg. %d --> %d connection across unit cell boundary.\n", 
+                src(edge), dst(edge))
+        end
+    end
+
+    return graph
+end
+
+function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64})
+    nb_segments = _count_segments(segmented_grid)
+
+    # 0 = inaccessible, 1 = accessible. start out with assuming inaccessible.
+    segment_classifiction = zeros(Int, nb_segments)
+    
+    # look for simple cycles in the graph
+    all_cycles = simplecycles(graph)
+
+    # all edges involved in a cycle are connected together and are accessible channels
+    for cyc in all_cycles
+        for s in cyc
+            segment_classifiction[s] = 1
+        end
+    end
+
+    return segment_classifiction
+end
+
+function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_classifiction::Array{Int, 1}; verbose::Bool=true)
+    for s = 1:length(segment_classifiction)
+        if segment_classifiction[s] == 1
+            if verbose
+                @printf("Segment %s classified as accessible channel.\n", s)
+            end
+        else
+            if verbose
+                @printf("Segment %s classified as inaccessible pocket. Overwriting.\n", s)
+            end
+            segmented_grid.data[segmented_grid.data .== s] .= -1
+        end
+    end
+end
+
+"""
+    accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
+    probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=2980.0, verbose=true,
+    write_b4_after_grids=true)
+
+Overlay a grid of points about the unit cell. Compute the potential energy of a probe
+molecule at each point. If the potential energy is less than `energy_tol`, the grid point
+is declared as accessible to an adsorbate; otherwise inaccessible.
+
+Then perform a flood fill algorithm to label disparate (unconnected) segments in the grid.
+
+Then build a graph whose vertices are the unconnected segments in the flood-filled grid and
+whose edges are the connections between the segments across the periodic boundary.
+
+Then find any simple cycles in the grid. Any vertex that is involved in a simple cycle is
+considered accessible since a molecule can travel from that segment in the home unit cell
+to the same segment but in a different unit cell. If any vertex is not involved in a cycle,
+the segment is declared as inaccessible and all grid points in this segment are re-labeled
+as inaccessible.
+
+Returns `accessibility_grid::Grid{Bool}` and `some_pockets_were_blocked`, the latter representing
+whether any inaccessible pockets were found.
+
+# Arguments
+* `framework::Framework`: the crystal for which we seek to compute an accessibility grid.
+* `probe_molecule::Molecule` a molecule serving as a probe to determine whether a given 
+point can be occupied and accessed.
+* `LJForceField::LJForceField`: the force field used to compute the potential energy of 
+the probe molecule
+* `n_pts::Tuple{Int, Int, Int}`: number of grid points in a, b, c directions
+* `energy_tol::Float64`: if the computed potential energy is less than this, we declare the
+grid point to be occupiable. Also this is the energy barrier beyond which we assume the
+probe adsorbate cannot pass. Default is 10 kT. Units: Kelvin.
+* `write_b4_after_grids::Bool`: write a .cube file of occupiability for visualization both
+before and after flood fill/blocking inaccessible pockets
+"""
+function compute_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
+    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=2980.0, verbose::Bool=true,
+    write_b4_after_grids::Bool=true)
+    
+    # write potential energy grid
+    grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose)
+    
+    # flood fill and label segments
+    segmented_grid = _segment_grid(grid, energy_tol, verbose)
+
+    if write_b4_after_grids
+        _segmented_grid = deepcopy(segmented_grid)
+        _segmented_grid.data[segmented_grid.data .!= -1] .= 1
+        gridfilename = @sprintf("%s_in_%s_%s_b4_pocket_blocking.cube", probe.species,
+            replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
+            replace(forcefield.name, ".csv" => ""))
+        write_cube(_segmented_grid, gridfilename)
+    end
+    
+    # get graph describing connectivity of segments across unit cell boundary
+    graph = _build_connectivity_graph(segmented_grid, verbose=verbose)
+
+    # get classifications of the segments
+    segment_classifications = _classify_segments(segmented_grid, graph)
+
+    # assign inaccessible pockets minus one if cycle not found in graph
+    _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications, verbose=verbose)
+    
+    # -1 for not accessible, 1 for accessible
+    segmented_grid.data[segmented_grid.data .!= -1] .= 1
+    
+    if write_b4_after_grids
+        gridfilename = @sprintf("%s_in_%s_%s_after_pocket_blocking.cube", probe.species,
+            replace(replace(framework.name, ".cif" => ""), ".cssr" => ""),
+            replace(forcefield.name, ".csv" => ""))
+        write_cube(segmented_grid, gridfilename)
+    end
+    
+    # print warning if there is no use in running a simulation since all pockets are inaccessible
+    if all(segmented_grid.data .== -1)
+        @warn @sprintf("%s cannot enter the pores of %s with %f K energy tolerance.",
+            probe.species, framework.name, energy_tol)
+    end
+    
+    # boolean for easy checking if any pockets were blocked.
+    some_pockets_were_blocked = any(segment_classifications .== 0)
+
+    # instead of returning grid of int's return a boolean grid for storage efficiency
+    accessibility_grid = Grid{Bool}(segmented_grid.box, segmented_grid.n_pts,
+        segmented_grid.data .== 1, :accessibility, segmented_grid.origin)
+
+    if some_pockets_were_blocked
+        @sprintf("%d pockets in %s were found to be inaccessible to %s and blocked.\n",
+            sum(segment_classifications .== 0), framework.name, probe.species)
+        @printf("Porosity of %s b4 pocket blocking is %f\n", framework.name,
+            sum(grid.data .< energy_tol) / length(grid.data))
+        @printf("Porosity of %s after pocket blocking is %f\n", framework.name,
+            sum(accessibility_grid.data) / length(accessibility_grid.data))
+    end
+
+    return accessibility_grid, some_pockets_were_blocked
+end
+
+# return ID that is the nearest neighbor.
+function _arg_nearest_neighbor(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
+    return 1 .+ round.(Int, xf .* (n_pts .- 1))
+end
+
+function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
+    for k = 1:3
+        if id[k] == 0
+            id[k] = n_pts[k]
+        end
+        if id[k] == n_pts[k] + 1
+            id[k] = 1
+        end
+    end
+    return nothing
+end
+
+"""
+    accessible(accessibility_grid, xf)
+    accessible(accessibility_grid, xf, repfactors)
+
+Using `accessibility_grid`, determine if fractional coordinate `xf` (relative to 
+`accessibility_grid.box` is accessible or not. Here, we search for the nearest grid point.
+We then look at the accessibility of this nearest grid point and all surroudning 9 other 
+grid points. The point `xf` is declared inaccessible if and only if all 10 of these grid
+points are inaccessible. We take this approach because, if the grid is coarse, we can allow
+energy computations to automatically determine accessibility at the boundary of 
+accessibility e.g. during a molecular simulation where inaccessible pockets are blocked.
+
+If a tuple of replication factors are also passed, it is assumed that the passed `xf` is 
+relative to a replicated `accessibility_grid.box` so that `xf` is scaled by these rep. 
+factors. So `xf = [0.5, 0.25, 0.1]` with `repfactors=(1, 2, 4)` actually is, relative to
+`accessibility_grid.box`, fractional coordinate `[0.5, 0.5, 0.4]`.
+"""
+function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1})
+    # find ID of nearest neighbor
+    id_nearest_neighbor = _arg_nearest_neighbor(accessibility_grid.n_pts, xf)
+    # the point is inaccessible if and only if ALL surrounding points are inaccessible;
+    #   if at the boundary, let the energy be computed and automatically address
+    #   accessibility during a simulation
+    for i = -1:1, j = -1:1, k = -1:1
+        id_neighbor = id_nearest_neighbor .+ [i, j, k]
+        _apply_pbc_to_index!(id_neighbor, accessibility_grid.n_pts)
+        # again, if ANY surrounding point is accessible, let the energy computation go on
+        if accessibility_grid.data[id_neighbor...]
+            return true
+        end
+    end
+    # if we made it to here, there is no surrounding point that is accessible.
+    return false
+end
+
+# when rep factors are used in the simulation so fractional coord system in grid does not match
+#   that in the simulation.
+function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
+    return accessible(accessibility_grid, mod.(xf .* repfactors, 1.0))
 end

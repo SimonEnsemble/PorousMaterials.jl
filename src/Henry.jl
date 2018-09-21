@@ -35,7 +35,8 @@ the replication factors in reciprocal space.
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
-                           autosave::Bool=true, filename_comment::AbstractString="")
+                           autosave::Bool=true, filename_comment::AbstractString="",
+                           accessibility_grid::Union{Nothing, Grid{Bool}}=nothing)
     time_start = time()
     if verbose
         print("Simulating Henry coefficient of ")
@@ -49,6 +50,14 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
         print(" force field with ")
         printstyled(insertions_per_volume; color=:green)
         println(" insertions per Å³.")
+
+        if accessibility_grid != nothing
+            println("Using provided accessibility grid to block inaccessible pockets")
+            if ! isapprox(accessibility_grid.box, framework.box)
+                error(@sprintf("accessibility grid box does not match box of %s.\n",
+                    framework.name))
+            end
+        end
     end
 
     # determine the number of insertions based on the unit cell volume of the crystal (BEFORE replication)
@@ -92,7 +101,8 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     # x = (nb_insertions, molecule) for that core
     henry_loop(x::Tuple{Int, Molecule}) = _conduct_Widom_insertions(framework, x[2],
                                             temperature, ljforcefield, x[1],
-                                            charged_system, ewald_precision, verbose)
+                                            charged_system, ewald_precision, verbose,
+                                            accessibility_grid, repfactors)
 
     # parallelize insertions across the cores; keep nb_insertions_per_block same
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
@@ -173,7 +183,9 @@ end
 function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
-                                   ewald_precision::Float64, verbose::Bool)
+                                   ewald_precision::Float64, verbose::Bool,
+                                   accessibility_grid::Union{Nothing, Grid{Bool}},
+                                   repfactors::Tuple{Int, Int, Int})
     # copy the molecule in case we need to reset it when bond lengths drift
     bond_length_drift_check_frequency = 5000 # every how many insertions check for drift
     ref_molecule = deepcopy(molecule)
@@ -204,9 +216,15 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
 
         # calculate potential energy of molecule at that position and orientation
         energy = PotentialEnergy(0.0, 0.0)
-        energy.vdw = vdw_energy(framework, molecule, ljforcefield)
-        if charged_system
-            energy.coulomb = total(electrostatic_potential_energy(framework, molecule, eparams, eikr))
+        # actually compute if accessibilty grid not available; or if is avail and accessible
+        if (accessibility_grid == nothing) || (accessible(accessibility_grid, xf, repfactors))
+            energy.vdw = vdw_energy(framework, molecule, ljforcefield)
+            if charged_system
+                energy.coulomb = total(electrostatic_potential_energy(framework, molecule, eparams, eikr))
+            end
+        else
+            energy.vdw = Inf
+            energy.coulomb = Inf
         end
 
         # calculate Boltzmann factor e^(-βE)
