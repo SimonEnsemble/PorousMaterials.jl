@@ -293,7 +293,7 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
     return nothing
 end
 
-function _segment_grid(grid::Grid; energy_tol::Float64=0.0, verbose::Bool=true)
+function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
     # let "-1" be "not accessible"
@@ -418,7 +418,7 @@ end
 
 """
     accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
-    probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=298.0, verbose=true,
+    probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=2980.0, verbose=true,
     write_b4_after_grids=true)
 
 Overlay a grid of points about the unit cell. Compute the potential energy of a probe
@@ -448,19 +448,19 @@ the probe molecule
 * `n_pts::Tuple{Int, Int, Int}`: number of grid points in a, b, c directions
 * `energy_tol::Float64`: if the computed potential energy is less than this, we declare the
 grid point to be occupiable. Also this is the energy barrier beyond which we assume the
-probe adsorbate cannot pass.
+probe adsorbate cannot pass. Default is 10 kT. Units: Kelvin.
 * `write_b4_after_grids::Bool`: write a .cube file of occupiability for visualization both
 before and after flood fill/blocking inaccessible pockets
 """
 function compute_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
-    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=298.0, verbose::Bool=true,
+    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=2980.0, verbose::Bool=true,
     write_b4_after_grids::Bool=true)
     
     # write potential energy grid
     grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose)
     
     # flood fill and label segments
-    segmented_grid = _segment_grid(grid, energy_tol=energy_tol, verbose=verbose)
+    segmented_grid = _segment_grid(grid, energy_tol, verbose)
 
     if write_b4_after_grids
         _segmented_grid = deepcopy(segmented_grid)
