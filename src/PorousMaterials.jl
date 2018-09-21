@@ -20,9 +20,9 @@ import Base.push!
 #   then the PATH_TO_DATA will change as well
 function __init__()
     # this is the directory where crystal structures, forcefields, and molecules data is stored
-    global PATH_TO_DATA = pwd() * "/data/"
+    global PATH_TO_DATA = joinpath(pwd(), "data")
     if ! isdir(PATH_TO_DATA)
-        @warn @sprintf("Directory for input data, \"/data/\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
+        @warn @sprintf("Directory for input data, \"data\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
     end
 end
 
@@ -41,9 +41,6 @@ files from the chosen path.
 - `new_path_to_data::String`: The desired PATH_TO_DATA in string form.
 """
 function set_path_to_data(new_path_to_data::String)
-    if new_path_to_data[end] != '/'
-        new_path_to_data = new_path_to_data * "/"
-    end
     global PATH_TO_DATA = new_path_to_data
     if ! isdir(PATH_TO_DATA)
         @warn @sprintf("The directory %s does not exist.\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", new_path_to_data)
@@ -52,9 +49,9 @@ function set_path_to_data(new_path_to_data::String)
 end
 
 function set_path_to_data()
-    global PATH_TO_DATA = pwd() * "/data/"
+    global PATH_TO_DATA = joinpath(pwd(), "data")
     if ! isdir(PATH_TO_DATA)
-        @warn @sprintf("Directory for input data, \"/data/\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
+        @warn @sprintf("Directory for input data, \"data\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
     end
     @printf("PATH_TO_DATA set to %s\n", PATH_TO_DATA)
 end
@@ -68,7 +65,7 @@ follow examples shown in the README. It displays a warning so that the user know
 They are no longer using their own data.
 """
 function set_tutorial_mode()
-    new_path = dirname(pathof(PorousMaterials)) * "/../test/data/"
+    new_path = joinpath(dirname(pathof(PorousMaterials)), "..", "test", "data")
     if ! isdir(new_path)
         @error @sprintf("Directory for testing data %s does not exist.\nNot entering Tutorial Mode.\n", new_path)
     else
@@ -117,7 +114,7 @@ export
     # Molecules.jl
     Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
     translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged,
-    pairwise_atom_distances, pairwise_charge_distances, Ion,
+    pairwise_atom_distances, pairwise_charge_distances, Ion, bond_length_drift,
 
     # Forcefield.jl
     LJForceField, replication_factors, check_forcefield_coverage,

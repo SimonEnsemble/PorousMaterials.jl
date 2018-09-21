@@ -102,13 +102,57 @@ using Random
     @test isapprox(pairwise_charge_distances(ms[2], box),
                    pairwise_charge_distances(Molecule("H2S"), UnitCube()))
 
+    ms = [Molecule("H2S") for i = 1:2]
+    for i = 1:1000
+        rotate!(ms[rand(1:2)], UnitCube())
+    end
+    for m in ms
+        @test ! bond_length_drift(m, Molecule("H2S"), UnitCube(), atol=1e-12)
+    end
+    @test isapprox(ms[1].xf_com, ms[2].xf_com, atol=1e-12)
+    
+    ms = [Molecule("H2S") for i = 1:2]
+    box = Framework("SBMOF-1.cif").box
+    for m in ms
+        translate_to!(m, [1.0, 2.0, 3.0])
+        set_fractional_coords!(m, box)
+        translate_to!(m, [3.0, 4.0, 5.0])
+    end
+    for i = 1:1000
+        rotate!(ms[rand(1:2)], box)
+    end
+    ref_molecule = Molecule("H2S")
+    set_fractional_coords!(ref_molecule, box)
+    for m in ms
+        @test ! bond_length_drift(m, ref_molecule, box, atol=1e-12)
+    end
+    @test isapprox(ms[1].xf_com, ms[2].xf_com, atol=1e-12)
+    
+    # bond drift
+    m1 = Molecule("CO2")
+    m2 = Molecule("CO2")
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-15)
+    rotate!(m1, UnitCube())
+    rotate!(m2, UnitCube())
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-14)
+    m1.atoms.xf[:, 1] += [1e-10, 1e-9, 1e-10]
+    @test bond_length_drift(m1, m2, UnitCube(), atol=1e-14, throw_warning=false)
+    m1.atoms.xf[:, 1] -= [1e-10, 1e-9, 1e-10]
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-14)
+    m2.charges.xf[:, 1] += [1e-10, 1e-9, 1e-10]
+    @test bond_length_drift(m1, m2, UnitCube(), atol=1e-14, throw_warning=false)
+    m1 = Molecule("Xe")
+    m2 = Molecule("Xe")
+    translate_to!(m1, rand(3))
+    @test ! bond_length_drift(m1, m2, UnitCube(), atol=1e-14)
+
     # test unit vector on sphere generator
     ms = [Molecule("He") for i = 1:10000]
     for m in ms
-        translate_to!(m, rand_point_on_unit_sphere())
+        translate_to!(m, rand_point_on_unit_sphere(), UnitCube())
     end
     @test all(isapprox.([norm(m.atoms.xf[:, 1]) for m in ms], 1.0))
-    write_xyz(ms, box, "random_vectors_on_sphere")
+    write_xyz(ms, UnitCube(), "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
 
     # Test to see if rotation_matrix() is random and uniform on sphere surface
@@ -204,6 +248,7 @@ using Random
     m2_old = deepcopy(m2)
     rotate!(m2, box)
     @test ! isapprox(m2_old, m2)
+    @test isapprox(m2_old.xf_com, m2.xf_com) # center of mass shld not change
     # visually inspect
     ms = [Molecule("CO2") for i = 1:1000]
     for m in ms
