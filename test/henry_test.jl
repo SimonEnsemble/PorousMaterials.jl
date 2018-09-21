@@ -4,7 +4,7 @@ using Distributed
 
 @warn "This will take a while..."
 
-insertions_per_volume = 500
+insertions_per_volume = 1000
 
 @testset "Henry coefficient tests" begin
     ###
