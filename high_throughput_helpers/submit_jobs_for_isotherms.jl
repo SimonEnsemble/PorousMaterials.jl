@@ -38,8 +38,8 @@ function write_gcmc_submit_script(structurename::AbstractString, gas::AbstractSt
     julia run_gcmc_simulation.jl %s %s %f %f
     """,
 	structurename, 
-    jobscriptdir * "/" * structurename * "_" * string(temperature) * "_" * string(pressure), 
-    jobscriptdir * "/" * structurename * "_" * string(temperature) * "_" * string(pressure),
+    joinpath(jobscriptdir, structurename * "_" * string(temperature) * "_" * string(pressure)), 
+    joinpath(jobscriptdir, structurename * "_" * string(temperature) * "_" * string(pressure)),
     structurename, gas, temperature, pressure)
 
     close(gcmc_submit)

@@ -29,7 +29,7 @@ using Random
     @test isapprox(framework.atoms, framework2.atoms) && isapprox(framework.charges, framework2.charges)
 
     # test .cif writer; write, read in, assert equal
-    write_cif(framework, "data/crystals/rewritten_test_structure2.cif")
+    write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2.cif"))
     framework_rewritten = Framework("rewritten_test_structure2.cif")
     @test isapprox(framework, framework_rewritten)
 

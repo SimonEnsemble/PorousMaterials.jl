@@ -32,7 +32,7 @@ using Random
         else
             Core.eval(Main, :(import PorousMaterials)) # used to be able to load in objects from Porous Materials
             # This was found here: https://github.com/JuliaIO/JLD.jl/issues/216
-            @load (PorousMaterials.PATH_TO_DATA * "/gcmc_checkpoints/" * gcmc_result_savename(framework.name, co2.species, ljff.name, temp, pressure, 5, 5 * i, comment = "_checkpoint")) checkpoint
+            @load (joinpath(PorousMaterials.PATH_TO_DATA, "gcmc_checkpoints", gcmc_result_savename(framework.name, co2.species, ljff.name, temp, pressure, 5, 5 * i, comment = "_checkpoint"))) checkpoint
         end
         results, molecules = gcmc_simulation(framework, deepcopy(co2), temp, pressure, ljff,
                                              n_burn_cycles=5, n_sample_cycles=5 * (i + 1),
