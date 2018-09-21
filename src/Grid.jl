@@ -21,7 +21,7 @@ end
     n_pts = required_n_pts(box, dx)
 
 Calculate the required number of grid pts in a, b, c unit cell directions required to keep
-distances between grid points less than `dx` apart.
+distances between grid points less than `dx` apart, where `dx` is in units of Angstrom.
 """
 function required_n_pts(box::Box, dx::Float64)
     # columns of f_to_c are the unit cell lattice vectors.
@@ -458,8 +458,6 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
     
     # write potential energy grid
     grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose)
-    if verbose
-    end
     
     # flood fill and label segments
     segmented_grid = _segment_grid(grid, energy_tol=energy_tol, verbose=verbose)
