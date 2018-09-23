@@ -330,16 +330,6 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     return segmented_grid
 end
 
-function _note_connection!(segment_1::Int, segment_2::Int, graph::SimpleDiGraph{Int64})
-    if (segment_1 == -1) || (segment_2 == -1)
-        return nothing
-    end
-
-    add_edge!(graph, segment_1, segment_2)
-
-    return nothing
-end
-
 # this returns number of segments in a segmented grid.
 #  it excludes the inaccessible portions -1.
 function _count_segments(segmented_grid::Grid)
@@ -352,37 +342,93 @@ function _count_segments(segmented_grid::Grid)
     return nb_segments
 end
 
-# obtain set of Segment Connections
-function _build_connectivity_graph(segmented_grid::Grid; verbose::Bool=true)
-    nb_segments = _count_segments(segmented_grid)
+# struct describing directed edge
+struct SegmentConnection
+    src::Int # source segment
+    dst::Int # destination segment
+    direction::Tuple{Int, Int, Int} # unit cell face traversed
+end
+
+function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{SegmentConnection, 1},
+                           direction::Tuple{Int, Int, Int}, verbose::Bool=true)
+    # ignore connections between un-occupiable regions
+    if (segment_1 == -1) || (segment_2 == -1)
+        return nothing
+    end
     
-    graph = DiGraph(nb_segments)
+    # construct edge; if not in list of edges, push it and note connection
+    segment_connection = SegmentConnection(segment_1, segment_2, direction)
+    if ! (segment_connection in connections)
+        push!(connections, segment_connection)
+        @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n", 
+            segment_1, segment_2, direction...)
+        # also add opposite direction to take into account symmetry
+        push!(connections, SegmentConnection(segment_2, segment_1, segment_connection.direction .* -1))
+    end
+
+    return nothing
+end
+
+# obtain set of Segment Connections
+function _build_list_of_connections(segmented_grid::Grid; verbose::Bool=true)
+    # initialize empty list of edges
+    connections = SegmentConnection[]
 
     # loop over faces of unit cell
     for i = 1:segmented_grid.n_pts[1], j = 1:segmented_grid.n_pts[2]
-        _note_connection!(segmented_grid.data[i, j, 1], segmented_grid.data[i, j, end], graph)
+        _note_connection!(segmented_grid.data[i, j, end], segmented_grid.data[i, j, 1], 
+            connections, (0, 0, 1), verbose)
     end
 
     for j = 1:segmented_grid.n_pts[2], k = 1:segmented_grid.n_pts[3]
-        _note_connection!(segmented_grid.data[1, j, k], segmented_grid.data[end, j, k], graph)
+        _note_connection!(segmented_grid.data[end, j, k], segmented_grid.data[1, j, k],
+            connections, (1, 0, 0), verbose)
     end
     
     for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
-        _note_connection!(segmented_grid.data[i, 1, k], segmented_grid.data[i, end, k], graph)
+        _note_connection!(segmented_grid.data[i, end, k], segmented_grid.data[i, 1, k],
+            connections, (0, 1, 0), verbose)
     end
     
-    # note connections
-    if verbose
-        for edge in edges(graph)
-            @printf("Noted seg. %d --> %d connection across unit cell boundary.\n", 
-                src(edge), dst(edge))
-        end
-    end
-
-    return graph
+    return connections
 end
 
-function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64})
+function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentConnection, 1})
+    nb_segments = _count_segments(segmented_grid)
+        
+    # directed graph; metagraph b/c has properties associated with vertices.
+    graph = DiGraph(nb_segments)
+
+    # goal: include edge info by connecting segments not direction to each other but
+    #  instead through an artificial vertex storing the direction. so all vertices
+    #  have a property :direction except for the segments themselves which are vanilla
+    #  vertices, so we first assign these with :property = nothing
+    vertex_to_direction = Dict{Int, Union{Nothing, Tuple{Int, Int, Int}}}()
+    for v in vertices(graph)
+        vertex_to_direction[v] = nothing
+    end
+    
+    # loop over edges, add edges to graph but with intermediate vertex corresponding to 
+    #  direction
+    for segment_connection in connections
+        # add vertex for the direction
+        add_vertex!(graph)
+        # id of vertex indicating connection
+        connection_vertex_id = length(vertices(graph))
+        # record direction of unit cell traversal in this edge
+        vertex_to_direction[connection_vertex_id] = segment_connection.direction
+        # add edge of segment connectivity, first going through direction segment
+        #   src --> connection_vertex_id --> dst
+        add_edge!(graph, segment_connection.src, connection_vertex_id)
+        add_edge!(graph, connection_vertex_id, segment_connection.dst)
+    end
+
+    return graph, vertex_to_direction
+end
+
+function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64}, 
+                            vertex_to_direction::Dict{Int, Union{Nothing, Tuple{Int, Int, Int}}},
+                            verbose::Bool=true)
     nb_segments = _count_segments(segmented_grid)
 
     # 0 = inaccessible, 1 = accessible. start out with assuming inaccessible.
@@ -390,11 +436,50 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64})
     
     # look for simple cycles in the graph
     all_cycles = simplecycles(graph)
-
+    if verbose
+        @printf("Found %d simple cycles in segment connectivity graph.\n", length(all_cycles))
+    end
+    
     # all edges involved in a cycle are connected together and are accessible channels
     for cyc in all_cycles
+        @assert vertex_to_direction[cyc[1]] == nothing "shld start with segment."
+        @assert vertex_to_direction[cyc[end]] != nothing "shld end with direction vertex."
+        # travel through cycle, keep track of which unit cell we're in
+        #  start in home unit cell
+        unit_cell = (0, 0, 0)
+        # loop over segments in the cycle (ordered)
         for s in cyc
-            segment_classifiction[s] = 1
+            # if an intermediate unit cell boundary vertex, then keep track of unit cell
+            #  we're in by looking at boundary we traversed.
+            if vertex_to_direction[s] != nothing
+                unit_cell = unit_cell .+ vertex_to_direction[s]
+            end
+        end
+
+        # if we traversed the cycle and ended up in a different unit cell, these all
+        #   must be accessible pockets!
+        if unit_cell != (0, 0, 0)
+            println("\t...found a cycle of accessible segments!")
+            for s in cyc
+                if vertex_to_direction[s] == nothing # i.e. if this is not a direciton vertex
+                    segment_classifiction[s] = 1
+                end
+            end
+        end
+    end
+
+    # now could have something like 1 --> 2 ---> 4 ---> 2. then 1 is also accessible
+    # loop over all segments
+    for s = 1:nb_segments
+        # if this segment was involved in a cycle that resulted in ending up in a different
+        #  unit cell
+        if segment_classifiction[s] == 1
+            # look for edges connected to this segment; these must be accessible
+            for t = 1:nb_segments
+                if Edge(t, s) in edges(graph)
+                    segment_classifiction[t] = 1
+                end
+            end
         end
     end
 
@@ -471,11 +556,15 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
         write_cube(_segmented_grid, gridfilename)
     end
     
-    # get graph describing connectivity of segments across unit cell boundary
-    graph = _build_connectivity_graph(segmented_grid, verbose=verbose)
+    # get list of edges describing connectivity of segments across unit cell boundaries
+    connections = _build_list_of_connections(segmented_grid, verbose=verbose)
+
+    # translate this into a directed LightGraph. Note that these include directions as an
+    #  artificial vertex to keep track of which unit cell boundary is traversed.
+    graph, vertex_to_direction = _translate_into_graph(segmented_grid, connections)
 
     # get classifications of the segments
-    segment_classifications = _classify_segments(segmented_grid, graph)
+    segment_classifications = _classify_segments(segmented_grid, graph, vertex_to_direction, verbose)
 
     # assign inaccessible pockets minus one if cycle not found in graph
     _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications, verbose=verbose)
