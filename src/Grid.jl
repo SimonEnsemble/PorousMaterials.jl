@@ -81,7 +81,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     end # loop over x points
     close(cubefile)
     if verbose
-        println("See ", joinpath(PATH_TO_DATA, "grids", filename))
+        println("\tSee ", joinpath(PATH_TO_DATA, "grids", filename))
     end
     return
 end
@@ -267,14 +267,15 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
         if (i_s, j_s, k_s) == (0, 0, 0)
             continue
         end
-
+        
+        # index of a neighboring point
         ind = (i + i_s, j + j_s, k + k_s)
         
         # avoid out of bounds
         if any(ind .<= (0, 0, 0)) || any(ind .> grid.n_pts)
             continue
         end
-        # if already assigned, continue
+        # if neighbor already assigned or un-occupiable, continue
         if segmented_grid.data[ind...] != 0
             continue
         end
@@ -282,11 +283,12 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
         # if accessible, assign same segment ID and keep looking at surrounding points
         if grid.data[ind...] < energy_tol
             segmented_grid.data[ind...] = segmented_grid.data[i, j, k]
-            # look to left, right, up, down; add grid pt. to queue.
+            # add grid pt. to queue to look at ITS surrounding neighbors
             # originally had recursive algo but get stack overflow
             push!(queue_of_grid_pts, ind)
         else
-            # if not accessible, assign -1 and don't call recursive algo.
+            # if not accessible, assign -1 and don't push any points to the queue
+            #  (this is how the algo eventually dies out)
             segmented_grid.data[ind...] = -1
         end
     end
@@ -296,7 +298,7 @@ end
 function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
-    # let "-1" be "not accessible"
+    # let "-1" be "not occupiable" and, eventually, "not accessible"
     segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts...),
         :Segment_No, grid.origin)
     segment_no = 0
@@ -314,7 +316,7 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
                     id = queue_of_grid_pts[1]
                     # assign segment number
                     segmented_grid.data[id...] = segment_no
-                    # look at surroudning points
+                    # look at surroudning points, add to queue if they are also accessible
                     _flood_fill!(grid, segmented_grid, queue_of_grid_pts,
                         id..., energy_tol)
                     # handled first one in queue, remove from queue
@@ -335,6 +337,7 @@ end
 function _count_segments(segmented_grid::Grid)
     unique_segments = unique(segmented_grid.data)
     nb_segments = length(unique_segments)
+    # not quite; if -1 present (unoccupiable), this shouldn't count as a segment
     if -1 in unique_segments
         nb_segments -= 1
     end
@@ -342,7 +345,9 @@ function _count_segments(segmented_grid::Grid)
     return nb_segments
 end
 
-# struct describing directed edge
+# struct describing directed edge describing connection between two segments of a flood-
+#  filled grid. the direction (which unit cell face is traversed in the connection) is
+#  also included.
 struct SegmentConnection
     src::Int # source segment
     dst::Int # destination segment
@@ -360,8 +365,10 @@ function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{Se
     segment_connection = SegmentConnection(segment_1, segment_2, direction)
     if ! (segment_connection in connections)
         push!(connections, segment_connection)
-        @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n", 
-            segment_1, segment_2, direction...)
+        if verbose
+            @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n", 
+                segment_1, segment_2, direction...)
+        end
         # also add opposite direction to take into account symmetry
         push!(connections, SegmentConnection(segment_2, segment_1, segment_connection.direction .* -1))
     end
@@ -396,20 +403,22 @@ end
 function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentConnection, 1})
     nb_segments = _count_segments(segmented_grid)
         
-    # directed graph; metagraph b/c has properties associated with vertices.
+    # directed graph
     graph = DiGraph(nb_segments)
 
-    # goal: include edge info by connecting segments not direction to each other but
-    #  instead through an artificial vertex storing the direction. so all vertices
-    #  have a property :direction except for the segments themselves which are vanilla
-    #  vertices, so we first assign these with :property = nothing
+    # so each edge REALLY has some data associated with it: which unit cell face is traversed
+    #  when traveling from the source segment to the destination segment.
+    #  goal: include this info about an edge indirectly by having an artificial vertex 
+    #  indicating the direction. so all vertices have a direction. if the vertex is actually
+    #  for representing a segment, it doens't have a direction, so we assign it a 
+    #  direction `nothing`.
     vertex_to_direction = Dict{Int, Union{Nothing, Tuple{Int, Int, Int}}}()
     for v in vertices(graph)
         vertex_to_direction[v] = nothing
     end
     
-    # loop over edges, add edges to graph but with intermediate vertex corresponding to 
-    #  direction
+    # loop over edges, add edges to graph but with intermediate dummy vertex corresponding
+    #  to direction
     for segment_connection in connections
         # add vertex for the direction
         add_vertex!(graph)
@@ -418,7 +427,7 @@ function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentC
         # record direction of unit cell traversal in this edge
         vertex_to_direction[connection_vertex_id] = segment_connection.direction
         # add edge of segment connectivity, first going through direction segment
-        #   src --> connection_vertex_id --> dst
+        #   src segment --> connection_vertex_id --> dst segment
         add_edge!(graph, segment_connection.src, connection_vertex_id)
         add_edge!(graph, connection_vertex_id, segment_connection.dst)
     end
@@ -437,7 +446,7 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
     # look for simple cycles in the graph
     all_cycles = simplecycles(graph)
     if verbose
-        @printf("Found %d simple cycles in segment connectivity graph.\n", length(all_cycles))
+        @printf("\tFound %d simple cycles in segment connectivity graph.\n", length(all_cycles))
     end
     
     # all edges involved in a cycle are connected together and are accessible channels
@@ -459,7 +468,9 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
         # if we traversed the cycle and ended up in a different unit cell, these all
         #   must be accessible pockets!
         if unit_cell != (0, 0, 0)
-            println("\t...found a cycle of accessible segments!")
+            if verbose
+                println("\t...found a cycle of accessible segments!")
+            end
             for s in cyc
                 if vertex_to_direction[s] == nothing # i.e. if this is not a direciton vertex
                     segment_classifiction[s] = 1
@@ -486,7 +497,8 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
     return segment_classifiction
 end
 
-function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, segment_classifiction::Array{Int, 1}; verbose::Bool=true)
+function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, 
+            segment_classifiction::Array{Int, 1}; verbose::Bool=true)
     for s = 1:length(segment_classifiction)
         if segment_classifiction[s] == 1
             if verbose
@@ -593,11 +605,11 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
         segmented_grid.data .== 1, :accessibility, segmented_grid.origin)
 
     if some_pockets_were_blocked
-        @sprintf("%d pockets in %s were found to be inaccessible to %s and blocked.\n",
-            sum(segment_classifications .== 0), framework.name, probe.species)
-        @printf("Porosity of %s b4 pocket blocking is %f\n", framework.name,
+        printstyled(@sprintf("\t%d pockets in %s were found to be inaccessible to %s and blocked.\n",
+            sum(segment_classifications .== 0), framework.name, probe.species), color=:green)
+        @printf("\tPorosity of %s b4 pocket blocking is %f\n", framework.name,
             sum(grid.data .< energy_tol) / length(grid.data))
-        @printf("Porosity of %s after pocket blocking is %f\n", framework.name,
+        @printf("\tPorosity of %s after pocket blocking is %f\n", framework.name,
             sum(accessibility_grid.data) / length(accessibility_grid.data))
     end
 

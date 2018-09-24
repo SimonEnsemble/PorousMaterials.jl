@@ -1,6 +1,7 @@
 using PorousMaterials
 
 framework = Framework("LTA.cif")
+write_xyz(framework)
 molecule = Molecule("CH4")
 forcefield = LJForceField("UFF.csv")
 grid = energy_grid(framework, molecule, forcefield, n_pts=(20, 20, 20))

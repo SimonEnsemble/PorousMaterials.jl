@@ -90,6 +90,7 @@ using Random
     accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
         molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false, 
         write_b4_after_grids=true)
+
     # replicate framework and build accessibility grid that includes the other accessibility grid in a corner
     repfactors = (2, 3, 1)
     framework = replicate(framework, repfactors)
