@@ -144,7 +144,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
 - `filename::AbstractString`: filename of the .vtk file output (absolute path)
 """
 function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
-    if ! contains(filename, ".vtk")
+    if ! occursin(".vtk", filename)
         filename *= ".vtk"
     end
     vtk_file = open(filename, "w")
