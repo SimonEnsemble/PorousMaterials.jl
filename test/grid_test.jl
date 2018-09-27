@@ -52,7 +52,7 @@ using Random
         @test isapprox(grid.data[:, :, 1], grid.data[:, :, end], atol=1e-7)
 
         accessibility_grid, some_pockets_were_blocked, porosity = compute_accessibility_grid(framework, 
-            molecule, forcefield, n_pts=(100, 100, 100), energy_tol=0.0, verbose=false, 
+            molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false, 
             write_b4_after_grids=true)
         @test some_pockets_were_blocked
         @test porosity[:b4_blocking] > porosity[:after_blocking]
