@@ -341,7 +341,9 @@ function _count_segments(segmented_grid::Grid)
     if -1 in unique_segments
         nb_segments -= 1
     end
-    @assert(nb_segments == maximum(segmented_grid.data))
+    if nb_segments != 0
+        @assert(nb_segments == maximum(segmented_grid.data))
+    end
     return nb_segments
 end
 
