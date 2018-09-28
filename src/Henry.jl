@@ -33,7 +33,7 @@ the replication factors in reciprocal space.
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
 """
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
-                           ljforcefield::LJForceField; insertions_per_volume::Int=200,
+                           ljforcefield::LJForceField; insertions_per_volume::Union{Int, Float64}=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="")
     time_start = time()
@@ -52,7 +52,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     end
 
     # determine the number of insertions based on the unit cell volume of the crystal (BEFORE replication)
-    nb_insertions = ceil(Int, insertions_per_volume * framework.box.Ω)
+    nb_insertions = max(5, ceil(Int, insertions_per_volume * framework.box.Ω))
     if verbose
         @printf("\t%d total # particle insertions\n", nb_insertions)
     end
