@@ -52,7 +52,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     end
 
     # determine the number of insertions based on the unit cell volume of the crystal (BEFORE replication)
-    nb_insertions = max(5, ceil(Int, insertions_per_volume * framework.box.Ω))
+    nb_insertions = max(N_BLOCKS, ceil(Int, insertions_per_volume * framework.box.Ω))
     if verbose
         @printf("\t%d total # particle insertions\n", nb_insertions)
     end
