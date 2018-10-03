@@ -41,7 +41,6 @@ B(T::Float64, P::Float64, gas::PengRobinsonFluid) = b(gas) * P / (R * T)
 # the Peng-Robinson Equation of State. Filters for only real roots and returns the
 # root closest to unity.
 function compressibility_factor(gas::PengRobinsonFluid, T::Float64, P::Float64)
-
     # construct cubic polynomial in z
     p = Poly([-(A(T, P, gas) * B(T, P, gas) - B(T, P, gas) ^ 2 - B(T, P, gas) ^ 3),
               A(T, P, gas) - 2 * B(T, P, gas) - 3 * B(T, P, gas) ^ 2,
@@ -104,38 +103,41 @@ function calculate_properties(gas::PengRobinsonFluid, T::Float64, P::Float64; ve
     return prop_dict
 end
 
-# vdW E.O.S.
+# vdW E.O.S. (P = RT / (ρ⁻¹ - b) - a ρ²
 function calculate_properties(gas::VDWFluid, T::Float64, P::Float64; verbose::Bool=true)
-    # build polynomial A ρ³ + B ρ² + C ρ + D = 0
-    # TODO: is this right? specify what A, B, C, D is.
+    # build polynomial in ρ: D ρ³ + C ρ² + B ρ + A = 0
     A = -P
     B = P * gas.b + R * T
     C = -gas.a
     D = gas.a * gas.b
 
-    # Creates a polynomial for the vdw cubic function TODO polynomail of WHAT
+    # Creates a polynomial in ρ the vdw cubic function 
     pol = Poly([A, B, C, D])
-    # finds roots of that polynomial TODO what do these roots represent
-    polroots = roots(pol)
+    # finds roots of that polynomial
+    ρs = roots(pol)
     # assigns rho to be the real root(s) and then makes it real to get rid of the 0im
-    rho = real.(polroots[isreal.(polroots)]) # assert one of them is real
+    real_ρs = real.(ρs[isreal.(ρs)]) # assert one of them is real
     # disregards all roots except the lowest one, as the lowest real root
     #   is the density corresponding to the gas phase
-    rho = minimum(rho)
+    rho = minimum(real_ρs)
     # molar volume is the reciprocal of the density
     # In units of [L/mol]
     vm = 1000.0 / rho
     # compressibility factor
     z = P / rho / (R * T)
 
-    #Finds fugacity using the derivation from the Van der Waals # TODO exp(-log) ...
-    fug = P * exp(-log(1 / rho - gas.b * P / (R * T)) + (gas.b / (1 / rho - gas.b) - 2 * gas.a * rho / (R * T)))
+    #Finds fugacity using the derivation from the Van der Waals
+ #     fug = P * exp(-log((1 / rho - gas.b) * P / (R * T)) + gas.b ./ ((1 ./ rho)-gas.b) - 2 * gas.a * rho / (R*T))
+ #     fug = P * exp(-log((1 / rho - gas.b) * P / (R * T)) + (gas.b / (1 / rho - gas.b) - 2 * gas.a * rho / (R * T)))
+    fug = P * exp((gas.b / (1 / rho - gas.b) - 2 * gas.a * rho / (R * T))) / ((1 / rho - gas.b) * P / (R * T))
     #defines the fugacity coefficient as fugacity over pressure
     ϕ = fug / P
 
-    prop_dict = Dict("Density (mol/m³)" => rho, "Fugacity (bar)" => fug,
-        "Molar Volume (L/mol)" => vm, "Fugacity Coefficient" => ϕ,
-        "Compressibility Factor" => z) # TODO clean up
+    prop_dict = Dict("Density (mol/m³)" => rho,
+                     "Fugacity (bar)" => fug,
+                     "Molar Volume (L/mol)" => vm, 
+                     "Fugacity Coefficient" => ϕ,
+                     "Compressibility Factor" => z)
 
     if verbose
         @printf("%s properties at T = %f K, P = %f bar:\n", gas.gas, T, P)
