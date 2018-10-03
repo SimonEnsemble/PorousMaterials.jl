@@ -20,12 +20,12 @@ end
 
 #Data structure stating characteristics of a Van der Waals gas
 struct VDWFluid
+    "Van der Waals Gas species e.g. :H2"
+    gas::Symbol
     "VDW constant a (units: m⁶bar/mol²)"
     a::Float64
     "VDW constant b (units: m³/mol)"
     b::Float64
-    "Van der Waals Gas species e.g. :H2"
-    gas::Symbol
 end
 
 # Parameters in the Peng-Robinson Equation of State
@@ -133,11 +133,11 @@ function calculate_properties(gas::VDWFluid, T::Float64, P::Float64; verbose::Bo
     #defines the fugacity coefficient as fugacity over pressure
     ϕ = fug / P
 
-    prop_dict = Dict("Density (mol/m³)" => rho,
-                     "Fugacity (bar)" => fug,
-                     "Molar Volume (L/mol)" => vm, 
-                     "Fugacity Coefficient" => ϕ,
-                     "Compressibility Factor" => z)
+    prop_dict = Dict("density (mol/m³)" => rho,
+                     "fugacity (bar)" => fug,
+                     "molar volume (L/mol)" => vm, 
+                     "fugacity coefficient" => ϕ,
+                     "compressibility factor" => z)
 
     if verbose
         @printf("%s properties at T = %f K, P = %f bar:\n", gas.gas, T, P)
@@ -166,7 +166,7 @@ function VDWFluid(gas::Symbol)
     gas = string(gas)
     A = vdwfile[vdwfile[:molecule].== gas, Symbol("a(m6bar/mol2)")]
     B = vdwfile[vdwfile[:molecule].== gas, Symbol("b(m3/mol)")]
-    return VDWFluid(A[1], B[1], Symbol(gas))
+    return VDWFluid(Symbol(gas), A[1], B[1])
 end
 
 """

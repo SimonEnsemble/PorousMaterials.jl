@@ -20,11 +20,16 @@ using Random
 
     #Van der Waals EOS test for Hydrogen
     gas = VDWFluid(:H2)
-    props = calculate_properties(gas, 300.0, 65.0)
-    @test isapprox(props["Compressibility Factor"], 1.0462045 , atol=0.001)
-    @test isapprox(props["Fugacity Coefficient"], 67.98203133 / 65.0 , atol=1e-4)
-    @test isapprox(props["Fugacity (bar)"], 67.98203133 , atol=1e-4)
-    @test isapprox(props["Density (mol/m³)"], 2490.815 , atol=0.2)
-    @test isapprox(props["Molar Volume (L/mol)"], 0.401475 , atol=1e-4)
+    props = calculate_properties(gas, 300.0, 65.0, verbose=false)
+    @test isapprox(props["compressibility factor"], 1.0462045 , atol=0.001)
+    @test isapprox(props["fugacity coefficient"], 67.98203133 / 65.0 , atol=1e-4)
+    @test isapprox(props["fugacity (bar)"], 67.98203133 , atol=1e-4)
+    @test isapprox(props["density (mol/m³)"], 2490.815 , atol=0.2)
+    @test isapprox(props["molar volume (L/mol)"], 0.401475 , atol=1e-4)
+    
+    # should match ideal gas in limit
+    ig = VDWFluid(0.0, 0.0, :ideal_gas)
+    ig_props = calculate_properties(ig, 298.0, 1.0, verbose=false)
+    @test isapprox(ig_props["fugacity coefficient"], 1.0)
 end
 end
