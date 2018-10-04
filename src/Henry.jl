@@ -35,7 +35,9 @@ the replication factors in reciprocal space.
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Int=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
-                           autosave::Bool=true, filename_comment::AbstractString="")
+                           autosave::Bool=true, filename_comment::AbstractString="",
+                           write_checkpoint::Bool=false, load_checkpoint_file::Bool=false,
+                           checkpoint_frequency::Int=1000, checkpoint::Dict=Dict())
     time_start = time()
     if verbose
         print("Simulating Henry coefficient of ")
@@ -85,6 +87,28 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
 
+    # Load checkpoint
+    if checkpoint != Dict() && load_checkpoint_file
+        error("A checkpoint dictionary was provided AND load_checkpoint_file=true.\n
+              Unclear which checkpoint to start with.\n")
+    end
+
+    checkpoint_filename = joinpath(PATH_TO_DATA, "henry_checkpoints", henry_result_savename(
+                                framework, molecule, temperature, ljforcefield, insertions_per_volume, comment="checkpoint"))
+    if load_checkpoint_file
+        if isfile(checkpoint_filename)
+            @load checkpoint_filename checkpoint_data
+            printstyled("\trestarting simulation from previous checkpoint.\n"; color=:yellow)
+            printstyled("\tstarting at insertion number ", checkpoint_data["n_insertion"], "\n"; color=:yellow)
+            println("\tCheckpoint filename: ", checkpoint_filename)
+            checkpoint_data["frequency"] = checkpoint_frequency
+            checkpoint_data["filename"] = checkpoint_filename
+        else
+            error(@sprintf("checkpoint file %s not found.\n", checkpoint_filename))
+        end
+    end
+                                  
+
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
     # set up function to take a tuple of arguments, the number of insertions to
     # perform and the molecule to move around/rotate. each core needs a different
@@ -92,7 +116,9 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     # x = (nb_insertions, molecule) for that core
     henry_loop(x::Tuple{Int, Molecule}) = _conduct_Widom_insertions(framework, x[2],
                                             temperature, ljforcefield, x[1],
-                                            charged_system, ewald_precision, verbose)
+                                            charged_system, ewald_precision, verbose,
+                                            write_checkpoint=write_checkpoint,
+                                            checkpoint_data = (load_checkpoint ? checkpoint_data : Dict()))
 
     # parallelize insertions across the cores; keep nb_insertions_per_block same
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
@@ -173,7 +199,8 @@ end
 function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
-                                   ewald_precision::Float64, verbose::Bool)
+                                   ewald_precision::Float64, verbose::Bool;
+                                   write_checkpoint::Bool=false, checkpoint_data::Dict=Dict())
     # copy the molecule in case we need to reset it when bond lengths drift
     bond_length_drift_check_frequency = 5000 # every how many insertions check for drift
     ref_molecule = deepcopy(molecule)
@@ -191,8 +218,13 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
     wtd_energy_sum = PotentialEnergy(0.0, 0.0)
     # to be Σᵢ e^(-βEᵢ)
     boltzmann_factor_sum = 0.0
+    if checkpoint_data != Dict()
+        wtd_energy_sum = checkpoint_data["wtd_energy_sum"]
+        boltzmann_factor_sum = checkpoint_data["boltzmann_factor_sum"]
+    end
 
-    for i = 1:nb_insertions
+    insertion_start = (checkpoint_data != Dict()) ? checkpoint["n_insertion"] + 1 : 1
+    for i = insertion_start:nb_insertions
         # determine uniform random center of mass
         xf = rand(3)
         # translate molecule to the new center of mass
@@ -236,7 +268,18 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                 molecule = deepcopy(ref_molecule)
             end
         end
-    end
+
+        # Write checkpoint
+        if write_checkpoint && checkpoint_data["frequency"] % i == 0
+            checkpoint = Dict("boltzmann_factor_sum" => boltzmann_factor_sum,
+                              "wtd_energy_sum" => wtd_energy_sum,
+                              "n_insertion" => i)
+            if !isdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
+                mkdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
+            end
+            @save checkpoint_data["filename"] checkpoint
+        end #write checkpoint
+    end #insertions
 
     return boltzmann_factor_sum, wtd_energy_sum
 end
