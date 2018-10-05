@@ -113,7 +113,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     # set up function to take a tuple of arguments, the number of insertions to
     # perform and the molecule to move around/rotate. each core needs a different
     # molecule because it will change its attributes in the simulation
-    # x = (nb_insertions, molecule, checkpoint_filenames) for that core
+    # x = (nb_insertions, molecule, block_no) for that core
     henry_loop(x::Tuple{Int, Molecule, Int}) = _conduct_Widom_insertions(framework, x[2],
                                             temperature, ljforcefield, x[1],
                                             charged_system, x[3], ewald_precision, verbose,
@@ -235,16 +235,19 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         if isfile(checkpoint_filename)
             @load checkpoint_filename checkpoint
 
-            printstyled("\tblock ", which_block, " restarted from previous state.\n"; color=:yellow)
-            
             # begin where we left off
             insertion_start = checkpoint["n_insertion"] + 1
             wtd_energy_sum = PotentialEnergy(checkpoint["wtd_energy_sum_vdw"], checkpoint["wtd_energy_sum_coulomb"])
             boltzmann_factor_sum = checkpoint["boltzmann_factor_sum"]
-
+            
             # if this block has already completed its simulation, just return what was stored.
             if insertion_start > nb_insertions
+                printstyled(@sprintf("\tBlock %d: recovered previous, finished simulation results from checkpoint\n",
+                                     which_block), color=:yellow)
                 return boltzmann_factor_sum, wtd_energy_sum
+            else
+                printstyled(@sprintf("\tBlock %d: restarting simulation from checkpoint at %d insertions\n",
+                                     which_block, insertion_start - 1), color=:yellow)
             end
         else
             printstyled("\tblock ", which_block, " started from a fresh state.\n"; color=:yellow)
