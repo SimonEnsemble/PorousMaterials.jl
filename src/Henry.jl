@@ -103,10 +103,8 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     ρ = crystal_density(framework) # kg/m³
 
     # Load checkpoint
-    if load_checkpoint || write_checkpoint
-        checkpoint_filenames = [joinpath(PATH_TO_DATA, "henry_checkpoints", henry_result_savename(
-                                          framework, molecule, temperature, ljforcefield, insertions_per_volume, comment="checkpoint_" * string(b))) for b in 1:N_BLOCKS]
-    end
+    checkpoint_filenames = [joinpath(PATH_TO_DATA, "henry_checkpoints", henry_result_savename(
+                                      framework, molecule, temperature, ljforcefield, insertions_per_volume, comment="checkpoint_" * string(b))) for b in 1:N_BLOCKS]
 
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
     # set up function to take a tuple of arguments, the number of insertions to
