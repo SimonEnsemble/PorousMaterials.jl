@@ -10,12 +10,17 @@ using Test
     co2 = Molecule("CO2")
     ljff = LJForceField("UFF.csv")
     temp = 298.0
-    insertions_per_volume = 750.0/framework.box.Ω
+    insertions_per_volume = 750.0 / framework.box.Ω
     results = Dict()
 
-    results = henry_coefficient(framework, co2, temp, ljff, insertions_per_volume = insertions_per_volume, write_checkpoint=true, checkpoint_frequency=25, load_checkpoint=false)
+    results = henry_coefficient(framework, co2, temp, ljff, 
+                                insertions_per_volume=insertions_per_volume, 
+                                write_checkpoint=true, checkpoint_frequency=25,
+                                load_checkpoint=false)
 
-    results2 = henry_coefficient(framework, co2, temp, ljff, insertions_per_volume = insertions_per_volume, load_checkpoint=true)
+    results2 = henry_coefficient(framework, co2, temp, ljff,
+                                 insertions_per_volume=insertions_per_volume,
+                                 load_checkpoint=true)
 
     @test(isapprox(results["⟨U⟩ (K)"], results2["⟨U⟩ (K)"]))
     @test(isapprox(results["⟨U, vdw⟩ (K)"], results2["⟨U, vdw⟩ (K)"]))
