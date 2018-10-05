@@ -5,7 +5,7 @@ using Test
 
 @testset "Henry Checkpoint Tests" begin
     # Write checkpoint files during a henry simulation. Then load it in and compare the results
-    framework = Framework("FIQCEN_clean.cif")
+    framework = Framework("FIQCEN_clean_min_charges.cif")
     co2 = Molecule("CO2")
     ljff = LJForceField("UFF.csv")
     temp = 298.0
