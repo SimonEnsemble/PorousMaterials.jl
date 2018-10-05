@@ -516,14 +516,15 @@ function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid,
 end
 
 """
-    accessibility_grid, some_pockets_were_blocked = compute_accessibility_grid(framework, 
+    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(framework, 
     probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=10.0, energy_unit=:kJ_mol,
-    verbose=true, write_b4_after_grids=false)
+    verbose=true, write_b4_after_grids=false, block_inaccessible_pockets=true)
 
 Overlay a grid of points about the unit cell. Compute the potential energy of a probe
 molecule at each point. If the potential energy is less than `energy_tol`, the grid point
 is declared as accessible to an adsorbate; otherwise inaccessible.
 
+If `block_pockets` is true:
 Then perform a flood fill algorithm to label disparate (unconnected) segments in the grid.
 
 Then build a graph whose vertices are the unconnected segments in the flood-filled grid and
@@ -535,7 +536,7 @@ to the same segment but in a different unit cell. If any vertex is not involved 
 the segment is declared as inaccessible and all grid points in this segment are re-labeled
 as inaccessible.
 
-Returns `accessibility_grid::Grid{Bool}` and `some_pockets_were_blocked`, the latter representing
+Returns `accessibility_grid::Grid{Bool}` and `nb_segments_blocked`, the latter representing
 whether any inaccessible pockets were found.
 
 # Arguments
@@ -555,8 +556,10 @@ threshold for occupiability and whether molecule can percolate over barrier in c
 before and after flood fill/blocking inaccessible pockets
 """
 function compute_accessibility_grid(framework::Framework, probe::Molecule, forcefield::LJForceField;
-    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), energy_tol::Float64=10.0, energy_units::Symbol=:kJ_mol,
-    verbose::Bool=true, write_b4_after_grids::Bool=true)
+                                    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), 
+                                    energy_tol::Float64=10.0,  energy_units::Symbol=:kJ_mol,
+                                    verbose::Bool=true, write_b4_after_grids::Bool=true, 
+                                    block_inaccessible_pockets::Bool=true)
     if verbose
         printstyled(@sprintf("Computing accessibility grid of %s using %f %s potential energy tol and %s probe...\n",
             framework.name, energy_tol, energy_units, probe.species), color=:green)
@@ -564,7 +567,16 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
     
     # write potential energy grid
     grid = energy_grid(framework, probe, forcefield, n_pts=n_pts, verbose=verbose, 
-        units=energy_units)
+                       units=energy_units)
+
+    if ! block_inaccessible_pockets
+        accessibility_grid = Grid{Bool}(grid.box, grid.n_pts, grid.data .< energy_tol, 
+                                        :accessibility, grid.origin)
+
+        porosity = sum(accessibility_grid.data) / length(accessibility_grid.data)
+
+        return accessibility_grid, 0, porosity
+    end
     
     # flood fill and label segments
     segmented_grid = _segment_grid(grid, energy_tol, verbose)
@@ -607,8 +619,7 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
             probe.species, framework.name, energy_tol)
     end
     
-    # boolean for easy checking if any pockets were blocked.
-    some_pockets_were_blocked = any(segment_classifications .== 0)
+    nb_segments_blocked = sum(segment_classifications .== 0)
 
     # instead of returning grid of int's return a boolean grid for storage efficiency
     accessibility_grid = Grid{Bool}(segmented_grid.box, segmented_grid.n_pts,
@@ -618,7 +629,7 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
     porosity = Dict(:b4_blocking    => sum(grid.data .< energy_tol) / length(grid.data),
                     :after_blocking => sum(accessibility_grid.data) / length(accessibility_grid.data))
 
-    if some_pockets_were_blocked
+    if nb_segments_blocked != 0
         printstyled(@sprintf("\t%d pockets in %s were found to be inaccessible to %s and blocked.\n",
             sum(segment_classifications .== 0), framework.name, probe.species), color=:yellow)
         @printf("\tPorosity of %s b4 pocket blocking is %f\n", framework.name, porosity[:b4_blocking])
@@ -627,7 +638,7 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
             energy_tol, energy_units)
     end
 
-    return accessibility_grid, some_pockets_were_blocked, porosity
+    return accessibility_grid, nb_segments_blocked, porosity
 end
 
 # return ID that is the nearest neighbor.
