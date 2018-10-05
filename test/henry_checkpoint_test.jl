@@ -8,20 +8,16 @@ framework = Framework("SBMOF-1.cif")
 co2 = Molecule("CO2")
 ljff = LJForceField("UFF.csv")
 temp = 298.0
-insertions_per_volume = 1500.0/framework.box.Ω
+insertions_per_volume = 750.0/framework.box.Ω
+ins_per_vol = [150.0, 300.0, 450.0, 600.0, 750.0] ./ framework.box.Ω
 results = Dict()
 
 Random.seed!(1234)
 for i = 1:5
-    if i == 1
-        checkpoint = Dict()
-    else
-        checkpoint = load(joinpath(PorousMaterials.PATH_TO_DATA, "henry_checkpoints", henry_result_savename(framework, co2, temp, ljff, insertions_per_volume * (i - 1), comment="checkpoint")))
-    end
-
-    results = henry_coefficient(framework, co2, temp, ljff, insertions_per_volume = insertions_per_volume * i, write_checkpoint=true, checkpoint_frequency=10, checkpoint=checkpoint)
+    global results
+    results = henry_coefficient(framework, co2, temp, ljff, insertions_per_volume = ins_per_vol[i], write_checkpoint=true, checkpoint_frequency=10, load_checkpoint=true)
     print(results)
 end
 
 Random.seed!(1234)
-results2 = henry_coefficient(framework, co2, temp, ljff, insertions_per_volume = 5 * insertions_per_volume)
+results2 = henry_coefficient(framework, co2, temp, ljff, insertions_per_volume = insertions_per_volume)
