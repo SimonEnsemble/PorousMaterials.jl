@@ -222,16 +222,20 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         if isfile(checkpoint_filename)
             @load checkpoint_filename checkpoint
             printstyled("\tblock ", n_block, " restarted from previous state.\n"; color=:yellow)
-            wtd_energy_sum = checkpoint["wtd_energy_sum"]
+            wtd_energy_sum_vdw = checkpoint["wtd_energy_sum_vdw"]
+            wtd_energy_sum_coulomb = checkpoint["wtd_energy_sum_coulomb"]
+            wtd_energy_sum = PotentialEnergy(wtd_energy_sum_vdw, wtd_energy_sum_coulomb)
             boltzmann_factor_sum = checkpoint["boltzmann_factor_sum"]
             start = checkpoint["n_insertion"] + 1
             if start > nb_insertions
+                @printf("Escape!\n")
                 return boltzmann_factor_sum, wtd_energy_sum
             end
         else
             printstyled("\tblock ", n_block, " started from a fresh state.\n"; color=:yellow)
         end
     end
+    @printf("start = %d\n", start)
 
     for i = start:nb_insertions
         # determine uniform random center of mass
@@ -285,9 +289,10 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         end
 
         # Write checkpoint
-        if write_checkpoint & checkpoint_frequency % i == 0
+        if write_checkpoint && i % checkpoint_frequency == 0
             checkpoint = Dict("boltzmann_factor_sum" => boltzmann_factor_sum,
-                              "wtd_energy_sum" => wtd_energy_sum,
+                              "wtd_energy_sum_vdw" => wtd_energy_sum.vdw,
+                              "wtd_energy_sum_coulomb" => wtd_energy_sum.coulomb,
                               "n_insertion" => i)
             if !isdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
                 mkdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
