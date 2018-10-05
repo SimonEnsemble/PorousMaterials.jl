@@ -1,6 +1,5 @@
 const universal_gas_constant = 8.3144598e-5 # m³-bar/(K-mol)
 const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
-using Distributed
 
 """
    results = henry_coefficient(framework, molecule, temperature, ljforcefield,
@@ -34,7 +33,7 @@ the replication factors in reciprocal space.
 - `write_checkpoint::Bool`: Will periodically save checkpoints to start the job from a previous state.
 - `load_checkpoint::Bool`: Instructs the program to look for a checkpoint file in `data/henry_checkpoints`
 and start the simulation from that point.
-- `checkpoint_frequency::Int`: The frequency at which we will save a checkpoint file. Is only used if `write_checkpoint`=true
+- `checkpoint_frequency::Int`: The frequency at which we will save a checkpoint file. Is only used if `write_checkpoint=true`
 
 """
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
@@ -102,15 +101,19 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     # get xtal density for conversion to per mass units (up here in case fails due to missing atoms in atomicmasses.csv)
     ρ = crystal_density(framework) # kg/m³
 
-    # Load checkpoint
-    checkpoint_filenames = [joinpath(PATH_TO_DATA, "henry_checkpoints", henry_result_savename(
-                                      framework, molecule, temperature, ljforcefield, insertions_per_volume, comment="checkpoint_" * string(b))) for b in 1:N_BLOCKS]
+    # for writing/loading checkpoint files. each block gets its own checkpoint file.
+    checkpoint_filenames = [joinpath(PATH_TO_DATA, "henry_checkpoints", 
+                                     henry_result_savename(framework, molecule, temperature, 
+                                                           ljforcefield, insertions_per_volume, 
+                                                           comment="checkpoint_$b"
+                                                           )
+                                     ) for b in 1:N_BLOCKS]
 
     # conduct Monte Carlo insertions for less than 5 cores using Julia pmap function
     # set up function to take a tuple of arguments, the number of insertions to
     # perform and the molecule to move around/rotate. each core needs a different
     # molecule because it will change its attributes in the simulation
-    # x = (nb_insertions, molecule) for that core
+    # x = (nb_insertions, molecule, checkpoint_filenames) for that core
     henry_loop(x::Tuple{Int, Molecule, Int}) = _conduct_Widom_insertions(framework, x[2],
                                             temperature, ljforcefield, x[1],
                                             charged_system, x[3], ewald_precision, verbose,
@@ -198,7 +201,7 @@ end
 # to facilitate parallelization
 function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
-                                   nb_insertions::Int, charged_system::Bool, n_block::Int,
+                                   nb_insertions::Int, charged_system::Bool, which_block::Int,
                                    ewald_precision::Float64, verbose::Bool,
                                    accessibility_grid::Union{Nothing, Grid{Bool}},
                                    repfactors::Tuple{Int, Int, Int};
@@ -222,25 +225,33 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
     wtd_energy_sum = PotentialEnergy(0.0, 0.0)
     # to be Σᵢ e^(-βEᵢ)
     boltzmann_factor_sum = 0.0
-    start = 1
+    
+    insertion_start = 1 # which insertion number to start on
+    
+    ###
+    #   load in checkpoint if applicable
+    ###
     if load_checkpoint
         if isfile(checkpoint_filename)
             @load checkpoint_filename checkpoint
-            printstyled("\tblock ", n_block, " restarted from previous state.\n"; color=:yellow)
-            wtd_energy_sum_vdw = checkpoint["wtd_energy_sum_vdw"]
-            wtd_energy_sum_coulomb = checkpoint["wtd_energy_sum_coulomb"]
-            wtd_energy_sum = PotentialEnergy(wtd_energy_sum_vdw, wtd_energy_sum_coulomb)
+
+            printstyled("\tblock ", which_block, " restarted from previous state.\n"; color=:yellow)
+            
+            # begin where we left off
+            insertion_start = checkpoint["n_insertion"] + 1
+            wtd_energy_sum = PotentialEnergy(checkpoint["wtd_energy_sum_vdw"], checkpoint["wtd_energy_sum_coulomb"])
             boltzmann_factor_sum = checkpoint["boltzmann_factor_sum"]
-            start = checkpoint["n_insertion"] + 1
-            if start > nb_insertions
+
+            # if this block has already completed its simulation, just return what was stored.
+            if insertion_start > nb_insertions
                 return boltzmann_factor_sum, wtd_energy_sum
             end
         else
-            printstyled("\tblock ", n_block, " started from a fresh state.\n"; color=:yellow)
+            printstyled("\tblock ", which_block, " started from a fresh state.\n"; color=:yellow)
         end
     end
 
-    for i = start:nb_insertions
+    for i = insertion_start:nb_insertions
         # determine uniform random center of mass
         xf = rand(3)
         # translate molecule to the new center of mass
@@ -293,11 +304,11 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
 
         # Write checkpoint
         if write_checkpoint && i % checkpoint_frequency == 0
-            checkpoint = Dict("boltzmann_factor_sum" => boltzmann_factor_sum,
-                              "wtd_energy_sum_vdw" => wtd_energy_sum.vdw,
+            checkpoint = Dict("boltzmann_factor_sum"   => boltzmann_factor_sum,
+                              "wtd_energy_sum_vdw"     => wtd_energy_sum.vdw,
                               "wtd_energy_sum_coulomb" => wtd_energy_sum.coulomb,
-                              "n_insertion" => i)
-            if !isdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
+                              "n_insertion"            => i)
+            if ! isdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
                 mkdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
             end
             @save checkpoint_filename checkpoint
