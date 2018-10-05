@@ -228,14 +228,12 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
             boltzmann_factor_sum = checkpoint["boltzmann_factor_sum"]
             start = checkpoint["n_insertion"] + 1
             if start > nb_insertions
-                @printf("Escape!\n")
                 return boltzmann_factor_sum, wtd_energy_sum
             end
         else
             printstyled("\tblock ", n_block, " started from a fresh state.\n"; color=:yellow)
         end
     end
-    @printf("start = %d\n", start)
 
     for i = start:nb_insertions
         # determine uniform random center of mass
