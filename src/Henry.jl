@@ -33,7 +33,7 @@ the replication factors in reciprocal space.
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
 """
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
-                           ljforcefield::LJForceField; insertions_per_volume::Int=200,
+                           ljforcefield::LJForceField; insertions_per_volume::Union{Int, Float64}=200,
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="",
                            write_checkpoint::Bool=false, load_checkpoint_file::Bool=false,
@@ -97,12 +97,12 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                                 framework, molecule, temperature, ljforcefield, insertions_per_volume, comment="checkpoint"))
     if load_checkpoint_file
         if isfile(checkpoint_filename)
-            @load checkpoint_filename checkpoint_data
+            @load checkpoint_filename checkpoint
             printstyled("\trestarting simulation from previous checkpoint.\n"; color=:yellow)
-            printstyled("\tstarting at insertion number ", checkpoint_data["n_insertion"], "\n"; color=:yellow)
+            printstyled("\tstarting at insertion number ", checkpoint["n_insertion"], "\n"; color=:yellow)
             println("\tCheckpoint filename: ", checkpoint_filename)
-            checkpoint_data["frequency"] = checkpoint_frequency
-            checkpoint_data["filename"] = checkpoint_filename
+            checkpoint["filename"] = checkpoint_filename
+            checkpoint["frequency"] = checkpoint_frequency
         else
             error(@sprintf("checkpoint file %s not found.\n", checkpoint_filename))
         end
@@ -118,7 +118,9 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                                             temperature, ljforcefield, x[1],
                                             charged_system, ewald_precision, verbose,
                                             write_checkpoint=write_checkpoint,
-                                            checkpoint_data = (load_checkpoint ? checkpoint_data : Dict()))
+                                            checkpoint_data=load_checkpoint_file ? checkpoint : Dict(),
+                                            checkpoint_frequency=checkpoint_frequency,
+                                            checkpoint_filename=checkpoint_filename)
 
     # parallelize insertions across the cores; keep nb_insertions_per_block same
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
@@ -200,7 +202,8 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    temperature::Float64, ljforcefield::LJForceField,
                                    nb_insertions::Int, charged_system::Bool,
                                    ewald_precision::Float64, verbose::Bool;
-                                   write_checkpoint::Bool=false, checkpoint_data::Dict=Dict())
+                                   write_checkpoint::Bool=false, checkpoint_data::Dict=Dict(),
+                                   checkpoint_frequency::Int=1000, checkpoint_filename::AbstractString="")
     # copy the molecule in case we need to reset it when bond lengths drift
     bond_length_drift_check_frequency = 5000 # every how many insertions check for drift
     ref_molecule = deepcopy(molecule)
@@ -270,14 +273,14 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
         end
 
         # Write checkpoint
-        if write_checkpoint && checkpoint_data["frequency"] % i == 0
+        if write_checkpoint & checkpoint_frequency % i == 0
             checkpoint = Dict("boltzmann_factor_sum" => boltzmann_factor_sum,
                               "wtd_energy_sum" => wtd_energy_sum,
                               "n_insertion" => i)
             if !isdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
                 mkdir(joinpath(PATH_TO_DATA, "henry_checkpoints"))
             end
-            @save checkpoint_data["filename"] checkpoint
+            @save checkpoint_filename checkpoint
         end #write checkpoint
     end #insertions
 
