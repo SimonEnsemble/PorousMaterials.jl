@@ -31,6 +31,11 @@ average, per unit cell volume (Å³)
 the replication factors in reciprocal space.
 - `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
+- `write_checkpoint::Bool`: Will periodically save checkpoints to start the job from a previous state.
+- `load_checkpoint::Bool`: Instructs the program to look for a checkpoint file in `data/henry_checkpoints`
+and start the simulation from that point.
+- `checkpoint_frequency::Int`: The frequency at which we will save a checkpoint file. Is only used if `write_checkpoint`=true
+
 """
 function henry_coefficient(framework::Framework, molecule_::Molecule, temperature::Float64,
                            ljforcefield::LJForceField; insertions_per_volume::Union{Int, Float64}=200,
