@@ -536,8 +536,8 @@ to the same segment but in a different unit cell. If any vertex is not involved 
 the segment is declared as inaccessible and all grid points in this segment are re-labeled
 as inaccessible.
 
-Returns `accessibility_grid::Grid{Bool}` and `nb_segments_blocked`, the latter representing
-whether any inaccessible pockets were found.
+Returns `accessibility_grid::Grid{Bool}` and `nb_segments_blocked`, the latter the number
+of segments that were blocked because they were determined to be inaccessible.
 
 # Arguments
 * `framework::Framework`: the crystal for which we seek to compute an accessibility grid.
