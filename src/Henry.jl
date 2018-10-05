@@ -3,7 +3,7 @@ const K_to_kJ_mol = 8.3144598 / 1000.0 # kJ/(mol-K)
 using Distributed
 
 """
-   result = henry_coefficient(framework, molecule, temperature, ljforcefield,
+   results = henry_coefficient(framework, molecule, temperature, ljforcefield,
                              nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
                              autosave=true)
 
@@ -37,7 +37,8 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="",
                            write_checkpoint::Bool=false, load_checkpoint_file::Bool=false,
-                           checkpoint_frequency::Int=1000, checkpoint::Dict=Dict())
+                           checkpoint_frequency::Int=1000, checkpoint::Dict=Dict(),
+                           accessibility_grid::Union{Nothing, Grid{Bool}}=nothing)
     time_start = time()
     if verbose
         print("Simulating Henry coefficient of ")
@@ -51,10 +52,18 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
         print(" force field with ")
         printstyled(insertions_per_volume; color=:green)
         println(" insertions per Å³.")
+
+        if accessibility_grid != nothing
+            println("Using provided accessibility grid to block inaccessible pockets")
+            if ! isapprox(accessibility_grid.box, framework.box)
+                error(@sprintf("accessibility grid box does not match box of %s.\n",
+                    framework.name))
+            end
+        end
     end
 
     # determine the number of insertions based on the unit cell volume of the crystal (BEFORE replication)
-    nb_insertions = ceil(Int, insertions_per_volume * framework.box.Ω)
+    nb_insertions = max(N_BLOCKS, ceil(Int, insertions_per_volume * framework.box.Ω))
     if verbose
         @printf("\t%d total # particle insertions\n", nb_insertions)
     end
@@ -120,7 +129,8 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                                             write_checkpoint=write_checkpoint,
                                             checkpoint_data=load_checkpoint_file ? checkpoint : Dict(),
                                             checkpoint_frequency=checkpoint_frequency,
-                                            checkpoint_filename=checkpoint_filename)
+                                            checkpoint_filename=checkpoint_filename,
+                                            accessibility_grid, repfactors)
 
     # parallelize insertions across the cores; keep nb_insertions_per_block same
     res = pmap(henry_loop, [(nb_insertions_per_block, deepcopy(molecule)) for b = 1:N_BLOCKS])
@@ -154,25 +164,25 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     err_energy.vdw = 2.0 * std([average_energies[b].vdw for b = 1:N_BLOCKS]) / sqrt(N_BLOCKS)
     err_energy.coulomb = 2.0 * std([average_energies[b].coulomb for b = 1:N_BLOCKS]) / sqrt(N_BLOCKS)
 
-    result = Dict{String, Float64}()
-    result["henry coefficient [mol/(m³-bar)]"] = mean(henry_coefficients)
-    result["henry coefficient [mmol/(g-bar)]"] = result["henry coefficient [mol/(m³-bar)]"] / ρ
-    result["err henry coefficient [mmol/(g-bar)]"] = err_kh / ρ
-    result["henry coefficient [mol/(kg-Pa)]"] = result["henry coefficient [mmol/(g-bar)]"] / 100000.0
+    results = Dict{String, Float64}()
+    results["henry coefficient [mol/(m³-bar)]"] = mean(henry_coefficients)
+    results["henry coefficient [mmol/(g-bar)]"] = results["henry coefficient [mol/(m³-bar)]"] / ρ
+    results["err henry coefficient [mmol/(g-bar)]"] = err_kh / ρ
+    results["henry coefficient [mol/(kg-Pa)]"] = results["henry coefficient [mmol/(g-bar)]"] / 100000.0
     # note assumes same # insertions per core.
-    result["⟨U, vdw⟩ (K)"] = mean([average_energies[b].vdw for b = 1:N_BLOCKS])
-    result["⟨U, Coulomb⟩ (K)"] = mean([average_energies[b].coulomb for b = 1:N_BLOCKS])
-    result["⟨U⟩ (K)"] = result["⟨U, vdw⟩ (K)"] + result["⟨U, Coulomb⟩ (K)"]
+    results["⟨U, vdw⟩ (K)"] = mean([average_energies[b].vdw for b = 1:N_BLOCKS])
+    results["⟨U, Coulomb⟩ (K)"] = mean([average_energies[b].coulomb for b = 1:N_BLOCKS])
+    results["⟨U⟩ (K)"] = results["⟨U, vdw⟩ (K)"] + results["⟨U, Coulomb⟩ (K)"]
 
-    result["⟨U⟩ (kJ/mol)"] = result["⟨U⟩ (K)"] * K_to_kJ_mol
-    result["⟨U, vdw⟩ (kJ/mol)"] = result["⟨U, vdw⟩ (K)"] * K_to_kJ_mol
-    result["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * K_to_kJ_mol
-    result["⟨U, Coulomb⟩ (kJ/mol)"] = result["⟨U, Coulomb⟩ (K)"] * K_to_kJ_mol
-    result["err ⟨U, Coulomb⟩ (kJ/mol)"] = err_energy.coulomb * K_to_kJ_mol
-    result["Qst (kJ/mol)"] = -result["⟨U⟩ (kJ/mol)"] + temperature * K_to_kJ_mol
-    result["err Qst (kJ/mol)"] = sum(err_energy) * K_to_kJ_mol
+    results["⟨U⟩ (kJ/mol)"] = results["⟨U⟩ (K)"] * K_to_kJ_mol
+    results["⟨U, vdw⟩ (kJ/mol)"] = results["⟨U, vdw⟩ (K)"] * K_to_kJ_mol
+    results["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * K_to_kJ_mol
+    results["⟨U, Coulomb⟩ (kJ/mol)"] = results["⟨U, Coulomb⟩ (K)"] * K_to_kJ_mol
+    results["err ⟨U, Coulomb⟩ (kJ/mol)"] = err_energy.coulomb * K_to_kJ_mol
+    results["Qst (kJ/mol)"] = -results["⟨U⟩ (kJ/mol)"] + temperature * K_to_kJ_mol
+    results["err Qst (kJ/mol)"] = sum(err_energy) * K_to_kJ_mol
 
-    result["elapsed time (min)"] = elapsed_time / 60
+    results["elapsed time (min)"] = elapsed_time / 60
 
     if autosave
         if ! isdir(joinpath(PATH_TO_DATA, "henry_sims"))
@@ -180,20 +190,20 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
         end
         savename = joinpath(PATH_TO_DATA, "henry_sims", henry_result_savename(framework, molecule, temperature,
                                ljforcefield, insertions_per_volume, comment=filename_comment))
-        @save savename result
+        @save savename results
         if verbose
             println("\tResults saved in: ", savename)
         end
     end
 
     if verbose
-        println("\tElapsed time (min): ", result["elapsed time (min)"])
+        println("\tElapsed time (min): ", results["elapsed time (min)"])
         printstyled("\t----- final results ----\n"; color=:green)
         for key in ["henry coefficient [mmol/(g-bar)]", "⟨U, vdw⟩ (kJ/mol)", "⟨U, Coulomb⟩ (kJ/mol)", "Qst (kJ/mol)"]
-            @printf("\t%s = %f +/- %f\n", key, result[key], result["err " * key])
+            @printf("\t%s = %f +/- %f\n", key, results[key], results["err " * key])
         end
     end
-    return result
+    return results
 end
 
 # assumed framework is already replicated sufficiently for short-range interactions
@@ -203,7 +213,9 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    nb_insertions::Int, charged_system::Bool,
                                    ewald_precision::Float64, verbose::Bool;
                                    write_checkpoint::Bool=false, checkpoint_data::Dict=Dict(),
-                                   checkpoint_frequency::Int=1000, checkpoint_filename::AbstractString="")
+                                   checkpoint_frequency::Int=1000, checkpoint_filename::AbstractString="",
+                                   accessibility_grid::Union{Nothing, Grid{Bool}},
+                                   repfactors::Tuple{Int, Int, Int})
     # copy the molecule in case we need to reset it when bond lengths drift
     bond_length_drift_check_frequency = 5000 # every how many insertions check for drift
     ref_molecule = deepcopy(molecule)
@@ -239,9 +251,15 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
 
         # calculate potential energy of molecule at that position and orientation
         energy = PotentialEnergy(0.0, 0.0)
-        energy.vdw = vdw_energy(framework, molecule, ljforcefield)
-        if charged_system
-            energy.coulomb = total(electrostatic_potential_energy(framework, molecule, eparams, eikr))
+        # actually compute if accessibilty grid not available; or if is avail and accessible
+        if (accessibility_grid == nothing) || (accessible(accessibility_grid, xf, repfactors))
+            energy.vdw = vdw_energy(framework, molecule, ljforcefield)
+            if charged_system
+                energy.coulomb = total(electrostatic_potential_energy(framework, molecule, eparams, eikr))
+            end
+        else
+            energy.vdw = Inf
+            energy.coulomb = Inf
         end
 
         # calculate Boltzmann factor e^(-βE)

@@ -286,6 +286,10 @@ function write_xyz(framework::Framework, filename::AbstractString;
 
     write_xyz(atoms, x, filename, comment=comment)
 end
+write_xyz(framework::Framework; comment::AbstractString="", center::Bool=false) = write_xyz(
+    framework, 
+    replace(replace(framework.name, ".cif" => ""), ".cssr" => "") * ".xyz",
+    comment=comment, center=center)
 
 """
     is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
