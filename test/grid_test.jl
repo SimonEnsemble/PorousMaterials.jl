@@ -51,10 +51,13 @@ using Random
         @test isapprox(grid.data[:, 1, :], grid.data[:, end, :], atol=1e-7)
         @test isapprox(grid.data[:, :, 1], grid.data[:, :, end], atol=1e-7)
 
-        accessibility_grid, some_pockets_were_blocked, porosity = compute_accessibility_grid(framework, 
+        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(framework, 
             molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false, 
             write_b4_after_grids=true)
-        @test some_pockets_were_blocked
+        @test nb_segments_blocked > 0
+        if zeolite == "LTA"
+            @test nb_segments_blocked == 8
+        end
         @test porosity[:b4_blocking] > porosity[:after_blocking]
 
         @test isapprox(framework.box, accessibility_grid.box)
@@ -83,24 +86,32 @@ using Random
             write_xyz([:CH4 for i = 1:size(x)[2]], x, xyzfilename)
             println("See ", xyzfilename)
         end
+        
+        # w./o blocking (nb = no blocking)
+        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(framework, 
+            molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false, 
+            write_b4_after_grids=false, block_inaccessible_pockets=false)
+        @test nb_segments_blocked_nb == 0
+        @test porosity_nb > porosity[:after_blocking]
+        @test isapprox(porosity_nb, porosity[:b4_blocking])
     end
 
     # test accessibility interpolator when there are replications
     framework = Framework("LTA.cif")
     molecule = Molecule("CH4")
     forcefield = LJForceField("UFF.csv")
-    accessibility_grid, some_pockets_were_blocked, porosity = compute_accessibility_grid(framework, 
+    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(framework, 
         molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false, 
         write_b4_after_grids=true)
 
     # replicate framework and build accessibility grid that includes the other accessibility grid in a corner
     repfactors = (2, 3, 1)
     framework = replicate(framework, repfactors)
-    rep_accessibility_grid, rep_some_pockets_were_blocked, porosity = compute_accessibility_grid(framework, 
+    rep_accessibility_grid, rep_nb_segments_blocked, porosity = compute_accessibility_grid(framework, 
         molecule, forcefield, n_pts=(20 * 2 - 1, 20 * 3 - 2, 20), energy_tol=0.0, verbose=false, 
         write_b4_after_grids=true)
     @test all(accessibility_grid.data .== rep_accessibility_grid.data[1:20, 1:20, 1:20])
-    @test rep_some_pockets_were_blocked
+    @test rep_nb_segments_blocked > 0
     same_accessibility_repfactors = true
     for i = 1:10000
         xf = rand(3) # in (2, 3, 1) box
@@ -109,5 +120,27 @@ using Random
         end
     end
     @test same_accessibility_repfactors
+
+    # SBMOF-1, CAXVILL_clean hv no pockets blocked. test accessibility grid w./o pocket blocking
+    molecule = Molecule("CH4")
+    forcefield = LJForceField("UFF.csv")
+    for framework in [Framework("SBMOF-1.cif"), Framework("CAXVII_clean.cif")]
+        n_pts = required_n_pts(framework.box, 1.0)
+        
+        # w./ blocking
+        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(framework, 
+            molecule, forcefield, n_pts=n_pts, energy_tol=5.0, verbose=false, 
+            write_b4_after_grids=true, energy_units=:kJ_mol)
+        @test nb_segments_blocked == 0
+
+        # w./o blocking (nb = no blocking)
+        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(framework, 
+            molecule, forcefield, n_pts=n_pts, energy_tol=5.0, verbose=false, energy_units=:kJ_mol,
+            write_b4_after_grids=true, block_inaccessible_pockets=false)
+
+        @test isapprox(porosity_nb, porosity[:b4_blocking])
+        @test nb_segments_blocked_nb == 0
+        @test isapprox(accessibility_grid, accessibility_grid_nb)
+    end
 end
 end
