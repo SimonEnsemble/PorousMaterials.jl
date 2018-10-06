@@ -41,7 +41,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                            verbose::Bool=true, ewald_precision::Float64=1e-6,
                            autosave::Bool=true, filename_comment::AbstractString="",
                            write_checkpoint::Bool=false, load_checkpoint::Bool=false,
-                           checkpoint_frequency::Int=1000,
+                           checkpoint_frequency::Int=10000,
                            accessibility_grid::Union{Nothing, Grid{Bool}}=nothing)
     time_start = time()
     if verbose
@@ -205,7 +205,7 @@ function _conduct_Widom_insertions(framework::Framework, molecule::Molecule,
                                    ewald_precision::Float64, verbose::Bool,
                                    accessibility_grid::Union{Nothing, Grid{Bool}},
                                    repfactors::Tuple{Int, Int, Int};
-                                   write_checkpoint::Bool=false, checkpoint_frequency::Int=1000, 
+                                   write_checkpoint::Bool=false, checkpoint_frequency::Int=10000, 
                                    load_checkpoint::Bool=false, checkpoint_filename::AbstractString="")
                                    
     # copy the molecule in case we need to reset it when bond lengths drift
