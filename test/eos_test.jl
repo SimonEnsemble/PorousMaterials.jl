@@ -28,7 +28,7 @@ using Random
     @test isapprox(props["molar volume (L/mol)"], 0.401475 , atol=1e-4)
     
     # should match ideal gas in limit
-    ig = VDWFluid(0.0, 0.0, :ideal_gas)
+    ig = VDWFluid(:ideal_gas, 0.0, 0.0)
     ig_props = calculate_properties(ig, 298.0, 1.0, verbose=false)
     @test isapprox(ig_props["fugacity coefficient"], 1.0)
 end
