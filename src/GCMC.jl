@@ -213,7 +213,7 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
 
     # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
-    return results[[find(x -> x==i, ids)[1] for i = 1:length(ids)]]
+    return results[[findall(x -> x==i, ids)[1] for i = 1:length(ids)]]
 end
 
 """

@@ -151,7 +151,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
 - `framework::Framework`: A framework containing the crystal structure information
 """
 function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
-    if ! contains(filename, ".vtk")
+    if ! occursin(".vtk", filename)
         filename *= ".vtk"
     end
     vtk_file = open(filename, "w")

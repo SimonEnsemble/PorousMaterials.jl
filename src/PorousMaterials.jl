@@ -12,6 +12,8 @@ using JLD2
 using Statistics
 using Printf
 using LinearAlgebra
+using LightGraphs
+using Distributed
 import Base.push!
 
 
@@ -133,7 +135,8 @@ export
 
     # Grid.jl
     apply_periodic_boundary_condition!,
-    Grid, write_cube, read_cube, energy_grid,
+    Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
+    required_n_pts,
 
     # EOS.jl
     calculate_properties, PengRobinsonGas,
