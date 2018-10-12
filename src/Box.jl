@@ -107,6 +107,12 @@ function Box(f_to_c::Array{Float64, 2})
     return Box(a, b, c, α, β, γ, Ω, f_to_c, c_to_f, r)
 end
 
+"""
+    unit_cube = UnitCube()
+
+This function generates a unit cube, each side is 1.0 Angstrom long, and all the
+corners are right angles.
+"""
 UnitCube() = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
 
 """
@@ -130,7 +136,7 @@ function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
 end
 
 """
-    write_vtk(box, "box.vtk"; verbose=true)
+    write_vtk(box, filename; verbose=true)
     write_vtk(framework)
 
 Write a `Box` to a .vtk file for visualizing e.g. the unit cell boundary of a crystal.
@@ -142,6 +148,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
 # Arguments
 - `box::Box`: a Bravais lattice
 - `filename::AbstractString`: filename of the .vtk file output (absolute path)
+- `framework::Framework`: A framework containing the crystal structure information
 """
 function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
     if ! occursin(".vtk", filename)

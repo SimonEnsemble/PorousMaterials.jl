@@ -3,8 +3,8 @@ Data structure for a molecule/adsorbate.
 
 # Attributes
 - `species::Symbol`: Species of molecule, e.g. `:CO2`
-- `atoms::Array{LJSphere, 1}`: array of Lennard-Jones spheres comprising the molecule
-- `charges::Array{PtCharge, 1}`: array of point charges comprising the molecule
+- `atoms::Atoms`: array of Lennard-Jones spheres comprising the molecule
+- `charges::Charges`: array of point charges comprising the molecule
 - `xf_com::Array{Float64, 1}`: center of mass of the molecule in fractional coordinates
 """
 struct Molecule
@@ -115,6 +115,10 @@ end
 After a molecule is freshly constructed, its fractional coords are assumed to correspond
 to a unit cell box that is a unit cube. This function adjusts the fractional coordinates
 of the molecule to be consistent with a different box.
+
+# Arguments
+- `molecule::Molecule`: The molecule which will have its' coordinates set to fractional coordinates
+- `box::Box`: The box which will serve as a reference for the fractional coordinates
 """
 function set_fractional_coords!(molecule::Molecule, box::Box)
     molecule.atoms.xf[:] = box.c_to_f * molecule.atoms.xf
@@ -128,6 +132,10 @@ end
 
 Change fractional coordinates of a molecule in the context of a given box to Cartesian,
 i.e. to correspond to fractional coords in a unit cube box.
+
+# Arguments
+- `molecule::Molecule`: The molecule which will have its' coordinates set to fractional coordinates of a unit cube
+- `box::Box`: The box which will serve as a reference for the fractional coordinates
 """
 function set_fractional_coords_to_unit_cube!(molecule::Molecule, box::Box)
     for i = 1:molecule.atoms.n_atoms
@@ -146,6 +154,10 @@ end
 
 Translate a molecule by vector `dxf` in fractional coordinate space or by vector `dx` in
 Cartesian coordinate space. For the latter, a unit cell box is required for context.
+
+# Arguments
+- `molecule::Molecule`: The molecule which will be translated by `dxf`
+- `dxf::Array{Float64, 1}`: A vector containing the translation in each dimension
 """
 function translate_by!(molecule::Molecule, dxf::Array{Float64, 1})
     # translate both atoms and charges
@@ -169,6 +181,10 @@ end
 Translate a molecule a molecule to point `xf` in fractional coordinate space or to `x` in
 Cartesian coordinate space. For the latter, a unit cell box is required for context. The
 molecule is translated such that its center of mass is at `xf`/x`.
+
+# Arguments
+- `molecule::Molecule`: The molecule which will be translated to `xf`
+- `xf::Array{Float64, 1}`: A vector containing the coordinates of the final destination of the molecule
 """
 function translate_to!(molecule::Molecule, xf::Array{Float64, 1})
     dxf = xf - molecule.xf_com
@@ -244,6 +260,10 @@ end
 
 Conduct a random rotation of the molecule about its center of mass.
 The box is needed because the molecule contains only its fractional coordinates.
+
+# Arguments
+- `molecule::Molecule`: The molecule which will be subject to a random rotation
+- `box::Box`: The molecule only contains fractional coordinates, so the box is needed for a correct rotation
 """
 function rotate!(molecule::Molecule, box::Box)
     # generate a random rotation matrix
@@ -264,13 +284,12 @@ function rotate!(molecule::Molecule, box::Box)
 end
 
 """
-    outside_box = completely_outside_box(molecule)
+    outside_box = outside_box(molecule)
 
 Checks if a Molecule object is within the boundaries of a Box unitcell.
 
 # Arguments
 - `molecule::Molecule`: The molecule object
-- `box::Box`: The unit cell object
 
 # Returns
 - `outside_box::Bool`: True if the center of mass of `molecule` is outisde of `box`. False otherwise
@@ -318,6 +337,18 @@ Sum up point charges on a molecule.
 """
 total_charge(molecule::Molecule) = (molecule.charges.n_charges == 0) ? 0.0 : sum(molecule.charges.q)
 
+"""
+    charged_flag = charged(molecule, verbose=false)
+
+Determine if a molecule has point charges
+
+# Arguments
+- `molecule::Molecule`: The molecule which will be checked for charges
+- `verbose::Bool`: Will print result if `true`
+
+# Returns
+- `charged_flag::Bool`: `true` if molecule is charged, `false` otherwise
+"""
 function charged(molecule::Molecule; verbose::Bool=false)
     charged_flag = molecule.charges.n_charges > 0
     if verbose
@@ -327,10 +358,17 @@ function charged(molecule::Molecule; verbose::Bool=false)
 end
 
 """
-    bl = pairwise_atom_distances(molecule, box) # n_atoms by n_atoms symmetric matrix
+    bond_lenghts = pairwise_atom_distances(molecule, box) 
 
-Loop over all pairs of `LJSphere`'s in `molecule.atoms`. Return a matrix whose `(i, j)`
+Loop over all pairs of `Atoms`'s in `molecule.atoms`. Return a matrix whose `(i, j)`
 element is the distance between atom `i` and atom `j` in the molecule.
+
+# Arguments
+- `molecule::Molecule`: The molecules containing the atoms we wish to calculate the distances between
+- `box::Box`: The box we use to get the cartesian coordinates rather than the fractional coordinates stored in the Molecule object
+
+# Returns
+- `bond_lenghts::Array{Float64, 2}`: A `n_atoms` by `n_atoms` symmetric matrix containing the bond lengths between atoms in `molecule`
 """
 function pairwise_atom_distances(molecule::Molecule, box::Box)
     nb_atoms = molecule.atoms.n_atoms
@@ -346,10 +384,17 @@ function pairwise_atom_distances(molecule::Molecule, box::Box)
 end
 
 """
-    bl = pairwise_charge_distances(molecule, box) # n_atoms by n_atoms symmetric matrix
+    charge_bond_lengths = pairwise_charge_distances(molecule, box)
 
-Loop over all pairs of `PtCharge`'s in `molecule.charges`. Return a matrix whose `(i, j)`
-element is the distance between pt charge `i` and pt charge `j` in the molecule.
+Loop over all pairs of `Charges`'s in `molecule.charges`. Return a matrix whose `(i, j)`
+element is the distance between point charge `i` and point charge `j` in the molecule.
+
+# Arguments
+- `molecule::Molecule`: The molecules containing the atoms we wish to calculate the distances between
+- `box::Box`: The box we use to get the cartesian coordinates rather than the fractional coordinates stored in the Molecule object
+
+# Returns
+- `charge_bond_lenghts::Array{Float64, 2}`: A `n_charges` by `n_charges` symmetric matrix containing the point charge bond lengths between atoms in `molecule`
 """
 function pairwise_charge_distances(molecule::Molecule, box::Box)
     nb_charges = molecule.charges.n_charges
@@ -365,12 +410,22 @@ function pairwise_charge_distances(molecule::Molecule, box::Box)
 end
 
 """
-    bond_length_drift(molecule, reference_molecule, box, atol=1e-14, throw_warning=true)
+    drift = bond_length_drift(molecule, reference_molecule, box, atol=1e-14, throw_warning=true)
 
 Compute pairwise atom & charge distances of `molecule` and compare to those in a reference 
 molecule to determine if the pairwise atom & charge distances differ within a tolerance 
 `atol`. This is useful for checking for drift in the course of the simulation, during 
 which rotations and translations are performed.
+
+# Arguments
+- `molecule::Molecule`: The molecule which is subject to bond length drift check
+- `reference_molecule::Molecule`: The molecule we will compare `molecule` with
+- `box::Box`: The box structure we use to transform to cartesian coordinates
+- `atol::Float64`: The tolerance for the bond length drift check
+- `throw_warning::Bool`: Will throw warning if `true`
+
+# Returns
+- `drift::Bool`: If `true` we have observed a bond length drift. No bond length drift otherwise
 """
 function bond_length_drift(molecule::Molecule, ref_molecule::Molecule, box::Box;
     atol::Float64=1e-14, throw_warning::Bool=true)

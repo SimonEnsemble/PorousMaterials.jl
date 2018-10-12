@@ -1,0 +1,56 @@
+#site_name:        PorousMaterials.jl
+site_name:        ""
+repo_url:         https://github.com/SimonEnsemble/PorousMaterials.jl
+site_description: Documentation for the julia package PorousMaterials.jl
+site_author:      SimonEnsemble
+
+theme: windmill
+
+extra_css:
+  - assets/Documenter.css
+
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML
+  - assets/mathjaxhelper.js
+  - mathjax-config.js
+
+markdown_extensions:
+  - pymdownx.arithmatex
+  - extra
+  - tables
+  - fenced_code
+  - toc:
+      permalink: '#'
+  #- toc:
+  #    baselevel: 1
+  #- mdx_math
+extra:
+  logo: assets/PMlogo.png
+
+
+docs_dir: 'build'
+
+nav:
+  - PorousMaterials: index.md
+  - Loading Data: guides/input_files.md
+  - Manual:
+    - Matter:
+      - Matter: manual/matter/about.md
+      - Matter Documentation: manual/matter/docs.md
+    - Boxes, Crystals, and Grids:
+      - Boxes, Crystals, and Grids: manual/boxes_crystals_grids/about.md
+      - Boxes, Crystals, and Grids Documentation: manual/boxes_crystals_grids/docs.md
+    - Molecules:
+      - Molecules: manual/molecules/about.md
+      - Molecules Documentation: manual/molecules/docs.md
+    - Atomic Interactions:
+      - Atomic Interactions: manual/atomic_interactions/about.md
+      - Atomic Interactions Documentation: manual/atomic_interactions/docs.md
+    - Molecular Simulations:
+      - Molecular Simulations: manual/mof_simulations/about.md
+      - Molecular Simulations Documentation: manual/mof_simulations/docs.md
+    - Other:
+      - Other: manual/other/about.md
+      - Other Documentation: manual/other/docs.md
+  - FAQ: guides/faq.md
+  - Help Wanted: guides/help_wanted.md

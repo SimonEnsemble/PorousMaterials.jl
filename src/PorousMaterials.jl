@@ -31,15 +31,15 @@ end
     set_path_to_data("user/path/to/data")
     set_path_to_data()
 
-Sets PorousMaterials PATH_TO_DATA variable which dictates where crystal, forcefield,
-and molecule files are loaded from. This function allows the user to set PATH_TO_DATA
+Sets PorousMaterials `PATH_TO_DATA` variable which dictates where crystal, forcefield,
+and molecule files are loaded from. This function allows the user to set `PATH_TO_DATA`
 manually to any directory or to a "/data/" folder within their current directory.
-This function WILL change the PATH_TO_DATA regardless of whether or not the path
+This function WILL change the `PATH_TO_DATA` regardless of whether or not the path
 exists, but will give a warning alerting the user that PorousMaterials cannot load
 files from the chosen path.
 
 # Arguments
-- `new_path_to_data::String`: The desired PATH_TO_DATA in string form.
+- `new_path_to_data::String`: The desired `PATH_TO_DATA` in string form.
 """
 function set_path_to_data(new_path_to_data::String)
     global PATH_TO_DATA = new_path_to_data
@@ -60,7 +60,7 @@ end
 """
     set_tutorial_mode()
 
-Places PorousMaterials in "Tutorial Mode". It changes the PATH_TO_DATA variable to
+Places PorousMaterials in "Tutorial Mode". It changes the `PATH_TO_DATA` variable to
 the directory where the PorousMaterials test data is stored. It can be used to
 follow examples shown in the README. It displays a warning so that the user knows
 They are no longer using their own data.
@@ -108,7 +108,7 @@ export
     read_xyz, read_cpk_colors, read_atomic_radii, write_xyz,
 
     # Crystal.jl
-    Framework, read_crystal_structure_file, remove_overlapping_atoms,
+    Framework, read_crystal_structure_file, remove_overlapping_atoms_and_charges,
     strip_numbers_from_atom_labels!, chemical_formula, molecular_weight, crystal_density,
     construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges,
 
@@ -127,7 +127,8 @@ export
     lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
     # ElectrostaticEnergetics.jl
-    electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts, setup_Ewald_sum, total, Eikr,
+    electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
+    setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
 
     # MChelpers.jl
     insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,

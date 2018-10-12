@@ -15,10 +15,13 @@ const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion
 Data structure to keep track of statistics collected during a grand-canonical Monte Carlo
 simulation.
 
-* `n` is the number of molecules in the simulation box.
-* `V` is the potential energy.
-* `g` refers to guest (the adsorbate molecule).
-* `h` refers to host (the crystalline framework).
+# Attributes
+- `n_samples::Int`: Number of samples in the MC simulation
+- `n::Int`: Number of molecules in the simulation box.
+- `n²::Int`: Number of molecules in the simulation box squared.
+- `U::SystemPotentialEnergy`: Potential energy of the system.
+- `U²::SystemPotentialEnergy`: Potential energy of the system squared.
+- `Un::Float64`: Potential energy of the system times the number of molecules.
 """
 mutable struct GCMCstats
     n_samples::Int
@@ -53,6 +56,9 @@ Compute average and standard error of the number of molecules and potential ener
 array of `GCMCstats`, each corresponding to statitics from an independent block/bin during
 the simulation. The average from each bin is treated as an independent sample and used to
 estimate the error in the estimate as a confidence interval.
+
+# Arguments
+- `gcmc_stats::Array{GCMCstats, 1}`: An array of the GCMC stats used in the MC simulation
 """
 function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     # ⟨N⟩, ⟨U⟩
@@ -118,13 +124,12 @@ end
 
 """
     results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures,
-                                  ljforcefield; n_sample_cycles=100000,
-                                  n_burn_cycles=10000, sample_frequency=10,
-                                  verbose=true, molecules=Molecule[],
-                                  ewald_precision=1e-6, eos=:ideal,
+                                  ljforcefield; n_sample_cycles=5000,
+                                  n_burn_cycles=5000, sample_frequency=1,
+                                  verbose=true, ewald_precision=1e-6, eos=:ideal,
                                   load_checkpoint_file=false, checkpoint=Dict(),
                                   write_checkpoints=false, checkpoint_frequency=50,
-                                  filename_comment="")
+                                  filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
@@ -138,7 +143,7 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 """
 function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
     temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
-    n_burn_cycles::Int=1000, n_sample_cycles::Int=5000, sample_frequency::Int=1,
+    n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, sample_frequency::Int=1,
     verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false,
@@ -166,12 +171,12 @@ end
 
 """
     results = adsorption_isotherm(framework, molecule, temperature, pressures,
-                                  ljforcefield; n_sample_cycles=100000,
-                                  n_burn_cycles=10000, sample_frequency=25,
-                                  verbose=false, molecules=Molecule[],
-                                  ewald_precision=1e-6, eos=:ideal, load_checkpoint_file=false,
-                                  checkpoint=Dict(), write_checkpoints=false, checkpoint_frequency=50,
-                                  filename_comment="")
+                                  ljforcefield; n_sample_cycles=5000,
+                                  n_burn_cycles=5000, sample_frequency=1,
+                                  verbose=true, ewald_precision=1e-6, eos=:ideal, 
+                                  load_checkpoint_file=false, checkpoint=Dict(), 
+                                  write_checkpoints=false, checkpoint_frequency=50,
+                                  filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
@@ -214,9 +219,10 @@ end
 """
     results, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
                                          ljforcefield; n_sample_cycles=5000,
-                                         n_burn_cycles=5000, sample_frequency=5,
+                                         n_burn_cycles=5000, sample_frequency=1,
                                          verbose=false, molecules=Molecule[],
-                                         eos=:ideal, load_checkpoint_file=false,
+                                         eos=:ideal, ewald_precision=1e-6,
+                                         load_checkpoint_file=false,
                                          show_progress_bar=false, checkpoint=Dict(),
                                          write_checkpoints=false, checkpoint_frequency=100,
                                          filename_comment="")
@@ -231,11 +237,11 @@ translation.
 
 # Arguments
 - `framework::Framework`: the porous crystal in which we seek to simulate adsorption
+- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
 - `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
     in the porous material. units: Kelvin (K)
 - `pressure::Float64`: pressure of bulk gas phase in equilibrium with adsorbed phase in the
     porous material. units: bar
-- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
     the adsorption
 - `ljforcefield::LJForceField`: the molecular model used to describe the
     energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
@@ -247,6 +253,7 @@ translation.
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework.
 Note that we assume these coordinates are Cartesian, i.e. corresponding to a unit box.
+- `ewald_precision::Float64`: The desired precision for the long range Ewald summation
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure. Default
 is ideal gas, where fugacity = pressure.
 - `load_checkpoint_file::Bool`: Will find a checkpoint file corresponding to the [`gcmc_result_savename`](@ref) if true.
@@ -258,8 +265,8 @@ is ideal gas, where fugacity = pressure.
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
-    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=25000,
-    n_sample_cycles::Int=25000, sample_frequency::Int=1, verbose::Bool=true,
+    pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=5000,
+    n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6,
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
@@ -634,10 +641,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # out of paranoia, assert molecules not outside box and bond lengths preserved
     for m in molecules
         @assert(! outside_box(m), "molecule outside box!")
-        @assert(isapprox(pairwise_atom_distances(m, framework.box), 
+        @assert(isapprox(pairwise_atom_distances(m, framework.box),
                          pairwise_atom_distances(molecule_, UnitCube()), atol=1e-12),
                          "drift in atom bond lenghts!")
-        @assert(isapprox(pairwise_charge_distances(m, framework.box), 
+        @assert(isapprox(pairwise_charge_distances(m, framework.box),
                          pairwise_charge_distances(molecule_, UnitCube()), atol=1e-12),
                          "drift in charge-charge lenghts!")
     end
@@ -742,7 +749,6 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         save_results_filename = joinpath(PATH_TO_DATA, "gcmc_sims", gcmc_result_savename(framework.name,
             molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, comment=filename_comment))
 
-        #JLD.save(save_results_filename, "results", results)
         @save save_results_filename results
         if verbose
             println("\tResults dictionary saved in ", save_results_filename)
@@ -753,7 +759,24 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 end # gcmc_simulation
 
 """
-Determine the name of files saved during the GCMC simulation, be molecule positions or results.
+    file_save_name = gcmc_result_savename(framework_name, molecule_species,
+                                        ljforcefield_name, temperature, pressure,
+                                        n_burn_cycles, n_sample_cycles; comment="")
+
+Determine the name of files saved during the GCMC simulation, be molecule
+positions or results. It uses many pieces of information from the simulation
+to ensure the file name accurately describes what it holds.
+
+# Arguments
+- `framework_name::AbstractString`: The porous crystal being tested
+- `molecule_species::Symbol`: The molecule being tested inside the porous crystal
+- `ljforcefield_name::AbstractString`: The molecular model being used in this
+    simulation to describe intermolecular Van der Waals interactions
+- `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
+- `pressure::Float64`: The pressure used in the simulation units: bar
+- `n_burn_cycles::Int`: The number of burn cycles used in this simulation
+- `n_sample_cycles::Int`: The number of sample cycles used in this simulation
+- `comment::AbstractString`: An optional comment that will be appended to the end of the filename
 """
 function gcmc_result_savename(framework_name::AbstractString,
                             molecule_species::Symbol,

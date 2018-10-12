@@ -63,7 +63,7 @@ given temperature and pressure.
 - `gas::PengRobinsonGas`: Peng-Robinson gas data structure
 - `T::Float64`: Temperature (units: Kelvin)
 - `P::Float64`: Pressure (units: bar)
-- `verbose::Bool`: print results
+- `verbose::Bool`: will print results if `true`
 
 # Returns
 - `prop_dict::Dict`: Dictionary of Peng-Robinson gas properties
@@ -99,6 +99,9 @@ Reads in critical temperature, critical pressure, and acentric factor of the `ga
 from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "PengRobinsonGasProps.csv")`
 and returns a complete `PengRobinsonGas` data structure.
 **NOTE: Do not delete the last three comment lines in PengRobinsonGasProps.csv
+
+# Arguments
+- `gas::Symbol`: The gas molecule you wish to construct a PengRobinsonGas struct for
 
 # Returns
 - `PengRobinsonGas::struct`: Data structure containing Peng-Robinson gas parameters.
