@@ -44,6 +44,6 @@ using Documenter, PorousMaterials
         target = "build",
         julia = "1.0",
         osname = "linux",
-        deps = nothing, #Deps.pip("mkdocs", "mkdocs-windmill"), # These are dependencies for the site, not the package
+        deps = Deps.pip3("mkdocs", "mkdocs-windmill", "pymdown-extensions"), # These are dependencies for the site, not the package
         make = nothing
     )
