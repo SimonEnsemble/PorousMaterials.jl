@@ -1,0 +1,6 @@
+- install mkdocs via pip
+- install windmill theme via pip3 install mkdocs-windmill
+- run `julia make.jl` in `docs`
+- install markdown extension for math `pip3 install pymdown-extensions`
+- in terminal `mkdocs build` from `docs` directory
+- `mkdocs serve` then go to address shown in browser.

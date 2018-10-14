@@ -6,7 +6,7 @@ const δ = 2.0 # Å
 const N_BLOCKS = 5
 
 """
-    insert_molecule!(molecules, simulation_box, template)
+    insert_molecule!(molecules, box, template)
 
 Inserts an additional adsorbate molecule into the simulation box using the template provided.
 The center of mass of the molecule is chosen at a uniform random position in the simulation box.
@@ -14,7 +14,7 @@ A uniformly random orientation of the molecule is chosen by rotating about the c
 
 # Arguments
 - `molecules::Array{Molecule, 1}`: An array of Molecule objects
-- `simulation_box::Box`: The simulation box
+- `box::Box`: The simulation box
 - `template::Molecule`: A template molecule used as reference when inserting molecules
 """
 function insert_molecule!(molecules::Array{Molecule, 1}, box::Box, template::Molecule)
@@ -56,7 +56,6 @@ and point charges) so that it is inside of the `Box`.
 
 # Arguments
 - `molecule::Molecule`: A molecule we're interested in seeing if its' center of mass falls within `simulation_box`
-- `simulation_box::Box`: The simulation box
 """
 function apply_periodic_boundary_condition!(molecule::Molecule)
     outside_box = false # do nothing if not outside the box
@@ -83,7 +82,7 @@ function apply_periodic_boundary_condition!(molecule::Molecule)
 end
 
 """
-    translate_molecule!(molecule, simulation_box)
+    translate_molecule!(molecule, box)
 
 Perturbs the Cartesian coordinates of a molecule about its center of mass by a random
 vector of max length δ. Applies periodic boundary conditions to keep the molecule inside
@@ -92,7 +91,7 @@ if the Monte Carlo proposal is rejected.
 
 # Arguments
 - `molecule::Molecule`: The molecule we want to perturb
-- `simulation_box::Box`: The simulation box
+- `box::Box`: The simulation box
 
 # Returns
 - `old_molecule::Molecule`: The old molecule in case the MC proposal is rejected
@@ -112,11 +111,15 @@ function translate_molecule!(molecule::Molecule, box::Box)
 end
 
 """
-    reinsert_molecule(molecule, simulation_box)
+    reinsert_molecule(molecule, box)
 
 Move molecule to a new center of mass randomly distrubted in the unit cell and choose
 a random orientation for it. Return a deep copy of the starting molecule for possible
 restoration. This MC move can be viewed as a more aggressive `translate_molecule!`.
+
+# Arguments
+- `molecule::Molecule`: The molecule we want to perturb
+- `box::Box`: The simulation box
 """
 function reinsert_molecule!(molecule::Molecule, box::Box)
     # store old molecule and return at the end for possible restoration

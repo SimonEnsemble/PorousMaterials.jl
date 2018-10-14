@@ -5,8 +5,8 @@ Data structure for a Lennard Jones forcefield.
 - `name::String`: name of forcefield; correponds to filename
 - `pure_σ::Dict{Symbol, Float64}`: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)
 - `pure_ϵ::Dict{Symbol, Float64}`: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)
-- `ϵ::Dict{Symbol, Dict{Symbol, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons[:He][:C]`
 - `σ²::Dict{Symbol, Dict{Symbol, Float64}}`: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is `sigmas_squared[:He][:C]`
+- `ϵ::Dict{Symbol, Dict{Symbol, Float64}}`: Lennard Jones ϵ (units: K) for cross-interactions. Example use is `epsilons[:He][:C]`
 - `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 """
 struct LJForceField
@@ -24,15 +24,17 @@ end
 Base.broadcastable(ljff::LJForceField) = Ref(ljff)
 
 """
-	ljforcefield = ForceField("forcefieldfile.csv", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
+	ljforcefield = ForceField(forcefieldfile; cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
 
 Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LJForceField object.
 
-Kong mixing rules: DOI 10.1063/1.1680358
-Lorenz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelot_rules
+The following mixing rules are implemented:
+* Kong mixing rules: DOI 10.1063/1.1680358
+* Lorentz-Berthelot: https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelot_rules
+* Geometric
 
 # Arguments
-- `forcefieldfile::AbstractString`: Name of the forcefield file
+- `forcefieldfile::AbstractString`: Name of the forcefield csv file
 - `cutoffradius::Float64`: Cutoff radius beyond which we define the potential energy to be zero (units: Angstrom)
 - `mixing_rules::AbstractString`: The mixing rules used to compute the cross-interaction terms of the forcefield
 

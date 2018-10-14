@@ -46,9 +46,9 @@ nav:
     - Atomic Interactions:
       - Atomic Interactions: manual/atomic_interactions/about.md
       - Atomic Interactions Documentation: manual/atomic_interactions/docs.md
-    - MOF Simulations:
-      - MOF Simulations: manual/mof_simulations/about.md
-      - MOF Simulations Documentation: manual/mof_simulations/docs.md
+    - Molecular Simulations:
+      - Molecular Simulations: manual/mof_simulations/about.md
+      - Molecular Simulations Documentation: manual/mof_simulations/docs.md
     - Other:
       - Other: manual/other/about.md
       - Other Documentation: manual/other/docs.md

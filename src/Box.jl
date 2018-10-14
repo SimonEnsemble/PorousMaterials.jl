@@ -136,7 +136,7 @@ function replicate(box::Box, repfactors::Tuple{Int, Int, Int})
 end
 
 """
-    write_vtk(box, "box.vtk"; verbose=true)
+    write_vtk(box, filename; verbose=true)
     write_vtk(framework)
 
 Write a `Box` to a .vtk file for visualizing e.g. the unit cell boundary of a crystal.
@@ -148,9 +148,10 @@ Appends ".vtk" extension to `filename` automatically if not passed.
 # Arguments
 - `box::Box`: a Bravais lattice
 - `filename::AbstractString`: filename of the .vtk file output (absolute path)
+- `framework::Framework`: A framework containing the crystal structure information
 """
 function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
-    if ! contains(filename, ".vtk")
+    if ! occursin(".vtk", filename)
         filename *= ".vtk"
     end
     vtk_file = open(filename, "w")
