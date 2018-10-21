@@ -57,6 +57,13 @@ function write_xyz(atoms::Array{Symbol, 1}, x::Array{Float64, 2},
         filename *= ".xyz"
     end
 
+    if length(atoms) != size(x)[2]
+        error("Number of atoms does not match number of coordinates provided!\n")
+    end
+    if size(x)[1] != 3
+        error("x should be 3 by number of atoms.\n")
+    end
+
     xyzfile = open(filename, "w")
     @printf(xyzfile, "%d\n%s\n", length(atoms), comment)
     for i = 1:length(atoms)
