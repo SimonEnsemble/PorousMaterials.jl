@@ -25,7 +25,7 @@ atoms = Atoms(2, [:C, :F], [0.0 1.0; 2.0 3.0; 4.0 5.0])
   * `xf::Array{Float64, 2}`: fractional coordinates in the columns
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/0b314a309d738169927abfd7afcb30c6f7d7a651/src/Matter.jl#L1-L13' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Matter.jl#L1-L13' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.Charges' href='#PorousMaterials.Charges'>#</a>
 **`PorousMaterials.Charges`** &mdash; *Type*.
@@ -49,5 +49,5 @@ charges = Charges(2, [-1.0, 1.0], [0.0 1.0; 2.0 3.0; 4.0 5.0])
   * `xf::Array{Float64, 2}`: fractional coordinates in the columns
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/0b314a309d738169927abfd7afcb30c6f7d7a651/src/Matter.jl#L25-L37' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Matter.jl#L25-L37' class='documenter-source'>source</a><br>
 
