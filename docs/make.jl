@@ -1,4 +1,5 @@
-using Documenter, PorousMaterials
+using Documenter
+import PorousMaterials
 
     makedocs(
         root = joinpath(dirname(pathof(PorousMaterials)), "..", "docs"),
@@ -6,35 +7,43 @@ using Documenter, PorousMaterials
         sitename = "PorousMaterials.jl",
         clean = true,
         pages = [
-                "index.md"
-                "guides/input_files.md"
+                "PorousMaterials" => "index.md",
+                "Loading Data" => "guides/input_files.md",
 
-                # Matter
-                "manual/matter/docs.md"
-                "manual/matter/about.md"
+                "Manual" => [
+                    "Matter" => [
+                        "Matter" => "manual/matter/docs.md",
+                        "Matter Documentation" => "manual/matter/about.md"
+                        ],
 
-                # Boxes, Crystals, and Grids
-                "manual/boxes_crystals_grids/docs.md"
-                "manual/boxes_crystals_grids/about.md"
+                    "Boxes, Crystals, and Grids" => [
+                        "Boxes, Crystals, and Grids" => "manual/boxes_crystals_grids/docs.md",
+                        "Boxes, Crystals, and Grids Documentation" => "manual/boxes_crystals_grids/about.md"
+                        ],
 
-                # Molecules
-                "manual/molecules/docs.md"
-                "manual/molecules/about.md"
+                    "Molecules" => [
+                        "Molecules" => "manual/molecules/docs.md",
+                        "Molecules Documentation" => "manual/molecules/about.md"
+                        ],
 
-                # Atomic Interactions
-                "manual/atomic_interactions/docs.md"
-                "manual/atomic_interactions/about.md"
+                    "Atomic Interactions" => [
+                        "Atomic Interactions" => "manual/atomic_interactions/docs.md",
+                        "Atomic Interactions" => "manual/atomic_interactions/about.md"
+                        ],
 
-                # MOF Simulations
-                "manual/mof_simulations/docs.md"
-                "manual/mof_simulations/about.md"
+                    "Molecular Simulations" => [ 
+                        "Molecular Simulations" => "manual/mof_simulations/docs.md",
+                        "Molecular Simulations Documentation" => "manual/mof_simulations/about.md"
+                        ],
 
-                # Other
-                "manual/other/docs.md"
-                "manual/other/about.md"
+                    "Other" => [
+                        "Other" => "manual/other/docs.md",
+                        "Other Documentation" => "manual/other/about.md"
+                        ]
+                    ],
 
-                "guides/faq.md"
-                "guides/help_wanted.md"
+                "FAQ" => "guides/faq.md",
+                "Help Wanted" => "guides/help_wanted.md",
                 ]
     )
 
