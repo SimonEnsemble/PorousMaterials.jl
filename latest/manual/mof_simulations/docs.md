@@ -47,7 +47,7 @@ and start the simulation from that point.
   * `result::Dict{String, Float64}`: A dictionary containing all the results from the Henry coefficient simulation
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Henry.jl#L4-L41' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Henry.jl#L4-L41' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.henry_result_savename' href='#PorousMaterials.henry_result_savename'>#</a>
 **`PorousMaterials.henry_result_savename`** &mdash; *Function*.
@@ -72,7 +72,7 @@ Determine the name of files saved while calculating the henry coefficient. It us
   * `comment::AbstractString`: An optional comment that will be appended to the filename
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Henry.jl#L327-L345' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Henry.jl#L327-L345' class='documenter-source'>source</a><br>
 
 
 <a id='Grand-Canonical-Monte-Carlo-Simulations-1'></a>
@@ -127,7 +127,7 @@ is ideal gas, where fugacity = pressure.
   * `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/GCMC.jl#L219-L266' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/GCMC.jl#L219-L266' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.adsorption_isotherm' href='#PorousMaterials.adsorption_isotherm'>#</a>
 **`PorousMaterials.adsorption_isotherm`** &mdash; *Function*.
@@ -147,7 +147,7 @@ results = adsorption_isotherm(framework, molecule, temperature, pressures,
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the same as [`gcmc_simulation`](docs.md#PorousMaterials.gcmc_simulation), as this is the function run in parallel behind the scenes. The only exception is that we pass an array of pressures. To give Julia access to multiple cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/GCMC.jl#L172-L186' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/GCMC.jl#L172-L186' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.stepwise_adsorption_isotherm' href='#PorousMaterials.stepwise_adsorption_isotherm'>#</a>
 **`PorousMaterials.stepwise_adsorption_isotherm`** &mdash; *Function*.
@@ -167,7 +167,7 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the same as [`gcmc_simulation`](docs.md#PorousMaterials.gcmc_simulation), as this is the function run behind the scenes. An exception is that we pass an array of pressures. The adsorption isotherm is computed step- wise, where the ending configuration from the previous simulation (array of molecules) is passed into the next simulation as a starting point. The ordering of `pressures` is honored. By giving each simulation a good starting point, (if the next pressure does not differ significantly from the previous pressure), we can reduce the number of burn cycles required to reach equilibrium in the Monte Carlo simulation. Also see [`adsorption_isotherm`](docs.md#PorousMaterials.adsorption_isotherm) which runs the μVT simulation at each pressure in parallel.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/GCMC.jl#L125-L143' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/GCMC.jl#L125-L143' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.gcmc_result_savename' href='#PorousMaterials.gcmc_result_savename'>#</a>
 **`PorousMaterials.gcmc_result_savename`** &mdash; *Function*.
@@ -194,5 +194,5 @@ Determine the name of files saved during the GCMC simulation, be molecule positi
   * `comment::AbstractString`: An optional comment that will be appended to the end of the filename
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/GCMC.jl#L761-L780' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/GCMC.jl#L761-L780' class='documenter-source'>source</a><br>
 

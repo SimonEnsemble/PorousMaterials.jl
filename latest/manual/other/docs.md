@@ -20,7 +20,7 @@ Sets PorousMaterials `PATH_TO_DATA` variable which dictates where crystal, force
   * `new_path_to_data::String`: The desired `PATH_TO_DATA` in string form.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/PorousMaterials.jl#L30-L43' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/PorousMaterials.jl#L30-L43' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.set_tutorial_mode' href='#PorousMaterials.set_tutorial_mode'>#</a>
 **`PorousMaterials.set_tutorial_mode`** &mdash; *Function*.
@@ -34,7 +34,7 @@ set_tutorial_mode()
 Places PorousMaterials in "Tutorial Mode". It changes the `PATH_TO_DATA` variable to the directory where the PorousMaterials test data is stored. It can be used to follow examples shown in the README. It displays a warning so that the user knows They are no longer using their own data.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br>
 
 
 <a id='Reading-in-Atomic-Values-1'></a>
@@ -57,7 +57,7 @@ Return `atomic_radii::Dict{Symbol, Float64}`, where `atom_masses[":C"]` gives th
   * `atomic_radii::Dict{Symbol, Float64}`: A dictionary linking an element symbol to its' corresponding atomic radius
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_atomic_masses' href='#PorousMaterials.read_atomic_masses'>#</a>
 **`PorousMaterials.read_atomic_masses`** &mdash; *Function*.
@@ -75,7 +75,7 @@ Read the `data/atomicmasses.csv` file to construct a dictionary of atoms and the
   * `atomic_masses::Dict{Symbol, Float64}`: A dictionary containing the atomic masses of each atom stored in `data/atomicmasses.csv`
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_cpk_colors' href='#PorousMaterials.read_cpk_colors'>#</a>
 **`PorousMaterials.read_cpk_colors`** &mdash; *Function*.
@@ -93,7 +93,7 @@ Read in CPK color scheme for atoms. Return `atom_colors::Dict{Symbol, Tuple{Int,
   * `atom_colors::Dict{Symbol, Tuple{Int, Int, Int}}`: A dictionary linking an element symbol to its' corresponding CPK color in RGB
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br>
 
 
 <a id='Using-.xyz-files-1'></a>
@@ -124,7 +124,7 @@ from the .xyz file.
   * `x::Array{Float64, 2}`: The Cartesian coordinates of the atoms. `x[:, k]` will return cartesian coordinates of the k-th atom
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_xyz' href='#PorousMaterials.write_xyz'>#</a>
 **`PorousMaterials.write_xyz`** &mdash; *Function*.
@@ -156,5 +156,5 @@ if the extension is not provided.) (absolute path)
   * `center::Bool`: shift atoms so that origin is the center of the `framework.box`
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br>
 

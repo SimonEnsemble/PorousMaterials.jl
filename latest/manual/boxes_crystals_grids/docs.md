@@ -34,7 +34,7 @@ coordinates to fractional coordinates. units: inverse Angstrom
 This choice was made (instead of columns) for speed of Ewald Sums.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Box.jl#L1-L20' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Box.jl#L1-L20' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.replicate' href='#PorousMaterials.replicate'>#</a>
 **`PorousMaterials.replicate`** &mdash; *Function*.
@@ -57,7 +57,7 @@ Replicates a `Box` in positive directions to construct a new `Box` representing 
   * `box::Box`: Fully formed Box object
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Box.jl#L118-L132' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Box.jl#L118-L132' class='documenter-source'>source</a><br>
 
 
 ```
@@ -76,7 +76,7 @@ Replicates the atoms and charges in a `Framework` in positive directions to cons
   * `replicated_frame::Framework`: Replicated framework
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.UnitCube' href='#PorousMaterials.UnitCube'>#</a>
 **`PorousMaterials.UnitCube`** &mdash; *Function*.
@@ -90,7 +90,7 @@ unit_cube = UnitCube()
 This function generates a unit cube, each side is 1.0 Angstrom long, and all the corners are right angles.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Box.jl#L110-L115' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Box.jl#L110-L115' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_vtk' href='#PorousMaterials.write_vtk'>#</a>
 **`PorousMaterials.write_vtk`** &mdash; *Function*.
@@ -113,7 +113,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
   * `framework::Framework`: A framework containing the crystal structure information
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Box.jl#L138-L152' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Box.jl#L138-L152' class='documenter-source'>source</a><br>
 
 
 <a id='Crystals-1'></a>
@@ -154,7 +154,7 @@ Read a crystal structure file (.cif or .cssr) and populate a `Framework` data st
   * `charges::Charges`: list of point charges in crystal unit cell
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L11-L35' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L11-L35' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.remove_overlapping_atoms_and_charges' href='#PorousMaterials.remove_overlapping_atoms_and_charges'>#</a>
 **`PorousMaterials.remove_overlapping_atoms_and_charges`** &mdash; *Function*.
@@ -178,7 +178,7 @@ Takes in a framework and returns a new framework with where overlapping atoms an
   * `new_framework::Framework`: A new framework where identical atoms have been removed.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L364-L379' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L364-L379' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.strip_numbers_from_atom_labels!' href='#PorousMaterials.strip_numbers_from_atom_labels!'>#</a>
 **`PorousMaterials.strip_numbers_from_atom_labels!`** &mdash; *Function*.
@@ -196,7 +196,7 @@ Strip numbers from labels for `framework.atoms`. Precisely, for `atom` in `frame
   * `framework::Framework`: The framework containing the crystal structure information
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L477-L488' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L477-L488' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.chemical_formula' href='#PorousMaterials.chemical_formula'>#</a>
 **`PorousMaterials.chemical_formula`** &mdash; *Function*.
@@ -219,7 +219,7 @@ Find the irreducible chemical formula of a crystal structure.
   * `formula::Dict{Symbol, Int}`: A dictionary with the irreducible chemical formula of a crystal structure
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L505-L516' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L505-L516' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.molecular_weight' href='#PorousMaterials.molecular_weight'>#</a>
 **`PorousMaterials.molecular_weight`** &mdash; *Function*.
@@ -241,7 +241,7 @@ Calculates the molecular weight of a unit cell of the framework in amu using inf
   * `mass_of_framework::Float64`: The molecular weight of a unit cell of the framework in amu
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L545-L556' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L545-L556' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.crystal_density' href='#PorousMaterials.crystal_density'>#</a>
 **`PorousMaterials.crystal_density`** &mdash; *Function*.
@@ -263,7 +263,7 @@ Compute the crystal density of a framework. Pulls atomic masses from [`read_atom
   * `ρ::Float64`: The crystal density of a framework in kg/m³
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L568-L578' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L568-L578' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.replicate-Tuple{Framework,Tuple{Int64,Int64,Int64}}' href='#PorousMaterials.replicate-Tuple{Framework,Tuple{Int64,Int64,Int64}}'>#</a>
 **`PorousMaterials.replicate`** &mdash; *Method*.
@@ -286,7 +286,7 @@ Replicates the atoms and charges in a `Framework` in positive directions to cons
   * `replicated_frame::Framework`: Replicated framework
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.charged-Tuple{Framework}' href='#PorousMaterials.charged-Tuple{Framework}'>#</a>
 **`PorousMaterials.charged`** &mdash; *Method*.
@@ -300,7 +300,7 @@ charged_flag = charged(framework, verbose=false) # true or false
 Determine if a framework has point charges
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L464-L468' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L464-L468' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_cif' href='#PorousMaterials.write_cif'>#</a>
 **`PorousMaterials.write_cif`** &mdash; *Function*.
@@ -314,7 +314,7 @@ write_cif(framework, filename)
 Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does not include the .cif extension, it will automatically be added.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L584-L589' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L584-L589' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.assign_charges' href='#PorousMaterials.assign_charges'>#</a>
 **`PorousMaterials.assign_charges`** &mdash; *Function*.
@@ -362,7 +362,7 @@ the resulting framework
 are assigned.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Crystal.jl#L637-L671' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Crystal.jl#L637-L671' class='documenter-source'>source</a><br>
 
 
 <a id='Grids-1'></a>
@@ -385,7 +385,7 @@ Data structure for a regular [equal spacing between points in each coordinate] g
   * `origin::Array{Float64, 1}`: the origin of the grid.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Grid.jl#L1-L11' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Grid.jl#L1-L11' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.apply_periodic_boundary_condition!' href='#PorousMaterials.apply_periodic_boundary_condition!'>#</a>
 **`PorousMaterials.apply_periodic_boundary_condition!`** &mdash; *Function*.
@@ -403,7 +403,7 @@ Check if the `center_of_mass` of a `Molecule` is outside of a `Box`. If so, appl
   * `molecule::Molecule`: A molecule we're interested in seeing if its' center of mass falls within `simulation_box`
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/MChelpers.jl#L50-L59' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/MChelpers.jl#L50-L59' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.write_cube' href='#PorousMaterials.write_cube'>#</a>
 **`PorousMaterials.write_cube`** &mdash; *Function*.
@@ -423,7 +423,7 @@ Write grid to a .cube file format. This format is described here: http://paulbou
   * `verbose::Bool`: print name of file after writing.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Grid.jl#L36-L47' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Grid.jl#L36-L47' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.read_cube' href='#PorousMaterials.read_cube'>#</a>
 **`PorousMaterials.read_cube`** &mdash; *Function*.
@@ -445,7 +445,7 @@ Read a .cube file and return a populated `Grid` data structure.
   * `grid::Grid`: A grid data structure
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Grid.jl#L89-L99' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Grid.jl#L89-L99' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.energy_grid' href='#PorousMaterials.energy_grid'>#</a>
 **`PorousMaterials.energy_grid`** &mdash; *Function*.
@@ -480,5 +480,5 @@ This is only relevant for molecules that are comprised of more than one Lennard 
   * `grid::Grid`: A grid data structure containing the potential energy of the system
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Grid.jl#L155-L178' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Grid.jl#L155-L178' class='documenter-source'>source</a><br>
 

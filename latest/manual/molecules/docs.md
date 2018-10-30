@@ -18,7 +18,7 @@ Data structure for a molecule/adsorbate.
   * `xf_com::Array{Float64, 1}`: center of mass of the molecule in fractional coordinates
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Molecules.jl#L1-L9' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Molecules.jl#L1-L9' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.translate_to!' href='#PorousMaterials.translate_to!'>#</a>
 **`PorousMaterials.translate_to!`** &mdash; *Function*.
@@ -38,7 +38,7 @@ Translate a molecule a molecule to point `xf` in fractional coordinate space or 
   * `xf::Array{Float64, 1}`: A vector containing the coordinates of the final destination of the molecule
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Molecules.jl#L177-L188' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Molecules.jl#L177-L188' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.rotate!' href='#PorousMaterials.rotate!'>#</a>
 **`PorousMaterials.rotate!`** &mdash; *Function*.
@@ -57,7 +57,7 @@ Conduct a random rotation of the molecule about its center of mass. The box is n
   * `box::Box`: The molecule only contains fractional coordinates, so the box is needed for a correct rotation
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Molecules.jl#L258-L267' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Molecules.jl#L258-L267' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.rotation_matrix' href='#PorousMaterials.rotation_matrix'>#</a>
 **`PorousMaterials.rotation_matrix`** &mdash; *Function*.
@@ -77,7 +77,7 @@ https://pdfs.semanticscholar.org/04f3/beeee1ce89b9adf17a6fabde1221a328dbad.pdf
   * `r::Array{Float64, 2}`: A 3x3 random rotation matrix
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Molecules.jl#L234-L244' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Molecules.jl#L234-L244' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.rand_point_on_unit_sphere' href='#PorousMaterials.rand_point_on_unit_sphere'>#</a>
 **`PorousMaterials.rand_point_on_unit_sphere`** &mdash; *Function*.
@@ -95,7 +95,7 @@ Generate a unit vector with a random orientation.
   * `u::Array{Float64, 1}`: A unit vector with a random orientation
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Molecules.jl#L217-L224' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Molecules.jl#L217-L224' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.charged-Tuple{Molecule}' href='#PorousMaterials.charged-Tuple{Molecule}'>#</a>
 **`PorousMaterials.charged`** &mdash; *Method*.
@@ -118,7 +118,7 @@ Determine if a molecule has point charges
   * `charged_flag::Bool`: `true` if molecule is charged, `false` otherwise
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Molecules.jl#L340-L351' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Molecules.jl#L340-L351' class='documenter-source'>source</a><br>
 
 
 <a id='Molecular-Movement-1'></a>
@@ -143,7 +143,7 @@ Inserts an additional adsorbate molecule into the simulation box using the templ
   * `template::Molecule`: A template molecule used as reference when inserting molecules
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/MChelpers.jl#L8-L19' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/MChelpers.jl#L8-L19' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.delete_molecule!' href='#PorousMaterials.delete_molecule!'>#</a>
 **`PorousMaterials.delete_molecule!`** &mdash; *Function*.
@@ -162,7 +162,7 @@ Removes a random molecule from the current molecules in the framework. molecule_
   * `molecules::Array{Molecule, 1}`: An array of Molecule objects
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/MChelpers.jl#L35-L45' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/MChelpers.jl#L35-L45' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.translate_molecule!' href='#PorousMaterials.translate_molecule!'>#</a>
 **`PorousMaterials.translate_molecule!`** &mdash; *Function*.
@@ -185,7 +185,7 @@ Perturbs the Cartesian coordinates of a molecule about its center of mass by a r
   * `old_molecule::Molecule`: The old molecule in case the MC proposal is rejected
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/MChelpers.jl#L84-L98' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/MChelpers.jl#L84-L98' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.reinsert_molecule!' href='#PorousMaterials.reinsert_molecule!'>#</a>
 **`PorousMaterials.reinsert_molecule!`** &mdash; *Function*.
@@ -204,7 +204,7 @@ Move molecule to a new center of mass randomly distrubted in the unit cell and c
   * `box::Box`: The simulation box
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/MChelpers.jl#L113-L123' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/MChelpers.jl#L113-L123' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.rotatable' href='#PorousMaterials.rotatable'>#</a>
 **`PorousMaterials.rotatable`** &mdash; *Function*.
@@ -226,5 +226,5 @@ Determines whether or not a given molecule needs to be rotated. For example, rot
   * `is_rotatable::Bool`: A boolean describing whether or not rotating the molecule   will alter its interactions with other molecules
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/MChelpers.jl#L142-L155' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/MChelpers.jl#L142-L155' class='documenter-source'>source</a><br>
 

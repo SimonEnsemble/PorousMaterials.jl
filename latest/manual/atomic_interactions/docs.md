@@ -20,7 +20,7 @@ Data structure for a Lennard Jones forcefield.
   * `cutoffradius_squared::Float64`: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.replication_factors' href='#PorousMaterials.replication_factors'>#</a>
 **`PorousMaterials.replication_factors`** &mdash; *Function*.
@@ -45,7 +45,7 @@ A non-replicated supercell has 1 as the replication factor in each dimension (`r
   * `repfactors::Tuple{Int, Int, Int}`: The replication factors in the a, b, c directions
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Forcefield.jl#L100-L116' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Forcefield.jl#L100-L116' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.check_forcefield_coverage' href='#PorousMaterials.check_forcefield_coverage'>#</a>
 **`PorousMaterials.check_forcefield_coverage`** &mdash; *Function*.
@@ -70,7 +70,7 @@ Check that the force field contains parameters for every atom present in a frame
   * `all_covered::Bool`: Returns true if all atoms in the `framework` are also included in `ljforcefield`. False otherwise
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Forcefield.jl#L161-L175' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Forcefield.jl#L161-L175' class='documenter-source'>source</a><br>
 
 
 <a id='Potential-Energy-1'></a>
@@ -100,7 +100,7 @@ This returns a PotentialEnergy data type where the vdw and coulomb attributes ar
   * `coulomb::Float64`: The potential energy contributions from electrostatic interactions
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Energetics_Util.jl#L3-L20' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Energetics_Util.jl#L3-L20' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.SystemPotentialEnergy' href='#PorousMaterials.SystemPotentialEnergy'>#</a>
 **`PorousMaterials.SystemPotentialEnergy`** &mdash; *Type*.
@@ -125,7 +125,7 @@ This initializes guest*host and guest*guest with PotentialEnergy(), so when it i
   * `guest_guest::PotentialEnergy`: The total potential energy from all guest-guest   interactions in the system
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/Energetics_Util.jl#L51-L69' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/Energetics_Util.jl#L51-L69' class='documenter-source'>source</a><br>
 
 
 <a id='Nearest-Image-Conventions-1'></a>
@@ -150,7 +150,7 @@ Warning: this assumes the two molecules are in the box described by fractional c
   * `dxf::Array{Float64}`: A vector between two atoms in fractional space
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/NearestImage.jl#L1-L12' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/NearestImage.jl#L1-L12' class='documenter-source'>source</a><br>
 
 
 <a id='Electrostatics-Energy-1'></a>
@@ -175,7 +175,7 @@ mutable struct for holding the eikr vectors
   * `eikcr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices   -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L77-L89' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L77-L89' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.electrostatic_potential_energy' href='#PorousMaterials.electrostatic_potential_energy'>#</a>
 **`PorousMaterials.electrostatic_potential_energy`** &mdash; *Function*.
@@ -204,7 +204,7 @@ Warning: it is assumed that the framework is replicated enough such that the nea
   * `pot::EwaldSum`: Electrostatic potential between `framework` and `molecule` (units: K)
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L307-L330' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L307-L330' class='documenter-source'>source</a><br>
 
 
 ```
@@ -231,7 +231,7 @@ Units of energy: Kelvin
   * `ϕ::GGEwaldSum`: The total electrostatic potential energy
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L411-L433' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L411-L433' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.precompute_kvec_wts' href='#PorousMaterials.precompute_kvec_wts'>#</a>
 **`PorousMaterials.precompute_kvec_wts`** &mdash; *Function*.
@@ -262,7 +262,7 @@ k-vectors with magnitude squared greater than this.
 corresponding weights indicating the contribution to the Fourier sum.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L177-L197' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L177-L197' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.setup_Ewald_sum' href='#PorousMaterials.setup_Ewald_sum'>#</a>
 **`PorousMaterials.setup_Ewald_sum`** &mdash; *Function*.
@@ -293,7 +293,7 @@ Also, allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k
 corresponding weights indicating the contribution to the Fourier sum.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L234-L255' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L234-L255' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.total_electrostatic_potential_energy' href='#PorousMaterials.total_electrostatic_potential_energy'>#</a>
 **`PorousMaterials.total_electrostatic_potential_energy`** &mdash; *Function*.
@@ -318,7 +318,7 @@ Calculates the total electrostatic potential energy of an array of `Molecule`s u
   * `ϕ::GGEwaldSum`: The total electrostatic potential energy
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L516-L531' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L516-L531' class='documenter-source'>source</a><br>
 
 
 ```
@@ -335,7 +335,7 @@ Explanation of total*electrostatic*potential_energy that uses framework
   * `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/ElectrostaticEnergetics.jl#L546-L557' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/ElectrostaticEnergetics.jl#L546-L557' class='documenter-source'>source</a><br>
 
 
 <a id='Van-der-Waals-Energy-1'></a>
@@ -364,7 +364,7 @@ Calculate the lennard jones potential energy given the square of the radius r be
   * `energy::Float64`: Lennard Jones potential energy
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.vdw_energy' href='#PorousMaterials.vdw_energy'>#</a>
 **`PorousMaterials.vdw_energy`** &mdash; *Function*.
@@ -390,7 +390,7 @@ WARNING: it is assumed that the framework is replicated sufficiently such that t
   * `energy::Float64`: Van der Waals interaction energy
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/VdWEnergetics.jl#L49-L65' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/VdWEnergetics.jl#L49-L65' class='documenter-source'>source</a><br>
 
 
 ```
@@ -411,7 +411,7 @@ Calculates van der Waals interaction energy of a single adsorbate `molecules[mol
   * `gg_energy::Float64`: The guest-guest interaction energy of `molecules[molecule_id]` with the other molecules in `molecules`
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/VdWEnergetics.jl#L70-L85' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/VdWEnergetics.jl#L70-L85' class='documenter-source'>source</a><br>
 
 <a id='PorousMaterials.vdw_energy_no_PBC' href='#PorousMaterials.vdw_energy_no_PBC'>#</a>
 **`PorousMaterials.vdw_energy_no_PBC`** &mdash; *Function*.
@@ -421,5 +421,5 @@ Calculates van der Waals interaction energy of a single adsorbate `molecules[mol
 Assumes unit cell box is a unit cube and no periodic boundary conditions are applied.
 
 
-<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/acc15df28b174dd79344a2142c46f7a0e16e948b/src/VdWEnergetics.jl#L134-L137' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/845505808b4e0fb9638d52f835a7b7cb0cde5b8f/src/VdWEnergetics.jl#L134-L137' class='documenter-source'>source</a><br>
 
