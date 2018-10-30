@@ -30,7 +30,7 @@ extra:
 
 docs_dir: 'build'
 
-nav:
+pages:
   - PorousMaterials: index.md
   - Loading Data: guides/input_files.md
   - Manual:
