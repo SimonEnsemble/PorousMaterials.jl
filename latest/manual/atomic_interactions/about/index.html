@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="SimonEnsemble">
+    
+    <link rel="shortcut icon" href="../../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Atomic Interactions - </title>
+    <link href="../../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/highlight.css">
+    <link href="../../../assets/Documenter.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Loading in Forcefield Files", url: "#_top", children: [
+          ]},
+          {title: "Building Blocks of PorousMaterials: Lennard-Jones forcefields", url: "#building-blocks-of-porousmaterials-lennard-jones-forcefields", children: [
+          ]},
+          {title: "Building Blocks of PorousMaterials: Potential energies", url: "#building-blocks-of-porousmaterials-potential-energies", children: [
+              {title: "Potential Energies: Van der Waals", url: "#potential-energies-van-der-waals" },
+              {title: "Potential Energies: Electrostatics", url: "#potential-energies-electrostatics" },
+              {title: "Potential Energies: Equations of state", url: "#potential-energies-equations-of-state" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../../js/base.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+      <script src="../../../assets/mathjaxhelper.js"></script>
+      <script src="../../../mathjax-config.js"></script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../docs/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../docs/" class="btn btn-xs btn-link">
+        Atomic Interactions Documentation
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../molecules/docs/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../molecules/docs/" class="btn btn-xs btn-link">
+        Molecules Documentation
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <p><a id='Loading-in-Forcefield-Files-1'></a></p>
+<h2 id="loading-in-forcefield-files">Loading in Forcefield Files<a class="headerlink" href="#loading-in-forcefield-files" title="Permanent link">#</a></h2>
+<p>Lennard-Jones forcefield parameters are stored in comma-separated-value format in <code>data/forcefields/</code>.</p>
+<p>Interaction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:</p>
+<p><code>V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ]</code>, where <code>x = sigma / r</code></p>
+<p>The Lennard Jones force field input files, e.g. <code>UFF.csv</code> contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, e.g., in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in <code>PorousMaterials.jl</code>.</p>
+<pre><code class="julia">using PorousMaterials
+
+ljff = LJForceField(&quot;UFF.csv&quot;)
+</code></pre>
+
+<p>PorousMaterials will the output information about the forcefield file you just loaded:</p>
+<pre><code class="julia">    Force field: UFF.csv
+    Number of atoms included: 106
+    Cut-off radius (Å) = 14.0    
+</code></pre>
+
+<p>This also prints all of the atoms included in the loaded forcefield with their given ϵ and σ. This was excluded because it would use too much space on this page.</p>
+<p><a id='Building-Blocks-of-PorousMaterials:-Lennard-Jones-forcefields-1'></a></p>
+<h2 id="building-blocks-of-porousmaterials-lennard-jones-forcefields">Building Blocks of PorousMaterials: Lennard-Jones forcefields<a class="headerlink" href="#building-blocks-of-porousmaterials-lennard-jones-forcefields" title="Permanent link">#</a></h2>
+<pre><code class="julia"># read in Lennard-Jones force field parameters from the Universal Force Field
+forcefield = LJForceField(&quot;UFF.csv&quot;, cutoffradius=14.0, mixing_rules=&quot;Lorentz-Berthelot&quot;)
+
+# access the Lennard-Jones epsilon &amp; sigma for Xe
+forcefield.pure_ϵ[:Xe] # K
+forcefield.pure_σ[:Xe] # Å
+
+# access the Lennard-Jones epsilon &amp; sigma for Xe-C interactions
+forcefield.ϵ[:Xe][:C] # K                                                                 
+forcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
+</code></pre>
+
+<p><a id='Building-Blocks-of-PorousMaterials:-Potential-energies-1'></a></p>
+<h2 id="building-blocks-of-porousmaterials-potential-energies">Building Blocks of PorousMaterials: Potential energies<a class="headerlink" href="#building-blocks-of-porousmaterials-potential-energies" title="Permanent link">#</a></h2>
+<p>First, set the fractional coordinates of the molecule in the context of some unit cell box.</p>
+<pre><code class="julia"># molecule in a framework
+set_fractional_coords!(molecule, framework.box)
+
+# molecule in a 10 by 10 by 10 cube
+box = Box(10.0, 10.0, 10.0, π/2, π/2, π/2) # make a box
+set_fractional_coords!(molecule, box)
+</code></pre>
+
+<p><a id='Potential-Energies:-Van-der-Waals-1'></a></p>
+<h4 id="potential-energies-van-der-waals">Potential Energies: Van der Waals<a class="headerlink" href="#potential-energies-van-der-waals" title="Permanent link">#</a></h4>
+<p>What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at <code>[0.0, 1.0, 3.0]</code> Cartesian coordinates using the UFF as a molecular model?</p>
+<pre><code class="julia">using PorousMaterials
+
+framework = Framework(&quot;SBMOF-1.cif&quot;)
+
+forcefield = LJForceField(&quot;UFF.csv&quot;)
+
+molecule = Molecule(&quot;Xe&quot;)
+set_fractional_coords!(molecule, framework.box)
+
+translate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian
+
+energy = vdw_energy(framework, molecule, forcefield) # K
+</code></pre>
+
+<p><a id='Potential-Energies:-Electrostatics-1'></a></p>
+<h4 id="potential-energies-electrostatics">Potential Energies: Electrostatics<a class="headerlink" href="#potential-energies-electrostatics" title="Permanent link">#</a></h4>
+<p>What is the electrostatic potential energy of a CO<sub>2</sub> adsorbate inside CAXVII_clean at <code>[0.0, 1.0, 0.0]</code> Cartesian coordinate?</p>
+<pre><code class="julia">using PorousMaterials
+
+framework = Framework(&quot;CAXVII_clean.cif&quot;) # has charges
+
+molecule = Molecule(&quot;CO2&quot;)
+set_fractional_coords!(molecule, framework.box)
+
+translate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian
+
+rotate!(molecule, framework.box) # let's give it a random orientation
+
+# this is for speed. pre-compute k-vectors and allocate memory
+eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)
+
+energy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)
+</code></pre>
+
+<p><a id='Potential-Energies:-Equations-of-state-1'></a></p>
+<h4 id="potential-energies-equations-of-state">Potential Energies: Equations of state<a class="headerlink" href="#potential-energies-equations-of-state" title="Permanent link">#</a></h4>
+<p>Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:</p>
+<pre><code class="julia">gas = PengRobinsonGas(:CH4)
+props = calculate_properties(gas, 298.0, 65.0) # dictionary of properties
+props[&quot;fugacity coefficient&quot;] # 0.8729
+</code></pre>
+
+<p>Pass <code>eos=:PengRobinson</code> to <code>gcmc_simulation</code> to automatically convert pressure to fugacity using the Peng-Robinson equation of state.</p>
+
+  <br>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../docs/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../docs/" class="btn btn-xs btn-link">
+        Atomic Interactions Documentation
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../molecules/docs/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../molecules/docs/" class="btn btn-xs btn-link">
+        Molecules Documentation
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/SimonEnsemble/PorousMaterials.jl/edit/master/docs/manual/atomic_interactions/about.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

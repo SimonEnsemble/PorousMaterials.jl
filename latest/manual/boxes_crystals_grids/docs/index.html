@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="SimonEnsemble">
+    
+    <link rel="shortcut icon" href="../../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Boxes, Crystals, and Grids Documentation - </title>
+    <link href="../../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/highlight.css">
+    <link href="../../../assets/Documenter.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Boxes", url: "#_top", children: [
+          ]},
+          {title: "Crystals", url: "#crystals", children: [
+          ]},
+          {title: "Grids", url: "#grids", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../../js/base.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+      <script src="../../../assets/mathjaxhelper.js"></script>
+      <script src="../../../mathjax-config.js"></script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../molecules/about/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../molecules/about/" class="btn btn-xs btn-link">
+        Molecules
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../about/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../about/" class="btn btn-xs btn-link">
+        Boxes, Crystals, and Grids
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <p><a id='Boxes-1'></a></p>
+<h2 id="boxes">Boxes<a class="headerlink" href="#boxes" title="Permanent link">#</a></h2>
+<pre><code>    Box
+    replicate
+    UnitCube
+    write_vtk
+</code></pre>
+
+<p><a id='Crystals-1'></a></p>
+<h2 id="crystals">Crystals<a class="headerlink" href="#crystals" title="Permanent link">#</a></h2>
+<pre><code>    Framework
+    remove_overlapping_atoms_and_charges
+    strip_numbers_from_atom_labels!
+    chemical_formula
+    molecular_weight
+    crystal_density
+    replicate(::Framework, ::Tuple{Int, Int, Int})
+    charged(::Framework; ::Bool)
+    write_cif
+    assign_charges
+</code></pre>
+
+<p><a id='Grids-1'></a></p>
+<h2 id="grids">Grids<a class="headerlink" href="#grids" title="Permanent link">#</a></h2>
+<pre><code>    Grid
+    apply_periodic_boundary_condition!
+    write_cube
+    read_cube
+    energy_grid
+</code></pre>
+
+  <br>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../molecules/about/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../molecules/about/" class="btn btn-xs btn-link">
+        Molecules
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../about/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../about/" class="btn btn-xs btn-link">
+        Boxes, Crystals, and Grids
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/SimonEnsemble/PorousMaterials.jl/edit/master/docs/manual/boxes_crystals_grids/docs.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

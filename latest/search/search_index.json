@@ -1,0 +1,289 @@
+{
+    "docs": [
+        {
+            "location": "/", 
+            "text": "A pure-\nJulia\n package for classical molecular modeling of adsorption in porous crystals such as metal-organic frameworks (MOFs).\n\n\n\ud83d\udd28 Compute the potential energy of a molecule at particular position and orientation inside of a porous crystal\n\n\n\ud83d\udd28 Write a potential energy grid of a molecule inside a porous material to visualize binding sites\n\n\n\ud83d\udd28 Compute the Henry coefficient of a gas in a porous crystal\n\n\n\ud83d\udd28 Run grand-canonical Monte Carlo simulations of gas adsorption in a porous crystal\n\n\nDesigned for high-throughput computations to minimize input files and querying results from output files. User-friendly. Instructive error messages thrown when they should be. Well-documented. Easy to install.\n\n\nIn development, please contribute, post issues \ud83d\udc1b, and improve!\n\n\n\n\nInstallation\n#\n\n\n\n\n\n\nDownload and install the \nJulia programming language\n, v1.0.\n\n\n\n\n\n\nIn Julia, open the package manager (using \n]\n) and enter the following:\n\n\n\n\n\n\nadd PorousMaterials\n\n\n\n\n\n\nIn Julia, load all functions in \nPorousMaterials.jl\n into the namespace:\n\n\n\n\nusing PorousMaterials # that's it\n\n\n\n\n\n\nTests\n#\n\n\nRun the unit-ish tests in the script \ntests/runtests.jl\n manually or type \nPkg.test(\"PorousMaterials\")\n into Julia.\n\n\nDirect tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and are found in \ntests/henry_test.jl\n and \ntests/gcmc_test.jl\n.", 
+            "title": "PorousMaterials"
+        }, 
+        {
+            "location": "/#installation", 
+            "text": "Download and install the  Julia programming language , v1.0.    In Julia, open the package manager (using  ] ) and enter the following:    add PorousMaterials   In Julia, load all functions in  PorousMaterials.jl  into the namespace:   using PorousMaterials # that's it", 
+            "title": "Installation"
+        }, 
+        {
+            "location": "/#tests", 
+            "text": "Run the unit-ish tests in the script  tests/runtests.jl  manually or type  Pkg.test(\"PorousMaterials\")  into Julia.  Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and are found in  tests/henry_test.jl  and  tests/gcmc_test.jl .", 
+            "title": "Tests"
+        }, 
+        {
+            "location": "/guides/input_files/", 
+            "text": "Input files to describe crystals, molecules, and forcefields\n#\n\n\nAll input files are stored in the path \nPorousMaterials.PATH_TO_DATA\n (type into Julia). By default, this path is set to be in the present working directory (type \npwd()\n into Julia) in a folder \ndata/\n. Go inside \nPorousMaterials.jl/test/data\n to see example input files for each case below.\n\n\nThere will be example code snippets through the documentation showing how to load in various files. To get a feel for this we have included a Tutorial Mode in \nPorousMaterials.jl\n that sets the \nPorousMaterial.PATH_TO_DATA\n to the data folder in our testing directory. To follow along with the examples without downloading your own data simply do the following:\n\n\nusing PorousMaterials\n\nset_tutorial_mode()\n    \u250c Warning: PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\n    \u2502 To get access to your own data use: reset_path_to_data()\n    \u2514 @ PorousMaterials ~/git_files/PorousMaterials.jl/src/PorousMaterials.jl:75\n\n\n\n\n\n\nAtomic masses\n#\n\n\nAdd fancy pseudo-atoms to \ndata/atomic_masses.csv\n.\n\n\n\n\nPeng-Robinson gas parameters\n#\n\n\nCritical temperatures and pressures and acentric factors are stored in \ndata/PengRobinsonGasProps.csv\n.", 
+            "title": "Loading Data"
+        }, 
+        {
+            "location": "/guides/input_files/#input-files-to-describe-crystals-molecules-and-forcefields", 
+            "text": "All input files are stored in the path  PorousMaterials.PATH_TO_DATA  (type into Julia). By default, this path is set to be in the present working directory (type  pwd()  into Julia) in a folder  data/ . Go inside  PorousMaterials.jl/test/data  to see example input files for each case below.  There will be example code snippets through the documentation showing how to load in various files. To get a feel for this we have included a Tutorial Mode in  PorousMaterials.jl  that sets the  PorousMaterial.PATH_TO_DATA  to the data folder in our testing directory. To follow along with the examples without downloading your own data simply do the following:  using PorousMaterials\n\nset_tutorial_mode()\n    \u250c Warning: PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\n    \u2502 To get access to your own data use: reset_path_to_data()\n    \u2514 @ PorousMaterials ~/git_files/PorousMaterials.jl/src/PorousMaterials.jl:75", 
+            "title": "Input files to describe crystals, molecules, and forcefields"
+        }, 
+        {
+            "location": "/guides/input_files/#atomic-masses", 
+            "text": "Add fancy pseudo-atoms to  data/atomic_masses.csv .", 
+            "title": "Atomic masses"
+        }, 
+        {
+            "location": "/guides/input_files/#peng-robinson-gas-parameters", 
+            "text": "Critical temperatures and pressures and acentric factors are stored in  data/PengRobinsonGasProps.csv .", 
+            "title": "Peng-Robinson gas parameters"
+        }, 
+        {
+            "location": "/manual/matter/about/", 
+            "text": "Matter is the foundation for every data type defined in PorousMaterials. Two structs are used to define all atomic structures: \nAtoms\n and \nCharges\n. Every atom, molecule, or crystal structure can be simulated by understanding its atoms and its point charges.\n\n\nWe chose to store each collection as a single object (Atoms) rather than an array of objects (Array{Atom}) because it allows us to store the locations in contiguous memory. We found significant speed increases when storing each collection as a single object.\n\n\nOne array of locations also allowed us to take advantage of broadcasting. For example, it is useful when calculating the energy inside a framework. Instead of looping through every atom, we can instead run this line:\n\n\ndxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[i])\n\n\n\n\nThis calculates the distance between one atom in a molecule and every atom in the framework.\n\n\n\n\nBuilding Blocks of PorousMaterials: Matter\n#\n\n\nIn \nPorousMaterials.jl\n, crystals and molecules are composed of \nAtoms\n and \nCharges\n\n\nTo create a carbon atom at \n[0.1, 0.2, 0.5]\n fractional coordinates (in the context of some Bravais lattice):\n\n\nxf = Array{Float64, 2}(undef, 3, 0)\nxf = [xf [0.1, 0.2, 0.5]]\natoms = Atoms([:C], xf) # constructor\natoms.species[1] # :C\natoms.xf[:, 1] # [0.1, 0.2, 0.5]\n\n\n\n\nTo create a point charge of +1 at \n[0.1, 0.2, 0.5]\n fractional coordinates (in the context of some Bravais lattice):\n\n\nxf = Array{Float64, 2}(undef, 3, 0)\nxf = [xf [0.1, 0.2, 0.5]]\ncharges = Charges([1.0], xf)\ncharges.q[1] # 1.0\ncharges.xf[:, 1] # [0.1, 0.2, 0.5]", 
+            "title": "Matter"
+        }, 
+        {
+            "location": "/manual/matter/about/#building-blocks-of-porousmaterials-matter", 
+            "text": "In  PorousMaterials.jl , crystals and molecules are composed of  Atoms  and  Charges  To create a carbon atom at  [0.1, 0.2, 0.5]  fractional coordinates (in the context of some Bravais lattice):  xf = Array{Float64, 2}(undef, 3, 0)\nxf = [xf [0.1, 0.2, 0.5]]\natoms = Atoms([:C], xf) # constructor\natoms.species[1] # :C\natoms.xf[:, 1] # [0.1, 0.2, 0.5]  To create a point charge of +1 at  [0.1, 0.2, 0.5]  fractional coordinates (in the context of some Bravais lattice):  xf = Array{Float64, 2}(undef, 3, 0)\nxf = [xf [0.1, 0.2, 0.5]]\ncharges = Charges([1.0], xf)\ncharges.q[1] # 1.0\ncharges.xf[:, 1] # [0.1, 0.2, 0.5]", 
+            "title": "Building Blocks of PorousMaterials: Matter"
+        }, 
+        {
+            "location": "/manual/matter/docs/", 
+            "text": "Matter\n#\n\n\n    Atoms\n    Charges", 
+            "title": "Matter Documentation"
+        }, 
+        {
+            "location": "/manual/matter/docs/#matter", 
+            "text": "Atoms\n    Charges", 
+            "title": "Matter"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/about/", 
+            "text": "Loading in Crystal Structure Files\n#\n\n\nPlace \n.cif\n and \n.cssr\n crystal structure files in \ndata/crystals\n. \nPorousMaterials.jl\n currently takes crystals in P1 symmetry only. From here you can start julia and do the following to load a framework and start working with it.\n\n\nusing PorousMaterials\n\nf = Framework(\nSBMOF-1.cif\n)\n\n\n\n\nPorousMaterials will then output information about the framework you just loaded:\n\n\nName: SBMOF-1.cif\nBravais unit cell of a crystal.\n        Unit cell angles \u03b1 = 90.000000 deg. \u03b2 = 100.897000 deg. \u03b3 = 90.000000 deg.\n        Unit cell dimensions a = 11.619300 \u212b. b = 5.566700 \u212b, c = 22.931200 \u212b\n        Volume of unit cell: 1456.472102 \u212b\u00b3\n\nNumber of atoms = 120\nNumber of charges = 0\nChemical formula: Dict(:H=\n8,:S=\n1,:Ca=\n1,:O=\n6,:C=\n14)\n\n\n\n\n\n\nBuilding Blocks of PorousMaterials: Bravais lattice\n#\n\n\nWe later apply periodic boundary conditions to mimic a crystal of infinite extent. A \nBox\n describes a \nBravais lattice\n.\n\n\nTo make a 10 by 10 by 10 \u212b Bravais lattice with right angles:\n\n\nbox = Box(10.0, 10.0, 10.0, \u03c0/2, \u03c0/2, \u03c0/2)\n\nbox.a, box.b, box.c # unit cell dimensions (10.0 \u212b)\nbox.\u03b1, box.\u03b2, box.\u03b3 # unit cell angles (1.57... radians)\nbox.\u03a9 # volume (1000.0 \u212b\u00b3)\nbox.f_to_c # fractional to Cartesian coordinate transformation matrix\nbox.c_to_f # Cartesian to fractional coordinate transformation matrix\nbox.reciprocal_lattice # rows are reciprocal lattice vectors\n\n\n\n\nReplicate a box as follows:\n\n\nbox = replicate(box, (2, 2, 2)) # new box replicated 2 by 2 by 2\nbox.a # 20 \u212b\n\n\n\n\n\n\nBuilding Blocks of PorousMaterials: Porous Crystals\n#\n\n\nusing PorousMaterials\n\n# read in xtal structure file\nframework = Framework(\nSBMOF-1.cif\n)\n\n# access unit cell box\nframework.box\n\n# access Lennard-Jones spheres and point charges comprising the crystal\nframework.atoms\nframework.charges\n\n# remove annoying numbers on the atom labels\nstrip_numbers_from_atom_labels!(framework)\n\n# compute crystal density\n\u03c1 = crystal_density(framework) # kg/m3\n\n# compute the chemical formula\ncf = chemical_formula(framework)\n\n# assign charges according to atom type\ncharges = Dict(:Ca =\n 3.0, :O =\n 2.0, :C =\n -1.0, :S =\n 7.0, :H =\n -1.0)\ncharged_framework = assign_charges(framework, charges)\n\n# replicate \n visualize\nframework = replicate(framework, (3, 3, 3))\nwrite_to_xyz(framework, \nSBMOF-1.xyz\n)\n\n\n\n\n\n\nDemo of Potential Energy Grid\n#\n\n\nSuperimpose a grid of points about the unit cell of SBMOF-1. Compute the potential energy of xenon at each point and store as a grid.\n\n\nusing PorousMaterials\n\nframework = Framework(\nSBMOF-1.cif\n)\nmolecule = Molecule(\nXe\n)\nforcefield = LJForceField(\nUFF.csv\n)\n\ngrid = energy_grid(framework, molecule, forcefield,\n    n_pts=(50, 50, 50), units=:kJ_mol) # Grid data structure\n\n\n\n\nWrite to a .cube volume file to visualize the potential energy contours.\n\n\nwrite_cube(grid, \nCH4_in_SBMOF1.cube\n)", 
+            "title": "Boxes, Crystals, and Grids"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/about/#loading-in-crystal-structure-files", 
+            "text": "Place  .cif  and  .cssr  crystal structure files in  data/crystals .  PorousMaterials.jl  currently takes crystals in P1 symmetry only. From here you can start julia and do the following to load a framework and start working with it.  using PorousMaterials\n\nf = Framework( SBMOF-1.cif )  PorousMaterials will then output information about the framework you just loaded:  Name: SBMOF-1.cif\nBravais unit cell of a crystal.\n        Unit cell angles \u03b1 = 90.000000 deg. \u03b2 = 100.897000 deg. \u03b3 = 90.000000 deg.\n        Unit cell dimensions a = 11.619300 \u212b. b = 5.566700 \u212b, c = 22.931200 \u212b\n        Volume of unit cell: 1456.472102 \u212b\u00b3\n\nNumber of atoms = 120\nNumber of charges = 0\nChemical formula: Dict(:H= 8,:S= 1,:Ca= 1,:O= 6,:C= 14)", 
+            "title": "Loading in Crystal Structure Files"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/about/#building-blocks-of-porousmaterials-bravais-lattice", 
+            "text": "We later apply periodic boundary conditions to mimic a crystal of infinite extent. A  Box  describes a  Bravais lattice .  To make a 10 by 10 by 10 \u212b Bravais lattice with right angles:  box = Box(10.0, 10.0, 10.0, \u03c0/2, \u03c0/2, \u03c0/2)\n\nbox.a, box.b, box.c # unit cell dimensions (10.0 \u212b)\nbox.\u03b1, box.\u03b2, box.\u03b3 # unit cell angles (1.57... radians)\nbox.\u03a9 # volume (1000.0 \u212b\u00b3)\nbox.f_to_c # fractional to Cartesian coordinate transformation matrix\nbox.c_to_f # Cartesian to fractional coordinate transformation matrix\nbox.reciprocal_lattice # rows are reciprocal lattice vectors  Replicate a box as follows:  box = replicate(box, (2, 2, 2)) # new box replicated 2 by 2 by 2\nbox.a # 20 \u212b", 
+            "title": "Building Blocks of PorousMaterials: Bravais lattice"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/about/#building-blocks-of-porousmaterials-porous-crystals", 
+            "text": "using PorousMaterials\n\n# read in xtal structure file\nframework = Framework( SBMOF-1.cif )\n\n# access unit cell box\nframework.box\n\n# access Lennard-Jones spheres and point charges comprising the crystal\nframework.atoms\nframework.charges\n\n# remove annoying numbers on the atom labels\nstrip_numbers_from_atom_labels!(framework)\n\n# compute crystal density\n\u03c1 = crystal_density(framework) # kg/m3\n\n# compute the chemical formula\ncf = chemical_formula(framework)\n\n# assign charges according to atom type\ncharges = Dict(:Ca =  3.0, :O =  2.0, :C =  -1.0, :S =  7.0, :H =  -1.0)\ncharged_framework = assign_charges(framework, charges)\n\n# replicate   visualize\nframework = replicate(framework, (3, 3, 3))\nwrite_to_xyz(framework,  SBMOF-1.xyz )", 
+            "title": "Building Blocks of PorousMaterials: Porous Crystals"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/about/#demo-of-potential-energy-grid", 
+            "text": "Superimpose a grid of points about the unit cell of SBMOF-1. Compute the potential energy of xenon at each point and store as a grid.  using PorousMaterials\n\nframework = Framework( SBMOF-1.cif )\nmolecule = Molecule( Xe )\nforcefield = LJForceField( UFF.csv )\n\ngrid = energy_grid(framework, molecule, forcefield,\n    n_pts=(50, 50, 50), units=:kJ_mol) # Grid data structure  Write to a .cube volume file to visualize the potential energy contours.  write_cube(grid,  CH4_in_SBMOF1.cube )", 
+            "title": "Demo of Potential Energy Grid"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/docs/", 
+            "text": "Boxes\n#\n\n\n    Box\n    replicate\n    UnitCube\n    write_vtk\n\n\n\n\n\n\nCrystals\n#\n\n\n    Framework\n    remove_overlapping_atoms_and_charges\n    strip_numbers_from_atom_labels!\n    chemical_formula\n    molecular_weight\n    crystal_density\n    replicate(::Framework, ::Tuple{Int, Int, Int})\n    charged(::Framework; ::Bool)\n    write_cif\n    assign_charges\n\n\n\n\n\n\nGrids\n#\n\n\n    Grid\n    apply_periodic_boundary_condition!\n    write_cube\n    read_cube\n    energy_grid", 
+            "title": "Boxes, Crystals, and Grids Documentation"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/docs/#boxes", 
+            "text": "Box\n    replicate\n    UnitCube\n    write_vtk", 
+            "title": "Boxes"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/docs/#crystals", 
+            "text": "Framework\n    remove_overlapping_atoms_and_charges\n    strip_numbers_from_atom_labels!\n    chemical_formula\n    molecular_weight\n    crystal_density\n    replicate(::Framework, ::Tuple{Int, Int, Int})\n    charged(::Framework; ::Bool)\n    write_cif\n    assign_charges", 
+            "title": "Crystals"
+        }, 
+        {
+            "location": "/manual/boxes_crystals_grids/docs/#grids", 
+            "text": "Grid\n    apply_periodic_boundary_condition!\n    write_cube\n    read_cube\n    energy_grid", 
+            "title": "Grids"
+        }, 
+        {
+            "location": "/manual/molecules/about/", 
+            "text": "Loading in Molecule Files\n#\n\n\nMolecule input files are stored in \ndata/molecules\n. Each molecule possesses its own directory and contains two files: \npoint_charges.csv\n and \nlennard_jones_spheres.csv\n, comma-separated-value files describing the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom; units of charges are electrons.\n\n\nusing PorousMaterials\n\nm = Molecule(\nCO2\n)\n\n\n\n\nPorousMaterials will then output information about the molecule you just loaded:\n\n\nMolecule species: CO2\nCenter of mass (fractional coords): [0.0, 0.0, 0.0]\nAtoms:\n\n        atom = C_CO2, xf = [0.000, 0.000, 0.000]\n        atom = O_CO2, xf = [-1.160, 0.000, 0.000]\n        atom = O_CO2, xf = [1.160, 0.000, 0.000]\nPoint charges:\n        charge = 0.700000, xf = [0.000, 0.000, 0.000]\n        charge = -0.350000, xf = [-1.160, 0.000, 0.000]\n        charge = -0.350000, xf = [1.160, 0.000, 0.000]\n\n\n\n\n\n\nBuilding Blocks of PorousMaterials: Molecules\n#\n\n\nmolecule = Molecule(\nCO2\n) # fractional coords in terms of unit cube box\n\n# access Lennard-Jones spheres \n point charges that comprise molecule\nmolecule.atoms\nmolecule.charges\n\n# translate to [1.0, 2.0, 3.0] fractional coordinates\ntranslate_to!(molecule, [1.0, 2.0, 3.0])\n\n# translate by [0.1, 0.0, 0.0] fractional coordinates\ntranslate_by!(molecule, [0.1, 0.0, 0.0])\n\n# conduct a uniform random rotation\nrotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of a unit cube", 
+            "title": "Molecules"
+        }, 
+        {
+            "location": "/manual/molecules/about/#loading-in-molecule-files", 
+            "text": "Molecule input files are stored in  data/molecules . Each molecule possesses its own directory and contains two files:  point_charges.csv  and  lennard_jones_spheres.csv , comma-separated-value files describing the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom; units of charges are electrons.  using PorousMaterials\n\nm = Molecule( CO2 )  PorousMaterials will then output information about the molecule you just loaded:  Molecule species: CO2\nCenter of mass (fractional coords): [0.0, 0.0, 0.0]\nAtoms:\n\n        atom = C_CO2, xf = [0.000, 0.000, 0.000]\n        atom = O_CO2, xf = [-1.160, 0.000, 0.000]\n        atom = O_CO2, xf = [1.160, 0.000, 0.000]\nPoint charges:\n        charge = 0.700000, xf = [0.000, 0.000, 0.000]\n        charge = -0.350000, xf = [-1.160, 0.000, 0.000]\n        charge = -0.350000, xf = [1.160, 0.000, 0.000]", 
+            "title": "Loading in Molecule Files"
+        }, 
+        {
+            "location": "/manual/molecules/about/#building-blocks-of-porousmaterials-molecules", 
+            "text": "molecule = Molecule( CO2 ) # fractional coords in terms of unit cube box\n\n# access Lennard-Jones spheres   point charges that comprise molecule\nmolecule.atoms\nmolecule.charges\n\n# translate to [1.0, 2.0, 3.0] fractional coordinates\ntranslate_to!(molecule, [1.0, 2.0, 3.0])\n\n# translate by [0.1, 0.0, 0.0] fractional coordinates\ntranslate_by!(molecule, [0.1, 0.0, 0.0])\n\n# conduct a uniform random rotation\nrotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of a unit cube", 
+            "title": "Building Blocks of PorousMaterials: Molecules"
+        }, 
+        {
+            "location": "/manual/molecules/docs/", 
+            "text": "Molecules\n#\n\n\n    Molecule\n    translate_to!\n    rotate!\n    rotation_matrix\n    rand_point_on_unit_sphere\n    charged(::Molecule; ::Bool)\n\n\n\n\n\n\nMolecular Movement\n#\n\n\n    insert_molecule!\n    delete_molecule!\n    translate_molecule!\n    reinsert_molecule!\n    rotatable", 
+            "title": "Molecules Documentation"
+        }, 
+        {
+            "location": "/manual/molecules/docs/#molecules", 
+            "text": "Molecule\n    translate_to!\n    rotate!\n    rotation_matrix\n    rand_point_on_unit_sphere\n    charged(::Molecule; ::Bool)", 
+            "title": "Molecules"
+        }, 
+        {
+            "location": "/manual/molecules/docs/#molecular-movement", 
+            "text": "insert_molecule!\n    delete_molecule!\n    translate_molecule!\n    reinsert_molecule!\n    rotatable", 
+            "title": "Molecular Movement"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/", 
+            "text": "Loading in Forcefield Files\n#\n\n\nLennard-Jones forcefield parameters are stored in comma-separated-value format in \ndata/forcefields/\n.\n\n\nInteraction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:\n\n\nV(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ]\n, where \nx = sigma / r\n\n\nThe Lennard Jones force field input files, e.g. \nUFF.csv\n contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, e.g., in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in \nPorousMaterials.jl\n.\n\n\nusing PorousMaterials\n\nljff = LJForceField(\nUFF.csv\n)\n\n\n\n\nPorousMaterials will the output information about the forcefield file you just loaded:\n\n\n    Force field: UFF.csv\n    Number of atoms included: 106\n    Cut-off radius (\u212b) = 14.0    \n\n\n\n\nThis also prints all of the atoms included in the loaded forcefield with their given \u03f5 and \u03c3. This was excluded because it would use too much space on this page.\n\n\n\n\nBuilding Blocks of PorousMaterials: Lennard-Jones forcefields\n#\n\n\n# read in Lennard-Jones force field parameters from the Universal Force Field\nforcefield = LJForceField(\nUFF.csv\n, cutoffradius=14.0, mixing_rules=\nLorentz-Berthelot\n)\n\n# access the Lennard-Jones epsilon \n sigma for Xe\nforcefield.pure_\u03f5[:Xe] # K\nforcefield.pure_\u03c3[:Xe] # \u212b\n\n# access the Lennard-Jones epsilon \n sigma for Xe-C interactions\nforcefield.\u03f5[:Xe][:C] # K                                                                 \nforcefield.\u03c3\u00b2[:Xe][:C] # \u212b (store \u03c3\u00b2 for faster computation)\n\n\n\n\n\n\nBuilding Blocks of PorousMaterials: Potential energies\n#\n\n\nFirst, set the fractional coordinates of the molecule in the context of some unit cell box.\n\n\n# molecule in a framework\nset_fractional_coords!(molecule, framework.box)\n\n# molecule in a 10 by 10 by 10 cube\nbox = Box(10.0, 10.0, 10.0, \u03c0/2, \u03c0/2, \u03c0/2) # make a box\nset_fractional_coords!(molecule, box)\n\n\n\n\n\n\nPotential Energies: Van der Waals\n#\n\n\nWhat is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at \n[0.0, 1.0, 3.0]\n Cartesian coordinates using the UFF as a molecular model?\n\n\nusing PorousMaterials\n\nframework = Framework(\nSBMOF-1.cif\n)\n\nforcefield = LJForceField(\nUFF.csv\n)\n\nmolecule = Molecule(\nXe\n)\nset_fractional_coords!(molecule, framework.box)\n\ntranslate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian\n\nenergy = vdw_energy(framework, molecule, forcefield) # K\n\n\n\n\n\n\nPotential Energies: Electrostatics\n#\n\n\nWhat is the electrostatic potential energy of a CO\n2\n adsorbate inside CAXVII_clean at \n[0.0, 1.0, 0.0]\n Cartesian coordinate?\n\n\nusing PorousMaterials\n\nframework = Framework(\nCAXVII_clean.cif\n) # has charges\n\nmolecule = Molecule(\nCO2\n)\nset_fractional_coords!(molecule, framework.box)\n\ntranslate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian\n\nrotate!(molecule, framework.box) # let's give it a random orientation\n\n# this is for speed. pre-compute k-vectors and allocate memory\neparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)\n\nenergy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)\n\n\n\n\n\n\nPotential Energies: Equations of state\n#\n\n\nCalculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:\n\n\ngas = PengRobinsonGas(:CH4)\nprops = calculate_properties(gas, 298.0, 65.0) # dictionary of properties\nprops[\nfugacity coefficient\n] # 0.8729\n\n\n\n\nPass \neos=:PengRobinson\n to \ngcmc_simulation\n to automatically convert pressure to fugacity using the Peng-Robinson equation of state.", 
+            "title": "Atomic Interactions"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/#loading-in-forcefield-files", 
+            "text": "Lennard-Jones forcefield parameters are stored in comma-separated-value format in  data/forcefields/ .  Interaction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:  V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ] , where  x = sigma / r  The Lennard Jones force field input files, e.g.  UFF.csv  contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, e.g., in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in  PorousMaterials.jl .  using PorousMaterials\n\nljff = LJForceField( UFF.csv )  PorousMaterials will the output information about the forcefield file you just loaded:      Force field: UFF.csv\n    Number of atoms included: 106\n    Cut-off radius (\u212b) = 14.0      This also prints all of the atoms included in the loaded forcefield with their given \u03f5 and \u03c3. This was excluded because it would use too much space on this page.", 
+            "title": "Loading in Forcefield Files"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/#building-blocks-of-porousmaterials-lennard-jones-forcefields", 
+            "text": "# read in Lennard-Jones force field parameters from the Universal Force Field\nforcefield = LJForceField( UFF.csv , cutoffradius=14.0, mixing_rules= Lorentz-Berthelot )\n\n# access the Lennard-Jones epsilon   sigma for Xe\nforcefield.pure_\u03f5[:Xe] # K\nforcefield.pure_\u03c3[:Xe] # \u212b\n\n# access the Lennard-Jones epsilon   sigma for Xe-C interactions\nforcefield.\u03f5[:Xe][:C] # K                                                                 \nforcefield.\u03c3\u00b2[:Xe][:C] # \u212b (store \u03c3\u00b2 for faster computation)", 
+            "title": "Building Blocks of PorousMaterials: Lennard-Jones forcefields"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/#building-blocks-of-porousmaterials-potential-energies", 
+            "text": "First, set the fractional coordinates of the molecule in the context of some unit cell box.  # molecule in a framework\nset_fractional_coords!(molecule, framework.box)\n\n# molecule in a 10 by 10 by 10 cube\nbox = Box(10.0, 10.0, 10.0, \u03c0/2, \u03c0/2, \u03c0/2) # make a box\nset_fractional_coords!(molecule, box)", 
+            "title": "Building Blocks of PorousMaterials: Potential energies"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/#potential-energies-van-der-waals", 
+            "text": "What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at  [0.0, 1.0, 3.0]  Cartesian coordinates using the UFF as a molecular model?  using PorousMaterials\n\nframework = Framework( SBMOF-1.cif )\n\nforcefield = LJForceField( UFF.csv )\n\nmolecule = Molecule( Xe )\nset_fractional_coords!(molecule, framework.box)\n\ntranslate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian\n\nenergy = vdw_energy(framework, molecule, forcefield) # K", 
+            "title": "Potential Energies: Van der Waals"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/#potential-energies-electrostatics", 
+            "text": "What is the electrostatic potential energy of a CO 2  adsorbate inside CAXVII_clean at  [0.0, 1.0, 0.0]  Cartesian coordinate?  using PorousMaterials\n\nframework = Framework( CAXVII_clean.cif ) # has charges\n\nmolecule = Molecule( CO2 )\nset_fractional_coords!(molecule, framework.box)\n\ntranslate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian\n\nrotate!(molecule, framework.box) # let's give it a random orientation\n\n# this is for speed. pre-compute k-vectors and allocate memory\neparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)\n\nenergy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)", 
+            "title": "Potential Energies: Electrostatics"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/about/#potential-energies-equations-of-state", 
+            "text": "Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:  gas = PengRobinsonGas(:CH4)\nprops = calculate_properties(gas, 298.0, 65.0) # dictionary of properties\nprops[ fugacity coefficient ] # 0.8729  Pass  eos=:PengRobinson  to  gcmc_simulation  to automatically convert pressure to fugacity using the Peng-Robinson equation of state.", 
+            "title": "Potential Energies: Equations of state"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/docs/", 
+            "text": "Forcefields\n#\n\n\n    LJForceField\n    replication_factors\n    check_forcefield_coverage\n\n\n\n\n\n\nPotential Energy\n#\n\n\n    PotentialEnergy\n    SystemPotentialEnergy\n\n\n\n\n\n\nNearest Image Conventions\n#\n\n\n    nearest_image!\n\n\n\n\n\n\nElectrostatics Energy\n#\n\n\n    Eikr\n    electrostatic_potential_energy\n    precompute_kvec_wts\n    setup_Ewald_sum\n    total_electrostatic_potential_energy\n\n\n\n\n\n\nVan der Waals Energy\n#\n\n\n    lennard_jones\n    vdw_energy\n    vdw_energy_no_PBC", 
+            "title": "Atomic Interactions Documentation"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/docs/#forcefields", 
+            "text": "LJForceField\n    replication_factors\n    check_forcefield_coverage", 
+            "title": "Forcefields"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/docs/#potential-energy", 
+            "text": "PotentialEnergy\n    SystemPotentialEnergy", 
+            "title": "Potential Energy"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/docs/#nearest-image-conventions", 
+            "text": "nearest_image!", 
+            "title": "Nearest Image Conventions"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/docs/#electrostatics-energy", 
+            "text": "Eikr\n    electrostatic_potential_energy\n    precompute_kvec_wts\n    setup_Ewald_sum\n    total_electrostatic_potential_energy", 
+            "title": "Electrostatics Energy"
+        }, 
+        {
+            "location": "/manual/atomic_interactions/docs/#van-der-waals-energy", 
+            "text": "lennard_jones\n    vdw_energy\n    vdw_energy_no_PBC", 
+            "title": "Van der Waals Energy"
+        }, 
+        {
+            "location": "/manual/mof_simulations/about/", 
+            "text": "Demo of Henry coefficients Calculation\n#\n\n\nCompute the Henry coefficient of CO\n2\n in CAXVII_clean (Fe\n2\n(dobdc)) at 298 K using the Dreiding force field:\n\n\nusing PorousMaterials\n\n# read in xtal structure file and populate a Framework data structure\nframework = Framework(\nCAXVII_clean.cif\n)                                               \n\n# read in Lennard-Jones force field parameters and populate a LJForceField data structure\nforcefield = LJForceField(\nDreiding.csv\n, cutoffradius=12.5)                                  \n\n# read in a molecule format file and populate a Molecule data structure\nmolecule = Molecule(\nCO2\n)                                                              \n\ntemperature = 298.0 # K\n\n# conduct Widom insertions and compute Henry coefficient, heat of adsorption\nresults = henry_coefficient(framework, molecule, temperature, forcefield, insertions_per_volume=200)\n\n# ... prints stuff\n# results automatically saved to .jld load later in one line of code\n\n# returns dictionary for easy querying\nresults[\nQst (kJ/mol)\n] # -21.0\nresults[\nhenry coefficient [mol/(kg-Pa)]\n] # 2.88e-05\n\n\n\n\nThe simulation is parallelized across a maximum of 5 cores.\n\n\n\n\nDemo of Grand-canonical Monte Carlo Simulations\n#\n\n\nSimulate the adsorption of CO\n2\n in FIQCEN_clean_min_charges (CuBTC) at 298 K at 1 bar using the Universal Force Field:\n\n\nusing PorousMaterials\n\n# read in xtal structure file and populate a Framework data structure\nframework = Framework(\nFIQCEN_clean_min_charges.cif\n)\n# remove annoying numbers from atom labels\nstrip_numbers_from_atom_labels!(framework)\n\n# read in Lennard-Jones force field parameters and populate a LJForceField data structure\nforcefield = LJForceField(\nUFF.csv\n, cutoffradius=12.8)\n\n# read in a molecule format file and populate a Molecule data structure\nmolecule = Molecule(\nCO2\n)\n\ntemperature = 298.0 # K\npressure = 1.0 # bar\n\n# conduct grand-canonical Monte Carlo simulation\nresults, molecules = gcmc_simulation(framework, molecule, temperature, pressure, forcefield,\n            n_burn_cycles=5000, n_sample_cycles=5000)\n\n# ... prints stuff\n# results automatically saved to .jld load later in one line of code\n\n# returns dictionary for easy querying\nresults[\n\u27e8N\u27e9 (molecules/unit cell)\n]\nresults[\nQ_st (K)\n]\n\n\n\n\nOr, compute the entire adsorption isotherm at once, parallelized across many cores:\n\n\npressures = [0.2, 0.6, 0.8, 1.0] # bar\n\n# loop over all pressures and compute entire adsorption isotherm in parallel\nresults = adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,\n            n_burn_cycles=5000, n_sample_cycles=5000)\n\n\n\n\nOr, compute the adsorption isotherm in a step-wise manner, loading the molecules from the previous simulation to save on burn cycles:\n\n\n# loop over all pressures and run GCMC simulations in series.\n# load in the configurations of the molecules from the previous pressure.\nresults = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,\n            n_burn_cycles=1000, n_sample_cycles=5000)", 
+            "title": "Molecular Simulations"
+        }, 
+        {
+            "location": "/manual/mof_simulations/about/#demo-of-henry-coefficients-calculation", 
+            "text": "Compute the Henry coefficient of CO 2  in CAXVII_clean (Fe 2 (dobdc)) at 298 K using the Dreiding force field:  using PorousMaterials\n\n# read in xtal structure file and populate a Framework data structure\nframework = Framework( CAXVII_clean.cif )                                               \n\n# read in Lennard-Jones force field parameters and populate a LJForceField data structure\nforcefield = LJForceField( Dreiding.csv , cutoffradius=12.5)                                  \n\n# read in a molecule format file and populate a Molecule data structure\nmolecule = Molecule( CO2 )                                                              \n\ntemperature = 298.0 # K\n\n# conduct Widom insertions and compute Henry coefficient, heat of adsorption\nresults = henry_coefficient(framework, molecule, temperature, forcefield, insertions_per_volume=200)\n\n# ... prints stuff\n# results automatically saved to .jld load later in one line of code\n\n# returns dictionary for easy querying\nresults[ Qst (kJ/mol) ] # -21.0\nresults[ henry coefficient [mol/(kg-Pa)] ] # 2.88e-05  The simulation is parallelized across a maximum of 5 cores.", 
+            "title": "Demo of Henry coefficients Calculation"
+        }, 
+        {
+            "location": "/manual/mof_simulations/about/#demo-of-grand-canonical-monte-carlo-simulations", 
+            "text": "Simulate the adsorption of CO 2  in FIQCEN_clean_min_charges (CuBTC) at 298 K at 1 bar using the Universal Force Field:  using PorousMaterials\n\n# read in xtal structure file and populate a Framework data structure\nframework = Framework( FIQCEN_clean_min_charges.cif )\n# remove annoying numbers from atom labels\nstrip_numbers_from_atom_labels!(framework)\n\n# read in Lennard-Jones force field parameters and populate a LJForceField data structure\nforcefield = LJForceField( UFF.csv , cutoffradius=12.8)\n\n# read in a molecule format file and populate a Molecule data structure\nmolecule = Molecule( CO2 )\n\ntemperature = 298.0 # K\npressure = 1.0 # bar\n\n# conduct grand-canonical Monte Carlo simulation\nresults, molecules = gcmc_simulation(framework, molecule, temperature, pressure, forcefield,\n            n_burn_cycles=5000, n_sample_cycles=5000)\n\n# ... prints stuff\n# results automatically saved to .jld load later in one line of code\n\n# returns dictionary for easy querying\nresults[ \u27e8N\u27e9 (molecules/unit cell) ]\nresults[ Q_st (K) ]  Or, compute the entire adsorption isotherm at once, parallelized across many cores:  pressures = [0.2, 0.6, 0.8, 1.0] # bar\n\n# loop over all pressures and compute entire adsorption isotherm in parallel\nresults = adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,\n            n_burn_cycles=5000, n_sample_cycles=5000)  Or, compute the adsorption isotherm in a step-wise manner, loading the molecules from the previous simulation to save on burn cycles:  # loop over all pressures and run GCMC simulations in series.\n# load in the configurations of the molecules from the previous pressure.\nresults = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,\n            n_burn_cycles=1000, n_sample_cycles=5000)", 
+            "title": "Demo of Grand-canonical Monte Carlo Simulations"
+        }, 
+        {
+            "location": "/manual/mof_simulations/docs/", 
+            "text": "Henry Coefficient Calculations\n#\n\n\n    henry_coefficient\n    henry_result_savename\n\n\n\n\n\n\nGrand-Canonical Monte Carlo Simulations\n#\n\n\n    gcmc_simulation\n    adsorption_isotherm\n    stepwise_adsorption_isotherm\n    gcmc_result_savename", 
+            "title": "Molecular Simulations Documentation"
+        }, 
+        {
+            "location": "/manual/mof_simulations/docs/#henry-coefficient-calculations", 
+            "text": "henry_coefficient\n    henry_result_savename", 
+            "title": "Henry Coefficient Calculations"
+        }, 
+        {
+            "location": "/manual/mof_simulations/docs/#grand-canonical-monte-carlo-simulations", 
+            "text": "gcmc_simulation\n    adsorption_isotherm\n    stepwise_adsorption_isotherm\n    gcmc_result_savename", 
+            "title": "Grand-Canonical Monte Carlo Simulations"
+        }, 
+        {
+            "location": "/manual/other/about/", 
+            "text": "PorousMaterials relies on functions that fall outside of the sections discussed up to this point. They are useful, but operate on their own for the most part.\n\n\n\n\nPATH_TO_DATA Control\n#\n\n\nThe PATH_TO_DATA is crucial for loading in data files. These functions allow the user to control this after they have done \nusing PorusMaterials\n. The \nset_tutorial_mode()\n function has been discussed before, and it allows you to recreate our example and try PorouMaterials before loading your data. The other functions allow the user to reset the PATH_TO_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.\n\n\n\n\nReading in Atomic Values\n#\n\n\nThese functions are used to read in the \natomicmasses.csv\n, \natom_properties.csv\n, and \ncpk_atom_colors.csv\n files from the current \nPATH_TO_DATA\n directory. They contain information on the masses, radii, and cpk color scheme for atoms.\n\n\n\n\nUsing .xyz files\n#\n\n\nThese functions allow the user to load and save .xyz files describing where molecules appear in a given space. This can be used to save the location of molecules in the middle of a simulation or to visualize what is happening.", 
+            "title": "Other"
+        }, 
+        {
+            "location": "/manual/other/about/#path_to_data-control", 
+            "text": "The PATH_TO_DATA is crucial for loading in data files. These functions allow the user to control this after they have done  using PorusMaterials . The  set_tutorial_mode()  function has been discussed before, and it allows you to recreate our example and try PorouMaterials before loading your data. The other functions allow the user to reset the PATH_TO_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.", 
+            "title": "PATH_TO_DATA Control"
+        }, 
+        {
+            "location": "/manual/other/about/#reading-in-atomic-values", 
+            "text": "These functions are used to read in the  atomicmasses.csv ,  atom_properties.csv , and  cpk_atom_colors.csv  files from the current  PATH_TO_DATA  directory. They contain information on the masses, radii, and cpk color scheme for atoms.", 
+            "title": "Reading in Atomic Values"
+        }, 
+        {
+            "location": "/manual/other/about/#using-xyz-files", 
+            "text": "These functions allow the user to load and save .xyz files describing where molecules appear in a given space. This can be used to save the location of molecules in the middle of a simulation or to visualize what is happening.", 
+            "title": "Using .xyz files"
+        }, 
+        {
+            "location": "/manual/other/docs/", 
+            "text": "PATH_TO_DATA Control\n#\n\n\n    set_path_to_data\n    set_tutorial_mode\n\n\n\n\n\n\nReading in Atomic Values\n#\n\n\n    read_atomic_radii\n    read_atomic_masses\n    read_cpk_colors\n\n\n\n\n\n\nUsing .xyz files\n#\n\n\n    read_xyz\n    write_xyz", 
+            "title": "Other Documentation"
+        }, 
+        {
+            "location": "/manual/other/docs/#path_to_data-control", 
+            "text": "set_path_to_data\n    set_tutorial_mode", 
+            "title": "PATH_TO_DATA Control"
+        }, 
+        {
+            "location": "/manual/other/docs/#reading-in-atomic-values", 
+            "text": "read_atomic_radii\n    read_atomic_masses\n    read_cpk_colors", 
+            "title": "Reading in Atomic Values"
+        }, 
+        {
+            "location": "/manual/other/docs/#using-xyz-files", 
+            "text": "read_xyz\n    write_xyz", 
+            "title": "Using .xyz files"
+        }, 
+        {
+            "location": "/guides/faq/", 
+            "text": "FAQ\n#\n\n\nHow do I type out the math symbols? e.g. \nbox.\u03b1\n?\n\n\nJulia supports \nunicode input\n! Type \nbox.\\alpha\n, then hit tab. Voil\u00e0. There is a vim extension for Julia \nhere\n.\n\n\nHow do I run as a script in the command line?\n\n\nIt is instructive to first run an example in the Julia REPL so you can print out and interact with attributes of your \nforcefield\n, \nframework\n, and \nmolecule\n to ensure they are correct. If you want to then run the Julia code in the command line, simply put the commands in a text file with a \n.jl\n extension and run in terminal as \njulia my_script.jl\n. For parallelization in \nadsorption_isotherm\n and \nhenry_coefficient\n, call e.g. 4 cores with \njulia -p 4 my_script.jl\n.\n\n\nCan I use \nPorousMaterials.jl\n in Jupyter Notebook/ Jupyter Lab?\n\n\nYes! See \nhere\n.\n\n\nHow can I convert my \n.cif\n into P1 symmetry for \nPorousMaterials.jl\n?\n\n\nWe hope someone will contribute this feature to \nPorousMaterials.jl\n eventually. For now, you can use \nOpenBabel\n:\n\n\nobabel -icif non-P1.cif -ocif -O P1.cif --fillUC strict", 
+            "title": "FAQ"
+        }, 
+        {
+            "location": "/guides/faq/#faq", 
+            "text": "How do I type out the math symbols? e.g.  box.\u03b1 ?  Julia supports  unicode input ! Type  box.\\alpha , then hit tab. Voil\u00e0. There is a vim extension for Julia  here .  How do I run as a script in the command line?  It is instructive to first run an example in the Julia REPL so you can print out and interact with attributes of your  forcefield ,  framework , and  molecule  to ensure they are correct. If you want to then run the Julia code in the command line, simply put the commands in a text file with a  .jl  extension and run in terminal as  julia my_script.jl . For parallelization in  adsorption_isotherm  and  henry_coefficient , call e.g. 4 cores with  julia -p 4 my_script.jl .  Can I use  PorousMaterials.jl  in Jupyter Notebook/ Jupyter Lab?  Yes! See  here .  How can I convert my  .cif  into P1 symmetry for  PorousMaterials.jl ?  We hope someone will contribute this feature to  PorousMaterials.jl  eventually. For now, you can use  OpenBabel :  obabel -icif non-P1.cif -ocif -O P1.cif --fillUC strict", 
+            "title": "FAQ"
+        }, 
+        {
+            "location": "/guides/help_wanted/", 
+            "text": "Help wanted and needed\n#\n\n\n\n\n\n\nthe speed of a GCMC or Henry simulation is determined primarily by how fast \nPorousMaterials.jl\n can compute the electrostatic and vdw potential energy. Some core functions that can speed up this are:\n\n\n\n\nnearest_image!\n in \nsrc/NearestImage.jl\n\n\nEwald sums in \nsrc/Electrostatics.jl\n. (electrostatics are a huge bottleneck.)\n\n\nsrc/VdWEnergetics.jl\n\n\nThe scripts \ntest/vdw_timing.jl\n and \ntest/ewald_timing.jl\n time the functions for benchmarking.\n\n\n\n\n\n\n\n\nconsolidate \neikar\n, \neikbr\n, \neikcr\n somehow without slowing down the Ewald sum.\n\n\n\n\nmore tests added to \ntests/runtests.jl\n, \ntests/henry_tests.jl\n, \ntests/gcmc_tests.jl\n\n\ngeometric-based pore size calculations (largest free and included spheres), surface area, and porosity calculations that take \nFramework\n's as input\n\n\nhandle .cif's without P1 symmetry. i.e. convert any .cif to P1 symmetry\n\n\nextend \ngcmc_simulation\n to handle mixtures\n\n\nbetter default rules for choosing Ewald sum parameters? alpha, kvectors required...\n\n\nHenry coefficient code prints off Ewald sum params 5 times if run with one core...\n\n\nset good defaults for \ngcmc_simulation\n probabilities (as now) but also allow user to change through default arguments to the function\n\n\nautomatically adjust the translation step \n\u03b4\n in \ngcmc_simulation\n during burn cycles to have 50% acceptance of translation moves (online gradient descent?)\n\n\nEQEq or other charge equilibration schemes for assinging charges, taking a \nFramework\n as input.", 
+            "title": "Help Wanted"
+        }, 
+        {
+            "location": "/guides/help_wanted/#help-wanted-and-needed", 
+            "text": "the speed of a GCMC or Henry simulation is determined primarily by how fast  PorousMaterials.jl  can compute the electrostatic and vdw potential energy. Some core functions that can speed up this are:   nearest_image!  in  src/NearestImage.jl  Ewald sums in  src/Electrostatics.jl . (electrostatics are a huge bottleneck.)  src/VdWEnergetics.jl  The scripts  test/vdw_timing.jl  and  test/ewald_timing.jl  time the functions for benchmarking.     consolidate  eikar ,  eikbr ,  eikcr  somehow without slowing down the Ewald sum.   more tests added to  tests/runtests.jl ,  tests/henry_tests.jl ,  tests/gcmc_tests.jl  geometric-based pore size calculations (largest free and included spheres), surface area, and porosity calculations that take  Framework 's as input  handle .cif's without P1 symmetry. i.e. convert any .cif to P1 symmetry  extend  gcmc_simulation  to handle mixtures  better default rules for choosing Ewald sum parameters? alpha, kvectors required...  Henry coefficient code prints off Ewald sum params 5 times if run with one core...  set good defaults for  gcmc_simulation  probabilities (as now) but also allow user to change through default arguments to the function  automatically adjust the translation step  \u03b4  in  gcmc_simulation  during burn cycles to have 50% acceptance of translation moves (online gradient descent?)  EQEq or other charge equilibration schemes for assinging charges, taking a  Framework  as input.", 
+            "title": "Help wanted and needed"
+        }
+    ]
+}
