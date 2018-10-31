@@ -50,7 +50,7 @@ import PorousMaterials
     deploydocs(
         repo = "github.com/SimonEnsemble/PorousMaterials.jl.git",
         # This is a link to the main repo and the master branch
-        target = "build",
+        # target = "build",
         julia = "1.0",
         osname = "linux",
         deps = Deps.pip("mkdocs", "mkdocs-windmill", "pymdown-extensions") # These are dependencies for the site, not the package
