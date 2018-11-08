@@ -42,3 +42,22 @@ translate_by!(molecule, [0.1, 0.0, 0.0])
 # conduct a uniform random rotation
 rotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of a unit cube
 ```
+
+## Molecules
+```@docs
+    Molecule
+    translate_to!
+    rotate!
+    rotation_matrix
+    rand_point_on_unit_sphere
+    charged(::Molecule; ::Bool)
+```
+
+## Molecular Movement
+```@docs
+    insert_molecule!
+    delete_molecule!
+    translate_molecule!
+    reinsert_molecule!
+    rotatable
+```

@@ -34,23 +34,11 @@ pages:
   - PorousMaterials: index.md
   - Loading Data: guides/input_files.md
   - Manual:
-    - Matter:
-      - Matter: manual/matter/about.md
-      - Matter Documentation: manual/matter/docs.md
-    - Boxes, Crystals, and Grids:
-      - Boxes, Crystals, and Grids: manual/boxes_crystals_grids/about.md
-      - Boxes, Crystals, and Grids Documentation: manual/boxes_crystals_grids/docs.md
-    - Molecules:
-      - Molecules: manual/molecules/about.md
-      - Molecules Documentation: manual/molecules/docs.md
-    - Atomic Interactions:
-      - Atomic Interactions: manual/atomic_interactions/about.md
-      - Atomic Interactions Documentation: manual/atomic_interactions/docs.md
-    - Molecular Simulations:
-      - Molecular Simulations: manual/mof_simulations/about.md
-      - Molecular Simulations Documentation: manual/mof_simulations/docs.md
-    - Other:
-      - Other: manual/other/about.md
-      - Other Documentation: manual/other/docs.md
+    - Matter: manual/matter.md
+    - Boxes, Crystals, and Grids: manual/boxes_crystals_grids.md
+    - Molecules: manual/molecules.md
+    - Atomic Interactions: manual/atomic_interactions.md
+    - Molecular Simulations: manual/mof_simulations.md
+    - Other: manual/other.md
   - FAQ: guides/faq.md
   - Help Wanted: guides/help_wanted.md

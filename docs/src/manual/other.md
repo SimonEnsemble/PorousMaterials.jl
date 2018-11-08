@@ -11,3 +11,22 @@ These functions are used to read in the `atomicmasses.csv`, `atom_properties.csv
 ## Using .xyz files
 
 These functions allow the user to load and save .xyz files describing where molecules appear in a given space. This can be used to save the location of molecules in the middle of a simulation or to visualize what is happening.
+
+## PATH\_TO\_DATA Control
+```@docs
+    set_path_to_data
+    set_tutorial_mode
+```
+
+## Reading in Atomic Values
+```@docs
+    read_atomic_radii
+    read_atomic_masses
+    read_cpk_colors
+```
+
+## Using .xyz files
+```@docs
+    read_xyz
+    write_xyz
+```

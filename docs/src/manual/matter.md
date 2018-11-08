@@ -31,3 +31,9 @@ charges = Charges([1.0], xf)
 charges.q[1] # 1.0
 charges.xf[:, 1] # [0.1, 0.2, 0.5]
 ```
+
+## Matter
+```@docs
+    Atoms
+    Charges
+```
