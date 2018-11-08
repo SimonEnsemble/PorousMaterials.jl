@@ -1,5 +1,5 @@
 using Documenter
-import PorousMaterials
+using PorousMaterials
 
     makedocs(
         root = joinpath(dirname(pathof(PorousMaterials)), "..", "docs"),
@@ -11,35 +11,23 @@ import PorousMaterials
                 "Loading Data" => "guides/input_files.md",
 
                 "Manual" => [
-                    "Matter" => [
-                        "Matter" => "manual/matter/docs.md",
-                        "Matter Documentation" => "manual/matter/about.md"
-                        ],
+                    "Matter" =>
+                        "manual/matter.md",
 
-                    "Boxes, Crystals, and Grids" => [
-                        "Boxes, Crystals, and Grids" => "manual/boxes_crystals_grids/docs.md",
-                        "Boxes, Crystals, and Grids Documentation" => "manual/boxes_crystals_grids/about.md"
-                        ],
+                    "Boxes, Crystals, and Grids" => 
+                        "manual/boxes_crystals_grids.md",
 
-                    "Molecules" => [
-                        "Molecules" => "manual/molecules/docs.md",
-                        "Molecules Documentation" => "manual/molecules/about.md"
-                        ],
+                    "Molecules" => 
+                        "manual/molecules.md",
 
-                    "Atomic Interactions" => [
-                        "Atomic Interactions" => "manual/atomic_interactions/docs.md",
-                        "Atomic Interactions" => "manual/atomic_interactions/about.md"
-                        ],
+                    "Atomic Interactions" => 
+                        "manual/atomic_interactions.md",
 
-                    "Molecular Simulations" => [ 
-                        "Molecular Simulations" => "manual/mof_simulations/docs.md",
-                        "Molecular Simulations Documentation" => "manual/mof_simulations/about.md"
-                        ],
+                    "Molecular Simulations" => 
+                        "manual/mof_simulations.md",
 
-                    "Other" => [
-                        "Other" => "manual/other/docs.md",
-                        "Other Documentation" => "manual/other/about.md"
-                        ]
+                    "Other" => 
+                        "manual/other.md",
                     ],
 
                 "FAQ" => "guides/faq.md",

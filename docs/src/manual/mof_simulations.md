@@ -78,3 +78,17 @@ Or, compute the adsorption isotherm in a step-wise manner, loading the molecules
 results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,
             n_burn_cycles=1000, n_sample_cycles=5000)
 ```
+
+## Henry Coefficient Calculations
+```@docs
+    henry_coefficient
+    henry_result_savename
+```
+
+## Grand-Canonical Monte Carlo Simulations
+```@docs
+    gcmc_simulation
+    adsorption_isotherm
+    stepwise_adsorption_isotherm
+    gcmc_result_savename
+```
