@@ -2,82 +2,52 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
      <loc>/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>/guides/input_files/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/matter/about/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <loc>/manual/matter/</loc>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/matter/docs/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <loc>/manual/boxes_crystals_grids/</loc>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/boxes_crystals_grids/about/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <loc>/manual/molecules/</loc>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/boxes_crystals_grids/docs/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <loc>/manual/atomic_interactions/</loc>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/molecules/about/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <loc>/manual/mof_simulations/</loc>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/molecules/docs/</loc>
-     <lastmod>2018-10-31</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>/manual/atomic_interactions/about/</loc>
-     <lastmod>2018-10-31</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>/manual/atomic_interactions/docs/</loc>
-     <lastmod>2018-10-31</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>/manual/mof_simulations/about/</loc>
-     <lastmod>2018-10-31</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>/manual/mof_simulations/docs/</loc>
-     <lastmod>2018-10-31</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>/manual/other/about/</loc>
-     <lastmod>2018-10-31</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    <url>
-     <loc>/manual/other/docs/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <loc>/manual/other/</loc>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>/guides/faq/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>/guides/help_wanted/</loc>
-     <lastmod>2018-10-31</lastmod>
+     <lastmod>2018-11-08</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>

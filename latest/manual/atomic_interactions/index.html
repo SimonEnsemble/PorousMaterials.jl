@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="SimonEnsemble">
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Atomic Interactions - </title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../assets/Documenter.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Loading in Forcefield Files", url: "#_top", children: [
+          ]},
+          {title: "Building Blocks of PorousMaterials: Lennard-Jones forcefields", url: "#building-blocks-of-porousmaterials-lennard-jones-forcefields", children: [
+          ]},
+          {title: "Building Blocks of PorousMaterials: Potential energies", url: "#building-blocks-of-porousmaterials-potential-energies", children: [
+              {title: "Potential Energies: Van der Waals", url: "#potential-energies-van-der-waals" },
+              {title: "Potential Energies: Electrostatics", url: "#potential-energies-electrostatics" },
+              {title: "Potential Energies: Equations of state", url: "#potential-energies-equations-of-state" },
+          ]},
+          {title: "Forcefields", url: "#forcefields", children: [
+          ]},
+          {title: "Potential Energy", url: "#potential-energy", children: [
+          ]},
+          {title: "Nearest Image Conventions", url: "#nearest-image-conventions", children: [
+          ]},
+          {title: "Electrostatics Energy", url: "#electrostatics-energy", children: [
+          ]},
+          {title: "Van der Waals Energy", url: "#van-der-waals-energy", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+      <script src="../../assets/mathjaxhelper.js"></script>
+      <script src="../../mathjax-config.js"></script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../mof_simulations/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../mof_simulations/" class="btn btn-xs btn-link">
+        Molecular Simulations
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../molecules/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../molecules/" class="btn btn-xs btn-link">
+        Molecules
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <p><a id='Loading-in-Forcefield-Files-1'></a></p>
+<h2 id="loading-in-forcefield-files">Loading in Forcefield Files<a class="headerlink" href="#loading-in-forcefield-files" title="Permanent link">#</a></h2>
+<p>Lennard-Jones forcefield parameters are stored in comma-separated-value format in <code>data/forcefields/</code>.</p>
+<p>Interaction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:</p>
+<p><code>V(r) = 4 * epsilon * [ x ^ 12 - x ^ 6 ]</code>, where <code>x = sigma / r</code></p>
+<p>The Lennard Jones force field input files, e.g. <code>UFF.csv</code> contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom and Kelvin, respectively. Note that, e.g., in the UFF paper, the Lennard Jones potential is written in a different form and thus parameters need to be converted to correspond to the functional form used in <code>PorousMaterials.jl</code>.</p>
+<pre><code class="julia">using PorousMaterials
+
+ljff = LJForceField(&quot;UFF.csv&quot;)
+</code></pre>
+
+<p>PorousMaterials will the output information about the forcefield file you just loaded:</p>
+<pre><code class="julia">    Force field: UFF.csv
+    Number of atoms included: 106
+    Cut-off radius (Å) = 14.0    
+</code></pre>
+
+<p>This also prints all of the atoms included in the loaded forcefield with their given ϵ and σ. This was excluded because it would use too much space on this page.</p>
+<p><a id='Building-Blocks-of-PorousMaterials:-Lennard-Jones-forcefields-1'></a></p>
+<h2 id="building-blocks-of-porousmaterials-lennard-jones-forcefields">Building Blocks of PorousMaterials: Lennard-Jones forcefields<a class="headerlink" href="#building-blocks-of-porousmaterials-lennard-jones-forcefields" title="Permanent link">#</a></h2>
+<pre><code class="julia"># read in Lennard-Jones force field parameters from the Universal Force Field
+forcefield = LJForceField(&quot;UFF.csv&quot;, cutoffradius=14.0, mixing_rules=&quot;Lorentz-Berthelot&quot;)
+
+# access the Lennard-Jones epsilon &amp; sigma for Xe
+forcefield.pure_ϵ[:Xe] # K
+forcefield.pure_σ[:Xe] # Å
+
+# access the Lennard-Jones epsilon &amp; sigma for Xe-C interactions
+forcefield.ϵ[:Xe][:C] # K                                                                 
+forcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
+</code></pre>
+
+<p><a id='Building-Blocks-of-PorousMaterials:-Potential-energies-1'></a></p>
+<h2 id="building-blocks-of-porousmaterials-potential-energies">Building Blocks of PorousMaterials: Potential energies<a class="headerlink" href="#building-blocks-of-porousmaterials-potential-energies" title="Permanent link">#</a></h2>
+<p>First, set the fractional coordinates of the molecule in the context of some unit cell box.</p>
+<pre><code class="julia"># molecule in a framework
+set_fractional_coords!(molecule, framework.box)
+
+# molecule in a 10 by 10 by 10 cube
+box = Box(10.0, 10.0, 10.0, π/2, π/2, π/2) # make a box
+set_fractional_coords!(molecule, box)
+</code></pre>
+
+<p><a id='Potential-Energies:-Van-der-Waals-1'></a></p>
+<h4 id="potential-energies-van-der-waals">Potential Energies: Van der Waals<a class="headerlink" href="#potential-energies-van-der-waals" title="Permanent link">#</a></h4>
+<p>What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at <code>[0.0, 1.0, 3.0]</code> Cartesian coordinates using the UFF as a molecular model?</p>
+<pre><code class="julia">using PorousMaterials
+
+framework = Framework(&quot;SBMOF-1.cif&quot;)
+
+forcefield = LJForceField(&quot;UFF.csv&quot;)
+
+molecule = Molecule(&quot;Xe&quot;)
+set_fractional_coords!(molecule, framework.box)
+
+translate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian
+
+energy = vdw_energy(framework, molecule, forcefield) # K
+</code></pre>
+
+<p><a id='Potential-Energies:-Electrostatics-1'></a></p>
+<h4 id="potential-energies-electrostatics">Potential Energies: Electrostatics<a class="headerlink" href="#potential-energies-electrostatics" title="Permanent link">#</a></h4>
+<p>What is the electrostatic potential energy of a CO<sub>2</sub> adsorbate inside CAXVII_clean at <code>[0.0, 1.0, 0.0]</code> Cartesian coordinate?</p>
+<pre><code class="julia">using PorousMaterials
+
+framework = Framework(&quot;CAXVII_clean.cif&quot;) # has charges
+
+molecule = Molecule(&quot;CO2&quot;)
+set_fractional_coords!(molecule, framework.box)
+
+translate_to!(molecule, [0.0, 1.0, 0.0], framework.box) # need box b/c we're talking Cartesian
+
+rotate!(molecule, framework.box) # let's give it a random orientation
+
+# this is for speed. pre-compute k-vectors and allocate memory
+eparams, kvectors, eikar, eikbr, eikcr = setup_Ewald_sum(12.0, framework.box)
+
+energy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, eikar, eikbr, eikcr)
+</code></pre>
+
+<p><a id='Potential-Energies:-Equations-of-state-1'></a></p>
+<h4 id="potential-energies-equations-of-state">Potential Energies: Equations of state<a class="headerlink" href="#potential-energies-equations-of-state" title="Permanent link">#</a></h4>
+<p>Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:</p>
+<pre><code class="julia">gas = PengRobinsonGas(:CH4)
+props = calculate_properties(gas, 298.0, 65.0) # dictionary of properties
+props[&quot;fugacity coefficient&quot;] # 0.8729
+</code></pre>
+
+<p>Pass <code>eos=:PengRobinson</code> to <code>gcmc_simulation</code> to automatically convert pressure to fugacity using the Peng-Robinson equation of state.</p>
+<p><a id='Forcefields-1'></a></p>
+<h2 id="forcefields">Forcefields<a class="headerlink" href="#forcefields" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.LJForceField' href='#PorousMaterials.LJForceField'>#</a>
+<strong><code>PorousMaterials.LJForceField</code></strong> &mdash; <em>Type</em>.</p>
+<p>Data structure for a Lennard Jones forcefield.</p>
+<p><strong>Attributes</strong></p>
+<ul>
+<li><code>name::String</code>: name of forcefield; correponds to filename</li>
+<li><code>pure_σ::Dict{Symbol, Float64}</code>: Dictionary that returns Lennard-Jones σ of an X-X interaction, where X is an atom. (units: Angstrom)</li>
+<li><code>pure_ϵ::Dict{Symbol, Float64}</code>: Dictionary that returns Lennard-Jones ϵ of an X-X interaction, where X is an atom. (units: K)</li>
+<li><code>σ²::Dict{Symbol, Dict{Symbol, Float64}}</code>: Lennard Jones σ² (units: Angstrom²) for cross-interactions. Example use is <code>sigmas_squared[:He][:C]</code></li>
+<li><code>ϵ::Dict{Symbol, Dict{Symbol, Float64}}</code>: Lennard Jones ϵ (units: K) for cross-interactions. Example use is <code>epsilons[:He][:C]</code></li>
+<li><code>cutoffradius_squared::Float64</code>: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.replication_factors' href='#PorousMaterials.replication_factors'>#</a>
+<strong><code>PorousMaterials.replication_factors</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>repfactors = replication_factors(unitcell, cutoffradius)
+</code></pre>
+
+<p>Find the replication factors needed to make a supercell big enough to fit a sphere with the specified cutoff radius. In PorousMaterials.jl, rather than replicating the atoms in the home unit cell to build the supercell that serves as a simulation box, we replicate the home unit cell to form the supercell (simulation box) in a for loop. This function ensures enough replication factors such that the nearest image convention can be applied.</p>
+<p>A non-replicated supercell has 1 as the replication factor in each dimension (<code>repfactors = (1, 1, 1)</code>).</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>unitcell::Box</code>: The unit cell of the framework</li>
+<li><code>cutoff_radius::Float64</code>: Cutoff radius beyond which we define the potential energy to be zero (units: Angstrom)</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>repfactors::Tuple{Int, Int, Int}</code>: The replication factors in the a, b, c directions</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/Forcefield.jl#L100-L116' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.check_forcefield_coverage' href='#PorousMaterials.check_forcefield_coverage'>#</a>
+<strong><code>PorousMaterials.check_forcefield_coverage</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>check_forcefield_coverage(framework, ljforcefield)
+check_forcefield_coverage(molecule, ljforcefield)
+</code></pre>
+
+<p>Check that the force field contains parameters for every atom present in a framework or molecule. Will print out which atoms are missing.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: The framework containing the crystal structure information</li>
+<li><code>molecule::Molecule</code>: A molecule object</li>
+<li><code>ljforcefield::LJForceField</code>: A Lennard Jones forcefield object containing information on atom interactions</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>all_covered::Bool</code>: Returns true if all atoms in the <code>framework</code> are also included in <code>ljforcefield</code>. False otherwise</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/Forcefield.jl#L161-L175' class='documenter-source'>source</a><br></p>
+<p><a id='Potential-Energy-1'></a></p>
+<h2 id="potential-energy">Potential Energy<a class="headerlink" href="#potential-energy" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.PotentialEnergy' href='#PorousMaterials.PotentialEnergy'>#</a>
+<strong><code>PorousMaterials.PotentialEnergy</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>pe = PotentialEnergy()
+</code></pre>
+
+<p>Data structure to store potential energy, partitioned into van der Waals (<code>energy.vdw</code>) and electrostatic (<code>energy.coulomb</code>) interactions, both <code>Float64</code>.</p>
+<p>This returns a PotentialEnergy data type where the vdw and coulomb attributes are set to 0.0</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>pe::PotentialEnergy</code>: A structure containing van der Waals and electrostatic energies, initialized at 0.0</li>
+</ul>
+<p><strong>Attributes</strong></p>
+<ul>
+<li><code>vdw::Float64</code>: The potential energy contributions from Van der Waals interactions</li>
+<li><code>coulomb::Float64</code>: The potential energy contributions from electrostatic interactions</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/Energetics_Util.jl#L3-L20' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.SystemPotentialEnergy' href='#PorousMaterials.SystemPotentialEnergy'>#</a>
+<strong><code>PorousMaterials.SystemPotentialEnergy</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>system_potential_energy = SystemPotentialEnergy()
+</code></pre>
+
+<p>Data structure to facilitate storing/partitioning potential energy of a system. It stores the potential energy from guest-host and guest-guest interactions separately.</p>
+<p>This initializes guest<em>host and guest</em>guest with PotentialEnergy(), so when it is created the total energy recorded is 0.0</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>system_potential_energy::SystemPotentialEnergy</code>: A structure containing the potential energy of the system,   broken down into guest-guest and guest-host interactions</li>
+</ul>
+<p><strong>Attributes</strong></p>
+<ul>
+<li><code>guest_host::PotentialEnergy</code>: The total potential energy from all guest-host   interactions in the system</li>
+<li><code>guest_guest::PotentialEnergy</code>: The total potential energy from all guest-guest   interactions in the system</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/Energetics_Util.jl#L51-L69' class='documenter-source'>source</a><br></p>
+<p><a id='Nearest-Image-Conventions-1'></a></p>
+<h2 id="nearest-image-conventions">Nearest Image Conventions<a class="headerlink" href="#nearest-image-conventions" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.nearest_image!' href='#PorousMaterials.nearest_image!'>#</a>
+<strong><code>PorousMaterials.nearest_image!</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>nearest_image!(dxf)
+</code></pre>
+
+<p>Applies the nearest image convention on a vector <code>dxf</code> between two atoms in fractional space; modifies <code>dxf</code> for nearest image convention. Fractional coordinates here fall in [0, 1] so that the box is [0, 1]^3 in fractional space.</p>
+<p>Warning: this assumes the two molecules are in the box described by fractional coords [0, 1]³.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>dxf::Array{Float64}</code>: A vector between two atoms in fractional space</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/NearestImage.jl#L1-L12' class='documenter-source'>source</a><br></p>
+<p><a id='Electrostatics-Energy-1'></a></p>
+<h2 id="electrostatics-energy">Electrostatics Energy<a class="headerlink" href="#electrostatics-energy" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.Eikr' href='#PorousMaterials.Eikr'>#</a>
+<strong><code>PorousMaterials.Eikr</code></strong> &mdash; <em>Type</em>.</p>
+<pre><code>eikr = Eikr(eikar, eikbr, eikcr)
+</code></pre>
+
+<p>mutable struct for holding the eikr vectors</p>
+<p><strong>Attributes</strong></p>
+<ul>
+<li><code>eikar::OffsetArray{Complex{Float64}}</code>: array for storing e^{i * ka ⋅ r}; has indices   0:kreps[1] and corresponds to recip. vectors in a-direction</li>
+<li><code>eikbr::OffsetArray{Complex{Float64}}</code>: array for storing e^{i * kb ⋅ r}; has indices   -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction</li>
+<li><code>eikcr::OffsetArray{Complex{Float64}}</code>: array for storing e^{i * kc ⋅ r}; has indices   -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L77-L89' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.electrostatic_potential_energy' href='#PorousMaterials.electrostatic_potential_energy'>#</a>
+<strong><code>PorousMaterials.electrostatic_potential_energy</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>ϕ = electrostatic_potential_energy(framework, molecule, eparams, eikr)
+</code></pre>
+
+<p>Compute the electrostatic potential energy of a molecule inside a framework.</p>
+<p>The electrostatic potential is created by the point charges assigned to the framework atoms in <code>framework.charges</code>. Periodic boundary conditions are applied through the Ewald summation. The spurious self-interaction term is neglected here because we are looking at <em>differences</em> in energy in a Monte Carlo simulation.</p>
+<p>Warning: it is assumed that the framework is replicated enough such that the nearest image convention can be applied for the short-range cutoff radius supplied in <code>eparams.sr_cutoff_r</code>.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: Crystal structure (see <code>framework.charges</code> for charges)</li>
+<li><code>molecule::Molecule</code>: The molecule being compared to the atoms in the framework.</li>
+<li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
+<li><code>eikr::Eikr</code>: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>pot::EwaldSum</code>: Electrostatic potential between <code>framework</code> and <code>molecule</code> (units: K)</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L307-L330' class='documenter-source'>source</a><br></p>
+<pre><code>ϕ = electrostatic_potential_energy(molecules, eparams, box, eikr)
+</code></pre>
+
+<p>Compute the electrostatic potential energy of a system comprised of an array of <code>Molecule</code>s.</p>
+<p>The EWald summation is used here in a double for loop; do not use this function for Monte Carlo simulations because it is computationally expensive.</p>
+<p>Returns an <code>EwaldSum</code> type containing short-range and long-range contributions to the Ewald sum as well as the spurious self-interaction and intramolecular interactions. Access via (ϕ.sr, ϕ.lr, ϕ.self, ϕ.intra).</p>
+<p>Units of energy: Kelvin</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>molecules::Array{Molecules, 1}</code>: array of molecules comprising the system.</li>
+<li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
+<li><code>box::Box</code>: the box the energy is being computed in</li>
+<li><code>eikr::Eikr</code>: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>ϕ::GGEwaldSum</code>: The total electrostatic potential energy</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L411-L433' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.precompute_kvec_wts' href='#PorousMaterials.precompute_kvec_wts'>#</a>
+<strong><code>PorousMaterials.precompute_kvec_wts</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>kvectors = precompute_kvec_wts(kreps, box, α, max_mag_k_sqrd=Inf)
+</code></pre>
+
+<p>For speed, pre-compute the weights for each reciprocal lattice vector for the Ewald sum in Fourier space. This function takes advantage of the symmetry:     cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))</p>
+<p>If <code>max_mag_k_sqrd</code> is passed, k-vectors with a magnitude greater than <code>max_mag_k_sqrd</code> are not included.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>kreps::Tuple{Int, Int, Int}</code>: number of k-vector replications required in a, b, c</li>
+<li><code>box::Box</code>: the simulation box containing the reciprocal lattice.</li>
+<li><code>α::Float64</code>: Ewald sum convergence parameter (units: inverse Å)</li>
+<li><code>max_mag_k_sqrd::Float64</code>: cutoff for |k|² in Fourier sum; if passed, do not include</li>
+</ul>
+<p>k-vectors with magnitude squared greater than this.</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>kvectors::Array{Kvector, 1}</code>: array of k-vectors to include in the Fourier sum and their</li>
+</ul>
+<p>corresponding weights indicating the contribution to the Fourier sum.</p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L177-L197' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.setup_Ewald_sum' href='#PorousMaterials.setup_Ewald_sum'>#</a>
+<strong><code>PorousMaterials.setup_Ewald_sum</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>eparams = setup_Ewald_sum(box, sr_cutoff_r; ϵ=1e-6, verbose=false)
+</code></pre>
+
+<p>Given the short-range cutoff radius and simulation box, automatically compute Ewald convergence parameter and number of k-vector replications in Fourier space required for a given precision. Constructs and returns Ewald parameters data type with this information.</p>
+<p>Also, pre-compute weights on k-vector contributions to Ewald sum in Fourier space.</p>
+<p>Also, allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k is a reciprocal lattice vector.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>box::Box</code>: the simulation box containing the reciprocal lattice.</li>
+<li><code>sr_cutoff_r::Float64</code>: cutoff-radius (units: Å) for short-range contributions to Ewald</li>
+<li><code>ϵ::Float64</code>: desired level of precision. Typical value is 1e-6, but this does not</li>
+<li><code>verbose::Bool</code>: If <code>true</code> will print results</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
+</ul>
+<p>corresponding weights indicating the contribution to the Fourier sum.</p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L234-L255' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.total_electrostatic_potential_energy' href='#PorousMaterials.total_electrostatic_potential_energy'>#</a>
+<strong><code>PorousMaterials.total_electrostatic_potential_energy</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>total_ϕ = total_electrostatic_potential_energy(molecules, eparams, box, eikr)
+</code></pre>
+
+<p>Calculates the total electrostatic potential energy of an array of <code>Molecule</code>s using a Grand Canonical Monte Carlo (GCMC) algorithm. #TODO add to this</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>molecules::Array{Molecule, 1}</code>: The molecules comprising the system.</li>
+<li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
+<li><code>box::Box</code>: The box the energy is being computed in.</li>
+<li><code>eikr::Eikr</code>: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>ϕ::GGEwaldSum</code>: The total electrostatic potential energy</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L516-L531' class='documenter-source'>source</a><br></p>
+<pre><code>total_ϕ = total_electrostatic_potential_energy(framework, molecules, eparams, eikr)
+</code></pre>
+
+<p>Explanation of total<em>electrostatic</em>potential_energy that uses framework</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: Crystal structure (see <code>framework.charges</code> for charges)</li>
+<li><code>molecules::Array{Molecule, 1}</code>: The molecules comprising the system.</li>
+<li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
+<li><code>eikr::Eikr</code>: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/ElectrostaticEnergetics.jl#L546-L557' class='documenter-source'>source</a><br></p>
+<p><a id='Van-der-Waals-Energy-1'></a></p>
+<h2 id="van-der-waals-energy">Van der Waals Energy<a class="headerlink" href="#van-der-waals-energy" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.lennard_jones' href='#PorousMaterials.lennard_jones'>#</a>
+<strong><code>PorousMaterials.lennard_jones</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>energy = lennard_jones(r², σ², ϵ)  (units: Kelvin)
+</code></pre>
+
+<p>Calculate the lennard jones potential energy given the square of the radius r between two lennard-jones spheres. σ and ϵ are specific to interaction between two elements. Return the potential energy in units Kelvin (well, whatever the units of ϵ are).</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>r²::Float64</code>: distance between two (pseudo)atoms in question squared (Angstrom²)</li>
+<li><code>σ²::Float64</code>: sigma parameter in Lennard Jones potential squared (units: Angstrom²)</li>
+<li><code>ϵ::Float64</code>: epsilon parameter in Lennard Jones potential (units: Kelvin)</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>energy::Float64</code>: Lennard Jones potential energy</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.vdw_energy' href='#PorousMaterials.vdw_energy'>#</a>
+<strong><code>PorousMaterials.vdw_energy</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>energy = vdw_energy(framework, molecule, ljforcefield)
+</code></pre>
+
+<p>Calculates the van der Waals interaction energy between a molecule and a framework. Applies the nearest image convention to find the closest replicate of a specific atom.</p>
+<p>WARNING: it is assumed that the framework is replicated sufficiently such that the nearest image convention can be applied. See <a href="../boxes_crystals_grids/#PorousMaterials.replicate"><code>replicate</code></a>.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: Crystal structure</li>
+<li><code>molecule::Molecule</code>: adsorbate (includes position/orientation/atoms)</li>
+<li><code>ljforcefield::LJForceField</code>: Lennard Jones force field</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>energy::Float64</code>: Van der Waals interaction energy</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/VdWEnergetics.jl#L49-L65' class='documenter-source'>source</a><br></p>
+<pre><code>gg_energy = vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
+</code></pre>
+
+<p>Calculates van der Waals interaction energy of a single adsorbate <code>molecules[molecule_id]</code> with all of the other molecules in the system. Periodic boundary conditions are applied, using the nearest image convention.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>molecule_id::Int</code>: Molecule ID used to determine which molecule in <code>molecules</code> we wish to calculate the guest-guest interactions</li>
+<li><code>molecules::Array{Molecule, 1}</code>: An array of Molecule data structures</li>
+<li><code>ljforcefield::LJForceField</code>: A Lennard Jones forcefield data structure describing the interactions between different atoms</li>
+<li><code>simulation_box::Box</code>: The simulation box for the computation.</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>gg_energy::Float64</code>: The guest-guest interaction energy of <code>molecules[molecule_id]</code> with the other molecules in <code>molecules</code></li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/VdWEnergetics.jl#L70-L85' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.vdw_energy_no_PBC' href='#PorousMaterials.vdw_energy_no_PBC'>#</a>
+<strong><code>PorousMaterials.vdw_energy_no_PBC</code></strong> &mdash; <em>Function</em>.</p>
+<p>Assumes unit cell box is a unit cube and no periodic boundary conditions are applied.</p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/2e6679332f5c1fd3363baff926affe2f21a775a2/src/VdWEnergetics.jl#L134-L137' class='documenter-source'>source</a><br></p>
+
+  <br>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../mof_simulations/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../mof_simulations/" class="btn btn-xs btn-link">
+        Molecular Simulations
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../molecules/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../molecules/" class="btn btn-xs btn-link">
+        Molecules
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/SimonEnsemble/PorousMaterials.jl/edit/master/docs/manual/atomic_interactions.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
