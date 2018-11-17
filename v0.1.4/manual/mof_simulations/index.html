@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="SimonEnsemble">
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Molecular Simulations - </title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../assets/Documenter.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Demo of Henry coefficients Calculation", url: "#_top", children: [
+          ]},
+          {title: "Demo of Grand-canonical Monte Carlo Simulations", url: "#demo-of-grand-canonical-monte-carlo-simulations", children: [
+          ]},
+          {title: "Henry Coefficient Calculations", url: "#henry-coefficient-calculations", children: [
+          ]},
+          {title: "Grand-Canonical Monte Carlo Simulations", url: "#grand-canonical-monte-carlo-simulations", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+      <script src="../../assets/mathjaxhelper.js"></script>
+      <script src="../../mathjax-config.js"></script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../other/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../other/" class="btn btn-xs btn-link">
+        Other
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../atomic_interactions/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../atomic_interactions/" class="btn btn-xs btn-link">
+        Atomic Interactions
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <p><a id='Demo-of-Henry-coefficients-Calculation-1'></a></p>
+<h2 id="demo-of-henry-coefficients-calculation">Demo of Henry coefficients Calculation<a class="headerlink" href="#demo-of-henry-coefficients-calculation" title="Permanent link">#</a></h2>
+<p>Compute the Henry coefficient of CO<sub>2</sub> in CAXVII_clean (Fe<sub>2</sub>(dobdc)) at 298 K using the Dreiding force field:</p>
+<pre><code class="julia">using PorousMaterials
+
+# read in xtal structure file and populate a Framework data structure
+framework = Framework(&quot;CAXVII_clean.cif&quot;)                                               
+
+# read in Lennard-Jones force field parameters and populate a LJForceField data structure
+forcefield = LJForceField(&quot;Dreiding.csv&quot;, cutoffradius=12.5)                                  
+
+# read in a molecule format file and populate a Molecule data structure
+molecule = Molecule(&quot;CO2&quot;)                                                              
+
+temperature = 298.0 # K
+
+# conduct Widom insertions and compute Henry coefficient, heat of adsorption
+results = henry_coefficient(framework, molecule, temperature, forcefield, insertions_per_volume=200)
+
+# ... prints stuff
+# results automatically saved to .jld load later in one line of code
+
+# returns dictionary for easy querying
+results[&quot;Qst (kJ/mol)&quot;] # -21.0
+results[&quot;henry coefficient [mol/(kg-Pa)]&quot;] # 2.88e-05
+</code></pre>
+
+<p>The simulation is parallelized across a maximum of 5 cores.</p>
+<p><a id='Demo-of-Grand-canonical-Monte-Carlo-Simulations-1'></a></p>
+<h2 id="demo-of-grand-canonical-monte-carlo-simulations">Demo of Grand-canonical Monte Carlo Simulations<a class="headerlink" href="#demo-of-grand-canonical-monte-carlo-simulations" title="Permanent link">#</a></h2>
+<p>Simulate the adsorption of CO<sub>2</sub> in FIQCEN_clean_min_charges (CuBTC) at 298 K at 1 bar using the Universal Force Field:</p>
+<pre><code class="julia">using PorousMaterials
+
+# read in xtal structure file and populate a Framework data structure
+framework = Framework(&quot;FIQCEN_clean_min_charges.cif&quot;)
+# remove annoying numbers from atom labels
+strip_numbers_from_atom_labels!(framework)
+
+# read in Lennard-Jones force field parameters and populate a LJForceField data structure
+forcefield = LJForceField(&quot;UFF.csv&quot;, cutoffradius=12.8)
+
+# read in a molecule format file and populate a Molecule data structure
+molecule = Molecule(&quot;CO2&quot;)
+
+temperature = 298.0 # K
+pressure = 1.0 # bar
+
+# conduct grand-canonical Monte Carlo simulation
+results, molecules = gcmc_simulation(framework, molecule, temperature, pressure, forcefield,
+            n_burn_cycles=5000, n_sample_cycles=5000)
+
+# ... prints stuff
+# results automatically saved to .jld load later in one line of code
+
+# returns dictionary for easy querying
+results[&quot;⟨N⟩ (molecules/unit cell)&quot;]
+results[&quot;Q_st (K)&quot;]
+</code></pre>
+
+<p>Or, compute the entire adsorption isotherm at once, parallelized across many cores:</p>
+<pre><code class="julia">pressures = [0.2, 0.6, 0.8, 1.0] # bar
+
+# loop over all pressures and compute entire adsorption isotherm in parallel
+results = adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,
+            n_burn_cycles=5000, n_sample_cycles=5000)
+</code></pre>
+
+<p>Or, compute the adsorption isotherm in a step-wise manner, loading the molecules from the previous simulation to save on burn cycles:</p>
+<pre><code class="julia"># loop over all pressures and run GCMC simulations in series.
+# load in the configurations of the molecules from the previous pressure.
+results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures, forcefield,
+            n_burn_cycles=1000, n_sample_cycles=5000)
+</code></pre>
+
+<p><a id='Henry-Coefficient-Calculations-1'></a></p>
+<h2 id="henry-coefficient-calculations">Henry Coefficient Calculations<a class="headerlink" href="#henry-coefficient-calculations" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.henry_coefficient' href='#PorousMaterials.henry_coefficient'>#</a>
+<strong><code>PorousMaterials.henry_coefficient</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>result = henry_coefficient(framework, molecule, temperature, ljforcefield,
+                            nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
+                            autosave=true)
+</code></pre>
+
+<p>Conduct particle insertions to compute the Henry coefficient Kₕ of a molecule in a framework. Also, for free, the heat of adsorption and ensemble average energy of adsorption is computed. The Henry coefficient is a model for adsorption at infinite dilution (low coverage): ⟨N⟩ = Kₕ P, where P is pressure and Kₕ is the Henry coefficient.</p>
+<p>Kₕ = β ⟨e^{-β U}⟩, where the average is over positions and orientations of the molecule in the framework.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: the porous crystal in which we seek to simulate adsorption</li>
+<li><code>molecule::Molecule</code>: the adsorbate molecule</li>
+<li><code>temperature::Float64</code>: temperature of bulk gas phase in equilibrium with adsorbed phase   in the porous material. units: Kelvin (K)</li>
+<li><code>ljforcefield::LJForceField</code>: the molecular model used to describe the   energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.</li>
+<li><code>insertions_per_volume::Int</code>: number of Widom insertions to perform for computing the</li>
+</ul>
+<p>average, per unit cell volume (Å³)</p>
+<ul>
+<li><code>verbose::Bool</code>: whether or not to print off information during the simulation.</li>
+<li><code>ewald_precision::Float64</code>: desired precision for Ewald summations; used to determine</li>
+</ul>
+<p>the replication factors in reciprocal space.</p>
+<ul>
+<li><code>autosave::Bool</code>: save results file as a .jld in PATH<em>TO</em>DATA * <code>sims</code></li>
+<li><code>filename_comment::AbstractString</code>: An optional comment that will be appended to the name of the saved file.</li>
+<li><code>write_checkpoint::Bool</code>: Will periodically save checkpoints to start the job from a previous state.</li>
+<li><code>load_checkpoint::Bool</code>: Instructs the program to look for a checkpoint file in <code>data/henry_checkpoints</code></li>
+</ul>
+<p>and start the simulation from that point.</p>
+<ul>
+<li><code>checkpoint_frequency::Int</code>: The frequency at which we will save a checkpoint file. Is only used if <code>write_checkpoint=true</code></li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>result::Dict{String, Float64}</code>: A dictionary containing all the results from the Henry coefficient simulation</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Henry.jl#L4-L41' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.henry_result_savename' href='#PorousMaterials.henry_result_savename'>#</a>
+<strong><code>PorousMaterials.henry_result_savename</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>save_name = henry_result_savename(framework, molecule, temperature,
+                               ljforcefield, insertions_per_volume;
+                               comment=&quot;&quot;)
+</code></pre>
+
+<p>Determine the name of files saved while calculating the henry coefficient. It uses many pieces of information from the simulation to ensure the file name accurately describes what it holds.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: The porous crystal being tested</li>
+<li><code>molecule::Molecule</code>: The molecule being tested inside the crystal</li>
+<li><code>temperature::Float64</code>: The temperature used in the simulation units: Kelvin (K)</li>
+<li><code>ljforcefield::LJForceField</code>: The molecular model being used in the simulation   to describe the intermolecular Van der Waals forces</li>
+<li><code>insertions_per_volume::Union{Int, Float64}</code>: The number of widom insertions per unit volume.   Will be scaled according to the framework we're working with</li>
+<li><code>comment::AbstractString</code>: An optional comment that will be appended to the filename</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Henry.jl#L327-L345' class='documenter-source'>source</a><br></p>
+<p><a id='Grand-Canonical-Monte-Carlo-Simulations-1'></a></p>
+<h2 id="grand-canonical-monte-carlo-simulations">Grand-Canonical Monte Carlo Simulations<a class="headerlink" href="#grand-canonical-monte-carlo-simulations" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.gcmc_simulation' href='#PorousMaterials.gcmc_simulation'>#</a>
+<strong><code>PorousMaterials.gcmc_simulation</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>results, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
+                                     ljforcefield; n_sample_cycles=5000,
+                                     n_burn_cycles=5000, sample_frequency=1,
+                                     verbose=false, molecules=Molecule[],
+                                     eos=:ideal, ewald_precision=1e-6,
+                                     load_checkpoint_file=false,
+                                     show_progress_bar=false, checkpoint=Dict(),
+                                     write_checkpoints=false, checkpoint_frequency=100,
+                                     filename_comment=&quot;&quot;)
+</code></pre>
+
+<p>Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a framework at a particular temperature and pressure using a Lennard Jones force field.</p>
+<p>A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain proposals. Current Markov chain moves implemented are particle insertion/deletion and translation.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework::Framework</code>: the porous crystal in which we seek to simulate adsorption</li>
+<li><code>molecule::Molecule</code>: a template of the adsorbate molecule of which we seek to simulate</li>
+<li><code>temperature::Float64</code>: temperature of bulk gas phase in equilibrium with adsorbed phase   in the porous material. units: Kelvin (K)</li>
+<li><code>pressure::Float64</code>: pressure of bulk gas phase in equilibrium with adsorbed phase in the   porous material. units: bar   the adsorption</li>
+<li><code>ljforcefield::LJForceField</code>: the molecular model used to describe the   energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.</li>
+<li><code>n_burn_cycles::Int</code>: number of cycles to allow the system to reach equilibrium before   sampling.</li>
+<li><code>n_sample_cycles::Int</code>: number of cycles used for sampling</li>
+<li><code>sample_frequency::Int</code>: during the sampling cycles, sample e.g. the number of adsorbed   gas molecules every this number of Markov proposals.</li>
+<li><code>verbose::Bool</code>: whether or not to print off information during the simulation.</li>
+<li><code>molecules::Array{Molecule, 1}</code>: a starting configuration of molecules in the framework.</li>
+</ul>
+<p>Note that we assume these coordinates are Cartesian, i.e. corresponding to a unit box.</p>
+<ul>
+<li><code>ewald_precision::Float64</code>: The desired precision for the long range Ewald summation</li>
+<li><code>eos::Symbol</code>: equation of state to use for calculation of fugacity from pressure. Default</li>
+</ul>
+<p>is ideal gas, where fugacity = pressure.</p>
+<ul>
+<li><code>load_checkpoint_file::Bool</code>: Will find a checkpoint file corresponding to the <a href="./#PorousMaterials.gcmc_result_savename"><code>gcmc_result_savename</code></a> if true.   If that file is not found, function will throw an error.</li>
+<li><code>checkpoint::Dict</code>: A checkpoint dictionary that will work as a starting configuration for the run.   The dictionary has to have the following keys: <code>outer_cycle</code>, <code>molecules</code>, <code>system_energy</code>, <code>current_block</code>, <code>gcmc_stats</code>, <code>markov_counts</code>, <code>markov_chain_time</code> and <code>time</code>. If this argument is used, keep <code>load_checkpoint_file=false</code>.</li>
+<li><code>write_checkpoints::Bool</code>: Will save checkpoints in data/gcmc_checkpoints if this is true.</li>
+<li><code>checkpoint_frequency::Int</code>: Will save checkpoint files every <code>checkpoint_frequency</code> cycles.</li>
+<li><code>filename_comment::AbstractString</code>: An optional comment that will be appended to the name of the saved file (if autosaved)</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/GCMC.jl#L219-L266' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.adsorption_isotherm' href='#PorousMaterials.adsorption_isotherm'>#</a>
+<strong><code>PorousMaterials.adsorption_isotherm</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>results = adsorption_isotherm(framework, molecule, temperature, pressures,
+                              ljforcefield; n_sample_cycles=5000,
+                              n_burn_cycles=5000, sample_frequency=1,
+                              verbose=true, ewald_precision=1e-6, eos=:ideal, 
+                              load_checkpoint_file=false, checkpoint=Dict(), 
+                              write_checkpoints=false, checkpoint_frequency=50,
+                              filename_comment=&quot;&quot;, show_progress_bar=false)
+</code></pre>
+
+<p>Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the same as <a href="./#PorousMaterials.gcmc_simulation"><code>gcmc_simulation</code></a>, as this is the function run in parallel behind the scenes. The only exception is that we pass an array of pressures. To give Julia access to multiple cores, run your script as <code>julia -p 4 mysim.jl</code> to allocate e.g. four cores. See <a href="https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1">Parallel Computing</a>.</p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/GCMC.jl#L172-L186' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.stepwise_adsorption_isotherm' href='#PorousMaterials.stepwise_adsorption_isotherm'>#</a>
+<strong><code>PorousMaterials.stepwise_adsorption_isotherm</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures,
+                              ljforcefield; n_sample_cycles=5000,
+                              n_burn_cycles=5000, sample_frequency=1,
+                              verbose=true, ewald_precision=1e-6, eos=:ideal,
+                              load_checkpoint_file=false, checkpoint=Dict(),
+                              write_checkpoints=false, checkpoint_frequency=50,
+                              filename_comment=&quot;&quot;, show_progress_bar=false)
+</code></pre>
+
+<p>Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the same as <a href="./#PorousMaterials.gcmc_simulation"><code>gcmc_simulation</code></a>, as this is the function run behind the scenes. An exception is that we pass an array of pressures. The adsorption isotherm is computed step- wise, where the ending configuration from the previous simulation (array of molecules) is passed into the next simulation as a starting point. The ordering of <code>pressures</code> is honored. By giving each simulation a good starting point, (if the next pressure does not differ significantly from the previous pressure), we can reduce the number of burn cycles required to reach equilibrium in the Monte Carlo simulation. Also see <a href="./#PorousMaterials.adsorption_isotherm"><code>adsorption_isotherm</code></a> which runs the μVT simulation at each pressure in parallel.</p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/GCMC.jl#L125-L143' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.gcmc_result_savename' href='#PorousMaterials.gcmc_result_savename'>#</a>
+<strong><code>PorousMaterials.gcmc_result_savename</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>file_save_name = gcmc_result_savename(framework_name, molecule_species,
+                                    ljforcefield_name, temperature, pressure,
+                                    n_burn_cycles, n_sample_cycles; comment=&quot;&quot;)
+</code></pre>
+
+<p>Determine the name of files saved during the GCMC simulation, be molecule positions or results. It uses many pieces of information from the simulation to ensure the file name accurately describes what it holds.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>framework_name::AbstractString</code>: The porous crystal being tested</li>
+<li><code>molecule_species::Symbol</code>: The molecule being tested inside the porous crystal</li>
+<li><code>ljforcefield_name::AbstractString</code>: The molecular model being used in this   simulation to describe intermolecular Van der Waals interactions</li>
+<li><code>temperature::Float64</code>: The temperature used in the simulation units: Kelvin (K)</li>
+<li><code>pressure::Float64</code>: The pressure used in the simulation units: bar</li>
+<li><code>n_burn_cycles::Int</code>: The number of burn cycles used in this simulation</li>
+<li><code>n_sample_cycles::Int</code>: The number of sample cycles used in this simulation</li>
+<li><code>comment::AbstractString</code>: An optional comment that will be appended to the end of the filename</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/GCMC.jl#L761-L780' class='documenter-source'>source</a><br></p>
+
+  <br>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../other/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../other/" class="btn btn-xs btn-link">
+        Other
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../atomic_interactions/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../atomic_interactions/" class="btn btn-xs btn-link">
+        Atomic Interactions
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/SimonEnsemble/PorousMaterials.jl/edit/master/docs/manual/mof_simulations.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

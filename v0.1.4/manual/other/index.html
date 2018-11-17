@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="SimonEnsemble">
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Other - </title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../assets/Documenter.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "PATH_TO_DATA Control", url: "#_top", children: [
+          ]},
+          {title: "Reading in Atomic Values", url: "#reading-in-atomic-values", children: [
+          ]},
+          {title: "Using .xyz files", url: "#using-xyz-files", children: [
+          ]},
+          {title: "PATH_TO_DATA Control", url: "#path_to_data-control_1", children: [
+          ]},
+          {title: "Reading in Atomic Values", url: "#reading-in-atomic-values_1", children: [
+          ]},
+          {title: "Using .xyz files", url: "#using-xyz-files_1", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+      <script src="../../assets/mathjaxhelper.js"></script>
+      <script src="../../mathjax-config.js"></script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../guides/faq/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../guides/faq/" class="btn btn-xs btn-link">
+        FAQ
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../mof_simulations/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../mof_simulations/" class="btn btn-xs btn-link">
+        Molecular Simulations
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <p>PorousMaterials relies on functions that fall outside of the sections discussed up to this point. They are useful, but operate on their own for the most part.</p>
+<p><a id='PATH_TO_DATA-Control-1'></a></p>
+<h2 id="path_to_data-control">PATH_TO_DATA Control<a class="headerlink" href="#path_to_data-control" title="Permanent link">#</a></h2>
+<p>The PATH_TO_DATA is crucial for loading in data files. These functions allow the user to control this after they have done <code>using PorusMaterials</code>. The <code>set_tutorial_mode()</code> function has been discussed before, and it allows you to recreate our example and try PorouMaterials before loading your data. The other functions allow the user to reset the PATH_TO_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.</p>
+<p><a id='Reading-in-Atomic-Values-1'></a></p>
+<h2 id="reading-in-atomic-values">Reading in Atomic Values<a class="headerlink" href="#reading-in-atomic-values" title="Permanent link">#</a></h2>
+<p>These functions are used to read in the <code>atomicmasses.csv</code>, <code>atom_properties.csv</code>, and <code>cpk_atom_colors.csv</code> files from the current <code>PATH_TO_DATA</code> directory. They contain information on the masses, radii, and cpk color scheme for atoms.</p>
+<p><a id='Using-.xyz-files-1'></a></p>
+<h2 id="using-xyz-files">Using .xyz files<a class="headerlink" href="#using-xyz-files" title="Permanent link">#</a></h2>
+<p>These functions allow the user to load and save .xyz files describing where molecules appear in a given space. This can be used to save the location of molecules in the middle of a simulation or to visualize what is happening.</p>
+<p><a id='PATH_TO_DATA-Control-2'></a></p>
+<h2 id="path_to_data-control_1">PATH_TO_DATA Control<a class="headerlink" href="#path_to_data-control_1" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.set_path_to_data' href='#PorousMaterials.set_path_to_data'>#</a>
+<strong><code>PorousMaterials.set_path_to_data</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>set_path_to_data(&quot;user/path/to/data&quot;)
+set_path_to_data()
+</code></pre>
+
+<p>Sets PorousMaterials <code>PATH_TO_DATA</code> variable which dictates where crystal, forcefield, and molecule files are loaded from. This function allows the user to set <code>PATH_TO_DATA</code> manually to any directory or to a "/data/" folder within their current directory. This function WILL change the <code>PATH_TO_DATA</code> regardless of whether or not the path exists, but will give a warning alerting the user that PorousMaterials cannot load files from the chosen path.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>new_path_to_data::String</code>: The desired <code>PATH_TO_DATA</code> in string form.</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/PorousMaterials.jl#L30-L43' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.set_tutorial_mode' href='#PorousMaterials.set_tutorial_mode'>#</a>
+<strong><code>PorousMaterials.set_tutorial_mode</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>set_tutorial_mode()
+</code></pre>
+
+<p>Places PorousMaterials in "Tutorial Mode". It changes the <code>PATH_TO_DATA</code> variable to the directory where the PorousMaterials test data is stored. It can be used to follow examples shown in the README. It displays a warning so that the user knows They are no longer using their own data.</p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br></p>
+<p><a id='Reading-in-Atomic-Values-2'></a></p>
+<h2 id="reading-in-atomic-values_1">Reading in Atomic Values<a class="headerlink" href="#reading-in-atomic-values_1" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.read_atomic_radii' href='#PorousMaterials.read_atomic_radii'>#</a>
+<strong><code>PorousMaterials.read_atomic_radii</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>atomic_radii = read_atomic_radii()
+</code></pre>
+
+<p>Return <code>atomic_radii::Dict{Symbol, Float64}</code>, where <code>atom_masses[":C"]</code> gives the atomic radii of carbon (10.87 Angstrom).</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>atomic_radii::Dict{Symbol, Float64}</code>: A dictionary linking an element symbol to its' corresponding atomic radius</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.read_atomic_masses' href='#PorousMaterials.read_atomic_masses'>#</a>
+<strong><code>PorousMaterials.read_atomic_masses</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>atomic_masses = read_atomic_masses()
+</code></pre>
+
+<p>Read the <code>data/atomicmasses.csv</code> file to construct a dictionary of atoms and their atomic masses in amu.</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>atomic_masses::Dict{Symbol, Float64}</code>: A dictionary containing the atomic masses of each atom stored in <code>data/atomicmasses.csv</code></li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.read_cpk_colors' href='#PorousMaterials.read_cpk_colors'>#</a>
+<strong><code>PorousMaterials.read_cpk_colors</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>atom_colors = read_cpk_colors()
+</code></pre>
+
+<p>Read in CPK color scheme for atoms. Return <code>atom_colors::Dict{Symbol, Tuple{Int, Int, Int}}</code> such that <code>atom_colors[":C"]</code> gives RGB code for carbon as a tuple, <code>(144, 144, 144)</code>. https://en.wikipedia.org/wiki/CPK_coloring</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>atom_colors::Dict{Symbol, Tuple{Int, Int, Int}}</code>: A dictionary linking an element symbol to its' corresponding CPK color in RGB</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br></p>
+<p><a id='Using-.xyz-files-2'></a></p>
+<h2 id="using-xyz-files_1">Using .xyz files<a class="headerlink" href="#using-xyz-files_1" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.read_xyz' href='#PorousMaterials.read_xyz'>#</a>
+<strong><code>PorousMaterials.read_xyz</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>atoms, x = read_xyz(filename)
+</code></pre>
+
+<p>Return the list of <code>atoms</code> (Array{Symbol, 1}) and their Cartesian coordinates <code>x::Array{Float64, 2}</code> as stored in the .xyz file. <code>x[:, k]</code> will return Cartesian coords of the kth atom.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>filename::AbstractString</code>: The filename of the .xyz file</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>atoms::Array{Symbol, 1}</code>: An array of atoms stored as symbols e.g. [:H, :H, :O] read</li>
+</ul>
+<p>from the .xyz file.</p>
+<ul>
+<li><code>x::Array{Float64, 2}</code>: The Cartesian coordinates of the atoms. <code>x[:, k]</code> will return cartesian coordinates of the k-th atom</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.write_xyz' href='#PorousMaterials.write_xyz'>#</a>
+<strong><code>PorousMaterials.write_xyz</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>write_xyz(atoms, x, filename; comment=&quot;&quot;)
+write_xyz(molecules, box, filename; comment=&quot;&quot;)
+write_xyz(framework, filename; comment=&quot;&quot;, center=false)
+</code></pre>
+
+<p>Write a molecule, framework, or array of atoms &amp; positions to an .xyz file.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>atoms::Array{Symbol, 1}</code>: An array of atoms stored as symbols e.g. [:H, :H, :O]</li>
+<li><code>x::Array{Float64, 2}</code>: The Cartesian coordinates of the atoms.</li>
+</ul>
+<p><code>x[:, k]</code> contains Cartesian coordinates of the k-th atom</p>
+<ul>
+<li><code>molecules::Array{Molecule, 1}</code>: an array of molecules whose atoms to write to .xyz</li>
+<li><code>framework::Framework</code>: a crystal structure whose atoms to write to .xyz</li>
+<li><code>filename::AbstractString</code>: The filename of the .xyz file. (".xyz" appended automatically</li>
+</ul>
+<p>if the extension is not provided.) (absolute path)</p>
+<ul>
+<li><code>comment::AbstractString</code>: comment if you'd like to write to the file.</li>
+<li><code>center::Bool</code>: shift atoms so that origin is the center of the <code>framework.box</code></li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br></p>
+
+  <br>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../guides/faq/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../guides/faq/" class="btn btn-xs btn-link">
+        FAQ
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../mof_simulations/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../mof_simulations/" class="btn btn-xs btn-link">
+        Molecular Simulations
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/SimonEnsemble/PorousMaterials.jl/edit/master/docs/manual/other.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

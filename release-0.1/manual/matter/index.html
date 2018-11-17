@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="author" content="SimonEnsemble">
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Matter - </title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <link href="../../assets/Documenter.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Building Blocks of PorousMaterials: Matter", url: "#_top", children: [
+          ]},
+          {title: "Matter", url: "#matter", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+      <script src="../../assets/mathjaxhelper.js"></script>
+      <script src="../../mathjax-config.js"></script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../boxes_crystals_grids/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../boxes_crystals_grids/" class="btn btn-xs btn-link">
+        Boxes, Crystals, and Grids
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../guides/input_files/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../guides/input_files/" class="btn btn-xs btn-link">
+        Loading Data
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <p>Matter is the foundation for every data type defined in PorousMaterials. Two structs are used to define all atomic structures: <code>Atoms</code> and <code>Charges</code>. Every atom, molecule, or crystal structure can be simulated by understanding its atoms and its point charges.</p>
+<p>We chose to store each collection as a single object (Atoms) rather than an array of objects (Array{Atom}) because it allows us to store the locations in contiguous memory. We found significant speed increases when storing each collection as a single object.</p>
+<p>One array of locations also allowed us to take advantage of broadcasting. For example, it is useful when calculating the energy inside a framework. Instead of looping through every atom, we can instead run this line:</p>
+<pre><code>dxf = broadcast(-, framework.atoms.xf, molecule.atoms.xf[i])
+</code></pre>
+
+<p>This calculates the distance between one atom in a molecule and every atom in the framework.</p>
+<p><a id='Building-Blocks-of-PorousMaterials:-Matter-1'></a></p>
+<h2 id="building-blocks-of-porousmaterials-matter">Building Blocks of PorousMaterials: Matter<a class="headerlink" href="#building-blocks-of-porousmaterials-matter" title="Permanent link">#</a></h2>
+<p>In <code>PorousMaterials.jl</code>, crystals and molecules are composed of <code>Atoms</code> and <code>Charges</code></p>
+<p>To create a carbon atom at <code>[0.1, 0.2, 0.5]</code> fractional coordinates (in the context of some Bravais lattice):</p>
+<pre><code class="julia">xf = Array{Float64, 2}(undef, 3, 0)
+xf = [xf [0.1, 0.2, 0.5]]
+atoms = Atoms([:C], xf) # constructor
+atoms.species[1] # :C
+atoms.xf[:, 1] # [0.1, 0.2, 0.5]
+</code></pre>
+
+<p>To create a point charge of +1 at <code>[0.1, 0.2, 0.5]</code> fractional coordinates (in the context of some Bravais lattice):</p>
+<pre><code class="julia">xf = Array{Float64, 2}(undef, 3, 0)
+xf = [xf [0.1, 0.2, 0.5]]
+charges = Charges([1.0], xf)
+charges.q[1] # 1.0
+charges.xf[:, 1] # [0.1, 0.2, 0.5]
+</code></pre>
+
+<p><a id='Matter-1'></a></p>
+<h2 id="matter">Matter<a class="headerlink" href="#matter" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.Atoms' href='#PorousMaterials.Atoms'>#</a>
+<strong><code>PorousMaterials.Atoms</code></strong> &mdash; <em>Type</em>.</p>
+<p>Data structure holds a set of atom species and their positions in fractional coordinates.</p>
+<p>Fractional coords of atom <code>i</code> is <code>charges.xf[:, i]</code>.</p>
+<p><strong>Example use</strong></p>
+<pre><code>atoms = Atoms(2, [:C, :F], [0.0 1.0; 2.0 3.0; 4.0 5.0])
+</code></pre>
+
+<p><strong>Attributes</strong></p>
+<ul>
+<li><code>n_atoms::Int</code>: number of atoms</li>
+<li><code>species::Array{Symbol, 1}</code>: atom species</li>
+<li><code>xf::Array{Float64, 2}</code>: fractional coordinates in the columns</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Matter.jl#L1-L13' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.Charges' href='#PorousMaterials.Charges'>#</a>
+<strong><code>PorousMaterials.Charges</code></strong> &mdash; <em>Type</em>.</p>
+<p>Data structure holds a set of point charges and their positions in fractional coordinates.</p>
+<p>Fractional coords of charge <code>i</code> is <code>charges.xf[:, i]</code>.</p>
+<p><strong>Example use</strong></p>
+<pre><code>charges = Charges(2, [-1.0, 1.0], [0.0 1.0; 2.0 3.0; 4.0 5.0])
+</code></pre>
+
+<p><strong>Attributes</strong></p>
+<ul>
+<li><code>n_charges::Int</code>: number of charges</li>
+<li><code>q::Array{Float64, 1}</code>: signed magnitude of charges (units: electrons)</li>
+<li><code>xf::Array{Float64, 2}</code>: fractional coordinates in the columns</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Matter.jl#L25-L37' class='documenter-source'>source</a><br></p>
+
+  <br>
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../boxes_crystals_grids/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../boxes_crystals_grids/" class="btn btn-xs btn-link">
+        Boxes, Crystals, and Grids
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../guides/input_files/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../guides/input_files/" class="btn btn-xs btn-link">
+        Loading Data
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/SimonEnsemble/PorousMaterials.jl/edit/master/docs/manual/matter.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
