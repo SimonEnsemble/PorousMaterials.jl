@@ -90,6 +90,7 @@ include("Grid.jl")
 include("EOS.jl")
 include("Henry.jl")
 include("GCMC.jl")
+include("generic_rotations.jl")
 
 export
     # PorousMaterials.jl
@@ -146,5 +147,8 @@ export
     gcmc_result_savename, GCMCstats, MarkovCounts,
 
     # Henry.jl
-    henry_coefficient, henry_result_savename
+    henry_coefficient, henry_result_savename,
+
+    # generic_rotations.jl
+    rotation_matrix
 end
