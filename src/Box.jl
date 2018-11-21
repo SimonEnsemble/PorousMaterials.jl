@@ -179,6 +179,17 @@ function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true)
     end
 end
 
+"""
+    inside_box = inside(x, box) # true or false
+
+Determine whether a Cartesian vector `x` lays inside a `Box`. This works by computing the 
+fractional coordinates of vector `x` and ensuring each lie within the interval `[0, 1]`.
+"""
+function inside(x::Array{Float64, 1}, box::Box)
+    xf = box.c_to_f * x
+    return all(xf .<= 1.0) && all(xf .>= 0.0)
+end
+
 function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
     @printf(io, "\tUnit cell angles α = %f deg. β = %f deg. γ = %f deg.\n",
