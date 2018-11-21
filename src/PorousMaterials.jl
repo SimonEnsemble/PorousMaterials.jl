@@ -96,7 +96,7 @@ export
     set_path_to_data, set_tutorial_mode,
 
     # Box.jl
-    Box, replicate, UnitCube, write_vtk,
+    Box, replicate, UnitCube, write_vtk, inside,
 
     # Matter.jl
     Atoms, Charges,
