@@ -71,6 +71,6 @@ using Random
     ljspheres = Atoms(atoms, x .+ [50.0, 50.0, 50.0]) #for i = 1:length(atoms) # cage as LJSphere array
     co2 = Molecule("CO2")
     translate_to!(co2, [50.0, 50.0, 50.0])
-    @test isapprox(energy, vdw_energy_no_PBC(co2, ljspheres, ljff))
+    @test isapprox(energy, vdw_energy_no_PBC(ljspheres, co2, ljff))
 end
 end
