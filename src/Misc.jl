@@ -136,3 +136,33 @@ function read_atomic_masses()
 
     return atomic_masses
 end
+
+"""
+    henry = extract_henry_coefficient(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, nb_pts_to_include::Int)
+
+Extract the Henry coefficient from an isotherm contained in `df`. Will use `nb_pts_to_include` points to find the slope (which is equivalent
+to the Henry coefficient). Does not convert any units.
+
+# Arguments
+- `df::DataFrame`: A DataFrame object that contains the isotherm we wish to extract the Henry coefficient from
+- `pressure_col_name::Symbol`: The name of the pressure column. Takes in symbols due to DataFrame structure
+- `loading_col_name::Symbol`: The name of the loading/adsorption column. Takes in symbols due to DataFrame structure
+- `nb_pts_to_include::Int`: The number of points used to fit the best Henry coefficient
+
+# Returns
+- `henry::Float64`: The henry coefficient from the isotherm in `df`
+"""
+function extract_henry_coefficient(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, nb_pts_to_include::Int)
+    sort!(df, [pressure_col_name])
+    P = zeros(nb_pts_to_include, 1)
+    n = zeros(nb_pts_to_include)
+    for (i, row) in enumerate(eachrow(df))
+        if i > nb_pts_to_include
+            break
+        end
+        P[i, 1] = row[pressure_col_name]
+        n[i] = row[loading_col_name]
+    end
+    henry = llsq(P, n; bias=false)[1]
+    return henry
+end
