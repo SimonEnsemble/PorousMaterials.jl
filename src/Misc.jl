@@ -138,7 +138,7 @@ function read_atomic_masses()
 end
 
 """
-    henry = extract_henry_coefficient(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, nb_pts_to_include::Int)
+    henry = extract_henry_coefficient(df, pressure_col_name, loading_col_name, nb_pts_to_include)
 
 Extract the Henry coefficient from an isotherm contained in `df`. Will use `nb_pts_to_include` points to find the slope (which is equivalent
 to the Henry coefficient). Does not convert any units.
@@ -165,4 +165,35 @@ function extract_henry_coefficient(df::DataFrame, pressure_col_name::Symbol, loa
     end
     henry = llsq(P, n; bias=false)[1]
     return henry
+end
+
+"""
+    M, K = fit_langmuir(df, pressure_col_name, loading_col_name)
+
+Takes in a DataFrame `df` containing an isotherm. Will try to fit a Langmuir model to the data.
+The Langmuir model is in the following form:
+N = (MKP)/(1+KP)
+where N is the total adsorption, M is the maximum monolayer coverage, K is the Langmuir constant and P is the partial pressure of the gas
+
+# Arguments
+- `df::DataFrame`: The DataFrame containing the pressure and adsorption data for the isotherm
+- `pressure_col_name::Symbol`: The header of the pressure column. Can be found with `names(df)`
+- `loading_col_name::Symbol`: The header of the loading/adsorption column. Can be found with `names(df)`
+
+# Returns
+- `M::Float64`: The maximum monolayer coverage according to Langmuir's theory, N = (MKP)/(1+KP)
+- `K::Float64`: The Langmuir constant
+"""
+function fit_langmuir(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol)
+    sort!(df, [pressure_col_name])
+    inv_N = (df[loading_col_name]).^(-1)
+    inv_P = (df[pressure_col_name]).^(-1)
+    if inv_P[1] == Inf || inv_N[1] == Inf
+        slope, intercept = llsq(inv_P[2:end,:], inv_N[2:end])
+    else
+        slope, intercept = llsq(inv_P, inv_N)
+    end 
+    M = 1/intercept
+    K = 1/(M * slope)
+    return M, K
 end
