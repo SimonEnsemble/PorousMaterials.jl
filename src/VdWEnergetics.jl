@@ -132,10 +132,12 @@ function total_vdw_energy(molecules::Array{Molecule, 1}, ljff::LJForceField, box
 end
 
 """
+    pot_energy = vdw_energy_no_PBC(atoms, molecule, ljff)
+
 Assumes unit cell box is a unit cube and no periodic boundary conditions
 are applied.
 """
-function vdw_energy_no_PBC(molecule::Molecule, atoms::Atoms, ljff::LJForceField)
+function vdw_energy_no_PBC(atoms::Atoms, molecule::Molecule, ljff::LJForceField)
     energy = 0.0
     for i = 1:molecule.atoms.n_atoms # loop over all atoms in molecule
         for j = 1:atoms.n_atoms

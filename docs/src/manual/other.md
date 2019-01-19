@@ -30,3 +30,8 @@ These functions allow the user to load and save .xyz files describing where mole
     read_xyz
     write_xyz
 ```
+
+## Generic Rotations
+```@docs
+    rotation_matrix
+```
