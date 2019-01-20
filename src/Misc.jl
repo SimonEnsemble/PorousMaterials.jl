@@ -138,7 +138,7 @@ function read_atomic_masses()
 end
 
 """
-    henry = extract_henry_coefficient(df, pressure_col_name, loading_col_name, nb_pts_to_include)
+    henry, rmse = extract_henry_coefficient(df, pressure_col_name, loading_col_name, nb_pts_to_include)
 
 Extract the Henry coefficient from an isotherm contained in `df`. Will use `nb_pts_to_include` points to find the slope (which is equivalent
 to the Henry coefficient). Does not convert any units.
@@ -151,6 +151,7 @@ to the Henry coefficient). Does not convert any units.
 
 # Returns
 - `henry::Float64`: The henry coefficient from the isotherm in `df`
+- `rmse::Float64`: The Root Mean Squared Error of the fit
 """
 function extract_henry_coefficient(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, nb_pts_to_include::Int)
     sort!(df, [pressure_col_name])
@@ -164,36 +165,38 @@ function extract_henry_coefficient(df::DataFrame, pressure_col_name::Symbol, loa
         n[i] = row[loading_col_name]
     end
     henry = llsq(P, n; bias=false)[1]
-    return henry
+    prediction = henry * P
+    rmse = sqrt(sum(abs2.(prediction - n))/length(prediction))
+    return henry, rmse
 end
 
 """
-    M, K = fit_langmuir(df, pressure_col_name, loading_col_name)
+    M, K = fit_langmuir(df, pressure_col_name, loading_col_name, M0=1.0, K0=1.0)
 
 Takes in a DataFrame `df` containing an isotherm. Will try to fit a Langmuir model to the data.
 The Langmuir model is in the following form:
 N = (MKP)/(1+KP)
-where N is the total adsorption, M is the maximum monolayer coverage, K is the Langmuir constant and P is the partial pressure of the gas
+where N is the total adsorption, M is the maximum monolayer coverage, K is the Langmuir constant and P is the partial pressure of the gas.
+A minimization problem is solved using `M0` and `K0` as initial guesses for the maximum monolayer coverage and Langmuir constant, respectively.
 
 # Arguments
 - `df::DataFrame`: The DataFrame containing the pressure and adsorption data for the isotherm
 - `pressure_col_name::Symbol`: The header of the pressure column. Can be found with `names(df)`
 - `loading_col_name::Symbol`: The header of the loading/adsorption column. Can be found with `names(df)`
+- `M0::Float64`: An initial guess for the maximum monolayer coverage
+- `K0::Float64`: An initial guess for the Langmuir constant
 
 # Returns
 - `M::Float64`: The maximum monolayer coverage according to Langmuir's theory, N = (MKP)/(1+KP)
 - `K::Float64`: The Langmuir constant
 """
-function fit_langmuir(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol)
+function fit_langmuir(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, M0::Float64=1.0, K0::Float64=1.0)
     sort!(df, [pressure_col_name])
-    inv_N = (df[loading_col_name]).^(-1)
-    inv_P = (df[pressure_col_name]).^(-1)
-    if inv_P[1] == Inf || inv_N[1] == Inf
-        slope, intercept = llsq(inv_P[2:end,:], inv_N[2:end])
-    else
-        slope, intercept = llsq(inv_P, inv_N)
-    end 
-    M = 1/intercept
-    K = 1/(M * slope)
+    n = df[loading_col_name]
+    p = df[pressure_col_name]
+    function_to_minimize(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i]/(1 + θ[2] * p[i]))^2 for i = 1:length(n)])
+    θ0 = [M0, K0]
+    res = optimize(function_to_minimize, θ0, LBFGS())
+    M, K = res.minimizer
     return M, K
 end

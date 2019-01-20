@@ -5,11 +5,12 @@ using Test
 using DataFrames
 using CSV
 using MultivariateStats
+using Optim
 
 @testset "Misc Tests" begin
     df = CSV.read("isotherm.csv")
     p_col_name, l_col_name = names(df)
-    henry = extract_henry_coefficient(df, p_col_name, l_col_name, 4)
+    henry, rmse = extract_henry_coefficient(df, p_col_name, l_col_name, 4)
     @test isapprox(henry, 0.9404942451976929)
 
     P = range(0, stop=1, length=100)

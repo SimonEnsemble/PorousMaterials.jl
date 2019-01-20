@@ -15,6 +15,7 @@ using LinearAlgebra
 using LightGraphs
 using Distributed
 using MultivariateStats
+using Optim
 import Base.push!
 
 
