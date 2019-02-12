@@ -72,6 +72,12 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
   <a name="_top"></a>
     
 
+    
+    
+      
+      
+    
+
   <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
     
     <div class="wm-article-nav pull-right">
@@ -199,7 +205,7 @@ props[&quot;fugacity coefficient&quot;] # 0.8729
 <li><code>ϵ::Dict{Symbol, Dict{Symbol, Float64}}</code>: Lennard Jones ϵ (units: K) for cross-interactions. Example use is <code>epsilons[:He][:C]</code></li>
 <li><code>cutoffradius_squared::Float64</code>: The square of the cut-off radius beyond which we define the potential energy to be zero (units: Angstrom²). We store σ² to speed up computations, which involve σ², not σ.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Forcefield.jl#L1-L11' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.replication_factors' href='#PorousMaterials.replication_factors'>#</a>
 <strong><code>PorousMaterials.replication_factors</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>repfactors = replication_factors(unitcell, cutoffradius)
@@ -216,7 +222,7 @@ props[&quot;fugacity coefficient&quot;] # 0.8729
 <ul>
 <li><code>repfactors::Tuple{Int, Int, Int}</code>: The replication factors in the a, b, c directions</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Forcefield.jl#L100-L116' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Forcefield.jl#L100-L116' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.check_forcefield_coverage' href='#PorousMaterials.check_forcefield_coverage'>#</a>
 <strong><code>PorousMaterials.check_forcefield_coverage</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>check_forcefield_coverage(framework, ljforcefield)
@@ -234,7 +240,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>all_covered::Bool</code>: Returns true if all atoms in the <code>framework</code> are also included in <code>ljforcefield</code>. False otherwise</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Forcefield.jl#L161-L175' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Forcefield.jl#L161-L175' class='documenter-source'>source</a><br></p>
 <p><a id='Potential-Energy-1'></a></p>
 <h2 id="potential-energy">Potential Energy<a class="headerlink" href="#potential-energy" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.PotentialEnergy' href='#PorousMaterials.PotentialEnergy'>#</a>
@@ -253,7 +259,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <li><code>vdw::Float64</code>: The potential energy contributions from Van der Waals interactions</li>
 <li><code>coulomb::Float64</code>: The potential energy contributions from electrostatic interactions</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Energetics_Util.jl#L3-L20' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Energetics_Util.jl#L3-L20' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.SystemPotentialEnergy' href='#PorousMaterials.SystemPotentialEnergy'>#</a>
 <strong><code>PorousMaterials.SystemPotentialEnergy</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>system_potential_energy = SystemPotentialEnergy()
@@ -270,7 +276,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <li><code>guest_host::PotentialEnergy</code>: The total potential energy from all guest-host   interactions in the system</li>
 <li><code>guest_guest::PotentialEnergy</code>: The total potential energy from all guest-guest   interactions in the system</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/Energetics_Util.jl#L51-L69' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Energetics_Util.jl#L51-L69' class='documenter-source'>source</a><br></p>
 <p><a id='Nearest-Image-Conventions-1'></a></p>
 <h2 id="nearest-image-conventions">Nearest Image Conventions<a class="headerlink" href="#nearest-image-conventions" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.nearest_image!' href='#PorousMaterials.nearest_image!'>#</a>
@@ -284,7 +290,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>dxf::Array{Float64}</code>: A vector between two atoms in fractional space</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/NearestImage.jl#L1-L12' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/NearestImage.jl#L1-L12' class='documenter-source'>source</a><br></p>
 <p><a id='Electrostatics-Energy-1'></a></p>
 <h2 id="electrostatics-energy">Electrostatics Energy<a class="headerlink" href="#electrostatics-energy" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.Eikr' href='#PorousMaterials.Eikr'>#</a>
@@ -299,7 +305,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <li><code>eikbr::OffsetArray{Complex{Float64}}</code>: array for storing e^{i * kb ⋅ r}; has indices   -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction</li>
 <li><code>eikcr::OffsetArray{Complex{Float64}}</code>: array for storing e^{i * kc ⋅ r}; has indices   -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L77-L89' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L77-L89' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.electrostatic_potential_energy' href='#PorousMaterials.electrostatic_potential_energy'>#</a>
 <strong><code>PorousMaterials.electrostatic_potential_energy</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>ϕ = electrostatic_potential_energy(framework, molecule, eparams, eikr)
@@ -319,7 +325,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>pot::EwaldSum</code>: Electrostatic potential between <code>framework</code> and <code>molecule</code> (units: K)</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L307-L330' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L307-L330' class='documenter-source'>source</a><br></p>
 <pre><code>ϕ = electrostatic_potential_energy(molecules, eparams, box, eikr)
 </code></pre>
 
@@ -338,7 +344,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>ϕ::GGEwaldSum</code>: The total electrostatic potential energy</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L411-L433' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L411-L433' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.precompute_kvec_wts' href='#PorousMaterials.precompute_kvec_wts'>#</a>
 <strong><code>PorousMaterials.precompute_kvec_wts</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>kvectors = precompute_kvec_wts(kreps, box, α, max_mag_k_sqrd=Inf)
@@ -359,7 +365,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <li><code>kvectors::Array{Kvector, 1}</code>: array of k-vectors to include in the Fourier sum and their</li>
 </ul>
 <p>corresponding weights indicating the contribution to the Fourier sum.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L177-L197' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L177-L197' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.setup_Ewald_sum' href='#PorousMaterials.setup_Ewald_sum'>#</a>
 <strong><code>PorousMaterials.setup_Ewald_sum</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>eparams = setup_Ewald_sum(box, sr_cutoff_r; ϵ=1e-6, verbose=false)
@@ -380,7 +386,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
 </ul>
 <p>corresponding weights indicating the contribution to the Fourier sum.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L234-L255' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L234-L255' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.total_electrostatic_potential_energy' href='#PorousMaterials.total_electrostatic_potential_energy'>#</a>
 <strong><code>PorousMaterials.total_electrostatic_potential_energy</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>total_ϕ = total_electrostatic_potential_energy(molecules, eparams, box, eikr)
@@ -398,7 +404,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>ϕ::GGEwaldSum</code>: The total electrostatic potential energy</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L516-L531' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L516-L531' class='documenter-source'>source</a><br></p>
 <pre><code>total_ϕ = total_electrostatic_potential_energy(framework, molecules, eparams, eikr)
 </code></pre>
 
@@ -410,7 +416,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <li><code>eparams::EwaldParams</code>: data structure containing Ewald summation settings</li>
 <li><code>eikr::Eikr</code>: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/ElectrostaticEnergetics.jl#L546-L557' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/ElectrostaticEnergetics.jl#L546-L557' class='documenter-source'>source</a><br></p>
 <p><a id='Van-der-Waals-Energy-1'></a></p>
 <h2 id="van-der-waals-energy">Van der Waals Energy<a class="headerlink" href="#van-der-waals-energy" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.lennard_jones' href='#PorousMaterials.lennard_jones'>#</a>
@@ -429,7 +435,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>energy::Float64</code>: Lennard Jones potential energy</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/VdWEnergetics.jl#L4-L18' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.vdw_energy' href='#PorousMaterials.vdw_energy'>#</a>
 <strong><code>PorousMaterials.vdw_energy</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>energy = vdw_energy(framework, molecule, ljforcefield)
@@ -447,7 +453,7 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>energy::Float64</code>: Van der Waals interaction energy</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/VdWEnergetics.jl#L49-L65' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/VdWEnergetics.jl#L49-L65' class='documenter-source'>source</a><br></p>
 <pre><code>gg_energy = vdw_energy(molecule_id, molecules, ljforcefield, simulation_box)
 </code></pre>
 
@@ -463,13 +469,22 @@ check_forcefield_coverage(molecule, ljforcefield)
 <ul>
 <li><code>gg_energy::Float64</code>: The guest-guest interaction energy of <code>molecules[molecule_id]</code> with the other molecules in <code>molecules</code></li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/VdWEnergetics.jl#L70-L85' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/VdWEnergetics.jl#L70-L85' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.vdw_energy_no_PBC' href='#PorousMaterials.vdw_energy_no_PBC'>#</a>
 <strong><code>PorousMaterials.vdw_energy_no_PBC</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>pot_energy = vdw_energy_no_PBC(atoms, molecule, ljff)
+</code></pre>
+
 <p>Assumes unit cell box is a unit cube and no periodic boundary conditions are applied.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6c398b753a4610dde389061222d5b0b999a5518a/src/VdWEnergetics.jl#L134-L137' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/VdWEnergetics.jl#L134-L139' class='documenter-source'>source</a><br></p>
 
   <br>
+    
+
+    
+    
+      
+      
     
 
   <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
