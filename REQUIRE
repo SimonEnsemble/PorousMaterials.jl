@@ -9,3 +9,4 @@ StatsBase
 ProgressMeter
 JLD2
 LightGraphs
+FileIO
