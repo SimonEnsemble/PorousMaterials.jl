@@ -59,7 +59,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
 
     # the integer refers to 0 atoms (just use .xyz to visualize atoms)
     # the next three floats correspond to the origin
-    @printf(cubefile, "%d %f %f %f\n" , 0, grid.origin...)
+    @printf(cubefile, "%d %f %f %f\n" , 0, grid.origin[1], grid.origin[2], grid.origin[3])
     for k = 1:3
         # these are the vectors that form the parallelogram comprising the voxels
         # 0 and 1 fractional coords were included. so voxel vector is unit cell axis divided by # grid pts - 1
