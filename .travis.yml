@@ -17,4 +17,9 @@ after_success:
 notifications:
     email: false
     slack: simonensemble:gqF8iQTs1HBAraiqczEoTAz9
-
+        on_success: always
+        on_faulure: always
+        template:
+            - "Repo `%{repository_slug}` *%{result}* build (<%{build_url}|#%{build_number}>) for commit (<%{compare_url}|%{commit}>) on branch `%{branch}`."
+            - "Execution time: *%{duration}*"
+            - "Message: %{message}"
