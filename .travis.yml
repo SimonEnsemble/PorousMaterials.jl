@@ -16,7 +16,9 @@ after_success:
     - julia -e 'using Pkg; cd(Pkg.dir("PorousMaterials")); include(joinpath("docs", "make.jl"))'
 notifications:
     email: false
-    slack: simonensemble:gqF8iQTs1HBAraiqczEoTAz9
+    slack:
+        rooms:
+            - simonensemble:gqF8iQTs1HBAraiqczEoTAz9#travis-pmjl
         on_success: always
         on_faulure: always
         template:
