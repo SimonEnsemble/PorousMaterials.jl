@@ -14,3 +14,7 @@ after_success:
     # build the documentation site
     - julia -e 'using Pkg; ps=Pkg.PackageSpec(name="Documenter", version="0.19"); Pkg.add(ps); Pkg.pin(ps)'
     - julia -e 'using Pkg; cd(Pkg.dir("PorousMaterials")); include(joinpath("docs", "make.jl"))'
+notifications:
+    email: false
+    slack: simonensemble:gqF8iQTs1HBAraiqczEoTAz9
+
