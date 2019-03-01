@@ -271,7 +271,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
-    filename_comment::AbstractString="")
+    snapshots::Bool=false, snapshot_frequency::Int=100, filename_comment::AbstractString="")
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -280,6 +280,16 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
+    end
+
+    f = "" # declare a variable outside of scope so we only open a file if we want to snapshot
+
+    xyz_filename = xyz_snapshot_savename(framework.name, molecule.species, ljforcefield.name,
+                    temperature, pressure, snapshot_frequency, comment=filename_comment)
+
+    # open file for xyz snapshots
+    if snapshot
+        f = open(xyz_filename, "w")
     end
 
     ###
@@ -616,6 +626,21 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             end
         end
 
+        # snapshot cycle
+        if snapshot && (outer_cycle % snapshot_frequency == 0)
+            num_atoms = length(molecules) * molecule.atoms.n_atoms # Assuming there is only one kind of adsorbate in
+                                                             # the system
+                                                             # TODO calculate total number of adsorbate atoms
+            write(f, @sprintf("%s\n\n", num_atoms))
+            for molecule in molecules
+                for i = 1:molecule.atoms.n_atoms
+                    write(f, @sprint("%s %f %f %f\n"), molecules.atoms.species[i],
+                          molecules.atoms.xf[1, i]), molecules.atoms.xf[2, i], molecules.atoms.xf[3, i]
+                end
+            end
+            write(f, "\n")
+        end
+
         if write_checkpoints && (outer_cycle % checkpoint_frequency == 0)
             checkpoint = Dict("outer_cycle" => outer_cycle,
                               "molecules" => deepcopy(molecules),
@@ -637,6 +662,11 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end # write checkpoint
     end # outer cycles
     # finished MC moves at this point.
+    
+    # close snapshot xyz file
+    if snapshot
+        close(f)
+    end
 
     # out of paranoia, assert molecules not outside box and bond lengths preserved
     for m in molecules
@@ -794,6 +824,42 @@ function gcmc_result_savename(framework_name::AbstractString,
         return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s.jld2", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
                     n_burn_cycles, n_sample_cycles, comment)
+end
+
+"""
+    file_save_name = xyz_snapshot_savename(framework_name, molecule_species,
+                                        ljforcefield_name, temperature, pressure,
+                                        n_snapshot_cycles; comment="")
+
+Determine the name of files saved during the GCMC simulation, specifically
+for molecule positions. It uses many pieces of information from the simulation
+to ensure the file name accurately describes what it holds.
+
+# Arguments
+- `framework_name::AbstractString`: The porous crystal being tested
+- `molecule_species::Symbol`: The molecule being tested inside the porous crystal
+- `ljforcefield_name::AbstractString`: The molecular model being used in this
+    simulation to describe intermolecular Van der Waals interactions
+- `temperature::Float64`: The temperature used in the simulation units: Kelvin (K)
+- `pressure::Float64`: The pressure used in the simulation units: bar
+- `n_snapshot_cycles::Int`: The number of snapshot cycles used in this simulation
+- `comment::AbstractString`: An optional comment that will be appended to the end of the filename
+"""
+function xyz_snapshot_savename(framework_name::AbstractString,
+                            molecule_species::Symbol,
+                            ljforcefield_name::AbstractString,
+                            temperature::Float64,
+                            pressure::Float64,
+                            snapshot_frequency::Int,
+                            comment::AbstractString="")
+        framework_name = split(framework_name, ".")[1] # remove file extension
+        ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
+        if comment != "" && comment[1] != '_'
+            comment = "_" * comment
+        end
+        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dsnapshot_freq%d.xyz", framework_name,
+                    molecule_species, temperature, pressure, ljforcefield_name,
+                    snapshot_frequency, comment)
 end
 
 function print_results(results::Dict; print_title::Bool=true)
