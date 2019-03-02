@@ -781,24 +781,6 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 end # gcmc_simulation
 
 """
-    num_atoms = atoms_in_molecules(molecules)
-
-calculates the total number of atoms in an array of molecules
-
-# Arguments
- - `molecule::Array{Molecule, 1}`: The molecules to count the number of atoms in
-# Returns
- - The total number of atoms in the molecules passed in
-"""
-function atoms_in_molecules(molecules::Array{Molecule, 1})
-    num_atoms = 0;
-    for molecule in molecules
-        num_atoms += molecule.atoms.n_atoms
-    end
-    return num_atoms
-end
-
-"""
     file_save_name = gcmc_result_savename(framework_name, molecule_species,
                                         ljforcefield_name, temperature, pressure,
                                         n_burn_cycles, n_sample_cycles; comment="",
@@ -847,25 +829,6 @@ function gcmc_result_savename(framework_name::AbstractString,
         filename = filename * extension
 
         return filename
-end
-
-"""
-    write_xyz_to_file(molecules, xyz_file)
-
-writes the coordinates of all atoms in molecules to the given xyz_file file object
-passing a file object around is faster for simulation because it can be opened
-once at the beginning of the simulation and closed at the end
-"""
-function write_xyz_to_file(molecules::Array{Molecule, 1}, xyz_file::IOStream)
-    num_atoms = atoms_in_molecules(molecules)
-    @printf(xyz_file, "%s\n\n", num_atoms)
-    for molecule in molecules
-        for i = 1:molecule.atoms.n_atoms
-            @print(xyz_file, "%s %f %f %f\n", molecules.atoms.species[i],
-                    molecules.atoms.xf[1, i], molecules.atoms.xf[2, i], molecules.atoms.xf[3, i])
-        end
-        write(f, "\n")
-    end
 end
 
 function print_results(results::Dict; print_title::Bool=true)
