@@ -178,10 +178,10 @@ function write_xyz_to_file(molecules::Array{Molecule, 1}, xyz_file::IOStream)
     @printf(xyz_file, "%s\n\n", num_atoms)
     for molecule in molecules
         for i = 1:molecule.atoms.n_atoms
-            @printf(xyz_file, "%s %f %f %f\n", molecules.atoms.species[i],
-                    molecules.atoms.xf[1, i], molecules.atoms.xf[2, i], molecules.atoms.xf[3, i])
+            @printf(xyz_file, "%s %f %f %f\n", molecule.atoms.species[i],
+                    molecule.atoms.xf[1, i], molecule.atoms.xf[2, i], molecule.atoms.xf[3, i])
         end
-        write(f, "\n")
+        write(xyz_file, "\n")
     end
 end
 

@@ -82,7 +82,7 @@ function update_density!(grid::Grid, molecules::Array{Molecule, 1}, species::Sym
     for molecule in molecules
         if species == molecule.species
             for i = 1:molecule.atoms.n_atoms
-                grid.data[xf_to_id(grid.n_pts, molecule[:, i])...]
+                grid.data[xf_to_id(grid.n_pts, molecule.atoms.xf[:, i])...] += 1
             end
         end
     end

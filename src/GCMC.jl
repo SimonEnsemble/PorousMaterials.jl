@@ -284,12 +284,21 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
     xyz_snapshot_file = "" # declare a variable outside of scope so we only open a file if we want to snapshot
 
-    xyz_filename = gcmc_result_savename(framework.name, molecule.species, ljforcefield.name,
-                    temperature, pressure, snapshot_frequency, comment=filename_comment,
-                    snapshot=true, extension=".xyz")
+    xyz_filename = gcmc_result_savename(framework.name, molecule.species,
+                    ljforcefield.name, temperature, pressure, n_burn_cycles,
+                    n_sample_cycles, comment=filename_comment * "adsorbate_positions",
+                    extension=".xyz")
+
+    # Initialize a density grid with each point being 0.1 units apart.
+    # This calculates the n_pts based on the framework
+    density_grid = initialize_density_grid(framework.box, dx=1.0)
+
+    # track number of snapshots to verify .xyz of dumped adsorbate positions
+    # and for getting and accurate density value in the density_grid
+    num_snapshots = 0
 
     # open file for xyz snapshots
-    if snapshot
+    if snapshots
         xyz_snapshot_file = open(xyz_filename, "w")
     end
 
@@ -628,8 +637,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
 
         # snapshot cycle
-        if snapshot && (outer_cycle % snapshot_frequency == 0)
+        if snapshots && (outer_cycle % snapshot_frequency == 0)
             write_xyz_to_file(molecules, xyz_snapshot_file)
+            update_density!(density_grid, molecules, molecule.species)
+            num_snapshots += 1
         end
 
         if write_checkpoints && (outer_cycle % checkpoint_frequency == 0)
@@ -655,8 +666,11 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # finished MC moves at this point.
     
     # close snapshot xyz file
-    if snapshot
+    if snapshots
+        # close snapshot file
         close(xyz_snapshot_file)
+        # divide number of molecules in a given voxel by total snapshots
+        density_grid.data ./= num_snapshots
     end
 
     # out of paranoia, assert molecules not outside box and bond lengths preserved
@@ -753,6 +767,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         results[@sprintf("Fraction of %s proposals accepted", proposal_description)] = markov_counts.n_accepted[proposal_id] / markov_counts.n_proposed[proposal_id]
     end
 
+    # Snapshot information
+    results["Density Grid"] = deepcopy(density_grid)
+    results["Num Snapshots"] = num_snapshots
+
     if verbose
         print_results(results, print_title=false)
     end
@@ -784,7 +802,7 @@ end # gcmc_simulation
     file_save_name = gcmc_result_savename(framework_name, molecule_species,
                                         ljforcefield_name, temperature, pressure,
                                         n_burn_cycles, n_sample_cycles; comment="",
-                                        snapshot=false, extension="")
+                                        extension="")
 
 Determine the name of files saved during the GCMC simulation, be molecule
 positions or results. It uses many pieces of information from the simulation
@@ -811,22 +829,15 @@ function gcmc_result_savename(framework_name::AbstractString,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int;
                             comment::AbstractString="",
-                            snapshot::Bool=false,
                             extension::AbstractString="")
         framework_name = split(framework_name, ".")[1] # remove file extension
         ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
         if comment != "" && comment[1] != '_'
             comment = "_" * comment
         end
-        filename = @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s", framework_name,
+        filename = @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s%s", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
-                    n_burn_cycles, n_sample_cycles, comment)
-
-        if snapshot
-            filename = filename * "adsorbate_positions"
-        end
-
-        filename = filename * extension
+                    n_burn_cycles, n_sample_cycles, comment, extension)
 
         return filename
 end
