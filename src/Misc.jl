@@ -190,13 +190,30 @@ A minimization problem is solved using `M0` and `K0` as initial guesses for the 
 - `M::Float64`: The maximum monolayer coverage according to Langmuir's theory, N = (MKP)/(1+KP)
 - `K::Float64`: The Langmuir constant
 """
-function fit_langmuir(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, M0::Float64=1.0, K0::Float64=1.0)
+function fit_langmuir(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, method::Symbol=:nonlinear)
     sort!(df, [pressure_col_name])
-    n = df[loading_col_name]
-    p = df[pressure_col_name]
-    function_to_minimize(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i]/(1 + θ[2] * p[i]))^2 for i = 1:length(n)])
-    θ0 = [M0, K0]
-    res = optimize(function_to_minimize, θ0, LBFGS())
-    M, K = res.minimizer
+    if method == :nonlinear
+        n = df[loading_col_name]
+        p = df[pressure_col_name]
+        #M0 = n[end] * 1.1
+        #K0 = n[2] / (p[2] * (M0-n[2]))
+        M0, K0 = fit_langmuir(df, pressure_col_name, loading_col_name, :linear)
+        function_to_minimize(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i]/(1 + θ[2] * p[i]))^2 for i = 1:length(n)])
+        θ0 = [M0, K0]
+        res = optimize(function_to_minimize, θ0, LBFGS())
+        M, K = res.minimizer
+    elseif method == :linear
+        inv_N = (df[loading_col_name]).^(-1)
+        inv_P = (df[pressure_col_name]).^(-1)
+        if inv_P[1] == Inf || inv_N[1] == Inf
+            slope, intercept = llsq(inv_P[2:end,:], inv_N[2:end])
+        else
+            slope, intercept = llsq(inv_P, inv_N)
+        end
+        M = 1/intercept
+        K = 1/(M * slope)
+    else
+        error("Method not available. Try `:linear` or `:nonlinear`")
+    end
     return M, K
 end

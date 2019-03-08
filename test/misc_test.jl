@@ -21,8 +21,11 @@ using Optim
     P = [P[1], P[11], P[21], P[31], P[41], P[51], P[61], P[71], P[81]]
     new_df = DataFrame(Pressure = P, Loading = N)
     M2, K2 = fit_langmuir(new_df, Symbol("Pressure"), Symbol("Loading"))
+    M2_2, K2_2 = fit_langmuir(new_df, Symbol("Pressure"), Symbol("Loading"), :linear)
     @test isapprox(M, M2)
     @test isapprox(K, K2)
+    @test isapprox(M, M2_2)
+    @test isapprox(K, K2_2)
 end
 
 
