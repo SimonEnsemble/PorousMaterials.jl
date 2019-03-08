@@ -86,7 +86,7 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
     repfactors = replication_factors(framework.box, ljforcefield)
     if verbose
         @printf("\tReplicating framework %d by %d by %d for short-range cutoff %.2f\n",
-                repfactors..., sqrt(ljforcefield.cutoffradius_squared))
+                repfactors[1], repfactors[2], repfactors[3], sqrt(ljforcefield.cutoffradius_squared))
     end
     # replicate the framework atoms so fractional coords are in [0, 1] spanning the simulation box
     framework = replicate(framework, repfactors)

@@ -132,7 +132,7 @@ function read_cube(filename::AbstractString)
     box = Box(f_to_c)
 
     # read in data
-    data = zeros(Float64, n_pts...)
+    data = zeros(Float64, n_pts[1], n_pts[2], n_pts[3])
     line = readline(cubefile)
     for i = 1:n_pts[1]
         for j = 1:n_pts[2]
@@ -197,12 +197,12 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
 
-    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts...), units, 
+    grid = Grid(framework.box, n_pts, zeros(Float64, n_pts[1], n_pts[2], n_pts[3]), units, 
         center ? framework.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0])
 
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
-        @printf("\tRegular grid (in fractional space) of %d by %d by %d points superimposed over the unit cell.\n", n_pts...)
+        @printf("\tRegular grid (in fractional space) of %d by %d by %d points superimposed over the unit cell.\n", n_pts[1], n_pts[2], n_pts[3])
         if rotations_required
             @printf("\t%d molecule rotations per grid point with temperature %f K.\n", n_rotations, temperature)
         end
@@ -243,9 +243,9 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
 end
 
 function Base.show(io::IO, grid::Grid)
-    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts...)
+    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts[1], n_pts[2], n_pts[3])
     @printf(io, "\tunits of data attribute: %s\n", grid.units)
-    @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin...)
+    @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin[1], grid.origin[2], grid.origin[3])
 end
 
 # comparing very large numbers in grid.data, so increase rtol to account
@@ -276,20 +276,20 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
             continue
         end
         # if neighbor already assigned or un-occupiable, continue
-        if segmented_grid.data[ind...] != 0
+        if segmented_grid.data[ind[1], ind[2], ind[3]] != 0
             continue
         end
 
         # if accessible, assign same segment ID and keep looking at surrounding points
-        if grid.data[ind...] < energy_tol
-            segmented_grid.data[ind...] = segmented_grid.data[i, j, k]
+        if grid.data[ind[1], ind[2], ind[3]] < energy_tol
+            segmented_grid.data[ind[1], ind[2], ind[3]] = segmented_grid.data[i, j, k]
             # add grid pt. to queue to look at ITS surrounding neighbors
             # originally had recursive algo but get stack overflow
             push!(queue_of_grid_pts, ind)
         else
             # if not accessible, assign -1 and don't push any points to the queue
             #  (this is how the algo eventually dies out)
-            segmented_grid.data[ind...] = -1
+            segmented_grid.data[ind[1], ind[2], ind[3]] = -1
         end
     end
     return nothing
@@ -299,7 +299,7 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
     # let "-1" be "not occupiable" and, eventually, "not accessible"
-    segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts...),
+    segmented_grid = Grid(grid.box, grid.n_pts, zeros(Int, grid.n_pts[1], grid.n_pts[2], grid.n_pts[3]),
         :Segment_No, grid.origin)
     segment_no = 0
     for i = 1:grid.n_pts[1], j = 1:grid.n_pts[2], k = 1:grid.n_pts[3]
@@ -315,10 +315,10 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
                     # take first index in line
                     id = queue_of_grid_pts[1]
                     # assign segment number
-                    segmented_grid.data[id...] = segment_no
+                    segmented_grid.data[id[1], id[2], id[3]] = segment_no
                     # look at surroudning points, add to queue if they are also accessible
                     _flood_fill!(grid, segmented_grid, queue_of_grid_pts,
-                        id..., energy_tol)
+                                 id[1], id[2], id[3], energy_tol)
                     # handled first one in queue, remove from queue
                     deleteat!(queue_of_grid_pts, 1)
                 end
@@ -369,7 +369,7 @@ function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{Se
         push!(connections, segment_connection)
         if verbose
             @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n", 
-                segment_1, segment_2, direction...)
+                    segment_1, segment_2, direction[1], direction[2], direction[3])
         end
         # also add opposite direction to take into account symmetry
         push!(connections, SegmentConnection(segment_2, segment_1, segment_connection.direction .* -1))
@@ -685,7 +685,7 @@ function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1})
         id_neighbor = id_nearest_neighbor .+ [i, j, k]
         _apply_pbc_to_index!(id_neighbor, accessibility_grid.n_pts)
         # again, if ANY surrounding point is accessible, let the energy computation go on
-        if accessibility_grid.data[id_neighbor...]
+        if accessibility_grid.data[id_neighbor[1], id_neighbor[2], id_neighbor[3]]
             return true
         end
     end

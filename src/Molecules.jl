@@ -202,14 +202,14 @@ function Base.show(io::IO, molecule::Molecule)
         print(io, "Atoms:\n")
         for i = 1:molecule.atoms.n_atoms
             @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
-                molecule.atoms.xf[:, i]...)
+                    molecule.atoms.xf[1, i], molecule.atoms.xf[2, i], molecule.atoms.xf[3, i])
         end
     end
     if molecule.charges.n_charges > 0
         print(io, "\nPoint charges: ")
         for i = 1:molecule.charges.n_charges
             @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
-                molecule.charges.xf[:, i]...)
+                    molecule.charges.xf[1, i], molecule.charges.xf[2, i], molecule.charges.xf[3, i])
         end
     end
 end
