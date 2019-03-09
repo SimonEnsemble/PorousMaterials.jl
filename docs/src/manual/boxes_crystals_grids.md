@@ -103,6 +103,7 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
     replicate
     UnitCube
     write_vtk
+    inside
 ```
 
 ## Crystals
