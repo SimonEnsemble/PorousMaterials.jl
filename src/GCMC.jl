@@ -271,7 +271,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
-    snapshots::Bool=false, snapshot_frequency::Int=100, filename_comment::AbstractString="")
+    snapshots::Bool=false, snapshot_frequency::Int=100, calculate_density_grid::Bool=false,
+    density_grid_dx::Float64=1.0, filename_comment::AbstractString="")
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -291,7 +292,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
     # Initialize a density grid with each point being 0.1 units apart.
     # This calculates the n_pts based on the framework
-    density_grid = initialize_density_grid(framework.box, dx=1.0)
+    n_pts = required_n_pts(framework.box, density_grid_dx)
+    density_grid = Grid(framework.box, n_pts, zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
 
     # track number of snapshots to verify .xyz of dumped adsorbate positions
     # and for getting and accurate density value in the density_grid
@@ -637,9 +639,17 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
 
         # snapshot cycle
-        if snapshots && (outer_cycle % snapshot_frequency == 0)
-            write_xyz_to_file(molecules, xyz_snapshot_file)
-            update_density!(density_grid, molecules, molecule.species)
+        if (outer_cycle % snapshot_frequency == 0) && (outer_cycle > n_burn_cycles)
+            if snapshots
+                # have a '\n' for every new set of atoms, leaves no '\n' at EOF
+                if num_snapshots > 0
+                    @printf(xyz_snapshot_file, "\n")
+                end
+                write_xyz_to_file(framework.box, molecules, xyz_snapshot_file)
+            end
+            if calculate_density_grid
+                update_density!(density_grid, molecules, molecule.species)
+            end
             num_snapshots += 1
         end
 
@@ -669,6 +679,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if snapshots
         # close snapshot file
         close(xyz_snapshot_file)
+    end
+
+    if calculate_density_grid
         # divide number of molecules in a given voxel by total snapshots
         density_grid.data ./= num_snapshots
     end
@@ -768,8 +781,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
 
     # Snapshot information
-    results["Density Grid"] = deepcopy(density_grid)
-    results["Num Snapshots"] = num_snapshots
+    results["density grid"] = deepcopy(density_grid)
+    results["num snapshots"] = num_snapshots
 
     if verbose
         print_results(results, print_title=false)

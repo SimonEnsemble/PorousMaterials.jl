@@ -173,15 +173,15 @@ writes the coordinates of all atoms in molecules to the given xyz_file file obje
 passing a file object around is faster for simulation because it can be opened
 once at the beginning of the simulation and closed at the end
 """
-function write_xyz_to_file(molecules::Array{Molecule, 1}, xyz_file::IOStream)
+function write_xyz_to_file(box::Box, molecules::Array{Molecule, 1}, xyz_file::IOStream)
     num_atoms = atoms_in_molecules(molecules)
-    @printf(xyz_file, "%s\n\n", num_atoms)
+    @printf(xyz_file, "%s\n", num_atoms)
     for molecule in molecules
         for i = 1:molecule.atoms.n_atoms
-            @printf(xyz_file, "%s %f %f %f\n", molecule.atoms.species[i],
-                    molecule.atoms.xf[1, i], molecule.atoms.xf[2, i], molecule.atoms.xf[3, i])
+            cartesian_coords = box.f_to_c * molecule.atoms.xf[:, i]
+            @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i],
+                    cartesian_coords...)
         end
-        write(xyz_file, "\n")
     end
 end
 

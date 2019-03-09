@@ -30,38 +30,8 @@ indices for storing that data inside a `Grid` object
  - `id::Array{Int, 1}`: The array indices for storing this point in space
 """
 function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
-    return floor.(Int, xf .* n_pts) .+ 1 
-end
-
-"""
-    density_grid = initialize_density_grid(box, dx, units=:Angstroms)
-
-Initializes a density grid for this box given that two points aren't within
-`dx` of each other or have a given number of points. These cannot be used together,
-and have been set up so that if there is a preferred distance, `n_pts` will be 
-calculated from that. Otherwise `set_n_pts` will be used. The `n_pts` defaults to
-(15, 15, 15).
-
-# Arguments
- - `box::Box`: the box the grid will be modelled on
- - `units::Symbol`: The units for measuring this grid
- - `dx::Float64`: The minimum space between grid points
- - `set_n_pts::Tuple{Int, Int, Int}`: The number of points
-# Returns
- - a grid for storing the density grid based on a specific framework
-"""
-function initialize_density_grid(box::Box; units::Symbol=:Angstroms, 
-                    dx::Float64=0.0, set_n_pts::Tuple{Int, Int, Int}=(15, 15, 15))
-    if dx > 0.0 # if user specified the distance between grid points, use it for n_pts
-        n_pts = required_n_pts(box, dx)
-    else # if user didn't specify a dx, will use a preset n_pts, either preset
-            # or user specified
-        n_pts = set_n_pts
-    end
-    data = zeros(n_pts...)
-    grid = Grid(box, n_pts, data, units, [0.0, 0.0, 0.0])
-
-    return grid
+    voxel_id = floor.(Int, xf .* n_pts) .+ 1
+    return voxel_id
 end
 
 """

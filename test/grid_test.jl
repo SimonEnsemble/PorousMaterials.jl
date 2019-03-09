@@ -142,5 +142,10 @@ using Random
         @test nb_segments_blocked_nb == 0
         @test isapprox(accessibility_grid, accessibility_grid_nb)
     end
+
+    # test xf_to_id
+    n_pts = (4, 4, 4) # testing a grid with 4x4x4 voxels
+    @test all(xf_to_id(n_pts, [0.0001, 0.0001, 0.0001]) .== 1)
+    @test all(xf_to_id(n_pts, [0.9999, 0.9999, 0.9999]) .== n_pts[end])
 end
 end
