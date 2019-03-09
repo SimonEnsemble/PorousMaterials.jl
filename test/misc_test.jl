@@ -11,7 +11,7 @@ using Optim
     df = CSV.read("isotherm.csv")
     p_col_name, l_col_name = names(df)
     henry = fit_isotherm(df, p_col_name, l_col_name, :henry)
-    @test isapprox(henry, 0.9404942451976929)
+    @test isapprox(henry, 0.9688044280548711)
 
     P = range(0, stop=1, length=100)
     M = 23.0
