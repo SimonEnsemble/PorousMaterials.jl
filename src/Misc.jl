@@ -217,3 +217,67 @@ function fit_langmuir(df::DataFrame, pressure_col_name::Symbol, loading_col_name
     end
     return M, K
 end
+
+function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol)
+    n = df[loading_col_name]
+    p = df[pressure_col_name]
+    if model == :langmuir
+        M0 = n[end] * 1.1
+        if isapprox(n[1], 0.0)
+            K0 = n[2]/p[2]
+        else
+            K0 = n[1]/p[1]
+        end
+        return [M0, K0]
+    elseif model == :henry
+        if isapprox(n[1], 0.0)
+            K0 = n[2]/p[2]
+        else
+            K0 = n[1]/p[1]
+        end
+        return [K0]
+    else
+        error("Model not available. Currently only `:langmuir` and `:henry` are available")
+    end
+end
+
+
+
+function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol; henry_tol::Float64 = 0.25)
+    sort!(df, [pressure_col_name])
+    n = df[loading_col_name]
+    p = df[pressure_col_name]
+    if ! isapprox(p[1], 0.0, atol=0.01)
+        prepend!(n, 0.0)
+        prepend!(p, 0.0)
+    end
+    θ0 = _guess(df, pressure_col_name, loading_col_name, model)
+
+    if model == :langmuir
+        objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i]/(1 + θ[2] * p[i]))^2 for i = 1:length(n)])
+        res = optimize(objective_function_langmuir, θ0, LBFGS())
+        M, K = res.minimizer
+        return M, K
+
+    elseif model == :henry
+        scaled_min_rmse = Inf
+        best_K = 0
+        for j = length(n):-1:3
+            objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:j])
+            res = optimize(objective_function_henry, 0.0, θ0[1] * 1.1)
+            K = res.minimizer
+            scaled_rmse = sqrt(res.minimum) / maximum(n[1:j])
+            if scaled_rmse < scaled_min_rmse
+                scaled_min_rmse = scaled_rmse
+                best_K = K
+            end
+        end
+        if scaled_min_rmse > henry_tol
+            @warn "The minimum scaled RMSE is higher than the `henry_tol` tolerance. The Henry coefficient was made using only 2 data points. Change `henry_tol` if this is not what you want"
+            return n[2]/p[2]
+        else
+            return best_K
+        end
+
+    end
+end
