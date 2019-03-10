@@ -4,7 +4,6 @@ using PorousMaterials
 using Test
 using DataFrames
 using CSV
-using MultivariateStats
 using Optim
 
 @testset "Misc Tests" begin
