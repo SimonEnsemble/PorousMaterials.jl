@@ -202,7 +202,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
 
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, framework.name)
-        @printf("\tRegular grid (in fractional space) of %d by %d by %d points superimposed over the unit cell.\n", n_pts...)
+        @printf("\tRegular grid (in fractional space) of %d by %d by %d points superimposed over the unit cell.\n", n_pts[1], n_pts[2], n_pts[3])
         if rotations_required
             @printf("\t%d molecule rotations per grid point with temperature %f K.\n", n_rotations, temperature)
         end
@@ -243,9 +243,9 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
 end
 
 function Base.show(io::IO, grid::Grid)
-    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts...)
+    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts[1], n_pts[2], n_pts[3])
     @printf(io, "\tunits of data attribute: %s\n", grid.units)
-    @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin...)
+    @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin[1], grid.origin[2], grid.origin[3])
 end
 
 # comparing very large numbers in grid.data, so increase rtol to account
@@ -318,7 +318,7 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
                     segmented_grid.data[id...] = segment_no
                     # look at surroudning points, add to queue if they are also accessible
                     _flood_fill!(grid, segmented_grid, queue_of_grid_pts,
-                        id..., energy_tol)
+                                 id..., energy_tol)
                     # handled first one in queue, remove from queue
                     deleteat!(queue_of_grid_pts, 1)
                 end
@@ -369,7 +369,7 @@ function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{Se
         push!(connections, segment_connection)
         if verbose
             @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n", 
-                segment_1, segment_2, direction...)
+                    segment_1, segment_2, direction[1], direction[2], direction[3])
         end
         # also add opposite direction to take into account symmetry
         push!(connections, SegmentConnection(segment_2, segment_1, segment_connection.direction .* -1))

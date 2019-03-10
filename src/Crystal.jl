@@ -629,7 +629,9 @@ function write_cif(framework::Framework, filename::AbstractString)
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
-        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i], framework.atoms.xf[:, i]..., q)
+        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i], 
+                framework.atoms.xf[1, i], framework.atoms.xf[2, i], 
+                framework.atoms.xf[3, i], q)
      end
      close(cif_file)
 end
