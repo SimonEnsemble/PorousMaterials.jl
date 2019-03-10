@@ -331,7 +331,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     set_fractional_coords!(molecule, framework.box)
     if verbose
         @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\n",
-                repfactors[1], repfactors[2], repfactors[3], sqrt(ljforcefield.cutoffradius_squared))
+                repfactors[1], repfactors[2], repfactors[3], 
+                sqrt(ljforcefield.cutoffradius_squared))
         println("\tFramework crystal density: ", crystal_density(framework))
         println("\tFramework chemical formula: ", chemical_formula(framework))
         println("\tTotal number of atoms: ", framework.atoms.n_atoms)
