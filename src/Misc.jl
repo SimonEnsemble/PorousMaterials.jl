@@ -208,7 +208,7 @@ function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name
             objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:j])
             res = optimize(objective_function_henry, 0.0, θ0[1] * 1.1)
             K = res.minimizer
-            scaled_rmse = sqrt(res.minimum) / maximum(n[1:j])
+            scaled_rmse = sqrt(res.minimum) / maximum(n)
             if scaled_rmse < scaled_min_rmse
                 scaled_min_rmse = scaled_rmse
                 best_K = K
