@@ -288,12 +288,12 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
     end
 
-    xyz_snapshot_file = IOStream() # declare a variable outside of scope so we only open a file if we want to snapshot
-
     xyz_filename = gcmc_result_savename(framework.name, molecule.species,
                     ljforcefield.name, temperature, pressure, n_burn_cycles,
                     n_sample_cycles, comment="adsorbate_positions" * filename_comment,
                     extension=".xyz")
+
+    xyz_snapshot_file = IOStream(xyz_filename) # declare a variable outside of scope so we only open a file if we want to snapshot
 
     # Initialize a density grid based on the framework and the passed in density_grid_dx
     # This calculates the n_pts based on the framework
