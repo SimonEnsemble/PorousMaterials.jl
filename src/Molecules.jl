@@ -149,7 +149,7 @@ function set_fractional_coords_to_unit_cube!(molecule::Molecule, box::Box)
 end
 
 """
-    num_atoms = atoms_in_molecules(molecules)
+    num_atoms = n_atoms(molecules)
 
 calculates the total number of atoms in an array of molecules
 
@@ -158,7 +158,7 @@ calculates the total number of atoms in an array of molecules
 # Returns
  - The total number of atoms in the molecules passed in
 """
-function atoms_in_molecules(molecules::Array{Molecule, 1})
+function n_atoms(molecules::Array{Molecule, 1})
     num_atoms = 0;
     for molecule in molecules
         num_atoms += molecule.atoms.n_atoms
@@ -167,14 +167,23 @@ function atoms_in_molecules(molecules::Array{Molecule, 1})
 end
 
 """
-    write_xyz_to_file(molecules, xyz_file)
+    write_xyz(box, molecules, xyz_file)
 
-writes the coordinates of all atoms in molecules to the given xyz_file file object
+Writes the coordinates of all atoms in molecules to the given xyz_file file object
 passing a file object around is faster for simulation because it can be opened
-once at the beginning of the simulation and closed at the end
+once at the beginning of the simulation and closed at the end.
+
+This writes the coordinates of the molecules in cartesian coordinates, so the
+box is needed for the conversion.
+
+# Arguments
+ - `box::Box`: The box the molecules are in, to convert molecule positions
+        to cartesian coordinates
+ - `molecules::Array{Molecule, 1}`: The array of molecules to be written to the file
+ - `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
 """
-function write_xyz_to_file(box::Box, molecules::Array{Molecule, 1}, xyz_file::IOStream)
-    num_atoms = atoms_in_molecules(molecules)
+function write_xyz(box::Box, molecules::Array{Molecule, 1}, xyz_file::IOStream)
+    num_atoms = n_atoms(molecules)
     @printf(xyz_file, "%s\n", num_atoms)
     for molecule in molecules
         for i = 1:molecule.atoms.n_atoms

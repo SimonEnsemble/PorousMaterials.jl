@@ -20,8 +20,8 @@ end
 """
     grid_coordinates = xf_to_id(n_pts, xf)
 
-Takes the fractional coordinates of a point in a unit cell and returns the
-indices for storing that data inside a `Grid` object
+returns the indices of the voxel in which it falls when a unit cube is
+partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels
 
 # Arguments
  - `n_pts::Tuple{Int, Int, Int}`: The number of points for each axis in the `Grid`
@@ -46,12 +46,12 @@ at the end of the GCMC simulation.
  - `grid::Grid`: the grid to be updated
  - `molecules::Array{Molecule, 1}`: An array of molecules whose positions will
     be added to the grid
- - `species::Symbol`: The species of molecule that can be added to this density grid
+ - `species::Symbol`: The species of atom that can be added to this density grid
 """
 function update_density!(grid::Grid, molecules::Array{Molecule, 1}, species::Symbol)
     for molecule in molecules
-        if species == molecule.species
-            for i = 1:molecule.atoms.n_atoms
+        for i = 1:molecule.atoms.n_atoms
+            if species == molecule.atoms.species[i]
                 grid.data[xf_to_id(grid.n_pts, molecule.atoms.xf[:, i])...] += 1
             end
         end

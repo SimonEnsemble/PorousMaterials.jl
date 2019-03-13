@@ -262,6 +262,10 @@ is ideal gas, where fugacity = pressure.
     The dictionary has to have the following keys: `outer_cycle`, `molecules`, `system_energy`, `current_block`, `gcmc_stats`, `markov_counts`, `markov_chain_time` and `time`. If this argument is used, keep `load_checkpoint_file=false`.
 - `write_checkpoints::Bool`: Will save checkpoints in data/gcmc_checkpoints if this is true.
 - `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles.
+- `write_adsorbate_snapshots::Bool`: Whether the simulation will create and save a snapshot file
+- `snapshot_frequency::Int`: The number of samples taken between each snapshot (after burn cycle completion)
+- `calculate_density_grid::Bool`: Whether the simulation will keep track of a density grid for adsorbates
+- `density_grid_dx::Float64`: The space between voxels (in Angstroms)
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
@@ -271,8 +275,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
-    snapshots::Bool=false, snapshot_frequency::Int=100, calculate_density_grid::Bool=false,
-    density_grid_dx::Float64=1.0, filename_comment::AbstractString="")
+    write_adosrbate_snapshots::Bool=false, snapshot_frequency::Int=1,
+    calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0,
+    filename_comment::AbstractString="")
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -283,14 +288,14 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
     end
 
-    xyz_snapshot_file = "" # declare a variable outside of scope so we only open a file if we want to snapshot
+    xyz_snapshot_file = IOStream() # declare a variable outside of scope so we only open a file if we want to snapshot
 
     xyz_filename = gcmc_result_savename(framework.name, molecule.species,
                     ljforcefield.name, temperature, pressure, n_burn_cycles,
-                    n_sample_cycles, comment=filename_comment * "adsorbate_positions",
+                    n_sample_cycles, comment="adsorbate_positions" * filename_comment,
                     extension=".xyz")
 
-    # Initialize a density grid with each point being 0.1 units apart.
+    # Initialize a density grid based on the framework and the passed in density_grid_dx
     # This calculates the n_pts based on the framework
     n_pts = required_n_pts(framework.box, density_grid_dx)
     density_grid = Grid(framework.box, n_pts, zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
@@ -300,7 +305,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     num_snapshots = 0
 
     # open file for xyz snapshots
-    if snapshots
+    if write_adsorbate_snapshots
         xyz_snapshot_file = open(xyz_filename, "w")
     end
 
@@ -639,13 +644,13 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
 
         # snapshot cycle
-        if (outer_cycle % snapshot_frequency == 0) && (outer_cycle > n_burn_cycles)
-            if snapshots
+        if (outer_cycle > n_burn_cycles) && (outer_cycle % snapshot_frequency == 0)
+            if write_adsorbate_snapshots
                 # have a '\n' for every new set of atoms, leaves no '\n' at EOF
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
-                write_xyz_to_file(framework.box, molecules, xyz_snapshot_file)
+                write_xyz(framework.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid
                 update_density!(density_grid, molecules, molecule.species)
@@ -676,7 +681,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     # finished MC moves at this point.
     
     # close snapshot xyz file
-    if snapshots
+    if write_adsorbate_snapshots
         # close snapshot file
         close(xyz_snapshot_file)
     end
@@ -831,7 +836,6 @@ to ensure the file name accurately describes what it holds.
 - `n_burn_cycles::Int`: The number of burn cycles used in this simulation
 - `n_sample_cycles::Int`: The number of sample cycles used in this simulation
 - `comment::AbstractString`: An optional comment that will be appended to the end of the filename
-- `snapshot::Bool`: Whether this is the name for a snapshot file
 - `extension::AbstractString`: The extension for the file being created
 """
 function gcmc_result_savename(framework_name::AbstractString,
