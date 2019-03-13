@@ -159,7 +159,7 @@ calculates the total number of atoms in an array of molecules
  - The total number of atoms in the molecules passed in
 """
 function n_atoms(molecules::Array{Molecule, 1})
-    num_atoms = 0;
+    num_atoms = 0
     for molecule in molecules
         num_atoms += molecule.atoms.n_atoms
     end

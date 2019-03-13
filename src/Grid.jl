@@ -30,6 +30,14 @@ partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels
  - `id::Array{Int, 1}`: The array indices for storing this point in space
 """
 function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
+    # atom positions wrap inside unit cell, to always return indices in range
+    for i in eachindex(xf)
+        @inbounds if xf[i] > 1.1
+            xf[i] -= 1.0
+        elseif xf[i] < 0.0
+            xf[i] += 1.0
+        end
+    end
     voxel_id = floor.(Int, xf .* n_pts) .+ 1
     return voxel_id
 end
