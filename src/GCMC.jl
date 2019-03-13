@@ -275,7 +275,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
-    write_adosrbate_snapshots::Bool=false, snapshot_frequency::Int=1,
+    write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
     calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0,
     filename_comment::AbstractString="")
 
@@ -363,6 +363,13 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         println("\tFramework chemical formula: ", chemical_formula(framework))
         println("\tTotal number of atoms: ", framework.atoms.n_atoms)
         println("\tTotal number of point charges: ", framework.charges.n_charges)
+        if write_adsorbate_snapshots
+            @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
+            @printf("\t\tWriting to file: %s\n", xyz_filename)
+        end
+        if calculate_density_grid
+            @printf("\tAdsorption spatial probability density grid written with spacing %.3f Angstroms every %d cycles (after burn cycles)\n", density_grid_dx, snapshot_frequency)
+        end
     end
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
