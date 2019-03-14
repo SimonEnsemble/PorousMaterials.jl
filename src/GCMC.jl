@@ -265,7 +265,8 @@ is ideal gas, where fugacity = pressure.
 - `write_adsorbate_snapshots::Bool`: Whether the simulation will create and save a snapshot file
 - `snapshot_frequency::Int`: The number of cycles taken between each snapshot (after burn cycle completion)
 - `calculate_density_grid::Bool`: Whether the simulation will keep track of a density grid for adsorbates
-- `density_grid_dx::Float64`: The space between voxels (in Angstroms)
+- `density_grid_dx::Float64`: The (approximate) space between voxels (in Angstroms) in the density grid. The number of voxels in the simulation box is computed automatically by [`required_n_pts`](@ref).
+- `density_grid_species::Symbol`: The atomic species within the `molecule` for which we will compute the density grid.
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
@@ -276,8 +277,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
     write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
-    calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0,
-    filename_comment::AbstractString="")
+    calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0, 
+    density_grid_species::Union{Nothing, Symbol}=nothing, filename_comment::AbstractString="")
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -351,10 +352,29 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     framework = replicate(framework, repfactors)
     # adjust fractional coords of molecule according to *replicated* framework
     set_fractional_coords!(molecule, framework.box)
-
-    # Initialize a density grid based on the framework and the passed in density_grid_dx
-    # This calculates the n_pts based on the framework
-    n_pts = required_n_pts(framework.box, density_grid_dx)
+    
+    ###
+    #   Density grid for adsorbate
+    ###
+    # if molecule has more than one atom, need to specify which atom to keep track of in density grid.
+    if calculate_density_grid && isnothing(density_grid_species)
+        if molecule.atoms.n_atoms == 1
+            # obviously we are keeping track of the only atom in the adsorbate.
+            density_grid_species = molecule.atoms.species[1]
+        else
+            # don't proceed if we don't know which atom to keep track of!
+            error(@sprintf("Passed `calculate_density_grid=true` but adsorbate %s has 
+                %d atoms. Must specify `density_grid_species` to keep track of during the
+                density grid updates.\n", molecule.species, molecule.atoms.n_atoms))
+        end
+    end
+    
+    # Initialize a density grid based on the *simulation box* (not framework box passed in) and the passed in density_grid_dx
+    # Calculate `n_pts`, number of voxels in grid, based on the sim box and specified voxel spacing
+    n_pts = (0, 0, 0) # don't store a huge grid if we aren't tracking a density grid
+    if calculate_density_grid
+        n_pts = required_n_pts(framework.box, density_grid_dx)
+    end
     density_grid = Grid(framework.box, n_pts, zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
 
     if verbose
@@ -369,8 +389,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             @printf("\t\tWriting to file: %s\n", xyz_filename)
         end
         if calculate_density_grid
-            @printf("\tAdsorption spatial probability density grid written with spacing %.3f Angstroms every %d cycles (after burn cycles)\n", density_grid_dx, snapshot_frequency)
-            @printf("\t\tGrid data stored in array of size: %d by %d by %d\n", n_pts...)
+            @printf("\tTracking adsorbate spatial probability density grid of atomic species %s, updated every %d cycles (after burn cycles)\n", density_grid_species, snapshot_frequency)
+            @printf("\t\tdensity grid voxel spacing specified as %.3f Å => %d by %d by %d voxels\n", density_grid_dx, n_pts...)
         end
     end
 
@@ -662,7 +682,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
                 write_xyz(framework.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid
-                update_density!(density_grid, molecules, molecule.species)
+                update_density!(density_grid, molecules, density_grid_species)
             end
             num_snapshots += 1
         end
