@@ -20,8 +20,9 @@ end
 """
     grid_coordinates = xf_to_id(n_pts, xf)
 
-returns the indices of the voxel in which it falls when a unit cube is
-partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels
+Returns the indices of the voxel in which it falls when a unit cube is
+partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels.
+Periodic boundary conditions are applied.
 
 # Arguments
  - `n_pts::Tuple{Int, Int, Int}`: The number of points for each axis in the `Grid`
@@ -30,15 +31,14 @@ partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels
  - `id::Array{Int, 1}`: The array indices for storing this point in space
 """
 function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
-    # atom positions wrap inside unit cell, to always return indices in range
-    for i in eachindex(xf)
-        @inbounds if xf[i] > 1.1
-            xf[i] -= 1.0
-        elseif xf[i] < 0.0
-            xf[i] += 1.0
+    voxel_id = floor.(Int, xf .* n_pts) .+ 1
+    for k = 1:3
+        if voxel_id[k] <= 0
+            voxel_id[k] += n_pts[k]
+        elseif voxel_id[k] > n_pts[k]
+            voxel_id[k] -= n_pts[k]
         end
     end
-    voxel_id = floor.(Int, xf .* n_pts) .+ 1
     return voxel_id
 end
 
@@ -59,8 +59,9 @@ at the end of the GCMC simulation.
 function update_density!(grid::Grid, molecules::Array{Molecule, 1}, species::Symbol)
     for molecule in molecules
         for i = 1:molecule.atoms.n_atoms
-            if species == molecule.atoms.species[i]
-                grid.data[xf_to_id(grid.n_pts, molecule.atoms.xf[:, i])...] += 1
+            if molecule.atoms.species[i] == species
+                voxel_id = xf_to_id(grid.n_pts, molecule.atoms.xf[:, i])
+                grid.data[voxel_id...] += 1
             end
         end
     end

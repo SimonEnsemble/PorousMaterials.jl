@@ -148,6 +148,7 @@ using Random
     @test all(xf_to_id(n_pts, [0.0001, 0.0001, 0.0001]) .== 1)
     @test all(xf_to_id(n_pts, [0.9999, 0.9999, 0.9999]) .== n_pts[end])
     @test all(xf_to_id(n_pts, [0.0001, 0.2400, 0.2600]) .== [1, 1, 2]) 
+    @test all(xf_to_id(n_pts, [-0.0001, 0.2400, 1.01]) .== [4, 1, 1]) # PBC check
 
     # test update_density!
     unit_box = UnitCube()
@@ -161,5 +162,11 @@ using Random
 
     update_density!(density_grid_o_co2, [molecule], :O_CO2) # only updates for a single atom
     @test isapprox(sum(density_grid_o_co2.data), 2.0)
+
+    translate_to!(molecule, [-0.26, 0.26, 1.1]) # test PBCs
+    update_density!(density_grid_c_co2, [molecule], :C_CO2) # only updates for a single atom
+    @test isapprox(sum(density_grid_c_co2.data), 2.0)
+    @test isapprox(density_grid_c_co2.data[3, 2, 1], 1.0)
+
 end
 end
