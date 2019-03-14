@@ -190,6 +190,8 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
     ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
     write_checkpoints::Bool=false, show_progress_bar::Bool=false,
+    write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
+    calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0,
     filename_comment::AbstractString="")
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
@@ -203,6 +205,10 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                                       write_checkpoints=write_checkpoints,
                                                       show_progress_bar=show_progress_bar,
+                                                      write_adsorbate_snapshot=write_adsorbate_snapshot,
+                                                      snapshot_frequency=snapshot_frequency,
+                                                      claculate_density_grid=calculate_density_grid,
+                                                      density_grid_dx=density_grid_dx,
                                                       filename_comment=filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
