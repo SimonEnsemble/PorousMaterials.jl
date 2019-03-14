@@ -248,7 +248,7 @@ translation.
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before
     sampling.
 - `n_sample_cycles::Int`: number of cycles used for sampling
-- `sample_period::Int`: during the sampling cycles, sample e.g. the number of adsorbed
+- `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of adsorbed
     gas molecules every this number of Markov proposals.
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework.
@@ -261,21 +261,21 @@ is ideal gas, where fugacity = pressure.
 - `checkpoint::Dict`: A checkpoint dictionary that will work as a starting configuration for the run.
     The dictionary has to have the following keys: `outer_cycle`, `molecules`, `system_energy`, `current_block`, `gcmc_stats`, `markov_counts`, `markov_chain_time` and `time`. If this argument is used, keep `load_checkpoint_file=false`.
 - `write_checkpoints::Bool`: Will save checkpoints in data/gcmc_checkpoints if this is true.
-- `checkpoint_period::Int`: Will save checkpoint files every `checkpoint_period` cycles.
+- `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles.
 - `write_adsorbate_snapshots::Bool`: Whether the simulation will create and save a snapshot file
-- `snapshot_period::Int`: The number of cycles taken between each snapshot (after burn cycle completion)
+- `snapshot_frequency::Int`: The number of cycles taken between each snapshot (after burn cycle completion)
 - `calculate_density_grid::Bool`: Whether the simulation will keep track of a density grid for adsorbates
 - `density_grid_dx::Float64`: The space between voxels (in Angstroms)
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
     pressure::Float64, ljforcefield::LJForceField; n_burn_cycles::Int=5000,
-    n_sample_cycles::Int=5000, sample_period::Int=1, verbose::Bool=true,
+    n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
     molecules::Array{Molecule, 1}=Molecule[], ewald_precision::Float64=1e-6,
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
-    checkpoint_period::Int=100, write_checkpoints::Bool=false,
-    write_adsorbate_snapshots::Bool=false, snapshot_period::Int=1,
+    checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
+    write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
     calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0,
     filename_comment::AbstractString="")
 
@@ -365,11 +365,11 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         println("\tTotal number of atoms: ", framework.atoms.n_atoms)
         println("\tTotal number of point charges: ", framework.charges.n_charges)
         if write_adsorbate_snapshots
-            @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_period)
+            @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
             @printf("\t\tWriting to file: %s\n", xyz_filename)
         end
         if calculate_density_grid
-            @printf("\tAdsorption spatial probability density grid written with spacing %.3f Angstroms every %d cycles (after burn cycles)\n", density_grid_dx, snapshot_period)
+            @printf("\tAdsorption spatial probability density grid written with spacing %.3f Angstroms every %d cycles (after burn cycles)\n", density_grid_dx, snapshot_frequency)
             @printf("\t\tGrid data stored in array of size: %d by %d by %d\n", n_pts...)
         end
     end
@@ -616,7 +616,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
             # if we've done all burn cycles, take samples for statistics
             if outer_cycle > n_burn_cycles
-                if markov_chain_time % sample_period == 0
+                if markov_chain_time % sample_frequency == 0
                     gcmc_stats[current_block].n_samples += 1
 
                     gcmc_stats[current_block].n += length(molecules)
@@ -653,7 +653,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
 
         # snapshot cycle
-        if (outer_cycle > n_burn_cycles) && (outer_cycle % snapshot_period == 0)
+        if (outer_cycle > n_burn_cycles) && (outer_cycle % snapshot_frequency == 0)
             if write_adsorbate_snapshots
                 # have a '\n' for every new set of atoms, leaves no '\n' at EOF
                 if num_snapshots > 0
@@ -667,7 +667,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             num_snapshots += 1
         end
 
-        if write_checkpoints && (outer_cycle % checkpoint_period == 0)
+        if write_checkpoints && (outer_cycle % checkpoint_frequency == 0)
             checkpoint = Dict("outer_cycle" => outer_cycle,
                               "molecules" => deepcopy(molecules),
                               "system_energy" => system_energy,
