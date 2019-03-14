@@ -141,14 +141,22 @@ differ significantly from the previous pressure), we can reduce the number of bu
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
-function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
-    temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
-    n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, sample_frequency::Int=1,
-    verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
-    checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false,
-    filename_comment::AbstractString="")
-
+function stepwise_adsorption_isotherm(framework::Framework, 
+                                      molecule::Molecule,
+                                      temperature::Float64, 
+                                      pressures::Array{Float64, 1}, 
+                                      ljforcefield::LJForceField;
+                                      n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, 
+                                      sample_frequency::Int=1, verbose::Bool=true, 
+                                      ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
+                                      load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+                                      checkpoint_frequency::Int=50, write_checkpoints::Bool=false, 
+                                      show_progress_bar::Bool=false, 
+                                      write_adsorbate_snapshots::Bool=false, 
+                                      snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
+                                      density_grid_dx::Float64=1.0, 
+                                      density_grid_species::Union{Nothing, Symbol}=nothing,
+                                      filename_comment::AbstractString="")
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
@@ -157,11 +165,16 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
-                                            verbose=verbose, molecules=molecules,
+                                            verbose=verbose, molecules=molecules, # essential step here
                                             ewald_precision=ewald_precision, eos=eos,
                                             load_checkpoint_file=load_checkpoint_file,
                                             checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                             write_checkpoints=write_checkpoints, show_progress_bar=show_progress_bar,
+                                            write_adsorbate_snapshots=write_adsorbate_snapshots,
+                                            snapshot_frequency=snapshot_frequency,
+                                            calculate_density_grid=calculate_density_grid,
+                                            density_grid_dx=density_grid_dx,
+                                            density_grid_species=density_grid_species,
                                             filename_comment=filename_comment)
         push!(results, result)
     end
@@ -184,15 +197,22 @@ The only exception is that we pass an array of pressures. To give Julia access t
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
-function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
-    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000,
-    n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
-    ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
-    write_checkpoints::Bool=false, show_progress_bar::Bool=false,
-    write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
-    calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0,
-    filename_comment::AbstractString="")
+function adsorption_isotherm(framework::Framework, 
+                             molecule::Molecule,
+                             temperature::Float64,
+                             pressures::Array{Float64, 1},
+                             ljforcefield::LJForceField;
+                             n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, 
+                             sample_frequency::Int=1, verbose::Bool=true, 
+                             ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
+                             load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+                             checkpoint_frequency::Int=50, write_checkpoints::Bool=false, 
+                             show_progress_bar::Bool=false, 
+                             write_adsorbate_snapshots::Bool=false, 
+                             snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
+                             density_grid_dx::Float64=1.0, 
+                             density_grid_species::Union{Nothing, Symbol}=nothing,
+                             filename_comment::AbstractString="")
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
                                                       pressure, ljforcefield,
@@ -205,10 +225,11 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                                       write_checkpoints=write_checkpoints,
                                                       show_progress_bar=show_progress_bar,
-                                                      write_adsorbate_snapshot=write_adsorbate_snapshot,
+                                                      write_adsorbate_snapshots=write_adsorbate_snapshots,
                                                       snapshot_frequency=snapshot_frequency,
-                                                      claculate_density_grid=calculate_density_grid,
+                                                      calculate_density_grid=calculate_density_grid,
                                                       density_grid_dx=density_grid_dx,
+                                                      density_grid_species=density_grid_species,
                                                       filename_comment=filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
