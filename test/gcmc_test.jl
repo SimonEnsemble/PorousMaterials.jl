@@ -5,10 +5,12 @@ using CSV
 using DataFrames
 using JLD2
 using Printf
+using Statistics
 
 ig_tests = false
-xe_in_sbmof1_tests = false
+xe_in_sbmof1_tests = true
 co2_tests = true
+density_grid_test = false
 
 #
 # Ideal gas tests.
@@ -19,7 +21,7 @@ co2_tests = true
 if ig_tests
     empty_space = Framework("empty_box.cssr") # zero atoms!
     ideal_gas = Molecule("IG")
-    @assert (empty_space.n_atoms == 0)
+    @assert empty_space.atoms.n_atoms == 0
     forcefield = LJForceField("Dreiding.csv")
     temperature = 298.0
     fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
@@ -33,6 +35,22 @@ if ig_tests
         n_sim[i] = results["⟨N⟩ (molecules/unit cell)"]
         @printf("fugacity = %f Pa; n_ig = %e; n_sim = %e\n", fugacity[i], n_ig[i], n_sim[i])
     end
+end
+
+if density_grid_test
+    # test denstiy grid w./ ideal gas
+    n_pts = (4, 4, 4) # testing a grid with 4x4x4 voxels
+    empty_space = Framework("empty_box.cssr") # zero atoms!
+    ideal_gas = Molecule("IG")
+    forcefield = LJForceField("Dreiding.csv", cutoffradius=4.0)
+    temperature = 25.0
+    fugacity = 500.0 # mk sure lots of molecules
+    results, molecules = gcmc_simulation(empty_space, ideal_gas, temperature, fugacity, forcefield,
+                n_burn_cycles=1, n_sample_cycles=1000, calculate_density_grid=true, density_grid_dx=10.1,
+                show_progress_bar=true)
+    mean_density = mean(results["density grid"].data)
+    println(results["density grid"].data)
+    @test all(isapprox.(results["density grid"].data, mean_density, rtol=0.05))
 end
 
 ## Xe adsorption in SBMOF-1 tests
