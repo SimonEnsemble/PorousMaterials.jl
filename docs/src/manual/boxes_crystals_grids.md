@@ -123,6 +123,8 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
 ## Grids
 ```@docs
     Grid
+    xf_to_id
+    update_density!
     apply_periodic_boundary_condition!
     write_cube
     read_cube

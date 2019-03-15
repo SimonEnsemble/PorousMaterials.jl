@@ -46,9 +46,11 @@ rotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of 
 ## Molecules
 ```@docs
     Molecule
+    n_atoms
     translate_to!
     rotate!
-    rotation_matrix
+    rotation_matrix()
+    rotation_matrix(::Float64, ::Array{Float64, 1}; ::Bool)
     rand_point_on_unit_sphere
     charged(::Molecule; ::Bool)
 ```

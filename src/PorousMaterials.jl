@@ -114,9 +114,10 @@ export
     construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges,
 
     # Molecules.jl
-    Molecule, set_fractional_coords!, translate_by!, outside_box, set_fractional_coords_to_unit_cube!,
-    translate_to!, rotate!, rotation_matrix, rand_point_on_unit_sphere, charged,
-    pairwise_atom_distances, pairwise_charge_distances, Ion, bond_length_drift,
+    Molecule, n_atoms, set_fractional_coords!, translate_by!, outside_box,
+    set_fractional_coords_to_unit_cube!, translate_to!, rotate!, rotation_matrix,
+    rand_point_on_unit_sphere, charged, pairwise_atom_distances,
+    pairwise_charge_distances, Ion, bond_length_drift,
 
     # Forcefield.jl
     LJForceField, replication_factors, check_forcefield_coverage,
@@ -137,7 +138,7 @@ export
     # Grid.jl
     apply_periodic_boundary_condition!,
     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
-    required_n_pts,
+    required_n_pts, xf_to_id, update_density!,
 
     # EOS.jl
     calculate_properties, PengRobinsonGas,

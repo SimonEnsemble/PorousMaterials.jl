@@ -141,14 +141,22 @@ differ significantly from the previous pressure), we can reduce the number of bu
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
-function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
-    temperature::Float64, pressures::Array{Float64, 1}, ljforcefield::LJForceField;
-    n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, sample_frequency::Int=1,
-    verbose::Bool=true, ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
-    checkpoint_frequency::Int=50, write_checkpoints::Bool=false, show_progress_bar::Bool=false,
-    filename_comment::AbstractString="")
-
+function stepwise_adsorption_isotherm(framework::Framework, 
+                                      molecule::Molecule,
+                                      temperature::Float64, 
+                                      pressures::Array{Float64, 1}, 
+                                      ljforcefield::LJForceField;
+                                      n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, 
+                                      sample_frequency::Int=1, verbose::Bool=true, 
+                                      ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
+                                      load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+                                      checkpoint_frequency::Int=50, write_checkpoints::Bool=false, 
+                                      show_progress_bar::Bool=false, 
+                                      write_adsorbate_snapshots::Bool=false, 
+                                      snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
+                                      density_grid_dx::Float64=1.0, 
+                                      density_grid_species::Union{Nothing, Symbol}=nothing,
+                                      filename_comment::AbstractString="")
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
@@ -157,11 +165,16 @@ function stepwise_adsorption_isotherm(framework::Framework, molecule::Molecule,
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
-                                            verbose=verbose, molecules=molecules,
+                                            verbose=verbose, molecules=molecules, # essential step here
                                             ewald_precision=ewald_precision, eos=eos,
                                             load_checkpoint_file=load_checkpoint_file,
                                             checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                             write_checkpoints=write_checkpoints, show_progress_bar=show_progress_bar,
+                                            write_adsorbate_snapshots=write_adsorbate_snapshots,
+                                            snapshot_frequency=snapshot_frequency,
+                                            calculate_density_grid=calculate_density_grid,
+                                            density_grid_dx=density_grid_dx,
+                                            density_grid_species=density_grid_species,
                                             filename_comment=filename_comment)
         push!(results, result)
     end
@@ -184,13 +197,22 @@ The only exception is that we pass an array of pressures. To give Julia access t
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
-function adsorption_isotherm(framework::Framework, molecule::Molecule, temperature::Float64,
-    pressures::Array{Float64, 1}, ljforcefield::LJForceField; n_burn_cycles::Int=5000,
-    n_sample_cycles::Int=5000, sample_frequency::Int=1, verbose::Bool=true,
-    ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-    load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), checkpoint_frequency::Int=50,
-    write_checkpoints::Bool=false, show_progress_bar::Bool=false,
-    filename_comment::AbstractString="")
+function adsorption_isotherm(framework::Framework, 
+                             molecule::Molecule,
+                             temperature::Float64,
+                             pressures::Array{Float64, 1},
+                             ljforcefield::LJForceField;
+                             n_burn_cycles::Int=5000, n_sample_cycles::Int=5000, 
+                             sample_frequency::Int=1, verbose::Bool=true, 
+                             ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
+                             load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(), 
+                             checkpoint_frequency::Int=50, write_checkpoints::Bool=false, 
+                             show_progress_bar::Bool=false, 
+                             write_adsorbate_snapshots::Bool=false, 
+                             snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
+                             density_grid_dx::Float64=1.0, 
+                             density_grid_species::Union{Nothing, Symbol}=nothing,
+                             filename_comment::AbstractString="")
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
                                                       pressure, ljforcefield,
@@ -203,6 +225,11 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                                       write_checkpoints=write_checkpoints,
                                                       show_progress_bar=show_progress_bar,
+                                                      write_adsorbate_snapshots=write_adsorbate_snapshots,
+                                                      snapshot_frequency=snapshot_frequency,
+                                                      calculate_density_grid=calculate_density_grid,
+                                                      density_grid_dx=density_grid_dx,
+                                                      density_grid_species=density_grid_species,
                                                       filename_comment=filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
@@ -262,6 +289,11 @@ is ideal gas, where fugacity = pressure.
     The dictionary has to have the following keys: `outer_cycle`, `molecules`, `system_energy`, `current_block`, `gcmc_stats`, `markov_counts`, `markov_chain_time` and `time`. If this argument is used, keep `load_checkpoint_file=false`.
 - `write_checkpoints::Bool`: Will save checkpoints in data/gcmc_checkpoints if this is true.
 - `checkpoint_frequency::Int`: Will save checkpoint files every `checkpoint_frequency` cycles.
+- `write_adsorbate_snapshots::Bool`: Whether the simulation will create and save a snapshot file
+- `snapshot_frequency::Int`: The number of cycles taken between each snapshot (after burn cycle completion)
+- `calculate_density_grid::Bool`: Whether the simulation will keep track of a density grid for adsorbates
+- `density_grid_dx::Float64`: The (approximate) space between voxels (in Angstroms) in the density grid. The number of voxels in the simulation box is computed automatically by [`required_n_pts`](@ref).
+- `density_grid_species::Symbol`: The atomic species within the `molecule` for which we will compute the density grid.
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature::Float64,
@@ -271,7 +303,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     eos::Symbol=:ideal, autosave::Bool=true, show_progress_bar::Bool=false,
     load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
     checkpoint_frequency::Int=100, write_checkpoints::Bool=false,
-    filename_comment::AbstractString="")
+    write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
+    calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0, 
+    density_grid_species::Union{Nothing, Symbol}=nothing, filename_comment::AbstractString="")
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
@@ -280,6 +314,22 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
 
     if verbose
         pretty_print(molecule.species, framework.name, temperature, pressure, ljforcefield)
+    end
+
+    xyz_filename = gcmc_result_savename(framework.name, molecule.species,
+                    ljforcefield.name, temperature, pressure, n_burn_cycles,
+                    n_sample_cycles, comment="adsorbate_positions" * filename_comment,
+                    extension=".xyz")
+
+    xyz_snapshot_file = IOStream(xyz_filename) # declare a variable outside of scope so we only open a file if we want to snapshot
+
+    # track number of snapshots to verify .xyz of dumped adsorbate positions
+    # and for getting and accurate density value in the density_grid
+    num_snapshots = 0
+
+    # open file for xyz snapshots
+    if write_adsorbate_snapshots
+        xyz_snapshot_file = open(xyz_filename, "w")
     end
 
     ###
@@ -308,7 +358,7 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     end
     checkpoint_filename = joinpath(PATH_TO_DATA, "gcmc_checkpoints", gcmc_result_savename(
         framework.name, molecule_.species, ljforcefield.name, temperature, pressure,
-        n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint")) # path to checkpoint file
+        n_burn_cycles, n_sample_cycles, comment=filename_comment * "_checkpoint", extension=".jld2")) # path to checkpoint file
     if load_checkpoint_file
         if isfile(checkpoint_filename)
             @load checkpoint_filename checkpoint
@@ -329,6 +379,31 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     framework = replicate(framework, repfactors)
     # adjust fractional coords of molecule according to *replicated* framework
     set_fractional_coords!(molecule, framework.box)
+    
+    ###
+    #   Density grid for adsorbate
+    ###
+    # if molecule has more than one atom, need to specify which atom to keep track of in density grid.
+    if calculate_density_grid && isnothing(density_grid_species)
+        if molecule.atoms.n_atoms == 1
+            # obviously we are keeping track of the only atom in the adsorbate.
+            density_grid_species = molecule.atoms.species[1]
+        else
+            # don't proceed if we don't know which atom to keep track of!
+            error(@sprintf("Passed `calculate_density_grid=true` but adsorbate %s has 
+                %d atoms. Must specify `density_grid_species` to keep track of during the
+                density grid updates.\n", molecule.species, molecule.atoms.n_atoms))
+        end
+    end
+    
+    # Initialize a density grid based on the *simulation box* (not framework box passed in) and the passed in density_grid_dx
+    # Calculate `n_pts`, number of voxels in grid, based on the sim box and specified voxel spacing
+    n_pts = (0, 0, 0) # don't store a huge grid if we aren't tracking a density grid
+    if calculate_density_grid
+        n_pts = required_n_pts(framework.box, density_grid_dx)
+    end
+    density_grid = Grid(framework.box, n_pts, zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
+
     if verbose
         @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\n",
                 repfactors[1], repfactors[2], repfactors[3], 
@@ -337,6 +412,14 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         println("\tFramework chemical formula: ", chemical_formula(framework))
         println("\tTotal number of atoms: ", framework.atoms.n_atoms)
         println("\tTotal number of point charges: ", framework.charges.n_charges)
+        if write_adsorbate_snapshots
+            @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
+            @printf("\t\tWriting to file: %s\n", xyz_filename)
+        end
+        if calculate_density_grid
+            @printf("\tTracking adsorbate spatial probability density grid of atomic species %s, updated every %d cycles (after burn cycles)\n", density_grid_species, snapshot_frequency)
+            @printf("\t\tdensity grid voxel spacing specified as %.3f Å => %d by %d by %d voxels\n", density_grid_dx, n_pts...)
+        end
     end
 
     # TODO: assert center of mass is origin and make rotate! take optional argument to assume com is at origin?
@@ -617,6 +700,21 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
             end
         end
 
+        # snapshot cycle
+        if (outer_cycle > n_burn_cycles) && (outer_cycle % snapshot_frequency == 0)
+            if write_adsorbate_snapshots
+                # have a '\n' for every new set of atoms, leaves no '\n' at EOF
+                if num_snapshots > 0
+                    @printf(xyz_snapshot_file, "\n")
+                end
+                write_xyz(framework.box, molecules, xyz_snapshot_file)
+            end
+            if calculate_density_grid
+                update_density!(density_grid, molecules, density_grid_species)
+            end
+            num_snapshots += 1
+        end
+
         if write_checkpoints && (outer_cycle % checkpoint_frequency == 0)
             checkpoint = Dict("outer_cycle" => outer_cycle,
                               "molecules" => deepcopy(molecules),
@@ -638,6 +736,14 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end # write checkpoint
     end # outer cycles
     # finished MC moves at this point.
+    
+    # close snapshot xyz file
+    close(xyz_snapshot_file)
+
+    if calculate_density_grid
+        # divide number of molecules in a given voxel by total snapshots
+        density_grid.data ./= num_snapshots
+    end
 
     # out of paranoia, assert molecules not outside box and bond lengths preserved
     for m in molecules
@@ -733,6 +839,10 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         results[@sprintf("Fraction of %s proposals accepted", proposal_description)] = markov_counts.n_accepted[proposal_id] / markov_counts.n_proposed[proposal_id]
     end
 
+    # Snapshot information
+    results["density grid"] = deepcopy(density_grid)
+    results["num snapshots"] = num_snapshots
+
     if verbose
         print_results(results, print_title=false)
     end
@@ -748,7 +858,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
         end
 
         save_results_filename = joinpath(PATH_TO_DATA, "gcmc_sims", gcmc_result_savename(framework.name,
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles, comment=filename_comment))
+            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles,
+            comment=filename_comment, extension=".jld2"))
 
         @save save_results_filename results
         if verbose
@@ -762,7 +873,8 @@ end # gcmc_simulation
 """
     file_save_name = gcmc_result_savename(framework_name, molecule_species,
                                         ljforcefield_name, temperature, pressure,
-                                        n_burn_cycles, n_sample_cycles; comment="")
+                                        n_burn_cycles, n_sample_cycles; comment="",
+                                        extension="")
 
 Determine the name of files saved during the GCMC simulation, be molecule
 positions or results. It uses many pieces of information from the simulation
@@ -778,6 +890,7 @@ to ensure the file name accurately describes what it holds.
 - `n_burn_cycles::Int`: The number of burn cycles used in this simulation
 - `n_sample_cycles::Int`: The number of sample cycles used in this simulation
 - `comment::AbstractString`: An optional comment that will be appended to the end of the filename
+- `extension::AbstractString`: The extension for the file being created
 """
 function gcmc_result_savename(framework_name::AbstractString,
                             molecule_species::Symbol,
@@ -786,15 +899,18 @@ function gcmc_result_savename(framework_name::AbstractString,
                             pressure::Float64,
                             n_burn_cycles::Int,
                             n_sample_cycles::Int;
-                            comment::AbstractString="")
+                            comment::AbstractString="",
+                            extension::AbstractString="")
         framework_name = split(framework_name, ".")[1] # remove file extension
         ljforcefield_name = split(ljforcefield_name, ".")[1] # remove file extension
         if comment != "" && comment[1] != '_'
             comment = "_" * comment
         end
-        return @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s.jld2", framework_name,
+        filename = @sprintf("gcmc_%s_%s_T%f_P%f_%s_%dburn_%dsample%s%s", framework_name,
                     molecule_species, temperature, pressure, ljforcefield_name,
-                    n_burn_cycles, n_sample_cycles, comment)
+                    n_burn_cycles, n_sample_cycles, comment, extension)
+
+        return filename
 end
 
 function print_results(results::Dict; print_title::Bool=true)

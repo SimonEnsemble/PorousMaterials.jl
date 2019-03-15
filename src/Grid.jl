@@ -18,6 +18,56 @@ struct Grid{T}
 end
 
 """
+    grid_coordinates = xf_to_id(n_pts, xf)
+
+Returns the indices of the voxel in which it falls when a unit cube is
+partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels.
+Periodic boundary conditions are applied.
+
+# Arguments
+ - `n_pts::Tuple{Int, Int, Int}`: The number of points for each axis in the `Grid`
+ - `xf::Array{Float64, 1}`: The fractional coordinates to be converted to an id
+# Returns
+ - `id::Array{Int, 1}`: The array indices for storing this point in space
+"""
+function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
+    voxel_id = floor.(Int, xf .* n_pts) .+ 1
+    for k = 1:3
+        if voxel_id[k] <= 0
+            voxel_id[k] += n_pts[k]
+        elseif voxel_id[k] > n_pts[k]
+            voxel_id[k] -= n_pts[k]
+        end
+    end
+    return voxel_id
+end
+
+"""
+    update_density!(grid, molecule, species)
+
+updates the density grid based on an array of molecules. If a molecule doesn't
+match the specified species it won't be added to the density grid. This function
+doesn't calculate the actual densities, it will need a `./ = num_snapshots`
+at the end of the GCMC simulation.
+
+# Arguments
+ - `grid::Grid`: the grid to be updated
+ - `molecules::Array{Molecule, 1}`: An array of molecules whose positions will
+    be added to the grid
+ - `species::Symbol`: The species of atom that can be added to this density grid
+"""
+function update_density!(grid::Grid, molecules::Array{Molecule, 1}, species::Symbol)
+    for molecule in molecules
+        for i = 1:molecule.atoms.n_atoms
+            if molecule.atoms.species[i] == species
+                voxel_id = xf_to_id(grid.n_pts, molecule.atoms.xf[:, i])
+                grid.data[voxel_id...] += 1
+            end
+        end
+    end
+end
+
+"""
     n_pts = required_n_pts(box, dx)
 
 Calculate the required number of grid pts in a, b, c unit cell directions required to keep
