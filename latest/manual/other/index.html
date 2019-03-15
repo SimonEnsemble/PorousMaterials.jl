@@ -120,14 +120,14 @@ set_path_to_data()
 <ul>
 <li><code>new_path_to_data::String</code>: The desired <code>PATH_TO_DATA</code> in string form.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/PorousMaterials.jl#L30-L43' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/PorousMaterials.jl#L30-L43' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.set_tutorial_mode' href='#PorousMaterials.set_tutorial_mode'>#</a>
 <strong><code>PorousMaterials.set_tutorial_mode</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>set_tutorial_mode()
 </code></pre>
 
 <p>Places PorousMaterials in "Tutorial Mode". It changes the <code>PATH_TO_DATA</code> variable to the directory where the PorousMaterials test data is stored. It can be used to follow examples shown in the README. It displays a warning so that the user knows They are no longer using their own data.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br></p>
 <p><a id='Reading-in-Atomic-Values-2'></a></p>
 <h2 id="reading-in-atomic-values_1">Reading in Atomic Values<a class="headerlink" href="#reading-in-atomic-values_1" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.read_atomic_radii' href='#PorousMaterials.read_atomic_radii'>#</a>
@@ -140,7 +140,7 @@ set_path_to_data()
 <ul>
 <li><code>atomic_radii::Dict{Symbol, Float64}</code>: A dictionary linking an element symbol to its' corresponding atomic radius</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.read_atomic_masses' href='#PorousMaterials.read_atomic_masses'>#</a>
 <strong><code>PorousMaterials.read_atomic_masses</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>atomic_masses = read_atomic_masses()
@@ -151,7 +151,7 @@ set_path_to_data()
 <ul>
 <li><code>atomic_masses::Dict{Symbol, Float64}</code>: A dictionary containing the atomic masses of each atom stored in <code>data/atomicmasses.csv</code></li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.read_cpk_colors' href='#PorousMaterials.read_cpk_colors'>#</a>
 <strong><code>PorousMaterials.read_cpk_colors</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>atom_colors = read_cpk_colors()
@@ -162,7 +162,7 @@ set_path_to_data()
 <ul>
 <li><code>atom_colors::Dict{Symbol, Tuple{Int, Int, Int}}</code>: A dictionary linking an element symbol to its' corresponding CPK color in RGB</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br></p>
 <p><a id='Using-.xyz-files-2'></a></p>
 <h2 id="using-xyz-files_1">Using .xyz files<a class="headerlink" href="#using-xyz-files_1" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.read_xyz' href='#PorousMaterials.read_xyz'>#</a>
@@ -183,7 +183,7 @@ set_path_to_data()
 <ul>
 <li><code>x::Array{Float64, 2}</code>: The Cartesian coordinates of the atoms. <code>x[:, k]</code> will return cartesian coordinates of the k-th atom</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.write_xyz' href='#PorousMaterials.write_xyz'>#</a>
 <strong><code>PorousMaterials.write_xyz</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>write_xyz(atoms, x, filename; comment=&quot;&quot;)
@@ -208,7 +208,19 @@ write_xyz(framework, filename; comment=&quot;&quot;, center=false)
 <li><code>comment::AbstractString</code>: comment if you'd like to write to the file.</li>
 <li><code>center::Bool</code>: shift atoms so that origin is the center of the <code>framework.box</code></li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br></p>
+<pre><code>write_xyz(box, molecules, xyz_file)
+</code></pre>
+
+<p>Writes the coordinates of all atoms in molecules to the given xyz_file file object passing a file object around is faster for simulation because it can be opened once at the beginning of the simulation and closed at the end.</p>
+<p>This writes the coordinates of the molecules in cartesian coordinates, so the box is needed for the conversion.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>box::Box</code>: The box the molecules are in, to convert molecule positions      to cartesian coordinates</li>
+<li><code>molecules::Array{Molecule, 1}</code>: The array of molecules to be written to the file</li>
+<li><code>xyz_file::IOStream</code>: The open 'write' file stream the data will be saved to</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L169-L184' class='documenter-source'>source</a><br></p>
 <p><a id='Generic-Rotations-1'></a></p>
 <h2 id="generic-rotations">Generic Rotations<a class="headerlink" href="#generic-rotations" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.rotation_matrix' href='#PorousMaterials.rotation_matrix'>#</a>
@@ -222,7 +234,7 @@ write_xyz(framework, filename; comment=&quot;&quot;, center=false)
 <ul>
 <li><code>r::Array{Float64, 2}</code>: A 3x3 random rotation matrix</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Molecules.jl#L234-L244' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L280-L290' class='documenter-source'>source</a><br></p>
 <pre><code>R = rotation_matrix(θ, u, assume_unit_vector=false) # 3 by 3 rotation matrix, angle θ about vector u
 R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 </code></pre>
@@ -241,7 +253,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>R::Array{Float64, 2}</code>: 3D rotation matrix. so <code>R * x</code> will rotate vector <code>x</code> as desired.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/generic_rotations.jl#L1-L18' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/generic_rotations.jl#L1-L18' class='documenter-source'>source</a><br></p>
 
   <br>
     

@@ -204,7 +204,7 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 <ul>
 <li><code>result::Dict{String, Float64}</code>: A dictionary containing all the results from the Henry coefficient simulation</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Henry.jl#L4-L41' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Henry.jl#L4-L41' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.henry_result_savename' href='#PorousMaterials.henry_result_savename'>#</a>
 <strong><code>PorousMaterials.henry_result_savename</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>save_name = henry_result_savename(framework, molecule, temperature,
@@ -222,7 +222,7 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 <li><code>insertions_per_volume::Union{Int, Float64}</code>: The number of widom insertions per unit volume.   Will be scaled according to the framework we're working with</li>
 <li><code>comment::AbstractString</code>: An optional comment that will be appended to the filename</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/Henry.jl#L327-L345' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Henry.jl#L327-L345' class='documenter-source'>source</a><br></p>
 <p><a id='Grand-Canonical-Monte-Carlo-Simulations-1'></a></p>
 <h2 id="grand-canonical-monte-carlo-simulations">Grand-Canonical Monte Carlo Simulations<a class="headerlink" href="#grand-canonical-monte-carlo-simulations" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.gcmc_simulation' href='#PorousMaterials.gcmc_simulation'>#</a>
@@ -264,9 +264,14 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 <li><code>checkpoint::Dict</code>: A checkpoint dictionary that will work as a starting configuration for the run.   The dictionary has to have the following keys: <code>outer_cycle</code>, <code>molecules</code>, <code>system_energy</code>, <code>current_block</code>, <code>gcmc_stats</code>, <code>markov_counts</code>, <code>markov_chain_time</code> and <code>time</code>. If this argument is used, keep <code>load_checkpoint_file=false</code>.</li>
 <li><code>write_checkpoints::Bool</code>: Will save checkpoints in data/gcmc_checkpoints if this is true.</li>
 <li><code>checkpoint_frequency::Int</code>: Will save checkpoint files every <code>checkpoint_frequency</code> cycles.</li>
+<li><code>write_adsorbate_snapshots::Bool</code>: Whether the simulation will create and save a snapshot file</li>
+<li><code>snapshot_frequency::Int</code>: The number of cycles taken between each snapshot (after burn cycle completion)</li>
+<li><code>calculate_density_grid::Bool</code>: Whether the simulation will keep track of a density grid for adsorbates</li>
+<li><code>density_grid_dx::Float64</code>: The (approximate) space between voxels (in Angstroms) in the density grid. The number of voxels in the simulation box is computed automatically by <a href="../@ref"><code>required_n_pts</code></a>.</li>
+<li><code>density_grid_species::Symbol</code>: The atomic species within the <code>molecule</code> for which we will compute the density grid.</li>
 <li><code>filename_comment::AbstractString</code>: An optional comment that will be appended to the name of the saved file (if autosaved)</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/GCMC.jl#L219-L266' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/GCMC.jl#L246-L298' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.adsorption_isotherm' href='#PorousMaterials.adsorption_isotherm'>#</a>
 <strong><code>PorousMaterials.adsorption_isotherm</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>results = adsorption_isotherm(framework, molecule, temperature, pressures,
@@ -279,7 +284,7 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 </code></pre>
 
 <p>Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the same as <a href="./#PorousMaterials.gcmc_simulation"><code>gcmc_simulation</code></a>, as this is the function run in parallel behind the scenes. The only exception is that we pass an array of pressures. To give Julia access to multiple cores, run your script as <code>julia -p 4 mysim.jl</code> to allocate e.g. four cores. See <a href="https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1">Parallel Computing</a>.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/GCMC.jl#L172-L186' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/GCMC.jl#L185-L199' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.stepwise_adsorption_isotherm' href='#PorousMaterials.stepwise_adsorption_isotherm'>#</a>
 <strong><code>PorousMaterials.stepwise_adsorption_isotherm</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures,
@@ -292,12 +297,13 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 </code></pre>
 
 <p>Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the same as <a href="./#PorousMaterials.gcmc_simulation"><code>gcmc_simulation</code></a>, as this is the function run behind the scenes. An exception is that we pass an array of pressures. The adsorption isotherm is computed step- wise, where the ending configuration from the previous simulation (array of molecules) is passed into the next simulation as a starting point. The ordering of <code>pressures</code> is honored. By giving each simulation a good starting point, (if the next pressure does not differ significantly from the previous pressure), we can reduce the number of burn cycles required to reach equilibrium in the Monte Carlo simulation. Also see <a href="./#PorousMaterials.adsorption_isotherm"><code>adsorption_isotherm</code></a> which runs the μVT simulation at each pressure in parallel.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/GCMC.jl#L125-L143' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/GCMC.jl#L125-L143' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.gcmc_result_savename' href='#PorousMaterials.gcmc_result_savename'>#</a>
 <strong><code>PorousMaterials.gcmc_result_savename</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>file_save_name = gcmc_result_savename(framework_name, molecule_species,
                                     ljforcefield_name, temperature, pressure,
-                                    n_burn_cycles, n_sample_cycles; comment=&quot;&quot;)
+                                    n_burn_cycles, n_sample_cycles; comment=&quot;&quot;,
+                                    extension=&quot;&quot;)
 </code></pre>
 
 <p>Determine the name of files saved during the GCMC simulation, be molecule positions or results. It uses many pieces of information from the simulation to ensure the file name accurately describes what it holds.</p>
@@ -311,8 +317,9 @@ results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressur
 <li><code>n_burn_cycles::Int</code>: The number of burn cycles used in this simulation</li>
 <li><code>n_sample_cycles::Int</code>: The number of sample cycles used in this simulation</li>
 <li><code>comment::AbstractString</code>: An optional comment that will be appended to the end of the filename</li>
+<li><code>extension::AbstractString</code>: The extension for the file being created</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/f971b0626d98865849c6f323d909f37e92d06796/src/GCMC.jl#L762-L781' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/GCMC.jl#L873-L894' class='documenter-source'>source</a><br></p>
 
   <br>
     
