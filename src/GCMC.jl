@@ -205,9 +205,9 @@ function adsorption_isotherm(framework::Framework, molecule::Molecule, temperatu
                                                       checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
                                                       write_checkpoints=write_checkpoints,
                                                       show_progress_bar=show_progress_bar,
-                                                      write_adsorbate_snapshot=write_adsorbate_snapshot,
+                                                      write_adsorbate_snapshots=write_adsorbate_snapshots,
                                                       snapshot_frequency=snapshot_frequency,
-                                                      claculate_density_grid=calculate_density_grid,
+                                                      calculate_density_grid=calculate_density_grid,
                                                       density_grid_dx=density_grid_dx,
                                                       filename_comment=filename_comment)[1] # only return results
 
