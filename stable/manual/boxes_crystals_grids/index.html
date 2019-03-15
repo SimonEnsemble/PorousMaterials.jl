@@ -211,7 +211,7 @@ box = Box(f_to_c)
 <li><code>reciprocal_lattice::Array{Float64, 2}</code>: the <em>rows</em> are the reciprocal lattice vectors.</li>
 </ul>
 <p>This choice was made (instead of columns) for speed of Ewald Sums.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Box.jl#L1-L20' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Box.jl#L1-L20' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.replicate' href='#PorousMaterials.replicate'>#</a>
 <strong><code>PorousMaterials.replicate</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>new_box = replicate(original_box, repfactors)
@@ -227,7 +227,7 @@ box = Box(f_to_c)
 <ul>
 <li><code>box::Box</code>: Fully formed Box object</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Box.jl#L118-L132' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Box.jl#L118-L132' class='documenter-source'>source</a><br></p>
 <pre><code>replicated_frame = replicate(framework, repfactors)
 </code></pre>
 
@@ -241,14 +241,14 @@ box = Box(f_to_c)
 <ul>
 <li><code>replicated_frame::Framework</code>: Replicated framework</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.UnitCube' href='#PorousMaterials.UnitCube'>#</a>
 <strong><code>PorousMaterials.UnitCube</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>unit_cube = UnitCube()
 </code></pre>
 
 <p>This function generates a unit cube, each side is 1.0 Angstrom long, and all the corners are right angles.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Box.jl#L110-L115' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Box.jl#L110-L115' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.write_vtk' href='#PorousMaterials.write_vtk'>#</a>
 <strong><code>PorousMaterials.write_vtk</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>write_vtk(box, filename; verbose=true, center_at_origin=false)
@@ -264,14 +264,14 @@ write_vtk(framework)
 <li><code>framework::Framework</code>: A framework containing the crystal structure information</li>
 <li><code>center_at_origin::Bool</code>: center box at origin if true. if false, the origin is the corner of the box.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Box.jl#L138-L153' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Box.jl#L138-L153' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.inside' href='#PorousMaterials.inside'>#</a>
 <strong><code>PorousMaterials.inside</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>inside_box = inside(x, box) # true or false
 </code></pre>
 
 <p>Determine whether a Cartesian vector <code>x</code> lays inside a <code>Box</code>. This works by computing the  fractional coordinates of vector <code>x</code> and ensuring each lie within the interval <code>[0, 1]</code>.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Box.jl#L189-L194' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Box.jl#L189-L194' class='documenter-source'>source</a><br></p>
 <p><a id='Crystals-1'></a></p>
 <h2 id="crystals">Crystals<a class="headerlink" href="#crystals" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.Framework' href='#PorousMaterials.Framework'>#</a>
@@ -302,7 +302,7 @@ framework = Framework(name, box, atoms, charges)
 <li><code>atoms::Atoms</code>: list of Atoms in crystal unit cell</li>
 <li><code>charges::Charges</code>: list of point charges in crystal unit cell</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L11-L35' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L11-L35' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.remove_overlapping_atoms_and_charges' href='#PorousMaterials.remove_overlapping_atoms_and_charges'>#</a>
 <strong><code>PorousMaterials.remove_overlapping_atoms_and_charges</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1, verbose=true)
@@ -319,7 +319,7 @@ framework = Framework(name, box, atoms, charges)
 <ul>
 <li><code>new_framework::Framework</code>: A new framework where identical atoms have been removed.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L364-L379' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L364-L379' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.strip_numbers_from_atom_labels!' href='#PorousMaterials.strip_numbers_from_atom_labels!'>#</a>
 <strong><code>PorousMaterials.strip_numbers_from_atom_labels!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>strip_numbers_from_atom_labels!(framework)
@@ -330,7 +330,7 @@ framework = Framework(name, box, atoms, charges)
 <ul>
 <li><code>framework::Framework</code>: The framework containing the crystal structure information</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L477-L488' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L477-L488' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.chemical_formula' href='#PorousMaterials.chemical_formula'>#</a>
 <strong><code>PorousMaterials.chemical_formula</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>formula = chemical_formula(framework, verbose=false)
@@ -346,7 +346,7 @@ framework = Framework(name, box, atoms, charges)
 <ul>
 <li><code>formula::Dict{Symbol, Int}</code>: A dictionary with the irreducible chemical formula of a crystal structure</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L505-L516' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L505-L516' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.molecular_weight' href='#PorousMaterials.molecular_weight'>#</a>
 <strong><code>PorousMaterials.molecular_weight</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>mass_of_framework = molecular_weight(framework)
@@ -361,7 +361,7 @@ framework = Framework(name, box, atoms, charges)
 <ul>
 <li><code>mass_of_framework::Float64</code>: The molecular weight of a unit cell of the framework in amu</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L545-L556' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L545-L556' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.crystal_density' href='#PorousMaterials.crystal_density'>#</a>
 <strong><code>PorousMaterials.crystal_density</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>ρ = crystal_density(framework) # kg/m²
@@ -376,7 +376,7 @@ framework = Framework(name, box, atoms, charges)
 <ul>
 <li><code>ρ::Float64</code>: The crystal density of a framework in kg/m³</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L568-L578' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L568-L578' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.replicate-Tuple{Framework,Tuple{Int64,Int64,Int64}}' href='#PorousMaterials.replicate-Tuple{Framework,Tuple{Int64,Int64,Int64}}'>#</a>
 <strong><code>PorousMaterials.replicate</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>replicated_frame = replicate(framework, repfactors)
@@ -392,21 +392,21 @@ framework = Framework(name, box, atoms, charges)
 <ul>
 <li><code>replicated_frame::Framework</code>: Replicated framework</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L222-L234' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.charged-Tuple{Framework}' href='#PorousMaterials.charged-Tuple{Framework}'>#</a>
 <strong><code>PorousMaterials.charged</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>charged_flag = charged(framework, verbose=false) # true or false
 </code></pre>
 
 <p>Determine if a framework has point charges</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L464-L468' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L464-L468' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.write_cif' href='#PorousMaterials.write_cif'>#</a>
 <strong><code>PorousMaterials.write_cif</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>write_cif(framework, filename)
 </code></pre>
 
 <p>Write a <code>framework::Framework</code> to a .cif file with <code>filename::AbstractString</code>. If <code>filename</code> does not include the .cif extension, it will automatically be added.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L584-L589' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L584-L589' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.assign_charges' href='#PorousMaterials.assign_charges'>#</a>
 <strong><code>PorousMaterials.assign_charges</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>new_framework = assign_charges(framework, charges, net_charge_tol=1e-5)
@@ -441,7 +441,7 @@ new_framework = assign_charges(framework, charges)
 <li><code>new_framework::Framework</code>: a new framework identical to the one passed except charges</li>
 </ul>
 <p>are assigned.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Crystal.jl#L637-L671' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Crystal.jl#L639-L673' class='documenter-source'>source</a><br></p>
 <p><a id='Grids-1'></a></p>
 <h2 id="grids">Grids<a class="headerlink" href="#grids" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.Grid' href='#PorousMaterials.Grid'>#</a>
@@ -455,7 +455,36 @@ new_framework = assign_charges(framework, charges)
 <li><code>units::Symbol</code>: the units associated with each data point.</li>
 <li><code>origin::Array{Float64, 1}</code>: the origin of the grid.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Grid.jl#L1-L11' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Grid.jl#L1-L11' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.xf_to_id' href='#PorousMaterials.xf_to_id'>#</a>
+<strong><code>PorousMaterials.xf_to_id</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>grid_coordinates = xf_to_id(n_pts, xf)
+</code></pre>
+
+<p>Returns the indices of the voxel in which it falls when a unit cube is partitioned into a regular grid of <code>n_pts[1]</code> by <code>n_pts[2]</code> by <code>n_pts[3]</code> voxels. Periodic boundary conditions are applied.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>n_pts::Tuple{Int, Int, Int}</code>: The number of points for each axis in the <code>Grid</code></li>
+<li><code>xf::Array{Float64, 1}</code>: The fractional coordinates to be converted to an id</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>id::Array{Int, 1}</code>: The array indices for storing this point in space</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Grid.jl#L20-L32' class='documenter-source'>source</a><br></p>
+<p><a id='PorousMaterials.update_density!' href='#PorousMaterials.update_density!'>#</a>
+<strong><code>PorousMaterials.update_density!</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>update_density!(grid, molecule, species)
+</code></pre>
+
+<p>updates the density grid based on an array of molecules. If a molecule doesn't match the specified species it won't be added to the density grid. This function doesn't calculate the actual densities, it will need a <code>./ = num_snapshots</code> at the end of the GCMC simulation.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>grid::Grid</code>: the grid to be updated</li>
+<li><code>molecules::Array{Molecule, 1}</code>: An array of molecules whose positions will  be added to the grid</li>
+<li><code>species::Symbol</code>: The species of atom that can be added to this density grid</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Grid.jl#L45-L58' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.apply_periodic_boundary_condition!' href='#PorousMaterials.apply_periodic_boundary_condition!'>#</a>
 <strong><code>PorousMaterials.apply_periodic_boundary_condition!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>apply_periodic_boundary_condition!(molecule)
@@ -466,7 +495,7 @@ new_framework = assign_charges(framework, charges)
 <ul>
 <li><code>molecule::Molecule</code>: A molecule we're interested in seeing if its' center of mass falls within <code>simulation_box</code></li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/MChelpers.jl#L50-L59' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/MChelpers.jl#L50-L59' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.write_cube' href='#PorousMaterials.write_cube'>#</a>
 <strong><code>PorousMaterials.write_cube</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>write_cube(grid, filename, verbose=true)
@@ -479,7 +508,7 @@ new_framework = assign_charges(framework, charges)
 <li><code>filename::AbstractString</code>: name of .cube file to which we write the grid; this is relative to <code>PorousMaterials.PATH_TO_DATA</code>/grids/.</li>
 <li><code>verbose::Bool</code>: print name of file after writing.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Grid.jl#L36-L47' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Grid.jl#L86-L97' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.read_cube' href='#PorousMaterials.read_cube'>#</a>
 <strong><code>PorousMaterials.read_cube</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>grid = read_cube(filename)
@@ -494,7 +523,7 @@ new_framework = assign_charges(framework, charges)
 <ul>
 <li><code>grid::Grid</code>: A grid data structure</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Grid.jl#L89-L99' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Grid.jl#L139-L149' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.energy_grid' href='#PorousMaterials.energy_grid'>#</a>
 <strong><code>PorousMaterials.energy_grid</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>grid = energy_grid(framework, molecule, ljforcefield; n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
@@ -521,7 +550,7 @@ new_framework = assign_charges(framework, charges)
 <ul>
 <li><code>grid::Grid</code>: A grid data structure containing the potential energy of the system</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/d59063e567b78949720642da3a191665421a9300/src/Grid.jl#L155-L178' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Grid.jl#L205-L228' class='documenter-source'>source</a><br></p>
 
   <br>
     
