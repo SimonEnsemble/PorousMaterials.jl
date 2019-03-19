@@ -293,7 +293,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
 end
 
 function Base.show(io::IO, grid::Grid)
-    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts[1], n_pts[2], n_pts[3])
+    @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts[1], grid.n_pts[2], grid.n_pts[3])
     @printf(io, "\tunits of data attribute: %s\n", grid.units)
     @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin[1], grid.origin[2], grid.origin[3])
 end
