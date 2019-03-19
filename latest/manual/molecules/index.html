@@ -143,7 +143,7 @@ rotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of 
 <li><code>charges::Charges</code>: array of point charges comprising the molecule</li>
 <li><code>xf_com::Array{Float64, 1}</code>: center of mass of the molecule in fractional coordinates</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L1-L9' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L1-L9' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.n_atoms' href='#PorousMaterials.n_atoms'>#</a>
 <strong><code>PorousMaterials.n_atoms</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>num_atoms = n_atoms(molecules)
@@ -158,7 +158,7 @@ rotate!(molecule, UnitCube()) # b/c now fractional coords defined in context of 
 <ul>
 <li>The total number of atoms in the molecules passed in</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L151-L160' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L151-L160' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.translate_to!' href='#PorousMaterials.translate_to!'>#</a>
 <strong><code>PorousMaterials.translate_to!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>translate_to!(molecule, xf)
@@ -171,7 +171,7 @@ translate_to!(molecule, x, box)
 <li><code>molecule::Molecule</code>: The molecule which will be translated to <code>xf</code></li>
 <li><code>xf::Array{Float64, 1}</code>: A vector containing the coordinates of the final destination of the molecule</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L223-L234' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L223-L234' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.rotate!' href='#PorousMaterials.rotate!'>#</a>
 <strong><code>PorousMaterials.rotate!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>rotate!(molecule, box)
@@ -183,7 +183,7 @@ translate_to!(molecule, x, box)
 <li><code>molecule::Molecule</code>: The molecule which will be subject to a random rotation</li>
 <li><code>box::Box</code>: The molecule only contains fractional coordinates, so the box is needed for a correct rotation</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L304-L313' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L304-L313' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.rotation_matrix-Tuple{}' href='#PorousMaterials.rotation_matrix-Tuple{}'>#</a>
 <strong><code>PorousMaterials.rotation_matrix</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>r = rotation_matrix()
@@ -195,7 +195,7 @@ translate_to!(molecule, x, box)
 <ul>
 <li><code>r::Array{Float64, 2}</code>: A 3x3 random rotation matrix</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L280-L290' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L280-L290' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.rotation_matrix-Tuple{Float64,Array{Float64,1}}' href='#PorousMaterials.rotation_matrix-Tuple{Float64,Array{Float64,1}}'>#</a>
 <strong><code>PorousMaterials.rotation_matrix</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>R = rotation_matrix(θ, u, assume_unit_vector=false) # 3 by 3 rotation matrix, angle θ about vector u
@@ -216,7 +216,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>R::Array{Float64, 2}</code>: 3D rotation matrix. so <code>R * x</code> will rotate vector <code>x</code> as desired.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/generic_rotations.jl#L1-L18' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/generic_rotations.jl#L1-L18' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.rand_point_on_unit_sphere' href='#PorousMaterials.rand_point_on_unit_sphere'>#</a>
 <strong><code>PorousMaterials.rand_point_on_unit_sphere</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>u = rand_point_on_unit_sphere()
@@ -227,7 +227,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>u::Array{Float64, 1}</code>: A unit vector with a random orientation</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L263-L270' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L263-L270' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.charged-Tuple{Molecule}' href='#PorousMaterials.charged-Tuple{Molecule}'>#</a>
 <strong><code>PorousMaterials.charged</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>charged_flag = charged(molecule, verbose=false)
@@ -243,7 +243,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>charged_flag::Bool</code>: <code>true</code> if molecule is charged, <code>false</code> otherwise</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/Molecules.jl#L386-L397' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/Molecules.jl#L386-L397' class='documenter-source'>source</a><br></p>
 <p><a id='Molecular-Movement-1'></a></p>
 <h2 id="molecular-movement">Molecular Movement<a class="headerlink" href="#molecular-movement" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.insert_molecule!' href='#PorousMaterials.insert_molecule!'>#</a>
@@ -258,7 +258,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <li><code>box::Box</code>: The simulation box</li>
 <li><code>template::Molecule</code>: A template molecule used as reference when inserting molecules</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/MChelpers.jl#L8-L19' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/MChelpers.jl#L8-L19' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.delete_molecule!' href='#PorousMaterials.delete_molecule!'>#</a>
 <strong><code>PorousMaterials.delete_molecule!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>delete_molecule!(molecule_id, molecules)
@@ -270,7 +270,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <li><code>molecule_id::Int</code>: The molecule ID is used to determine which molecule in <code>molecules</code> should be removed</li>
 <li><code>molecules::Array{Molecule, 1}</code>: An array of Molecule objects</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/MChelpers.jl#L35-L45' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/MChelpers.jl#L35-L45' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.translate_molecule!' href='#PorousMaterials.translate_molecule!'>#</a>
 <strong><code>PorousMaterials.translate_molecule!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>translate_molecule!(molecule, box)
@@ -286,7 +286,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>old_molecule::Molecule</code>: The old molecule in case the MC proposal is rejected</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/MChelpers.jl#L84-L98' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/MChelpers.jl#L84-L98' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.reinsert_molecule!' href='#PorousMaterials.reinsert_molecule!'>#</a>
 <strong><code>PorousMaterials.reinsert_molecule!</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>reinsert_molecule(molecule, box)
@@ -298,7 +298,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <li><code>molecule::Molecule</code>: The molecule we want to perturb</li>
 <li><code>box::Box</code>: The simulation box</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/MChelpers.jl#L113-L123' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/MChelpers.jl#L113-L123' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.rotatable' href='#PorousMaterials.rotatable'>#</a>
 <strong><code>PorousMaterials.rotatable</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>need_to_rotate = rotatable(molecule)
@@ -313,7 +313,7 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>is_rotatable::Bool</code>: A boolean describing whether or not rotating the molecule   will alter its interactions with other molecules</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/6d7bcbe1c0e8b3f51623369fedc457daf71c481a/src/MChelpers.jl#L142-L155' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/adfae91fd8f908f4866d9bf0d1cb9beb0c2ae762/src/MChelpers.jl#L142-L155' class='documenter-source'>source</a><br></p>
 
   <br>
     
