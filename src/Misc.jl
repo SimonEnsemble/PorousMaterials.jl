@@ -148,14 +148,14 @@ function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symb
         else
             K0 = n[1]/p[1]
         end
-        return [M0, K0]
+        return Dict("M0" => M0, "K0" => K0)
     elseif model == :henry
         if isapprox(n[1], 0.0)
             K0 = n[2]/p[2]
         else
             K0 = n[1]/p[1]
         end
-        return [K0]
+        return Dict("K0" => K0)
     else
         error("Model not available. Currently only `:langmuir` and `:henry` are available")
     end
@@ -183,7 +183,7 @@ and `params` will contain K
 - `model::Symbol`: The model chosen to fit the isotherm
 
 # Returns
-- `params::Array{Float64, 1}`: Will contain the fitted parameters of the model chosen. `:langmuir` return M, K while `:henry` return K
+- `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "K".
 """
 function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol; henry_tol::Float64 = 0.25)
     sort!(df, [pressure_col_name])
@@ -197,29 +197,20 @@ function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name
 
     if model == :langmuir
         objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i]/(1 + θ[2] * p[i]))^2 for i = 1:length(n)])
-        res = optimize(objective_function_langmuir, θ0, LBFGS())
+        res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], LBFGS())
         M, K = res.minimizer
-        return M, K
+        mse = res.minimum / length(n)
+        return Dict("M" => M, "K" => K, "MSE" => mse)
 
     elseif model == :henry
-        scaled_min_rmse = Inf
-        best_K = 0
-        for j = length(n):-1:3
-            objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:j])
-            res = optimize(objective_function_henry, 0.0, θ0[1] * 1.1)
-            K = res.minimizer
-            scaled_rmse = sqrt(res.minimum) / maximum(n)
-            if scaled_rmse < scaled_min_rmse
-                scaled_min_rmse = scaled_rmse
-                best_K = K
-            end
+        min_mse = Inf
+        objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
+        res = optimize(objective_function_henry, [θ0["K0"]] * 1.1, LBFGS())
+        K = res.minimizer
+        mse = res.minimum / length(n)
+        if mse < min_mse
+            min_mse = mse
         end
-        if scaled_min_rmse > henry_tol
-            @warn "The minimum scaled RMSE is higher than the `henry_tol` tolerance. The Henry coefficient was made using only 2 data points. Change `henry_tol` if this is not what you want"
-            return n[2]/p[2]
-        else
-            return best_K
-        end
-
+        return Dict("K" => K[1], "MSE" => mse)
     end
 end
