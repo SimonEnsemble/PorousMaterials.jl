@@ -9,7 +9,7 @@ using Optim
 @testset "Misc Tests" begin
     df = CSV.read("isotherm.csv")
     p_col_name, l_col_name = names(df)
-    henry = fit_isotherm(df[1:3,:], p_col_name, l_col_name, :henry)["K"]
+    henry = fit_isotherm(df[1:3,:], p_col_name, l_col_name, :henry)["H"]
     @test isapprox(henry, 0.9688044280548711)
 
     P = range(0, stop=1, length=100)

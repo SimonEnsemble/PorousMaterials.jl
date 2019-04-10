@@ -141,21 +141,19 @@ end
 function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol)
     n = df[loading_col_name]
     p = df[pressure_col_name]
-    if model == :langmuir
-        M0 = n[end] * 1.1
+    if model == :langmuir || model == :henry
         if isapprox(n[1], 0.0)
-            K0 = n[2]/p[2]
+            H0 = n[2] / p[2]
         else
-            K0 = n[1]/p[1]
+            H0 = n[1] / p[1]
         end
-        return Dict("M0" => M0, "K0" => K0)
-    elseif model == :henry
-        if isapprox(n[1], 0.0)
-            K0 = n[2]/p[2]
+        if model == :henry
+            return Dict("H0" => H0)
         else
-            K0 = n[1]/p[1]
+            M0 = n[end] * 1.1
+            K0 = M0 * H0
+            return Dict("M0" => M0, "K0" => K0)
         end
-        return Dict("K0" => K0)
     else
         error("Model not available. Currently only `:langmuir` and `:henry` are available")
     end
@@ -173,8 +171,8 @@ N = (MKP)/(1+KP)
 where N is the total adsorption, M is the maximum monolayer coverage, K is the Langmuir constant and P is the partial pressure of the gas.
 `params` will contain a fit to M and K
 The Henry model takes the following form:
-N = KP
-and `params` will contain K
+N = HP
+and `params` will contain H
 
 # Arguments
 - `df::DataFrame`: The DataFrame containing the pressure and adsorption data for the isotherm
@@ -183,16 +181,12 @@ and `params` will contain K
 - `model::Symbol`: The model chosen to fit the isotherm
 
 # Returns
-- `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "K".
+- `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "H".
 """
 function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol; henry_tol::Float64 = 0.25)
     sort!(df, [pressure_col_name])
     n = df[loading_col_name]
     p = df[pressure_col_name]
-    if ! isapprox(p[1], 0.0, atol=0.01)
-        prepend!(n, 0.0)
-        prepend!(p, 0.0)
-    end
     θ0 = _guess(df, pressure_col_name, loading_col_name, model)
 
     if model == :langmuir
@@ -205,12 +199,12 @@ function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name
     elseif model == :henry
         min_mse = Inf
         objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
-        res = optimize(objective_function_henry, [θ0["K0"]] * 1.1, LBFGS())
-        K = res.minimizer
+        res = optimize(objective_function_henry, [θ0["H0"]], LBFGS())
+        H = res.minimizer
         mse = res.minimum / length(n)
         if mse < min_mse
             min_mse = mse
         end
-        return Dict("K" => K[1], "MSE" => mse)
+        return Dict("H" => H[1], "MSE" => mse)
     end
 end
