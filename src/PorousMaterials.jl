@@ -107,7 +107,7 @@ export
     nearest_image!, nearest_r², nearest_r,
 
     # Misc.jl
-    read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_isotherm,
+    read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_adsorption_isotherm,
 
     # Crystal.jl
     Framework, read_crystal_structure_file, remove_overlapping_atoms_and_charges,
