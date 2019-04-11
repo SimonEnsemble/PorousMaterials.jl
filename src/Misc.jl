@@ -164,7 +164,7 @@ function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symb
 end
 
 """
-    params = fit_isotherm(df, pressure_col_name, loading_col_name, model)
+    params = fit_adsorption_isotherm(df, pressure_col_name, loading_col_name, model)
 
 Takes in a DataFrame `df` containing adsorption isotherm data and fits an analytical model 
 to the data to identify its parameters of best fit, returned as a dictionary.
