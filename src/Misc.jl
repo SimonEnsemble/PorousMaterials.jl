@@ -183,7 +183,7 @@ and `params` will contain H
 # Returns
 - `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "H".
 """
-function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol; henry_tol::Float64 = 0.25)
+function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol)
     sort!(df, [pressure_col_name])
     n = df[loading_col_name]
     p = df[pressure_col_name]
@@ -197,14 +197,10 @@ function fit_isotherm(df::DataFrame, pressure_col_name::Symbol, loading_col_name
         return Dict("M" => M, "K" => K, "MSE" => mse)
 
     elseif model == :henry
-        min_mse = Inf
         objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS())
         H = res.minimizer
         mse = res.minimum / length(n)
-        if mse < min_mse
-            min_mse = mse
-        end
         return Dict("H" => H[1], "MSE" => mse)
     end
 end
