@@ -168,5 +168,10 @@ using Random
     @test isapprox(sum(density_grid_c_co2.data), 2.0)
     @test isapprox(density_grid_c_co2.data[3, 2, 1], 1.0)
 
+    # xf to id
+    @test isapprox(id_to_xf((1, 1, 1), (10, 12, 14)), zeros(3))
+    @test isapprox(id_to_xf((10, 12, 14), (10, 12, 14)), ones(3))
+    @test isapprox(id_to_xf((2, 2, 2), (3, 3, 3)), [0.5, 0.5, 0.5])
+
 end
 end

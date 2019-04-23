@@ -18,7 +18,7 @@ struct Grid{T}
 end
 
 """
-    grid_coordinates = xf_to_id(n_pts, xf)
+    voxel_id = xf_to_id(n_pts, xf)
 
 Returns the indices of the voxel in which it falls when a unit cube is
 partitioned into a regular grid of `n_pts[1]` by `n_pts[2]` by `n_pts[3]` voxels.
@@ -41,6 +41,22 @@ function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
     end
     return voxel_id
 end
+
+"""
+    xf = id_to_xf(voxel_id, n_pts)
+
+Given a `voxel_id` in a `Grid`, return the fractional coordinates to which this voxel
+corresponds.
+
+# Arguments
+ - `n_pts::Tuple{Int, Int, Int}`: The number of voxels along each axis in the `Grid`
+ - `voxel_id::Array{Int, 1}`: the voxel coordinates in `grid.data`
+# Returns
+ - `xf::Array{Float64, 1}`: The fractional coordinates corresponding to the grid voxel
+"""
+function id_to_xf(id::Tuple{Int, Int, Int}, n_pts::Tuple{Int, Int, Int})
+    return [(id[k] - 1.0) / (n_pts[k] - 1.0) for k = 1:3]
+end 
 
 """
     update_density!(grid, molecule, species)
