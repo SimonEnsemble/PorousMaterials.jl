@@ -1,0 +1,12 @@
+fluid,a(bar*m^6/mol^2),b(m^3/mol)
+Ar,0.000001355,0.0000320
+C2H4,0.000004612,0.0000582
+CO2,0.000003658,0.0000429
+CO,0.000001472,0.0000395
+CH4,0.000002303,0.0000431
+H2,0.0000002452,0.0000265
+Kr,0.000005193,0.0000106
+Xe,0.000004192,0.0000516
+  Values converted and taken from a more complete list given in (do not delete)
+  Reid, R.C, Prausnitz, J. M., and Poling, B.E., The Properties of (do not delete)
+  Gases and Liquids, Fourth Edition, McGraw-Hill, New York, 1987. (do not delete)
