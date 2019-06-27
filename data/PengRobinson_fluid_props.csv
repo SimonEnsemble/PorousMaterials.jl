@@ -1,4 +1,4 @@
-gas,Tc(K),Pc(bar),acentric_factor
+fluid,Tc(K),Pc(bar),acentric_factor
 Ar,150.86,48.98,-0.002
 C2H4,282.34,50.41,0.087
 CO2,304.12,73.74,0.225

@@ -96,9 +96,9 @@ end
     fluid = PengRobinsonFluid(fluid)
 
 Reads in critical temperature, critical pressure, and acentric factor of the `fluid::Symbol`
-from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "PengRobinsonFluidProps.csv")`
+from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "PengRobinson_fluid_props.csv")`
 and returns a complete `PengRobinsonFluid` data structure.
-**NOTE: Do not delete the last three comment lines in PengRobinsonFluidProps.csv
+**NOTE: Do not delete the last three comment lines in PengRobinson_fluid_props.csv
 
 # Arguments
 - `fluid::Symbol`: The fluid molecule you wish to construct a PengRobinsonFluid struct for
@@ -107,9 +107,9 @@ and returns a complete `PengRobinsonFluid` data structure.
 - `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters.
 """
 function PengRobinsonFluid(fluid::Symbol)
-    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinsonfluidProps.csv"); footerskip=3)
+    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinson_fluid_props.csv"); footerskip=3)
     if ! (string(fluid) in df[:fluid])
-        error(@sprintf("fluid %s properties not found in %sPengRobinsonFluidProps.csv", fluid, PATH_TO_DATA))
+        error(@sprintf("fluid %s properties not found in %sPengRobinson_fluid_props.csv", fluid, PATH_TO_DATA))
     end
     Tc = df[df[:fluid].== string(fluid), Symbol("Tc(K)")][1]
     Pc = df[df[:fluid].== string(fluid), Symbol("Pc(bar)")][1]
