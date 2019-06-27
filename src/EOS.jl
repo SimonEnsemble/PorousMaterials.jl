@@ -16,8 +16,6 @@ struct PengRobinsonFluid
     ω::Float64
 end
 
-# Data structure stating
-
 # Parameters in the Peng-Robinson Equation of State
 # T in Kelvin, P in bar
 a(fluid::PengRobinsonFluid) = (0.457235 * R ^ 2 * fluid.Tc ^ 2) / fluid.Pc
@@ -109,7 +107,7 @@ and returns a complete `PengRobinsonFluid` data structure.
 - `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters.
 """
 function PengRobinsonFluid(fluid::Symbol)
-    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinsonFluidProps.csv"); footerskip=3)
+    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinsonfluidProps.csv"); footerskip=3)
     if ! (string(fluid) in df[:fluid])
         error(@sprintf("fluid %s properties not found in %sPengRobinsonFluidProps.csv", fluid, PATH_TO_DATA))
     end
@@ -125,4 +123,121 @@ function Base.show(io::IO, fluid::PengRobinsonFluid)
     println(io, "\tCritical temperature (K): ", fluid.Tc)
     println(io, "\tCritical pressure (bar): ", fluid.Pc)
     println(io, "\tAcenteric factor: ", fluid.ω)
+end
+
+# Data structure stating characteristics of a Van der Waals fluid
+struct VdWFluid
+    "Van der Waals Fluid species. e.g. :CO2"
+    fluid::Symbol
+    "VdW constant a (units: bar * m⁶ / mol²)"
+    a::Float64
+    "VdW constant b (units: m³ / mol)"
+    b::Float64
+end
+
+# Calculates the compressibility factor Z for fluids
+function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
+    # build polynomial in ρ: D ρ³ + C ρ² + B ρ + A = 0
+    # cubic function: P * x^3 - (P * b + R * T) * x^2 + a * x - a * b
+    # McQuarrie, Donald A., and John D. Simon. Molecular Thermodynamics.
+    # University Science Books, 1999. pg. 57 example 2-2
+
+    A = - fluid.a * fluid.b
+    B = fluid.a
+    C = - (P * fluid.b + R * T)
+    D = P
+
+    # Creates polynomial in ρ the VdW cubic function
+    p = Poly([A, B, C, D])
+    # Finds roots of polynomial
+    rhos = roots(p)
+    # assigns rho to be the real root(s) and then makes it real to get rid of the 0im
+    real_rhos = real.(rhos[isreal.(rhos)]) # assert one of them is real
+    # Disregards all roots except the lowest one, as the lowest real root
+    #   is the density corresponding to the fluid phase
+    ρ = minimum(real_rhos)
+    # Compressibility factor
+    z = P / (ρ * R * T)
+    return z
+end
+
+# Calculates for fugacity coefficient using derivation of Van der Waals EOS
+function calculate_ϕ(fluid::VdWFluid, T::Float64, P::Float64)
+    fug = P * exp((fluid.b / (1 / rho - fluid.b) - 2 * fluid.a * rho / (R * T))) / ((1 / rho - fluid.b) * P / (R * T))
+    # Defines the fugacity coefficient as fugacity over pressure
+    ϕ = fug / P
+    return ϕ
+end
+
+"""
+    props = calculate_properties(fluid, T, P, verbose=true)
+Use equation of state to calculate density, fugacity, and molar volume of a real fluid at a
+given temperature and pressure.
+
+Equation of state used is as follows:
+(P + n² * a / V²) * (V - n * b) = n * R * T
+
+# Arguments
+- `fluid::VdWFluid: Fluid structure
+- `T::Float64`: Temperature (units: Kelvin)
+- `P::Float64`: Pressure (units: bar)
+- `verbose::Bool`: print results
+
+# Returns
+- `prop_dict::Dict`: Dictionary of Van der Waals fluid properties
+"""
+
+function calculate_properties(fluid::VdWFluid, T::Float64, P::Float64; verbose::Bool=true)
+    # Compressibility factor (unitless)
+    z = compressibility_factor(fluid, T, P)
+    # Density (mol/m^3)
+    ρ = P / (z * R * T)
+    # Molar volume (L/mol)
+    Vm = 1000.0 / ρ
+    # Fugacity (bar)
+    ϕ = calculate_ϕ(fluid, T, P)
+    f = ϕ * P
+    # Prints a dictionary holding values for compressibility factor, molar volume,
+    # density and fugacity
+    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm ,
+                 "density (mol/m³)" => ρ, "fugacity (bar)" => f,
+                 "fugacity coefficient" => ϕ)
+    if verbose
+        @printf("%s properties at T = %f K, P = %f bar:\n", fluid.fluid, T, P)
+        for (property, value) in prop_dict
+            println("\t" * property * ": ", value)
+        end
+    end
+    return prop_dict
+end
+
+"""
+    fluid = VdWFluid(fluid)
+
+Reads in Van der Waals constants of the `fluid::Symbol`
+from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "VdW_fluid_props.csv")`
+and returns a complete `VdWFluid` data structure.
+***NOTE: Do not delete the last three comment lines in VdW_fluid_props.csv
+
+# Arguments
+- `fluid::Symbol`: The fluid you wish to construct a VdWFluid struct for
+
+# Returns
+- `VdWFluid::struct`: Data structure containing Van der Waals constants
+"""
+function VdWFluid(fluid::Symbol)
+    df = CSV.read(joinpath(PATH_TO_DATA, "VdW_fluid_props.csv"); footerskip = 3)
+    if ! (string(fluid) in df[:fluid])
+        error(@sprintf("Fluid %s constants not found in %sVdW_fluidops.csv", fluid, PATH_TO_DATA))
+    end
+    a = df[df[:fluid].== string(fluid), Symbol("a(bar*m^6/mol^2)")][1]
+    b = df[df[:fluid].== string(fluid), Symbol("b(m^3/mol)")][1]
+    return VdWFluid(fluid, a, b)
+end
+
+# Prints resulting values for Van der Waals constants
+function Base.show(io::IO, fluid::VdWFluid)
+    println(io, "Fluid species: ", fluid.fluid)
+    println(io, "Constant a (bar*m⁶/mol²): ", fluid.a)
+    println(io, "Constant b (m³/mol): ", fluid.b)
 end
