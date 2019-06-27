@@ -10,7 +10,7 @@ using Random
 
 @testset "EOS Tests" begin
     # Peng-Robinsion EOS test for methane.
-    gas = PengRobinsonGas(:CH4)
+    gas = PengRobinsonFluid(:CH4)
     props = calculate_properties(gas, 298.0, 65.0, verbose=false)
     @test isapprox(props["compressibility factor"], 0.874496226625811, atol=1e-4)
     @test isapprox(props["fugacity coefficient"], 0.8729028157628362, atol=1e-4)
