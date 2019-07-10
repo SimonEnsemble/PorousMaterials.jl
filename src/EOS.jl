@@ -54,45 +54,6 @@ function calculate_ϕ(fluid::PengRobinsonFluid, T::Float64, P::Float64)
 end
 
 """
-    props = calculate_properties(fluid, T, P, verbose=true)
-
-Use equation of state to calculate density, fugacity, and molar volume of a real fluid at a
-given temperature and pressure.
-
-# Arguments
-- `fluid::PengRobinsonFluid`: Peng-Robinson fluid data structure
-- `T::Float64`: Temperature (units: Kelvin)
-- `P::Float64`: Pressure (units: bar)
-- `verbose::Bool`: will print results if `true`
-
-# Returns
-- `prop_dict::Dict`: Dictionary of Peng-Robinson fluid properties
-"""
-function calculate_properties(fluid::PengRobinsonFluid, T::Float64, P::Float64; verbose::Bool=true)
-    # Compressbility factor (unitless)
-    z = compressibility_factor(fluid, T, P)
-    # Density (mol/m^3)
-    ρ = P / (z * R * T)
-    # Molar volume (L/mol)
-    Vm = 1.0 / ρ * 1000.0
-    # Fugacity (bar)
-    ϕ = calculate_ϕ(fluid, T, P)
-    f = ϕ * P
-    # Prints a dictionary holding values for compressibility factor, molar volume, density, and fugacity.
-    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm ,
-                     "density (mol/m³)" => ρ, "fugacity (bar)" => f,
-                     "fugacity coefficient" => ϕ)
-    if verbose
-        @printf("%s properties at T = %f K, P = %f bar:\n", fluid.fluid, T, P)
-        for (property, value) in prop_dict
-            println("\t" * property * ": ", value)
-        end
-    end
-    return prop_dict
-end
-
-
-"""
     fluid = PengRobinsonFluid(fluid)
 
 Reads in critical temperature, critical pressure, and acentric factor of the `fluid::Symbol`
@@ -125,9 +86,9 @@ function Base.show(io::IO, fluid::PengRobinsonFluid)
     println(io, "\tAcenteric factor: ", fluid.ω)
 end
 
-# Data structure stating characteristics of a Van der Waals fluid
+# Data structure stating characteristics of a van der Waals fluid
 struct VdWFluid
-    "Van der Waals Fluid species. e.g. :CO2"
+    "van der Waals Fluid species. e.g. :CO2"
     fluid::Symbol
     "VdW constant a (units: bar * m⁶ / mol²)"
     a::Float64
@@ -142,79 +103,39 @@ function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
     # McQuarrie, Donald A., and John D. Simon. Molecular Thermodynamics.
     # University Science Books, 1999. pg. 57 example 2-2
 
-    A = - fluid.a * fluid.b
-    B = fluid.a
-    C = - (P * fluid.b + R * T)
-    D = P
+    D = - fluid.a * fluid.b
+    C = fluid.a
+    B = - (P * fluid.b + R * T)
+    A = P
 
     # Creates polynomial in ρ the VdW cubic function
     p = Poly([A, B, C, D])
     # Finds roots of polynomial
-    rhos = roots(p)
+    rho = roots(p)
     # assigns rho to be the real root(s) and then makes it real to get rid of the 0im
-    real_rhos = real.(rhos[isreal.(rhos)]) # assert one of them is real
+    real_rho = real.(rho[isreal.(rho)]) # assert one of them is real
     # Disregards all roots except the lowest one, as the lowest real root
     #   is the density corresponding to the fluid phase
-    ρ = minimum(real_rhos)
+    ρ = minimum(real_rho)
     # Compressibility factor
     z = P / (ρ * R * T)
     return z
 end
 
-# Calculates for fugacity coefficient using derivation of Van der Waals EOS
+# Calculates for fugacity using derivation of van der Waals EOS
 function calculate_ϕ(fluid::VdWFluid, T::Float64, P::Float64)
-    fug = P * exp((fluid.b / (1 / rho - fluid.b) - 2 * fluid.a * rho / (R * T))) / ((1 / rho - fluid.b) * P / (R * T))
-    # Defines the fugacity coefficient as fugacity over pressure
-    ϕ = fug / P
-    return ϕ
-end
-
-"""
-    props = calculate_properties(fluid, T, P, verbose=true)
-Use equation of state to calculate density, fugacity, and molar volume of a real fluid at a
-given temperature and pressure.
-
-Equation of state used is as follows:
-(P + n² * a / V²) * (V - n * b) = n * R * T
-
-# Arguments
-- `fluid::VdWFluid: Fluid structure
-- `T::Float64`: Temperature (units: Kelvin)
-- `P::Float64`: Pressure (units: bar)
-- `verbose::Bool`: print results
-
-# Returns
-- `prop_dict::Dict`: Dictionary of Van der Waals fluid properties
-"""
-
-function calculate_properties(fluid::VdWFluid, T::Float64, P::Float64; verbose::Bool=true)
-    # Compressibility factor (unitless)
     z = compressibility_factor(fluid, T, P)
-    # Density (mol/m^3)
     ρ = P / (z * R * T)
-    # Molar volume (L/mol)
-    Vm = 1000.0 / ρ
-    # Fugacity (bar)
-    ϕ = calculate_ϕ(fluid, T, P)
-    f = ϕ * P
-    # Prints a dictionary holding values for compressibility factor, molar volume,
-    # density and fugacity
-    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm ,
-                 "density (mol/m³)" => ρ, "fugacity (bar)" => f,
-                 "fugacity coefficient" => ϕ)
-    if verbose
-        @printf("%s properties at T = %f K, P = %f bar:\n", fluid.fluid, T, P)
-        for (property, value) in prop_dict
-            println("\t" * property * ": ", value)
-        end
-    end
-    return prop_dict
+    log_f = log(P) + (fluid.b - fluid.a / (R * T)) * (P / (R * T))
+    # Defines the fugacity coefficient as fugacity over pressure
+    ϕ = exp(log_f) / P
+    return ϕ
 end
 
 """
     fluid = VdWFluid(fluid)
 
-Reads in Van der Waals constants of the `fluid::Symbol`
+Reads in van der Waals constants of the `fluid::Symbol`
 from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "VdW_fluid_props.csv")`
 and returns a complete `VdWFluid` data structure.
 ***NOTE: Do not delete the last three comment lines in VdW_fluid_props.csv
@@ -223,7 +144,7 @@ and returns a complete `VdWFluid` data structure.
 - `fluid::Symbol`: The fluid you wish to construct a VdWFluid struct for
 
 # Returns
-- `VdWFluid::struct`: Data structure containing Van der Waals constants
+- `VdWFluid::struct`: Data structure containing van der Waals constants
 """
 function VdWFluid(fluid::Symbol)
     df = CSV.read(joinpath(PATH_TO_DATA, "VdW_fluid_props.csv"))
@@ -235,9 +156,49 @@ function VdWFluid(fluid::Symbol)
     return VdWFluid(fluid, a, b)
 end
 
-# Prints resulting values for Van der Waals constants
+# Prints resulting values for van der Waals constants
 function Base.show(io::IO, fluid::VdWFluid)
     println(io, "Fluid species: ", fluid.fluid)
     println(io, "Constant a (bar*m⁶/mol²): ", fluid.a)
     println(io, "Constant b (m³/mol): ", fluid.b)
+end
+
+
+"""
+    props = calculate_properties(fluid, T, P, verbose=true)
+
+Use equation of state to calculate density, fugacity, and molar volume of a real fluid at a
+given temperature and pressure.
+
+# Arguments
+- `fluid::Union{PengRobinsonFluid, VdWFluid}`: Peng-Robinson/ van der Waals fluid data structure
+- `T::Float64`: Temperature (units: Kelvin)
+- `P::Float64`: Pressure (units: bar)
+- `verbose::Bool`: will print results if `true`
+
+# Returns
+- `prop_dict::Dict`: Dictionary of Peng-Robinson/ van der Waals fluid properties
+"""
+function calculate_properties(fluid::Union{PengRobinsonFluid, VdWFluid}, T::Float64, P::Float64; verbose::Bool=true)
+    # Compressbility factor (unitless)
+    z = compressibility_factor(fluid, T, P)
+    # Density (mol/m^3)
+    ρ = P / (z * R * T)
+    # Molar volume (L/mol)
+    Vm = 1000.0 / ρ
+    # Fugacity (bar)
+    ϕ = calculate_ϕ(fluid, T, P)
+    f = ϕ * P
+    # Prints a dictionary holding values for compressibility factor, molar volume,
+    # density, and fugacity.
+    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm ,
+                     "density (mol/m³)" => ρ, "fugacity (bar)" => f,
+                     "fugacity coefficient" => ϕ)
+    if verbose
+        @printf("%s properties at T = %f K, P = %f bar:\n", fluid.fluid, T, P)
+        for (property, value) in prop_dict
+            println("\t" * property * ": ", value)
+        end
+    end
+    return prop_dict
 end
