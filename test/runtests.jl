@@ -1,5 +1,5 @@
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
-# Values for PengRobinson taken from a more complete list given in (do not delete)
+# Values for PengRobinson and van der Waals taken from a more complete list given in (do not delete)
 # R. C. Reid, J. M. Prausnitz, and B. E. Poling, 2001, (do not delete)
 # The Properties of Gases and Liquids, 5th Ed. New York: McGraw-Hill. (do not delete)
 # Start Test Script

@@ -95,11 +95,18 @@ energy = electrostatic_potential_energy(framework, molecule, eparams, kvectors, 
 
 #### Potential Energies: Equations of state
 
-Calculate fugacity, density of methane at 298 K and 65 bar using the Peng-Robinson EOS:
+Calculate fugacity of methane at 298 K and 65 bar using the Peng-Robinson EOS:
 ```julia
-gas = PengRobinsonGas(:CH4)
-props = calculate_properties(gas, 298.0, 65.0) # dictionary of properties
+fluid = PengRobinsonFluid(:CH4)
+props = calculate_properties(fluid, 298.0, 65.0) # dictionary of PREOS properties
 props["fugacity coefficient"] # 0.8729
+```
+
+Calculate compressibility factor of hydrogen at 300 K and 50 bar using van der Waals EOS:
+```julia
+fluid = VdWFluid(:H2)
+props = calculate_properties(fluid, 300.0, 50.0) # dictionary of VdW properties
+props["compressibility factor"] # 1.03511
 ```
 
 Pass `eos=:PengRobinson` to `gcmc_simulation` to automatically convert pressure to fugacity using the Peng-Robinson equation of state.
