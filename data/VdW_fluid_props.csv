@@ -8,3 +8,8 @@ H2,0.0000002476,0.00002661
 Kr,0.000002349,0.00003978
 Xe,0.000004250,0.00005105
 C2H6,0.000005570,0.00006499
+# Values taken from a more complete list given in
+# R. C. Reid, J. M. Prausnitz, and B. E. Poling, 2001,
+# The Properties of Gases and Liquids, 5th Ed. New York: McGraw-Hill.
+
+

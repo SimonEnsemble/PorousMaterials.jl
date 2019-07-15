@@ -11,3 +11,6 @@ C2H6,0.000005570,0.00006499
 N2_test,0.000001408,0.0000391
 H2_test,0.0000002476,0.00002661
 CO2_test,0.00000364,0.00004267
+# Values taken from a more complete list given in
+# R. C. Reid, J. M. Prausnitz, and B. E. Poling, 2001,
+# The Properties of Gases and Liquids, 5th Ed. New York: McGraw-Hill.

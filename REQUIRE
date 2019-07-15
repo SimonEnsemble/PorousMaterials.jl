@@ -4,7 +4,7 @@ OffsetArrays
 Roots
 Polynomials
 DataFrames
-CSV
+CSV 0.5.9
 StatsBase
 ProgressMeter
 JLD2

@@ -68,7 +68,7 @@ and returns a complete `PengRobinsonFluid` data structure.
 - `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters.
 """
 function PengRobinsonFluid(fluid::Symbol)
-    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinson_fluid_props.csv"))
+    df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinson_fluid_props.csv"); comment="#")
     if ! (string(fluid) in df[:fluid])
         error(@sprintf("fluid %s properties not found in %sPengRobinson_fluid_props.csv", fluid, PATH_TO_DATA))
     end
@@ -147,7 +147,7 @@ and returns a complete `VdWFluid` data structure.
 - `VdWFluid::struct`: Data structure containing van der Waals constants
 """
 function VdWFluid(fluid::Symbol)
-    df = CSV.read(joinpath(PATH_TO_DATA, "VdW_fluid_props.csv"))
+    df = CSV.read(joinpath(PATH_TO_DATA, "VdW_fluid_props.csv"); comment="#")
     if ! (string(fluid) in df[:fluid])
         error(@sprintf("Fluid %s constants not found in %sVdW_fluidops.csv", fluid, PATH_TO_DATA))
     end
