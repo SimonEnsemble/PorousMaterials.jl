@@ -142,7 +142,7 @@ export
     required_n_pts, xf_to_id, id_to_xf, update_density!,
 
     # EOS.jl
-    calculate_properties, PengRobinsonGas,
+    calculate_properties, PengRobinsonFluid, VdWFluid,
 
     # GCMC.jl
     gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,

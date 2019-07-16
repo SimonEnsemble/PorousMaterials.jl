@@ -1,0 +1,13 @@
+fluid,a(bar*m^6/mol^2),b(m^3/mol)
+Ar,0.000001355,0.00003201
+C2H4,0.000004612,0.0000582
+CO2,0.000003640,0.00004267
+CO,0.000001505,0.00003985
+CH4,0.000002283,0.00004278
+H2,0.0000002476,0.00002661
+Kr,0.000002349,0.00003978
+Xe,0.000004250,0.00005105
+C2H6,0.000005570,0.00006499
+# Values taken from a more complete list given in
+# R. C. Reid, J. M. Prausnitz, and B. E. Poling, 2001,
+# The Properties of Gases and Liquids, 5th Ed. New York: McGraw-Hill.

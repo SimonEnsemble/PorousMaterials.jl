@@ -339,8 +339,8 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     if eos == :ideal
        fugacity = pressure * 100000.0 # bar --> Pa
     elseif eos == :PengRobinson
-        prgas = PengRobinsonGas(molecule.species)
-        gas_props = calculate_properties(prgas, temperature, pressure, verbose=false)
+        prfluid = PengRobinsonFluid(molecule.species)
+        gas_props = calculate_properties(prfluid, temperature, pressure, verbose=false)
         fugacity = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
     else
         error("eos=:ideal and eos=:PengRobinson are only valid options for equation of state.")
