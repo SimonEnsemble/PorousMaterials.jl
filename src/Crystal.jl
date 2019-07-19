@@ -230,6 +230,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             end
         elseif p1_symmetry
             coords = deepcopy(coords_simple)
+            charge_values = deepcopy(charges_simple)
+            species = deepcopy(species_simple)
         end
 
     # Start of cssr reader #TODO make sure this works for different .cssr files!
