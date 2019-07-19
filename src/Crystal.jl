@@ -54,14 +54,19 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
     coords = Array{Float64, 2}(undef, 3, 0)
+    symmetry_rules = Array{Function, 2}(undef, 3, 0)
 
 
     # Start of .cif reader
     if extension == "cif"
         data = Dict{AbstractString, Float64}()
         loop_starts = -1
-        for (i, line) in enumerate(lines)
-            line = split(line)
+        i = 1
+        p1_symmetry = false
+        symmetry_info = false
+        atom_info = false
+        while i <= length(lines)
+            line = split(lines[i])
             # Skip empty lines
             if length(line) == 0
                 continue
@@ -70,18 +75,89 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # Make sure the space group is P1
             if line[1] == "_symmetry_space_group_name_H-M"
                 if length(line) == 3
-                    @assert (occursin("P1", line[2] * line[3]) ||
+                    p1_symmetry = (occursin("P1", line[2] * line[3]) ||
                             occursin("P 1", line[2] * line[3]) ||
                             occursin("-P1", line[2] * line[3]))
-                            "cif must have P1 symmetry.\n"
                 elseif length(line) == 2
-                    @assert (occursin("P1", line[2]) ||
+                    p1_symmetry = (occursin("P1", line[2]) ||
                             occursin("P 1", line[2]) ||
                             occursin("-P1", line[2]))
-                            "cif must have P1 symmetry.\n"
-                else
-                    println(line)
-                    error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
+                end
+            end
+
+            # checking for information about atom sites and symmetry
+            if line[1] == "loop_"
+                next_line = split(lines[i+1])
+                if occursin("_atom_site", next_line[1])
+                    atom_info = true
+                    atom_column_name = ""
+                    # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
+                    #   use example: name_to_column["_atom_site_fract_x"] gives 3
+                    name_to_column = Dict{AbstractString, Int}()
+
+                    i += 1
+                    loop_starts = i
+                    while length(split(lines[i])) == 1
+                        if i == loop_starts
+                            atom_column_name = split(lines[i])[1]
+                        end
+                        name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
+                        # iterate to next line in file
+                        i += 1
+                    end
+
+                    # read in atom_site info and store it in column based on
+                    #   the name_to_column dictionary
+                    while length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+
+                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        coords = [coords [mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0),
+                                mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0),
+                                mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0)]]
+                        # If charges present, import them
+                        if haskey(name_to_column, "_atom_site_charge")
+                            push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                        else
+                            push!(charge_values, 0.0)
+                        end
+                        # iterate to next line in file
+                        i += 1
+                    end
+
+                    # finish reading in atom_site information, skip to next
+                    #   iteration of outer while-loop
+                    # prevents skipping a line after finishing reading atoms
+                    continue
+                # only read in symmetry if the structure is not in P1 symmetry
+                elseif occursin("_symmetry_equiv_pos", next_line[1]) && !p1_symmetry
+                    symmetry_info = true
+                    symmetry_column_name = ""
+                    # name_to_column is a dictionary that e.g. returns which column contains xyz remapping
+                    #   use example: name_to_column["_symmetry_equiv_pos_as_xyz"] gives 2
+                    name_to_column = Dict{AbstractString, Int}()
+
+                    i += 1
+                    while length(split(lines[i])) == 1
+                        name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
+                        # iterate to next line in file
+                        i += 1
+                    end
+
+                    @assert haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") "Need column name `_symmetry_equiv_pos_xyz` to parse symmetry information"
+                    
+                    symmetry_count = 1
+                    while length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+                        sym_funcs = split(line["_symmetry_equiv_pos_as_xyz"], ",")
+
+                        i += 1
+                        symmetry_count += 1
+                    end
+                    
+                    # finish reading in symmetry information, skip to next
+                    #   iteration of outer while-loop
+                    continue
                 end
             end
 
@@ -98,52 +174,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
                 end
             end
-
-            # As soon as we reach the coordinate loop, we break this for-loop
-            # and replace it with a while-loop further down
-            if line[1] == "loop_"
-                next_line = split(lines[i+1])
-                if occursin("_atom_site", next_line[1])
-                    loop_starts = i + 1
-                    break
-                end
-            end
         end # End loop over lines
 
-        if loop_starts == -1
+        if !atom_info
             error("Could not find _atom_site* after loop_ in .cif file\n")
         end
 
-        atom_column_name = ""
-        # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
-        #   use example: name_to_column["_atom_site_fract_x"] gives 3
-        name_to_column = Dict{AbstractString, Int}()
-
-        i = loop_starts
-        while length(split(lines[i])) == 1
-            if i == loop_starts
-                atom_column_name = split(lines[i])[1]
-            end
-            name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
-            i += 1
-        end
-
-        for i = loop_starts+length(name_to_column):length(lines)
-            line = split(lines[i])
-            if length(line) != length(name_to_column)
-                break
-            end
-
-            push!(species, Symbol(line[name_to_column[atom_column_name]]))
-            coords = [coords [mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0),
-                    mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0),
-                    mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0)]]
-            # If charges present, import them
-            if haskey(name_to_column, "_atom_site_charge")
-                push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
-            else
-                push!(charge_values, 0.0)
-            end
+        # Structure must either be in P1 symmetry or have replication information
+        if !p1_symmetry && !symmetry_info
+            error("If structure is not in P1 symmetry it must have replication information")
         end
 
         a = data["a"]
