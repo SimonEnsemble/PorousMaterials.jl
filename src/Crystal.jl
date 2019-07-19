@@ -69,6 +69,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             line = split(lines[i])
             # Skip empty lines
             if length(line) == 0
+                i += 1
                 continue
             end
 
@@ -108,7 +109,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
                     # read in atom_site info and store it in column based on
                     #   the name_to_column dictionary
-                    while length(split(lines[i])) == length(name_to_column)
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
                         push!(species, Symbol(line[name_to_column[atom_column_name]]))
@@ -147,7 +148,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     @assert haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") "Need column name `_symmetry_equiv_pos_xyz` to parse symmetry information"
                     
                     symmetry_count = 1
-                    while length(split(lines[i])) == length(name_to_column)
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
                         sym_funcs = split(line["_symmetry_equiv_pos_as_xyz"], ",")
 
@@ -174,6 +175,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     data[angle] = parse(Float64, split(line[2],'(')[1]) * pi / 180.0
                 end
             end
+
+            i += 1
         end # End loop over lines
 
         if !atom_info
