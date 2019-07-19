@@ -59,6 +59,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     # Start of .cif reader
     if extension == "cif"
+        coords_simple = Array{Float64, 2}(undef, 3, 0)
+        charges_simple = Array{Float64, 1}()
+        species_simple = Array{Symbol, 1}()
         data = Dict{AbstractString, Float64}()
         loop_starts = -1
         i = 1
@@ -112,15 +115,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
-                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
-                        coords = [coords [mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0),
-                                mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0),
-                                mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0)]]
+                        push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
+                        coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
+                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
+                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
                         # If charges present, import them
                         if haskey(name_to_column, "_atom_site_charge")
-                            push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                            push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
                         else
-                            push!(charge_values, 0.0)
+                            push!(charges_simple, 0.0)
                         end
                         # iterate to next line in file
                         i += 1
@@ -139,6 +142,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     name_to_column = Dict{AbstractString, Int}()
 
                     i += 1
+                    loop_starts = i
                     while length(split(lines[i])) == 1
                         name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
                         # iterate to next line in file
@@ -147,14 +151,35 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
                     @assert haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") "Need column name `_symmetry_equiv_pos_xyz` to parse symmetry information"
                     
-                    symmetry_count = 1
-                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                    symmetry_count = 0
+                    # CSD stores symmetry as one column in a string that ends
+                    #   up getting split on the spaces between commas (i.e. its
+                    #   not really one column) the length(name_to_column) + 2
+                    #   should catch this hopefully there aren't other weird
+                    #   ways of writing cifs...
+                    while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_'
+                        symmetry_count += 1
                         line = split(lines[i])
-                        sym_funcs = split(line["_symmetry_equiv_pos_as_xyz"], ",")
+                        sym_funcs = split(line[name_to_column["_symmetry_equiv_pos_as_xyz"]], [' ', ',', '''], keepempty=false)
+
+                        new_sym_rule = Array{Function, 1}(undef, 3)
+
+                        for sym in sym_funcs
+                            if occursin("x", sym)
+                                new_sym_rule[1] = eval(Meta.parse("x -> " * sym))
+                            elseif occursin("y", sym)
+                                new_sym_rule[2] = eval(Meta.parse("y -> " * sym))
+                            elseif occursin("z", sym)
+                                new_sym_rule[3] = eval(Meta.parse("z -> " * sym))
+                            end
+                        end
+
+                        symmetry_rules = [symmetry_rules new_sym_rule]
 
                         i += 1
-                        symmetry_count += 1
                     end
+
+                    @assert symmetry_count == size(symmetry_rules, 2) "number of symmetry rules must match the count"
                     
                     # finish reading in symmetry information, skip to next
                     #   iteration of outer while-loop
@@ -194,6 +219,18 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         α = data["alpha"]
         β = data["beta"]
         γ = data["gamma"]
+
+        if !p1_symmetry && symmetry_info
+            for i in 1:size(symmetry_rules, 2)
+                # check for making sure the mapping of function was working correctly
+                #@printf("i: %d\tproof of mapping: %0.3f %0.3f %0.3f\n", i, Base.invokelatest.(symmetry_rules[:, i], [0.5, 0.5, 0.5])...)
+                coords = [coords Base.invokelatest.(symmetry_rules[:, i], coords_simple)]
+                charge_values = [charge_values; charges_simple]
+                species = [species; species_simple]
+            end
+        elseif p1_symmetry
+            coords = deepcopy(coords_simple)
+        end
 
     # Start of cssr reader #TODO make sure this works for different .cssr files!
     elseif extension == "cssr"
