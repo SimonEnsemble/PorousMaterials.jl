@@ -77,7 +77,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             end
 
             # Make sure the space group is P1
-            if line[1] == "_symmetry_space_group_name_H-M"
+            if line[1] == "_symmetry_space_group_name_H-M" || line[1] == "_space_group_name_H-M_alt"
                 if length(line) == 3
                     p1_symmetry = (occursin("P1", line[2] * line[3]) ||
                             occursin("P 1", line[2] * line[3]) ||
@@ -91,7 +91,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
             # checking for information about atom sites and symmetry
             if line[1] == "loop_"
-                next_line = split(lines[i+1])
+                next_line = split(lines[i+1], [' ', '\t']; keepempty=false)
                 if occursin("_atom_site", next_line[1])
                     atom_info = true
                     atom_column_name = ""
@@ -157,10 +157,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     #   not really one column) the length(name_to_column) + 2
                     #   should catch this hopefully there aren't other weird
                     #   ways of writing cifs...
-                    while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_'
+                    while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
+                        @printf("%s\n", lines[i])
                         symmetry_count += 1
-                        line = split(lines[i])
-                        sym_funcs = split(line[name_to_column["_symmetry_equiv_pos_as_xyz"]], [' ', ',', '''], keepempty=false)
+                        line = lines[i]
+                        sym_funcs = split(line, [' ', ',', '''], keepempty=false)
 
                         new_sym_rule = Array{Function, 1}(undef, 3)
 
@@ -221,6 +222,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         γ = data["gamma"]
 
         if !p1_symmetry && symmetry_info
+            @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 to be ready for simulation use.", filename)
             for i in 1:size(symmetry_rules, 2)
                 # check for making sure the mapping of function was working correctly
                 #@printf("i: %d\tproof of mapping: %0.3f %0.3f %0.3f\n", i, Base.invokelatest.(symmetry_rules[:, i], [0.5, 0.5, 0.5])...)
@@ -228,6 +230,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
+            coords .= mod.(coords, 1.0)
         elseif p1_symmetry
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
