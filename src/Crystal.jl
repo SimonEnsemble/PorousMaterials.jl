@@ -808,7 +808,7 @@ function Base.show(io::IO, framework::Framework)
     println(io, "Chemical formula: ", chemical_formula(framework))
 end
 
-function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
+function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false, verbose::Bool=false)
     names_flag = f1.name == f2.name
     if checknames && (! names_flag)
         return false
@@ -822,5 +822,8 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     end
     charges_flag = isapprox(f1.charges, f2.charges)
     atoms_flag = isapprox(f1.atoms, f2.atoms)
+    if verbose
+        @printf("Box flag:%s\nAtoms flag:%s\nCharges flag%s\n", box_flag ? "TRUE" : "FALSE", atoms_flag ? "TRUE" : "FALSE", charges_flag ? "TRUE" : "FALSE")
+    end
     return box_flag && charges_flag && atoms_flag
 end

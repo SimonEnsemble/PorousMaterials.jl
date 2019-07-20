@@ -20,7 +20,8 @@ end
 # compute n_species automatically from array sizes
 Atoms(species::Array{Symbol, 1}, xf::Array{Float64, 2}) = Atoms(size(xf, 2), species, xf)
 
-Base.isapprox(a1::Atoms, a2::Atoms) = (a1.species == a2.species) && isapprox(a1.xf, a2.xf)
+Base.isapprox(a1::Atoms, a2::Atoms) = issetequal(Set(a1.species), Set(a2.species)) &&
+        issetequal(Set([a1.xf[:, i] for i in 1:a1.n_atoms]), Set([a2.xf[:, i] for i in 1:a2.n_atoms]))
 
 """
 Data structure holds a set of point charges and their positions in fractional coordinates.
@@ -44,4 +45,5 @@ end
 # compute n_charges automatically from array sizes
 Charges(q::Array{Float64, 1}, xf::Array{Float64, 2}) = Charges(size(xf, 2), q, xf)
 
-Base.isapprox(c1::Charges, c2::Charges) = (isapprox(c1.q, c2.q) && isapprox(c1.xf, c2.xf))
+Base.isapprox(c1::Charges, c2::Charges) = issetequal(Set(c1.q), Set(c2.q)) &&
+        issetequal(Set([c1.xf[:, i] for i in 1:c1.n_charges]), Set([c2.xf[:, i] for i in 1:c2.n_charges]))
