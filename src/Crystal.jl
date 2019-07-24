@@ -158,7 +158,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     #   should catch this hopefully there aren't other weird
                     #   ways of writing cifs...
                     while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
-                        @printf("%s\n", lines[i])
                         symmetry_count += 1
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', '''], keepempty=false)
@@ -823,7 +822,7 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false, ver
     charges_flag = isapprox(f1.charges, f2.charges)
     atoms_flag = isapprox(f1.atoms, f2.atoms)
     if verbose
-        @printf("Box flag:%s\nAtoms flag:%s\nCharges flag%s\n", box_flag ? "TRUE" : "FALSE", atoms_flag ? "TRUE" : "FALSE", charges_flag ? "TRUE" : "FALSE")
+        @printf("Box flag: %s\nAtoms flag: %s\nCharges flag: %s\n", box_flag ? "TRUE" : "FALSE", atoms_flag ? "TRUE" : "FALSE", charges_flag ? "TRUE" : "FALSE")
     end
     return box_flag && charges_flag && atoms_flag
 end

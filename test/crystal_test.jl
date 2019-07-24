@@ -33,6 +33,18 @@ using Random
     framework_rewritten = Framework("rewritten_test_structure2.cif")
     @test isapprox(framework, framework_rewritten)
 
+    # test .cif reader for non-P1 symmetry
+    #   no atoms should overlap
+    #   should palce atoms in the same positions as the P1 conversion using
+    #       openBabel
+    non_P1_framework = Framework("KAXQIL_clean.cif")
+    P1_framework = Framework("KAXQIL_clean_P1.cif")
+        # need to round to five digits because the equality fails when they have
+        #   different significant digits
+    non_P1_framework.atoms.xf .= round.(non_P1_framework.atoms.xf, digits=5)
+    P1_framework.atoms.xf .= round.(P1_framework.atoms.xf, digits=5)
+    @test isapprox(non_P1_framework, P1_framework) 
+
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = Framework("test_structure2.cssr")
     strip_numbers_from_atom_labels!(framework_from_cssr)
