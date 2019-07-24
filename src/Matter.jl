@@ -22,6 +22,14 @@ Atoms(species::Array{Symbol, 1}, xf::Array{Float64, 2}) = Atoms(size(xf, 2), spe
 
 Base.isapprox(a1::Atoms, a2::Atoms) = issetequal(Set(a1.species), Set(a2.species)) &&
     issetequal(Set([round.(a1.xf[:, i], digits=5) for i in 1:a1.n_atoms]), Set([round.(a2.xf[:, i], digits=5) for i in 1:a2.n_atoms])) 
+
+function Base.:+(a1::Atoms, a2::Atoms)
+    new_species = [a1.species; a2.species]
+    new_xf = [a1.xf a2.xf]
+
+    return Atoms(a1.n_atoms + a2.n_atoms, new_species, new_xf)
+end
+
 """
 Data structure holds a set of point charges and their positions in fractional coordinates.
 
@@ -46,3 +54,10 @@ Charges(q::Array{Float64, 1}, xf::Array{Float64, 2}) = Charges(size(xf, 2), q, x
 
 Base.isapprox(c1::Charges, c2::Charges) = issetequal(Set(c1.q), Set(c2.q)) &&
     issetequal(Set([round.(c1.xf[:, i], digits=5) for i in 1:c1.n_charges]), Set([round.(c2.xf[:, i], digits=5) for i in 1:c2.n_charges]))
+
+function Base.:+(c1::Charges, c2::Charges)
+    new_q = [c1.q; c2.q]
+    new_xf = [c1.xf c2.xf]
+    
+    return Charges(c1.n_charges + c2.n_charges, new_q, new_xf)
+end

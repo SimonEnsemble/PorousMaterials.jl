@@ -59,6 +59,34 @@ using Random
     @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
     @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
 
+    # test framework addition
+    f1 = Framework("framework 1", UnitCube(), Atoms(
+                                                    [:a, :b],
+                                                    [1.0 4.0;
+                                                     2.0 5.0;
+                                                     3.0 6.0]),
+                                              Charges(
+                                                      [0.1, 0.2],
+                                                      [1.0 4.0;
+                                                       2.0 5.0;
+                                                       3.0 6.0]))
+    f2 = Framework("framework 2", UnitCube(), Atoms(
+                                                    [:c, :d],
+                                                    [7.0 10.0;
+                                                     8.0 11.0;
+                                                     9.0 12.0]),
+                                              Charges(
+                                                      [0.3, 0.4],
+                                                      [7.0 10.0;
+                                                       8.0 11.0;
+                                                       9.0 12.0]))
+    f3 = f1 + f2
+    @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
+    @test isapprox(f1.box, f3.box)
+    @test isapprox(f2.box, f3.box)
+    @test isapprox(f1.atoms + f2.atoms, f3.atoms)
+    @test isapprox(f1.charges + f2.charges, f3.charges)
+
     # more xtal tests
     sbmof1 = Framework("SBMOF-1.cif")
     @test !charged(sbmof1)

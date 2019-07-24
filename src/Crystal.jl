@@ -826,3 +826,22 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false, ver
     end
     return box_flag && charges_flag && atoms_flag
 end
+
+function Base.:+(f1::Framework, f2::Framework)
+    @assert isapprox(f1.box, f2.box) "Two frameworks need the same Box to allow addition"
+
+    new_atoms = f1.atoms + f2.atoms
+    new_charges = f1.charges + f2.charges
+
+    new_framework = Framework(f1.name * " + " * f2.name, f1.box, new_atoms, new_charges)
+
+    if atom_overlap(new_framework)
+        @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+    end
+
+    if charge_overlap(new_framework)
+        @warn "This new framework has overlapping charges, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+    end
+    
+    return new_framework
+end
