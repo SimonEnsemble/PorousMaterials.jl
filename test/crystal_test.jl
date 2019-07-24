@@ -39,10 +39,6 @@ using Random
     #       openBabel
     non_P1_framework = Framework("KAXQIL_clean.cif")
     P1_framework = Framework("KAXQIL_clean_P1.cif")
-        # need to round to five digits because the equality fails when they have
-        #   different significant digits
-    non_P1_framework.atoms.xf .= round.(non_P1_framework.atoms.xf, digits=5)
-    P1_framework.atoms.xf .= round.(P1_framework.atoms.xf, digits=5)
     @test isapprox(non_P1_framework, P1_framework) 
 
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
