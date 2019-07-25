@@ -223,13 +223,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         if !p1_symmetry && symmetry_info
             @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 to be ready for simulation use.", filename)
             for i in 1:size(symmetry_rules, 2)
-                # check for making sure the mapping of function was working correctly
-                #@printf("i: %d\tproof of mapping: %0.3f %0.3f %0.3f\n", i, Base.invokelatest.(symmetry_rules[:, i], [0.5, 0.5, 0.5])...)
                 coords = [coords Base.invokelatest.(symmetry_rules[:, i], coords_simple)]
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
-            coords .= mod.(coords, 1.0)
+            coords = mod.(coords, 1.0)
         elseif p1_symmetry
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
