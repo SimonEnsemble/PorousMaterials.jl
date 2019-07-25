@@ -2,6 +2,7 @@
 # Start Test Script
 
 include("box_test.jl")
+include("matter_test.jl")
 include("crystal_test.jl")
 include("molecule_test.jl")
 include("nearest_image_test.jl")
