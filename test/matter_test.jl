@@ -23,6 +23,10 @@ using Test
     # no atoms that weren't in a1 or a2 are in a3
     @test issetequal(setdiff(Set(a3.xf), union(Set(a1.xf), Set(a2.xf))), Set())
     @test issetequal(setdiff(Set(a3.species), union(Set(a1.species), Set(a2.species))), Set())
+    a1_mismatch = Atoms([:b, :a], [1.0 4.0;
+                                   2.0 5.0;
+                                   3.0 6.0])
+    @test ! isapprox(a1, a1_mismatch)
 
     # testing addition for charges type
     c1 = Charges([0.1, 0.2], [1.0 4.0;
@@ -42,6 +46,10 @@ using Test
     # no charges are added to c3 that weren't within c1 or c2
     @test issetequal(setdiff(Set(c3.xf), union(Set(c1.xf), Set(c2.xf))), Set())
     @test issetequal(setdiff(Set(c3.q), union(Set(c1.q), Set(c2.q))), Set())
+    c1_mismatch = Charges([0.2, 0.1], [1.0 4.0;
+                                       2.0 5.0;
+                                       3.0 6.0])
+    @test ! isapprox(c1, c1_mismatch)
 
 end
 end

@@ -20,8 +20,9 @@ end
 # compute n_species automatically from array sizes
 Atoms(species::Array{Symbol, 1}, xf::Array{Float64, 2}) = Atoms(size(xf, 2), species, xf)
 
-Base.isapprox(a1::Atoms, a2::Atoms) = issetequal(Set(a1.species), Set(a2.species)) &&
-    issetequal(Set([round.(a1.xf[:, i], digits=5) for i in 1:a1.n_atoms]), Set([round.(a2.xf[:, i], digits=5) for i in 1:a2.n_atoms])) 
+Base.isapprox(a1::Atoms, a2::Atoms) = issetequal(
+    Set([(round.(a1.xf[:, i], digits=5), a1.species[i]) for i in 1:a1.n_atoms]),
+    Set([(round.(a2.xf[:, i], digits=5), a2.species[i]) for i in 1:a2.n_atoms])) 
 
 function Base.:+(a1::Atoms, a2::Atoms)
     new_species = [a1.species; a2.species]
@@ -52,8 +53,9 @@ end
 # compute n_charges automatically from array sizes
 Charges(q::Array{Float64, 1}, xf::Array{Float64, 2}) = Charges(size(xf, 2), q, xf)
 
-Base.isapprox(c1::Charges, c2::Charges) = issetequal(Set(c1.q), Set(c2.q)) &&
-    issetequal(Set([round.(c1.xf[:, i], digits=5) for i in 1:c1.n_charges]), Set([round.(c2.xf[:, i], digits=5) for i in 1:c2.n_charges]))
+Base.isapprox(c1::Charges, c2::Charges) = issetequal(
+    Set([(round.(c1.xf[:, i], digits=5), c1.q[i]) for i in 1:c1.n_charges]),
+    Set([(round.(c2.xf[:, i], digits=5), c2.q[i]) for i in 1:c2.n_charges]))
 
 function Base.:+(c1::Charges, c2::Charges)
     new_q = [c1.q; c2.q]
