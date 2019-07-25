@@ -35,7 +35,7 @@ using Random
 
     # test .cif reader for non-P1 symmetry
     #   no atoms should overlap
-    #   should palce atoms in the same positions as the P1 conversion using
+    #   should place atoms in the same positions as the P1 conversion using
     #       openBabel
     non_P1_framework = Framework("KAXQIL_clean.cif")
     P1_framework = Framework("KAXQIL_clean_P1.cif")
