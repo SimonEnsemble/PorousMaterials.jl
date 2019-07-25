@@ -40,6 +40,10 @@ using Random
     non_P1_framework = Framework("KAXQIL_clean.cif")
     P1_framework = Framework("KAXQIL_clean_P1.cif")
     @test isapprox(non_P1_framework, P1_framework) 
+    # test that incorrect file formats throw proper errors
+    @test_throws ErrorException Framework("non_P1_no_symmetry.cif")
+    # test that a file with no atoms throws error
+    @test_throws ErrorException Framework("no_atoms.cif")
 
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = Framework("test_structure2.cssr")
