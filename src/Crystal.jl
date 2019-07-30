@@ -55,6 +55,10 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     zf = Array{Float64, 1}()
     coords = Array{Float64, 2}(undef, 3, 0)
     symmetry_rules = Array{Function, 2}(undef, 3, 0)
+    # used for remembering whether fractional/cartesian coordinates are read in
+    # placed here so it will be defined for the if-stmt after the box is defined
+    fractional = false
+    cartesian = false
 
 
     # Start of .cif reader
@@ -65,6 +69,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         data = Dict{AbstractString, Float64}()
         loop_starts = -1
         i = 1
+        # used for reading in symmetry options and replications
         p1_symmetry = false
         symmetry_info = false
         atom_info = false
@@ -110,15 +115,35 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         i += 1
                     end
 
+                    # if the file provides fractional coordinates
+                    fractional = haskey(name_to_column, "_atom_site_fract_x") &&
+                                    haskey(name_to_column, "_atom_site_fract_y") &&
+                                    haskey(name_to_column, "_atom_site_fract_z")
+                    # if the file provides cartesian coordinates
+                    cartesian = haskey(name_to_column, "_atom_site_Cartn_x") &&
+                                    haskey(name_to_column, "_atom_site_Cartn_y") &&
+                                    haskey(name_to_column, "_atom_site_Cartn_z") &&
+                                    ! fractional # if both are provided, will default
+                                                 #  to using fractional, so keep cartesian
+                                                 #  false
+
                     # read in atom_site info and store it in column based on
                     #   the name_to_column dictionary
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
                         push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
-                        coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
-                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
-                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
+                        if fractional
+                            coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
+                                    mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
+                                    mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
+                        elseif cartesian
+                            coords_simple = [coords_simple [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
+                                    parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
+                                    parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
+                        else
+                            error("The file does not store atom information in the form '_atom_site_fract_x' or '_atom_site_Cartn_x'")
+                        end
                         # If charges present, import them
                         if haskey(name_to_column, "_atom_site_charge")
                             push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
@@ -214,6 +239,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         α = data["alpha"]
         β = data["beta"]
         γ = data["gamma"]
+
+        # redo coordinates if they were read in cartesian
+        if cartesian && ! fractional
+            coords_simple = Box(a, b, c, α, β, γ).c_to_f * coords_simple
+        end
 
         if !p1_symmetry && symmetry_info
             @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.", filename)
