@@ -92,7 +92,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # checking for information about atom sites and symmetry
             if line[1] == "loop_"
                 next_line = split(lines[i+1], [' ', '\t']; keepempty=false)
-                if occursin("_atom_site", next_line[1])
+                if occursin("_atom_site", next_line[1][1:10])
                     atom_info = true
                     atom_column_name = ""
                     # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
@@ -143,7 +143,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
                     i += 1
                     loop_starts = i
-                    while length(split(lines[i])) == 1
+                    while length(split(lines[i], [''', ' ', '\t', ','], keepempty=false)) == 1
                         name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
                         # iterate to next line in file
                         i += 1
@@ -164,14 +164,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
                         new_sym_rule = Array{Function, 1}(undef, 3)
 
-                        for sym in sym_funcs
-                            if occursin("x", sym)
-                                new_sym_rule[1] = eval(Meta.parse("x -> " * sym))
-                            elseif occursin("y", sym)
-                                new_sym_rule[2] = eval(Meta.parse("y -> " * sym))
-                            elseif occursin("z", sym)
-                                new_sym_rule[3] = eval(Meta.parse("z -> " * sym))
-                            end
+                        sym_start = name_to_column["_symmetry_equiv_pos_as_xyz"] - 1
+                        for j = 1:3
+                            new_sym_rule[j] = eval(Meta.parse("(x, y, z) -> " * sym_funcs[j + sym_start]))
                         end
 
                         symmetry_rules = [symmetry_rules new_sym_rule]
@@ -221,9 +216,14 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         γ = data["gamma"]
 
         if !p1_symmetry && symmetry_info
-            @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 to be ready for simulation use.", filename)
+            @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.", filename)
+            # loop over all symmetry rules
             for i in 1:size(symmetry_rules, 2)
-                coords = [coords Base.invokelatest.(symmetry_rules[:, i], coords_simple)]
+                new_col = Array{Float64, 1}(undef, 0)
+                # loop over all atom positions from lower level symmetry
+                for j in 1:size(coords_simple, 2)
+                    coords = [coords [Base.invokelatest(symmetry_rules[k, i], coords_simple[:, j]...) for k in 1:3]]
+                end
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
@@ -285,6 +285,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                             framework.name, total_charge(framework)))
         end
     end
+
+    strip_numbers_from_atom_labels!(framework)
 
     if remove_overlap
         return remove_overlapping_atoms_and_charges(framework)
@@ -462,7 +464,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1, verbose::Bool=true)
 
     atoms_to_keep = trues(framework.atoms.n_atoms)
-    charges_to_keep = trues(framework.atoms.n_atoms)
+    charges_to_keep = trues(framework.charges.n_charges)
 
     for i = 1:framework.atoms.n_atoms
         for j =  1:framework.atoms.n_atoms

@@ -37,8 +37,8 @@ using Random
     #   no atoms should overlap
     #   should place atoms in the same positions as the P1 conversion using
     #       openBabel
-    non_P1_framework = Framework("KAXQIL_clean.cif")
-    P1_framework = Framework("KAXQIL_clean_P1.cif")
+    non_P1_framework = Framework("ORIVOC_clean_fract.cif", remove_overlap=true)
+    P1_framework = Framework("ORIVOC_clean_P1.cif", remove_overlap=true)
     @test isapprox(non_P1_framework, P1_framework) 
     # test that incorrect file formats throw proper errors
     @test_throws ErrorException Framework("non_P1_no_symmetry.cif")
