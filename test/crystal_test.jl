@@ -40,6 +40,17 @@ using Random
     non_P1_framework = Framework("ORIVOC_clean_fract.cif", remove_overlap=true)
     non_P1_cartesian = Framework("ORIVOC_clean.cif", remove_overlap=true)
     P1_framework = Framework("ORIVOC_clean_P1.cif", remove_overlap=true)
+
+    # wrap all atoms and charges to be within the unit cell
+    non_P1_framework.atoms.xf .= mod.(non_P1_framework.atoms.xf, 1.0)
+    non_P1_framework.charges.xf .= mod.(non_P1_framework.charges.xf, 1.0)
+
+    non_P1_cartesian.atoms.xf .= mod.(non_P1_cartesian.atoms.xf, 1.0)
+    non_P1_cartesian.charges.xf .= mod.(non_P1_cartesian.charges.xf, 1.0)
+
+    P1_framework.atoms.xf .= mod.(P1_framework.atoms.xf, 1.0)
+    P1_framework.charges.xf .= mod.(P1_framework.charges.xf, 1.0)
+
     @test isapprox(non_P1_framework, P1_framework) 
     # test that fractional and cartesian produce same results
     @test isapprox(non_P1_framework, non_P1_cartesian)
