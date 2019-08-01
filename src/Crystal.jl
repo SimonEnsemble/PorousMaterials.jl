@@ -257,7 +257,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
-            coords = mod.(coords, 1.0)
         elseif p1_symmetry
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
@@ -463,7 +462,7 @@ end
 #   do overlap, and can then use that number to determine if they overlap or are repeats
 function _overlap(xf_1::Array{Float64, 1}, xf_2::Array{Float64, 1},
                   box::Box, overlap_tol::Float64)
-    dxf = xf_1 .- xf_2
+    dxf = mod.(xf_1, 1.0) .- mod.(xf_2, 1.0)
     nearest_image!(dxf)
     dxc = box.f_to_c * dxf
     return norm(dxc) < overlap_tol
