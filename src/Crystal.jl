@@ -266,17 +266,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
-            # has been converted to P1, so symmetry rules are set to P1 symmetry rules
-            symmetry_rules = [Array{Function, 2}(undef, 3, 0) [(x, y, z) -> x,
-                                                               (x, y, z) -> y,
-                                                               (x, y, z) -> z]]
         elseif p1_symmetry || !convert_to_p1
-            # leave symmetry rules the same
-            #   if not P1, want to keep the full symmetry rules
-            #   if P1 leave as is
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
             species = deepcopy(species_simple)
+        end
+
+        # either read in P1 or converted to P1 so should have same symmetry rules
+        if p1_symmetry || convert_to_p1
+            symmetry_rules = [Array{Function, 2}(undef, 3, 0) [(x, y, z) -> x,
+                                                               (x, y, z) -> y,
+                                                               (x, y, z) -> z]]
         end
 
     # Start of cssr reader #TODO make sure this works for different .cssr files!
