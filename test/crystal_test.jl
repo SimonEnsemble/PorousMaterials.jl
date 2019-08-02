@@ -61,6 +61,26 @@ using Random
     # test that a file with no atoms throws error
     @test_throws ErrorException Framework("no_atoms.cif")
 
+    # test reading in non-P1 then applying symmetry later
+    # read in the same files as above, then convert to P1, then compare
+    non_P1_framework_symmetry = Framework("ORIVOC_clean_fract.cif", convert_to_p1=false)
+    non_P1_cartesian_symmetry = Framework("ORIVOC_clean.cif", convert_to_p1=false)
+
+    non_P1_framework_symmetry = apply_symmetry_rules(non_P1_framework_symmetry, remove_overlap=true)
+    non_P1_cartesian_symmetry = apply_symmetry_rules(non_P1_cartesian_symmetry, remove_overlap=true)
+
+    # wrap all atoms and charges to be within the unit cell
+    non_P1_framework_symmetry.atoms.xf .= mod.(non_P1_framework_symmetry.atoms.xf, 1.0)
+    non_P1_framework_symmetry.charges.xf .= mod.(non_P1_framework_symmetry.charges.xf, 1.0)
+
+    non_P1_cartesian_symmetry.atoms.xf .= mod.(non_P1_cartesian_symmetry.atoms.xf, 1.0)
+    non_P1_cartesian_symmetry.charges.xf .= mod.(non_P1_cartesian_symmetry.charges.xf, 1.0)
+
+    # test that same structure is created when reading and converting to P1 and
+    #   when reading then converting to P1
+    @test isapprox(non_P1_framework, non_P1_framework_symmetry)
+    @test isapprox(non_P1_cartesian, non_P1_cartesian_symmetry)
+
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = Framework("test_structure2.cssr")
     strip_numbers_from_atom_labels!(framework_from_cssr)

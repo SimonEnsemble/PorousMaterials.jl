@@ -727,7 +727,9 @@ return the new framework.
 - `P1_framework::Framework`: The framework after it has been converted to P1
     symmetry. The new symmetry rules will be the P1 symemtry rules
 """
-function apply_symmetry_rules(f::Framework)
+function apply_symmetry_rules(f::Framework; check_charge_neutrality::Bool=true,
+                              net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
+                              remove_overlap::Bool=false)
     new_atom_xfs = Array{Float64, 2}(undef, 3, 0)
     new_charge_xfs = Array{Float64, 2}(undef, 3, 0)
     new_atom_species = Array{Symbol, 1}(undef, 0)
@@ -738,23 +740,43 @@ function apply_symmetry_rules(f::Framework)
         # loop over all atoms in lower level symemtry
         for j in 1:size(f.atoms.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            new_atom_xfs = [new_atom_xfs [Base.invokelatest.(f.symmetry_rules[k, i], f.atoms.xf[:, j]...) for k in 1:3]]
+            new_atom_xfs = [new_atom_xfs [Base.invokelatest.(f.symmetry[k, i], f.atoms.xf[:, j]...) for k in 1:3]]
         end
         # loop over all charges in lower level symmetry
         for j in 1:size(f.charges.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            new_charge_xfs = [new_charge_xfs [Base.invokelatest.(f.symmetry_rules[k, i], f.charges.xf[:, j]...) for k in 1:3]]
+            new_charge_xfs = [new_charge_xfs [Base.invokelatest.(f.symmetry[k, i], f.charges.xf[:, j]...) for k in 1:3]]
         end
         # repeat charge_qs and atom_species for every symmetry applied
-        new_atom_species = [new_atom_species f.atoms.species]
-        new_charge_qs = [new_charge_qs f.charges.q]
+        new_atom_species = [new_atom_species; f.atoms.species]
+        new_charge_qs = [new_charge_qs; f.charges.q]
     end
 
-    new_symmetry_rules = [(x, y, z) -> x,
-                          (x, y, z) -> y,
-                          (x, y, z) -> z,]
+    new_symmetry_rules = [Array{Float64, 2}(undef, 3, 0) [(x, y, z) -> x,
+                                                          (x, y, z) -> y,
+                                                          (x, y, z) -> z]]
 
     new_f = Framework(f.name, f.box, Atoms(new_atom_species, new_atom_xfs), Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules)
+
+    if check_charge_neutrality
+        if ! charge_neutral(new_f, net_charge_tol)
+            error(@sprintf("Framework %s is not charge neutral; net charge is %f e. Ignore
+            this error message by passing check_charge_neutrality=false or increasing the
+            net charge tolerance `net_charge_tol`\n",
+                            new_f.name, total_charge(new_f)))
+        end
+    end
+
+    if remove_overlap
+        return remove_overlapping_atoms_and_charges(new_f)
+    end
+
+    if check_atom_and_charge_overlap
+        if atom_overlap(new_f) | charge_overlap(new_f)
+            error(@sprintf("At least one pair of atoms/charges overlap in %s.
+            Consider passing `remove_overlap=true`\n", new_f.name))
+        end
+    end
 
     return new_f
 end
@@ -967,7 +989,8 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     end
     charges_flag = isapprox(f1.charges, f2.charges)
     atoms_flag = isapprox(f1.atoms, f2.atoms)
-    return box_flag && charges_flag && atoms_flag
+    symmetry_flag = is_symmetry_equal(f1.symmetry, f2.symmetry)
+    return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
 # TODO do something about symmetry rules, force to have same
