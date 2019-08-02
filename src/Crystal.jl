@@ -57,9 +57,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     coords = Array{Float64, 2}(undef, 3, 0)
     # default for symmetry rules is P1.
     # These will be overwritten if the user chooses to read in non-P1
-    symmetry_rules = [(x, y, z) -> x,
-                      (x, y, z) -> y,
-                      (x, y, z) -> z]
+    symmetry_rules = Array{Function, 2}(undef, 3, 0)
     # used for remembering whether fractional/cartesian coordinates are read in
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
@@ -269,10 +267,13 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 species = [species; species_simple]
             end
             # has been converted to P1, so symmetry rules are set to P1 symmetry rules
-            symmetry_rules = [(x, y, z) -> x,
-                              (x, y, z) -> y,
-                              (x, y, z) -> z]
+            symmetry_rules = [Array{Function, 2}(undef, 3, 0) [(x, y, z) -> x,
+                                                               (x, y, z) -> y,
+                                                               (x, y, z) -> z]]
         elseif p1_symmetry || !convert_to_p1
+            # leave symmetry rules the same
+            #   if not P1, want to keep the full symmetry rules
+            #   if P1 leave as is
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
             species = deepcopy(species_simple)
@@ -309,6 +310,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         for i = 1:n_atoms
             coords = [ coords [xf[i], yf[i], zf[i]] ]
         end
+
+        # add P1 symmetry rules for consistency
+        symmetry_rules = [symmetry_rules [(x, y, z) -> x,
+                                          (x, y, z) -> y,
+                                          (x, y, z) -> z]]
     end
 
     # Construct the unit cell box
@@ -393,7 +399,7 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
 
     @assert (new_charges.n_charges == framework.charges.n_charges * prod(repfactors))
     @assert (new_atoms.n_atoms == framework.atoms.n_atoms * prod(repfactors))
-    return Framework(framework.name, new_box, new_atoms, new_charges)
+    return Framework(framework.name, new_box, new_atoms, new_charges, deepcopy(framework.symmetry))
 end
 
 # doc string in Misc.jl
@@ -568,7 +574,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     atoms = Atoms(framework.atoms.species[atoms_to_keep], atom_coords_to_keep)
     charges = Charges(framework.charges.q[charges_to_keep], charge_coords_to_keep)
 
-    new_framework = Framework(framework.name, framework.box, atoms, charges)
+    new_framework = Framework(framework.name, framework.box, atoms, charges, deepcopy(framework.symmetry))
 
     @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
     @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
@@ -754,6 +760,56 @@ function apply_symmetry_rules(f::Framework)
 end
 
 """
+    symmetry_equal = is_symmetry_equal(sym1, sym2)
+
+Returns true if both symmetry rules can create the same set from the same set
+of coordinates. Returns false if they don't contain the same number of rules or
+if they create different sets of points.
+
+# Arguments
+- `sym1::Array{Function, 2}`: Array of anonymous functions that represent
+    symmetry operations
+- `sym2::Array{Function, 2}`: Array of anonymous functions that represent
+    symmetry operations
+
+# Returns
+- `is_equal::Bool`: True if they are the same set of symmetry rules
+    False if they are different
+"""
+function is_symmetry_equal(sym1::Array{Function, 2}, sym2::Array{Function, 2})
+    # need same number of symmetry operations
+    if size(sym1, 2) != size(sym2, 2)
+        return false
+    end
+    # define a test array that operations will be performed on
+    test_array = [0.0 0.25 0.0  0.0  0.0  0.25 0.25 0.25;
+                  0.0 0.0  0.25 0.0  0.25 0.0  0.25 0.25;
+                  0.0 0.0  0.0  0.25 0.25 0.25 0.25 0.25]
+    # set up both arrays for storing replicated coords
+    sym1_applied_to_test = Array{Float64, 2}(undef, 3, 0)
+    sym2_applied_to_test = Array{Float64, 2}(undef, 3, 0)
+
+    # loop over all positions in the test_array
+    for i in 1:size(test_array, 2)
+        # loop over f1 symmetry rules
+        for j in 1:size(sym1, 2)
+            sym1_applied_to_test = [sym1_applied_to_test [Base.invokelatest.(sym1[k, j], test_array[:, i]...) for k in 1:3]]
+        end
+        # loop over f2 symmetry rules
+        for j in 1:size(sym2, 2)
+            sym2_applied_to_test = [sym2_applied_to_test [Base.invokelatest.(sym2[k, j], test_array[:, i]...) for k in 1:3]]
+        end
+    end
+
+    # convert to sets for using issetequal, symmetry rules might be in a a different order
+    sym1_set = Set([sym1_applied_to_test[:, i] for i in 1:size(sym1_applied_to_test, 2)])
+    sym2_set = Set([sym2_applied_to_test[:, i] for i in 1:size(sym2_applied_to_test, 2)])
+
+    # return if the sets of coords are equal
+    return issetequal(sym1_set, sym2_set)
+end
+
+"""
     write_cif(framework, filename)
 
 Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does
@@ -876,7 +932,7 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     charges = Charges(charge_vals, charge_coords)
 
     # construct new framework
-    new_framework = Framework(framework.name, framework.box, framework.atoms, charges)
+    new_framework = Framework(framework.name, framework.box, framework.atoms, charges, deepcopy(framework.symmetry))
 
     # check for charge neutrality
     if abs(total_charge(new_framework)) > net_charge_tol
@@ -896,6 +952,7 @@ function Base.show(io::IO, framework::Framework)
     println(io, "Chemical formula: ", chemical_formula(framework))
 end
 
+# TODO add something comparing symmetry rules
 function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     names_flag = f1.name == f2.name
     if checknames && (! names_flag)
@@ -913,13 +970,15 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     return box_flag && charges_flag && atoms_flag
 end
 
+# TODO do something about symmetry rules, force to have same
 function Base.:+(f1::Framework, f2::Framework)
     @assert isapprox(f1.box, f2.box) "Two frameworks need the same Box to allow addition"
+    @assert is_symmetry_equal(f1.symmetry, f2.symmetry) "Symmetry rules are different"
 
     new_atoms = f1.atoms + f2.atoms
     new_charges = f1.charges + f2.charges
 
-    new_framework = Framework(f1.name * " + " * f2.name, f1.box, new_atoms, new_charges)
+    new_framework = Framework(f1.name * "_" * f2.name, f1.box, new_atoms, new_charges, f1.symmetry)
 
     if atom_overlap(new_framework)
         @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
