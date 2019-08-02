@@ -6,6 +6,7 @@ struct Framework
     box::Box
     atoms::Atoms
     charges::Charges
+    symmetry::Array{Function, 2}
 end
 
 """
@@ -35,7 +36,7 @@ or construct a `Framework` data structure directly.
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
-                   remove_overlap::Bool=false)
+                   remove_overlap::Bool=false, convert_to_p1::Bool=true)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -54,7 +55,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
     coords = Array{Float64, 2}(undef, 3, 0)
-    symmetry_rules = Array{Function, 2}(undef, 3, 0)
+    # default for symmetry rules is P1.
+    # These will be overwritten if the user chooses to read in non-P1
+    symmetry_rules = [(x, y, z) -> x,
+                      (x, y, z) -> y,
+                      (x, y, z) -> z]
     # used for remembering whether fractional/cartesian coordinates are read in
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
@@ -233,6 +238,12 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             error("If structure is not in P1 symmetry it must have replication information")
         end
 
+        # warning that structure is not being converted to P1 symmetry
+        if ! convert_to_p1 && ! p1_symmetry
+            @warn @sprintf("%s is not in P1 symmetry and it is not being converted to P1 symmetry.\nAny simulations performed with PorousMaterials will NOT be accurate",
+                          filename)
+        end
+
         a = data["a"]
         b = data["b"]
         c = data["c"]
@@ -245,7 +256,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             coords_simple = Box(a, b, c, α, β, γ).c_to_f * coords_simple
         end
 
-        if !p1_symmetry && symmetry_info
+        if symmetry_info && convert_to_p1
             @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.", filename)
             # loop over all symmetry rules
             for i in 1:size(symmetry_rules, 2)
@@ -257,7 +268,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
-        elseif p1_symmetry
+            # has been converted to P1, so symmetry rules are set to P1 symmetry rules
+            symmetry_rules = [(x, y, z) -> x,
+                              (x, y, z) -> y,
+                              (x, y, z) -> z]
+        elseif p1_symmetry || !convert_to_p1
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
             species = deepcopy(species_simple)
@@ -304,7 +319,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     idx_nz = charge_values .!= 0.0
     charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
-    framework = Framework(filename, box, atoms, charges)
+    framework = Framework(filename, box, atoms, charges, symmetry_rules)
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
@@ -691,6 +706,51 @@ Compute the crystal density of a framework. Pulls atomic masses from [`read_atom
 function crystal_density(framework::Framework)
     mw = molecular_weight(framework)
     return mw / framework.box.Ω * 1660.53892  # --> kg/m3
+end
+
+"""
+    simulation_ready_framework = apply_symemtry_rules(non_p1_framework)
+
+Convert a framework to P1 symmetry based on internal symmetry rules. This will
+return the new framework.
+
+# Arguments
+- `f::Framework`: The framework to be converted to P1 symmetry
+
+# Returns
+- `P1_framework::Framework`: The framework after it has been converted to P1
+    symmetry. The new symmetry rules will be the P1 symemtry rules
+"""
+function apply_symmetry_rules(f::Framework)
+    new_atom_xfs = Array{Float64, 2}(undef, 3, 0)
+    new_charge_xfs = Array{Float64, 2}(undef, 3, 0)
+    new_atom_species = Array{Symbol, 1}(undef, 0)
+    new_charge_qs = Array{Float64, 1}(undef, 0)
+
+    # for each symmetry rule
+    for i in 1:size(f.symmetry, 2)
+        # loop over all atoms in lower level symemtry
+        for j in 1:size(f.atoms.xf, 2)
+            # apply current symmetry rule to current atom for x, y, and z coordinates
+            new_atom_xfs = [new_atom_xfs [Base.invokelatest.(f.symmetry_rules[k, i], f.atoms.xf[:, j]...) for k in 1:3]]
+        end
+        # loop over all charges in lower level symmetry
+        for j in 1:size(f.charges.xf, 2)
+            # apply current symmetry rule to current atom for x, y, and z coordinates
+            new_charge_xfs = [new_charge_xfs [Base.invokelatest.(f.symmetry_rules[k, i], f.charges.xf[:, j]...) for k in 1:3]]
+        end
+        # repeat charge_qs and atom_species for every symmetry applied
+        new_atom_species = [new_atom_species f.atoms.species]
+        new_charge_qs = [new_charge_qs f.charges.q]
+    end
+
+    new_symmetry_rules = [(x, y, z) -> x,
+                          (x, y, z) -> y,
+                          (x, y, z) -> z,]
+
+    new_f = Framework(f.name, f.box, Atoms(new_atom_species, new_atom_xfs), Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules)
+
+    return new_f
 end
 
 """
