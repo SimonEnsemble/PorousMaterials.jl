@@ -7,6 +7,7 @@ struct Framework
     atoms::Atoms
     charges::Charges
     symmetry::Array{Function, 2}
+    is_p1::Bool
 end
 
 """
@@ -62,6 +63,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
     cartesian = false
+    # used for determining if the framework is in P1 symmetry for simulations
+    p1_symmetry = false
 
 
     # Start of .cif reader
@@ -73,7 +76,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         loop_starts = -1
         i = 1
         # used for reading in symmetry options and replications
-        p1_symmetry = false
         symmetry_info = false
         atom_info = false
         while i <= length(lines)
@@ -279,6 +281,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                                                (x, y, z) -> z]]
         end
 
+        # if structure was stored in P1 or converted to P1, store that information for later
+        p1_symmetry = p1_symmetry || convert_to_p1
+
     # Start of cssr reader #TODO make sure this works for different .cssr files!
     elseif extension == "cssr"
         # First line contains unit cell lenghts
@@ -315,6 +320,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         symmetry_rules = [symmetry_rules [(x, y, z) -> x,
                                           (x, y, z) -> y,
                                           (x, y, z) -> z]]
+        p1_symmetry = true
     end
 
     # Construct the unit cell box
@@ -325,7 +331,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     idx_nz = charge_values .!= 0.0
     charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
-    framework = Framework(filename, box, atoms, charges, symmetry_rules)
+    framework = Framework(filename, box, atoms, charges, symmetry_rules, p1_symmetry)
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
@@ -399,7 +405,7 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
 
     @assert (new_charges.n_charges == framework.charges.n_charges * prod(repfactors))
     @assert (new_atoms.n_atoms == framework.atoms.n_atoms * prod(repfactors))
-    return Framework(framework.name, new_box, new_atoms, new_charges, deepcopy(framework.symmetry))
+    return Framework(framework.name, new_box, new_atoms, new_charges, deepcopy(framework.symmetry), framework.is_p1)
 end
 
 # doc string in Misc.jl
@@ -574,7 +580,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     atoms = Atoms(framework.atoms.species[atoms_to_keep], atom_coords_to_keep)
     charges = Charges(framework.charges.q[charges_to_keep], charge_coords_to_keep)
 
-    new_framework = Framework(framework.name, framework.box, atoms, charges, deepcopy(framework.symmetry))
+    new_framework = Framework(framework.name, framework.box, atoms, charges, deepcopy(framework.symmetry), framework.is_p1)
 
     @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
     @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
@@ -756,7 +762,7 @@ function apply_symmetry_rules(f::Framework; check_charge_neutrality::Bool=true,
                                                           (x, y, z) -> y,
                                                           (x, y, z) -> z]]
 
-    new_f = Framework(f.name, f.box, Atoms(new_atom_species, new_atom_xfs), Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules)
+    new_f = Framework(f.name, f.box, Atoms(new_atom_species, new_atom_xfs), Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules, true)
 
     if check_charge_neutrality
         if ! charge_neutral(new_f, net_charge_tol)
@@ -954,7 +960,7 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     charges = Charges(charge_vals, charge_coords)
 
     # construct new framework
-    new_framework = Framework(framework.name, framework.box, framework.atoms, charges, deepcopy(framework.symmetry))
+    new_framework = Framework(framework.name, framework.box, framework.atoms, charges, deepcopy(framework.symmetry), framework.is_p1)
 
     # check for charge neutrality
     if abs(total_charge(new_framework)) > net_charge_tol
@@ -1001,7 +1007,7 @@ function Base.:+(f1::Framework, f2::Framework)
     new_atoms = f1.atoms + f2.atoms
     new_charges = f1.charges + f2.charges
 
-    new_framework = Framework(f1.name * "_" * f2.name, f1.box, new_atoms, new_charges, f1.symmetry)
+    new_framework = Framework(f1.name * "_" * f2.name, f1.box, new_atoms, new_charges, f1.symmetry, f1.is_p1)
 
     if atom_overlap(new_framework)
         @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"

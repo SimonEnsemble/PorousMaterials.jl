@@ -60,11 +60,20 @@ using Random
     @test_throws ErrorException Framework("non_P1_no_symmetry.cif")
     # test that a file with no atoms throws error
     @test_throws ErrorException Framework("no_atoms.cif")
+    # test that these carry the is_p1 flag
+    @test non_P1_framework.is_p1
+    @test non_P1_cartesian.is_p1
+    @test P1_framework.is_p1
 
     # test reading in non-P1 then applying symmetry later
     # read in the same files as above, then convert to P1, then compare
     non_P1_framework_symmetry = Framework("ORIVOC_clean_fract.cif", convert_to_p1=false)
     non_P1_cartesian_symmetry = Framework("ORIVOC_clean.cif", convert_to_p1=false)
+
+    # make sure these frameworks are not in P1 symmetry when convert_to_p1 is
+    #   set to false
+    @test ! non_P1_framework_symmetry.is_p1
+    @test ! non_P1_cartesian_symmetry.is_p1
 
     non_P1_framework_symmetry = apply_symmetry_rules(non_P1_framework_symmetry, remove_overlap=true)
     non_P1_cartesian_symmetry = apply_symmetry_rules(non_P1_cartesian_symmetry, remove_overlap=true)
@@ -75,6 +84,10 @@ using Random
 
     non_P1_cartesian_symmetry.atoms.xf .= mod.(non_P1_cartesian_symmetry.atoms.xf, 1.0)
     non_P1_cartesian_symmetry.charges.xf .= mod.(non_P1_cartesian_symmetry.charges.xf, 1.0)
+
+    # make sure frameworks are now recorded as being in P1 with their is_p1 flag
+    @test non_P1_framework_symmetry.is_p1
+    @test non_P1_cartesian_symmetry.is_p1
 
     # test that same structure is created when reading and converting to P1 and
     #   when reading then converting to P1
@@ -127,7 +140,8 @@ using Random
                                                       [1.0 4.0;
                                                        2.0 5.0;
                                                        3.0 6.0]),
-                                              deepcopy(symmetry_rules))
+                                              deepcopy(symmetry_rules),
+                                              true)
     f2 = Framework("framework 2", UnitCube(), Atoms(
                                                     [:c, :d],
                                                     [7.0 10.0;
@@ -138,7 +152,8 @@ using Random
                                                       [7.0 10.0;
                                                        8.0 11.0;
                                                        9.0 12.0]),
-                                              deepcopy(symmetry_rules))
+                                              deepcopy(symmetry_rules),
+                                              true)
     f3 = f1 + f2
     @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
     @test isapprox(f1.box, f3.box)
