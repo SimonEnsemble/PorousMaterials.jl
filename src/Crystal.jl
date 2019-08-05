@@ -102,69 +102,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             # checking for information about atom sites and symmetry
             if line[1] == "loop_"
                 next_line = split(lines[i+1], [' ', '\t']; keepempty=false)
-                if occursin("_atom_site", next_line[1][1:10])
-                    atom_info = true
-                    atom_column_name = ""
-                    # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
-                    #   use example: name_to_column["_atom_site_fract_x"] gives 3
-                    name_to_column = Dict{AbstractString, Int}()
-
-                    i += 1
-                    loop_starts = i
-                    while length(split(lines[i])) == 1
-                        if i == loop_starts
-                            atom_column_name = split(lines[i])[1]
-                        end
-                        name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
-                        # iterate to next line in file
-                        i += 1
-                    end
-
-                    # if the file provides fractional coordinates
-                    fractional = haskey(name_to_column, "_atom_site_fract_x") &&
-                                    haskey(name_to_column, "_atom_site_fract_y") &&
-                                    haskey(name_to_column, "_atom_site_fract_z")
-                    # if the file provides cartesian coordinates
-                    cartesian = haskey(name_to_column, "_atom_site_Cartn_x") &&
-                                    haskey(name_to_column, "_atom_site_Cartn_y") &&
-                                    haskey(name_to_column, "_atom_site_Cartn_z") &&
-                                    ! fractional # if both are provided, will default
-                                                 #  to using fractional, so keep cartesian
-                                                 #  false
-
-                    # read in atom_site info and store it in column based on
-                    #   the name_to_column dictionary
-                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
-                        line = split(lines[i])
-
-                        push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
-                        if fractional
-                            coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
-                                    mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
-                                    mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
-                        elseif cartesian
-                            coords_simple = [coords_simple [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
-                                    parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
-                                    parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
-                        else
-                            error("The file does not store atom information in the form '_atom_site_fract_x' or '_atom_site_Cartn_x'")
-                        end
-                        # If charges present, import them
-                        if haskey(name_to_column, "_atom_site_charge")
-                            push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
-                        else
-                            push!(charges_simple, 0.0)
-                        end
-                        # iterate to next line in file
-                        i += 1
-                    end
-
-                    # finish reading in atom_site information, skip to next
-                    #   iteration of outer while-loop
-                    # prevents skipping a line after finishing reading atoms
-                    continue
                 # only read in symmetry if the structure is not in P1 symmetry
-                elseif occursin("_symmetry_equiv_pos", next_line[1]) && !p1_symmetry
+                if occursin("_symmetry_equiv_pos", next_line[1]) && !p1_symmetry
                     symmetry_info = true
                     symmetry_column_name = ""
                     # name_to_column is a dictionary that e.g. returns which column contains xyz remapping
@@ -209,6 +148,73 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     # finish reading in symmetry information, skip to next
                     #   iteration of outer while-loop
                     continue
+                # read in keywords, store in a dictionary, then if
+                #   `_atom_site_fract_.` or `_atom_site_Cartn_.` it will
+                #   proceed to read in atom coordinate information
+                elseif ! atom_info
+                    atom_column_name = ""
+                    # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
+                    #   use example: name_to_column["_atom_site_fract_x"] gives 3
+                    name_to_column = Dict{AbstractString, Int}()
+
+                    i += 1
+                    loop_starts = i
+                    while length(split(lines[i])) == 1 && split(lines[i])[1][1] == '_'
+                        if i == loop_starts
+                            atom_column_name = split(lines[i])[1]
+                        end
+                        name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
+                        # iterate to next line in file
+                        i += 1
+                    end
+                    
+                    # if the file provides fractional coordinates
+                    fractional = haskey(name_to_column, "_atom_site_fract_x") &&
+                                    haskey(name_to_column, "_atom_site_fract_y") &&
+                                    haskey(name_to_column, "_atom_site_fract_z")
+                    # if the file provides cartesian coordinates
+                    cartesian = haskey(name_to_column, "_atom_site_Cartn_x") &&
+                                    haskey(name_to_column, "_atom_site_Cartn_y") &&
+                                    haskey(name_to_column, "_atom_site_Cartn_z") &&
+                                    ! fractional # if both are provided, will default
+                                                 #  to using fractional, so keep cartesian
+                                                 #  false
+                    if fractional || cartesian
+                        # found the atom_info, so don't need to check for it
+                        #   after reading in the information
+                        atom_info = true
+                        # read in atom_site info and store it in column based on
+                        #   the name_to_column dictionary
+                        while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                            line = split(lines[i])
+
+                            push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
+                            if fractional
+                                coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
+                                        mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
+                                        mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
+                            elseif cartesian
+                                coords_simple = [coords_simple [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
+                                        parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
+                                        parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
+                            else
+                                error("The file does not store atom information in the form '_atom_site_fract_x' or '_atom_site_Cartn_x'")
+                            end
+                            # If charges present, import them
+                            if haskey(name_to_column, "_atom_site_charge")
+                                push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                            else
+                                push!(charges_simple, 0.0)
+                            end
+                            # iterate to next line in file
+                            i += 1
+                        end
+
+                        # finish reading in atom_site information, skip to next
+                        #   iteration of outer while-loop
+                        # prevents skipping a line after finishing reading atoms
+                        continue
+                    end
                 end
             end
 
