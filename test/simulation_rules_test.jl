@@ -7,7 +7,7 @@ using Test
 #   i.e. frameworks musts be in P1 symmetry to be used in GCMC or Henry
 #   coefficient test
 @testset "Simulation Rules Tests" begin
-    non_P1_framework = Framework("ORIVOC.cif", convert_to_p1=false)
+    non_P1_framework = Framework("ORIVOC_clean.cif", convert_to_p1=false)
     molecule = Molecule("CO2")
     ljff = LJForceField("UFF.csv")
     temp = 298.0
