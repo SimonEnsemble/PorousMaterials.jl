@@ -157,6 +157,14 @@ function stepwise_adsorption_isotherm(framework::Framework,
                                       density_grid_dx::Float64=1.0, 
                                       density_grid_species::Union{Nothing, Symbol}=nothing,
                                       filename_comment::AbstractString="")
+
+    # simulation only works if framework is in P1
+    @assert framework.is_p1 @sprintf("The framework %s is not in P1 symmetry.\n
+                                     try running:\n
+                                     \tframework_p1 = apply_symmetry_rules(framework)\n
+                                     and pass `framework_p1` into this simulation",
+                                    framework.name)
+
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
@@ -213,6 +221,14 @@ function adsorption_isotherm(framework::Framework,
                              density_grid_dx::Float64=1.0, 
                              density_grid_species::Union{Nothing, Symbol}=nothing,
                              filename_comment::AbstractString="")
+
+    # simulation only works if framework is in P1
+    @assert framework.is_p1 @sprintf("The framework %s is not in P1 symmetry.\n
+                                     try running:\n
+                                     \tframework_p1 = apply_symmetry_rules(framework)\n
+                                     and pass `framework_p1` into this simulation",
+                                    framework.name)
+
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
                                                       pressure, ljforcefield,
@@ -306,6 +322,13 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
     calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0, 
     density_grid_species::Union{Nothing, Symbol}=nothing, filename_comment::AbstractString="")
+
+    # simulation only works if framework is in P1
+    @assert framework.is_p1 @sprintf("The framework %s is not in P1 symmetry.\n
+                                     try running:\n
+                                     \tframework_p1 = apply_symmetry_rules(framework)\n
+                                     and pass `framework_p1` into this simulation",
+                                    framework.name)
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make
