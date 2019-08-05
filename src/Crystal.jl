@@ -1005,23 +1005,31 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
-# TODO do something about symmetry rules, force to have same
-function Base.:+(f1::Framework, f2::Framework)
-    @assert isapprox(f1.box, f2.box) "Two frameworks need the same Box to allow addition"
-    @assert is_symmetry_equal(f1.symmetry, f2.symmetry) "Symmetry rules are different"
+function Base.:+(frameworks::Framework...; check_overlap=true)
+    new_framework = Framework("", frameworks[1].box,
+                  Atoms(Array{Symbol, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
+                  Charges(Array{Float64, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
+                  frameworks[1].symmetry, frameworks[1].is_p1)
+    for f in frameworks
+        @assert isapprox(new_framework.box, f.box) "All Frameworks need same unit box to be combined"
+        @assert is_symmetry_equal(new_framework.symmetry, f.symmetry) "All Frameworks need the same symmetry to be combined"
 
-    new_atoms = f1.atoms + f2.atoms
-    new_charges = f1.charges + f2.charges
+        new_atoms = new_framework.atoms + f.atoms
+        new_charges = new_framework.charges + f.charges
+        
+        new_framework = Framework(new_framework.name * "_" * f.name, new_framework.box,
+                                 new_atoms, new_charges, new_framework.symmetry,
+                                new_framework.is_p1)
+    end
+    if check_overlap
+        if atom_overlap(new_framework) 
+            @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+        end
 
-    new_framework = Framework(f1.name * "_" * f2.name, f1.box, new_atoms, new_charges, f1.symmetry, f1.is_p1)
-
-    if atom_overlap(new_framework)
-        @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+        if charge_overlap(new_framework)
+            @warn "This new framework has overlapping charges, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+        end
     end
 
-    if charge_overlap(new_framework)
-        @warn "This new framework has overlapping charges, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
-    end
-    
     return new_framework
 end

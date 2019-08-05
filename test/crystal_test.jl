@@ -161,6 +161,12 @@ using Random
     @test isapprox(f1.atoms + f2.atoms, f3.atoms)
     @test isapprox(f1.charges + f2.charges, f3.charges)
 
+    # test infinite framework_addition
+    f4 = +(f1, f2, f3; check_overlap=false)
+    @test isapprox(f3.box, f4.box)
+    @test isapprox(f4.atoms, f1.atoms + f2.atoms + f3.atoms)
+    @test isapprox(f4.charges, f1.charges + f2.charges + f3.charges)
+
     # more xtal tests
     sbmof1 = Framework("SBMOF-1.cif")
     @test !charged(sbmof1)
