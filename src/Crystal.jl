@@ -25,6 +25,8 @@ or construct a `Framework` data structure directly.
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
+- `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
+    P1 symmetry using the symmetry rules
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
@@ -34,6 +36,11 @@ or construct a `Framework` data structure directly.
 - `box::Box`: unit cell (Bravais Lattice)
 - `atoms::Atoms`: list of Atoms in crystal unit cell
 - `charges::Charges`: list of point charges in crystal unit cell
+- `symmetry::Array{Function, 2}`: 2D array of anonymous functions that represent
+    the symmetry operations. If the structure is in P1 there will be one
+    symmetry operation.
+- `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
+    is used before any simulations such as GCMC and Henry Coefficient
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
@@ -119,7 +126,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     end
 
                     @assert haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") "Need column name `_symmetry_equiv_pos_xyz` to parse symmetry information"
-                    
+
                     symmetry_count = 0
                     # CSD stores symmetry as one column in a string that ends
                     #   up getting split on the spaces between commas (i.e. its
@@ -144,7 +151,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     end
 
                     @assert symmetry_count == size(symmetry_rules, 2) "number of symmetry rules must match the count"
-                    
+
                     # finish reading in symmetry information, skip to next
                     #   iteration of outer while-loop
                     continue
@@ -167,7 +174,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         # iterate to next line in file
                         i += 1
                     end
-                    
+
                     # if the file provides fractional coordinates
                     fractional = haskey(name_to_column, "_atom_site_fract_x") &&
                                     haskey(name_to_column, "_atom_site_fract_y") &&
@@ -432,7 +439,7 @@ function write_xyz(framework::Framework, filename::AbstractString;
     write_xyz(atoms, x, filename, comment=comment)
 end
 write_xyz(framework::Framework; comment::AbstractString="", center::Bool=false) = write_xyz(
-    framework, 
+    framework,
     replace(replace(framework.name, ".cif" => ""), ".cssr" => "") * ".xyz",
     comment=comment, center=center)
 
@@ -734,12 +741,16 @@ return the new framework.
 
 # Arguments
 - `f::Framework`: The framework to be converted to P1 symmetry
+- `check_charge_neutrality::Bool`: check for charge neutrality
+- `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
+- `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
+- `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
 
 # Returns
 - `P1_framework::Framework`: The framework after it has been converted to P1
     symmetry. The new symmetry rules will be the P1 symemtry rules
 """
-function apply_symmetry_rules(f::Framework; check_charge_neutrality::Bool=true,
+function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Bool=true,
                               net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
                               remove_overlap::Bool=false)
     new_atom_xfs = Array{Float64, 2}(undef, 3, 0)
@@ -748,53 +759,57 @@ function apply_symmetry_rules(f::Framework; check_charge_neutrality::Bool=true,
     new_charge_qs = Array{Float64, 1}(undef, 0)
 
     # for each symmetry rule
-    for i in 1:size(f.symmetry, 2)
+    for i in 1:size(framework.symmetry, 2)
         # loop over all atoms in lower level symemtry
-        for j in 1:size(f.atoms.xf, 2)
+        for j in 1:size(framework.atoms.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            new_atom_xfs = [new_atom_xfs [Base.invokelatest.(f.symmetry[k, i], f.atoms.xf[:, j]...) for k in 1:3]]
+            new_atom_xfs = [new_atom_xfs [Base.invokelatest.(
+                framework.symmetry[k, i], framework.atoms.xf[:, j]...) for k in 1:3]]
         end
         # loop over all charges in lower level symmetry
-        for j in 1:size(f.charges.xf, 2)
+        for j in 1:size(framework.charges.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            new_charge_xfs = [new_charge_xfs [Base.invokelatest.(f.symmetry[k, i], f.charges.xf[:, j]...) for k in 1:3]]
+            new_charge_xfs = [new_charge_xfs [Base.invokelatest.(
+                framework.symmetry[k, i], framework.charges.xf[:, j]...) for k in 1:3]]
         end
         # repeat charge_qs and atom_species for every symmetry applied
-        new_atom_species = [new_atom_species; f.atoms.species]
-        new_charge_qs = [new_charge_qs; f.charges.q]
+        new_atom_species = [new_atom_species; framework.atoms.species]
+        new_charge_qs = [new_charge_qs; framework.charges.q]
     end
 
     new_symmetry_rules = [Array{Float64, 2}(undef, 3, 0) [(x, y, z) -> x,
                                                           (x, y, z) -> y,
                                                           (x, y, z) -> z]]
 
-    new_f = Framework(f.name, f.box, Atoms(new_atom_species, new_atom_xfs), Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules, true)
+    new_framework = Framework(framework.name, framework.box,
+        Atoms(new_atom_species, new_atom_xfs),
+        Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules, true)
 
     if check_charge_neutrality
-        if ! charge_neutral(new_f, net_charge_tol)
+        if ! charge_neutral(new_framework, net_charge_tol)
             error(@sprintf("Framework %s is not charge neutral; net charge is %f e. Ignore
             this error message by passing check_charge_neutrality=false or increasing the
             net charge tolerance `net_charge_tol`\n",
-                            new_f.name, total_charge(new_f)))
+                            new_framework.name, total_charge(new_framework)))
         end
     end
 
     if remove_overlap
-        return remove_overlapping_atoms_and_charges(new_f)
+        return remove_overlapping_atoms_and_charges(new_framework)
     end
 
     if check_atom_and_charge_overlap
-        if atom_overlap(new_f) | charge_overlap(new_f)
+        if atom_overlap(new_framework) | charge_overlap(new_framework)
             error(@sprintf("At least one pair of atoms/charges overlap in %s.
-            Consider passing `remove_overlap=true`\n", new_f.name))
+            Consider passing `remove_overlap=true`\n", new_framework.name))
         end
     end
 
-    return new_f
+    return new_framework
 end
 
 """
-    symmetry_equal = is_symmetry_equal(sym1, sym2)
+    symmetry_equal = is_symmetry_equal(framework1.symmetry, framework2.symmetry)
 
 Returns true if both symmetry rules can create the same set from the same set
 of coordinates. Returns false if they don't contain the same number of rules or
@@ -891,8 +906,8 @@ function write_cif(framework::Framework, filename::AbstractString)
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
-        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i], 
-                framework.atoms.xf[1, i], framework.atoms.xf[2, i], 
+        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i],
+                framework.atoms.xf[1, i], framework.atoms.xf[2, i],
                 framework.atoms.xf[3, i], q)
      end
      close(cif_file)
@@ -1016,13 +1031,13 @@ function Base.:+(frameworks::Framework...; check_overlap=true)
 
         new_atoms = new_framework.atoms + f.atoms
         new_charges = new_framework.charges + f.charges
-        
+
         new_framework = Framework(new_framework.name * "_" * f.name, new_framework.box,
                                  new_atoms, new_charges, new_framework.symmetry,
                                 new_framework.is_p1)
     end
     if check_overlap
-        if atom_overlap(new_framework) 
+        if atom_overlap(new_framework)
             @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
         end
 
