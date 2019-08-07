@@ -1026,8 +1026,8 @@ function Base.:+(frameworks::Framework...; check_overlap=true)
                   Charges(Array{Float64, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
                   frameworks[1].symmetry, frameworks[1].is_p1)
     for f in frameworks
-        @assert isapprox(new_framework.box, f.box) "All Frameworks need same unit box to be combined"
-        @assert is_symmetry_equal(new_framework.symmetry, f.symmetry) "All Frameworks need the same symmetry to be combined"
+        @assert isapprox(new_framework.box, f.box) @sprintf("Framework %s has a different box\n", f.name)
+        @assert is_symmetry_equal(new_framework.symmetry, f.symmetry) @sprintf("Framework %s has different symmetry rules\n", f.name)
 
         new_atoms = new_framework.atoms + f.atoms
         new_charges = new_framework.charges + f.charges
