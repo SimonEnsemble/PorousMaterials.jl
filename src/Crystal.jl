@@ -864,7 +864,7 @@ end
 Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does
 not include the .cif extension, it will automatically be added.
 """
-function write_cif(framework::Framework, filename::AbstractString)
+function write_cif(framework::Framework, filename::AbstractString; fractional::Bool=true)
     if charged(framework) && (framework.atoms.n_atoms != framework.charges.n_charges)
         error("write_cif assumes equal numbers of Charges and Atoms (or zero charges)")
     end
@@ -895,7 +895,11 @@ function write_cif(framework::Framework, filename::AbstractString)
     @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n 'x, y, z'\n\n")
 
     @printf(cif_file, "loop_\n_atom_site_label\n")
-    @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
+    if fractional
+        @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
+    else
+        @printf(cif_file, "_atom_site_Cartn_x\n_atom_site_Cartn_y\n_atom_site_Cartn_z\n")
+    end
     @printf(cif_file, "_atom_site_charge\n")
 
     for i = 1:framework.atoms.n_atoms
@@ -906,9 +910,14 @@ function write_cif(framework::Framework, filename::AbstractString)
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
-        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i],
-                framework.atoms.xf[1, i], framework.atoms.xf[2, i],
-                framework.atoms.xf[3, i], q)
+        if fractional
+            @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i],
+                    framework.atoms.xf[:, i]..., q)
+        else
+            
+            @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i],
+                    (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
+        end
      end
      close(cif_file)
 end

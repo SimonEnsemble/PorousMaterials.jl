@@ -31,7 +31,10 @@ using Random
     # test .cif writer; write, read in, assert equal
     write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2.cif"))
     framework_rewritten = Framework("rewritten_test_structure2.cif")
+    write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2_cartn.cif"); fractional=false)
+    framework_rewritten_cartn = Framework("rewritten_test_structure2_cartn.cif")
     @test isapprox(framework, framework_rewritten)
+    @test isapprox(framework, framework_rewritten_cartn)
 
     # test .cif reader for non-P1 symmetry
     #   no atoms should overlap
