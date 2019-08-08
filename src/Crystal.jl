@@ -100,7 +100,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 # use anonymous function to combine all terms past the first
                 #   to extract space group name
                 space_group = reduce((x, y) -> x * " " * y, line[2:end])
-                space_group = split(space_group, ''', keepempty=false)[1]
+                space_group = split(space_group, [''', '"'], keepempty=false)[1]
                 if space_group == "P1" || space_group == "P 1" ||
                         space_group == "-P1"
                     # simplify by only having one P1 space_group name
