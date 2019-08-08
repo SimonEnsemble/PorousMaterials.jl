@@ -6,7 +6,8 @@ struct Framework
     box::Box
     atoms::Atoms
     charges::Charges
-    symmetry::Array{Function, 2}
+    symmetry::Array{AbstractString, 2}
+    space_group::AbstractString
     is_p1::Bool
 end
 
@@ -14,7 +15,7 @@ end
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
                           remove_overlap=false)
-    framework = Framework(name, box, atoms, charges)
+    framework = Framework(name, box, atoms, charges, symmetry, space_group, is_p1)
 
 Read a crystal structure file (.cif or .cssr) and populate a `Framework` data structure,
 or construct a `Framework` data structure directly.
@@ -65,13 +66,14 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     coords = Array{Float64, 2}(undef, 3, 0)
     # default for symmetry rules is P1.
     # These will be overwritten if the user chooses to read in non-P1
-    symmetry_rules = Array{Function, 2}(undef, 3, 0)
+    symmetry_rules = Array{AbstractString, 2}(undef, 3, 0)
     # used for remembering whether fractional/cartesian coordinates are read in
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
     cartesian = false
     # used for determining if the framework is in P1 symmetry for simulations
     p1_symmetry = false
+    space_group = ""
 
 
     # Start of .cif reader
@@ -94,15 +96,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             end
 
             # Make sure the space group is P1
-            if line[1] == "_symmetry_space_group_name_H-M" || line[1] == "_space_group_name_H-M_alt"
-                if length(line) == 3
-                    p1_symmetry = (occursin("P1", line[2] * line[3]) ||
-                            occursin("P 1", line[2] * line[3]) ||
-                            occursin("-P1", line[2] * line[3]))
-                elseif length(line) == 2
-                    p1_symmetry = (occursin("P1", line[2]) ||
-                            occursin("P 1", line[2]) ||
-                            occursin("-P1", line[2]))
+            if line[1] == "_symmetry_space_group_name_H-M"
+                # use anonymous function to combine all terms past the first
+                #   to extract space group name
+                space_group = reduce((x, y) -> x * " " * y, line[2:end])
+                space_group = split(space_group, ''', keepempty=false)[1]
+                @printf("Framework %s has %s space group\n", filename, space_group)
+                if space_group == "P1" || space_group == "P 1" ||
+                        space_group == "-P1"
+                    # simplify by only having one P1 space_group name
+                    space_group = "P1"
+                    p1_symmetry = true
                 end
             end
 
@@ -138,11 +142,12 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', '''], keepempty=false)
 
-                        new_sym_rule = Array{Function, 1}(undef, 3)
+                        # store as strings so it can be written out later
+                        new_sym_rule = Array{AbstractString, 1}(undef, 3)
 
                         sym_start = name_to_column["_symmetry_equiv_pos_as_xyz"] - 1
                         for j = 1:3
-                            new_sym_rule[j] = eval(Meta.parse("(x, y, z) -> " * sym_funcs[j + sym_start]))
+                            new_sym_rule[j] = sym_funcs[j + sym_start]
                         end
 
                         symmetry_rules = [symmetry_rules new_sym_rule]
@@ -276,7 +281,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 new_col = Array{Float64, 1}(undef, 0)
                 # loop over all atom positions from lower level symmetry
                 for j in 1:size(coords_simple, 2)
-                    coords = [coords [Base.invokelatest(symmetry_rules[k, i], coords_simple[:, j]...) for k in 1:3]]
+                    coords = [coords [Base.invokelatest(eval(Meta.parse("(x, y, z) -> " * symmetry_rules[k, i])), coords_simple[:, j]...) for k in 1:3]]
                 end
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
@@ -289,9 +294,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
         # either read in P1 or converted to P1 so should have same symmetry rules
         if p1_symmetry || convert_to_p1
-            symmetry_rules = [Array{Function, 2}(undef, 3, 0) [(x, y, z) -> x,
-                                                               (x, y, z) -> y,
-                                                               (x, y, z) -> z]]
+            symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]]
         end
 
         # if structure was stored in P1 or converted to P1, store that information for later
@@ -330,10 +333,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
 
         # add P1 symmetry rules for consistency
-        symmetry_rules = [symmetry_rules [(x, y, z) -> x,
-                                          (x, y, z) -> y,
-                                          (x, y, z) -> z]]
+        symmetry_rules = [symmetry_rules ["x", "y", "z"]]
         p1_symmetry = true
+        space_group = "P1"
     end
 
     # Construct the unit cell box
@@ -344,7 +346,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     idx_nz = charge_values .!= 0.0
     charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
-    framework = Framework(filename, box, atoms, charges, symmetry_rules, p1_symmetry)
+    framework = Framework(filename, box, atoms, charges, symmetry_rules, space_group, p1_symmetry)
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
@@ -418,7 +420,7 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
 
     @assert (new_charges.n_charges == framework.charges.n_charges * prod(repfactors))
     @assert (new_atoms.n_atoms == framework.atoms.n_atoms * prod(repfactors))
-    return Framework(framework.name, new_box, new_atoms, new_charges, deepcopy(framework.symmetry), framework.is_p1)
+    return Framework(framework.name, new_box, new_atoms, new_charges, deepcopy(framework.symmetry), framework.space_group, framework.is_p1)
 end
 
 # doc string in Misc.jl
@@ -593,7 +595,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     atoms = Atoms(framework.atoms.species[atoms_to_keep], atom_coords_to_keep)
     charges = Charges(framework.charges.q[charges_to_keep], charge_coords_to_keep)
 
-    new_framework = Framework(framework.name, framework.box, atoms, charges, deepcopy(framework.symmetry), framework.is_p1)
+    new_framework = Framework(framework.name, framework.box, atoms, charges, deepcopy(framework.symmetry), framework.space_group, framework.is_p1)
 
     @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
     @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
@@ -734,7 +736,7 @@ function crystal_density(framework::Framework)
 end
 
 """
-    simulation_ready_framework = apply_symemtry_rules(non_p1_framework)
+    simulation_ready_framework = apply_symmetry_rules(non_p1_framework)
 
 Convert a framework to P1 symmetry based on internal symmetry rules. This will
 return the new framework.
@@ -764,26 +766,26 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
         for j in 1:size(framework.atoms.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
             new_atom_xfs = [new_atom_xfs [Base.invokelatest.(
-                framework.symmetry[k, i], framework.atoms.xf[:, j]...) for k in 1:3]]
+                        eval(Meta.parse("(x, y, z) -> " * framework.symmetry[k, i])),
+                        framework.atoms.xf[:, j]...) for k in 1:3]]
         end
         # loop over all charges in lower level symmetry
         for j in 1:size(framework.charges.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
             new_charge_xfs = [new_charge_xfs [Base.invokelatest.(
-                framework.symmetry[k, i], framework.charges.xf[:, j]...) for k in 1:3]]
+                        eval(Meta.parse("(x, y, z) -> " * framework.symmetry[k, i])),
+                        framework.charges.xf[:, j]...) for k in 1:3]]
         end
         # repeat charge_qs and atom_species for every symmetry applied
         new_atom_species = [new_atom_species; framework.atoms.species]
         new_charge_qs = [new_charge_qs; framework.charges.q]
     end
 
-    new_symmetry_rules = [Array{Float64, 2}(undef, 3, 0) [(x, y, z) -> x,
-                                                          (x, y, z) -> y,
-                                                          (x, y, z) -> z]]
+    new_symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]]
 
     new_framework = Framework(framework.name, framework.box,
         Atoms(new_atom_species, new_atom_xfs),
-        Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules, true)
+        Charges(new_charge_qs, new_charge_xfs), new_symmetry_rules, "P1", true)
 
     if check_charge_neutrality
         if ! charge_neutral(new_framework, net_charge_tol)
@@ -816,16 +818,16 @@ of coordinates. Returns false if they don't contain the same number of rules or
 if they create different sets of points.
 
 # Arguments
-- `sym1::Array{Function, 2}`: Array of anonymous functions that represent
+- `sym1::Array{AbstractString, 2}`: Array of strings that represent
     symmetry operations
-- `sym2::Array{Function, 2}`: Array of anonymous functions that represent
+- `sym2::Array{AbstractString, 2}`: Array of strings that represent
     symmetry operations
 
 # Returns
 - `is_equal::Bool`: True if they are the same set of symmetry rules
     False if they are different
 """
-function is_symmetry_equal(sym1::Array{Function, 2}, sym2::Array{Function, 2})
+function is_symmetry_equal(sym1::Array{AbstractString, 2}, sym2::Array{AbstractString, 2})
     # need same number of symmetry operations
     if size(sym1, 2) != size(sym2, 2)
         return false
@@ -842,11 +844,13 @@ function is_symmetry_equal(sym1::Array{Function, 2}, sym2::Array{Function, 2})
     for i in 1:size(test_array, 2)
         # loop over f1 symmetry rules
         for j in 1:size(sym1, 2)
-            sym1_applied_to_test = [sym1_applied_to_test [Base.invokelatest.(sym1[k, j], test_array[:, i]...) for k in 1:3]]
+            sym1_applied_to_test = [sym1_applied_to_test [Base.invokelatest.(
+                eval(Meta.parse("(x, y, z) -> " * sym1[k, j])), test_array[:, i]...) for k in 1:3]]
         end
         # loop over f2 symmetry rules
         for j in 1:size(sym2, 2)
-            sym2_applied_to_test = [sym2_applied_to_test [Base.invokelatest.(sym2[k, j], test_array[:, i]...) for k in 1:3]]
+            sym2_applied_to_test = [sym2_applied_to_test [Base.invokelatest.(
+                eval(Meta.parse("(x, y, z) -> " * sym2[k, j])), test_array[:, i]...) for k in 1:3]]
         end
     end
 
@@ -881,7 +885,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         @printf(cif_file, "data_%s_PM\n", split(framework.name, ".")[1])
     end
 
-    @printf(cif_file, "_symmetry_space_group_name_H-M   'P 1'\n")
+    @printf(cif_file, "_symmetry_space_group_name_H-M   '%s'\n", framework.space_group)
 
     @printf(cif_file, "_cell_length_a %f\n", framework.box.a)
     @printf(cif_file, "_cell_length_b %f\n", framework.box.b)
@@ -892,7 +896,11 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
     @printf(cif_file, "_cell_angle_gamma %f\n", framework.box.γ * 180.0 / pi)
 
     @printf(cif_file, "_symmetry_Int_Tables_number 1\n\n")
-    @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n 'x, y, z'\n\n")
+    @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n")
+    for i in 1:size(framework.symmetry, 2)
+        @printf(cif_file, "'%s,%s,%s'\n", framework.symmetry[:, i]...)
+    end
+    @printf(cif_file, "\n")
 
     @printf(cif_file, "loop_\n_atom_site_label\n")
     if fractional
@@ -990,7 +998,7 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     charges = Charges(charge_vals, charge_coords)
 
     # construct new framework
-    new_framework = Framework(framework.name, framework.box, framework.atoms, charges, deepcopy(framework.symmetry), framework.is_p1)
+    new_framework = Framework(framework.name, framework.box, framework.atoms, charges, deepcopy(framework.symmetry), framework.space_group, framework.is_p1)
 
     # check for charge neutrality
     if abs(total_charge(new_framework)) > net_charge_tol
@@ -1033,17 +1041,18 @@ function Base.:+(frameworks::Framework...; check_overlap=true)
     new_framework = Framework("", frameworks[1].box,
                   Atoms(Array{Symbol, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
                   Charges(Array{Float64, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
-                  frameworks[1].symmetry, frameworks[1].is_p1)
+                  frameworks[1].symmetry, frameworks[1].space_group, frameworks[1].is_p1)
     for f in frameworks
         @assert isapprox(new_framework.box, f.box) @sprintf("Framework %s has a different box\n", f.name)
         @assert is_symmetry_equal(new_framework.symmetry, f.symmetry) @sprintf("Framework %s has different symmetry rules\n", f.name)
+        @assert new_framework.space_group == f.space_group
 
         new_atoms = new_framework.atoms + f.atoms
         new_charges = new_framework.charges + f.charges
 
         new_framework = Framework(new_framework.name * "_" * f.name, new_framework.box,
                                  new_atoms, new_charges, new_framework.symmetry,
-                                new_framework.is_p1)
+                                 new_framework.space_group, new_framework.is_p1)
     end
     if check_overlap
         if atom_overlap(new_framework)

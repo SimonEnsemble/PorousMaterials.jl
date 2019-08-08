@@ -29,6 +29,7 @@ using Random
     @test isapprox(framework.atoms, framework2.atoms) && isapprox(framework.charges, framework2.charges)
 
     # test .cif writer; write, read in, assert equal
+    #   more write_cif tests below with symmetry tests
     write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2.cif"))
     framework_rewritten = Framework("rewritten_test_structure2.cif")
     write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2_cartn.cif"); fractional=false)
@@ -78,6 +79,16 @@ using Random
     @test ! non_P1_framework_symmetry.is_p1
     @test ! non_P1_cartesian_symmetry.is_p1
 
+    # test write_cif in non_p1 symmetry
+    write_cif(non_P1_framework_symmetry, joinpath("data", "crystals", "rewritten_ORIVOC_clean_fract.cif"))
+    # keep this in cartesian to test both
+    write_cif(non_P1_cartesian_symmetry, joinpath("data", "crystals", "rewritten_ORIVOC_clean.cif"), fractional=false)
+    rewritten_non_p1_fractional = Framework("rewritten_ORIVOC_clean_fract.cif"; convert_to_p1=false)
+    rewritten_non_p1_cartesian = Framework("rewritten_ORIVOC_clean.cif"; convert_to_p1=false)
+
+    @test isapprox(rewritten_non_p1_fractional, non_P1_framework_symmetry)
+    @test isapprox(rewritten_non_p1_cartesian, non_P1_cartesian_symmetry)
+
     non_P1_framework_symmetry = apply_symmetry_rules(non_P1_framework_symmetry, remove_overlap=true)
     non_P1_cartesian_symmetry = apply_symmetry_rules(non_P1_cartesian_symmetry, remove_overlap=true)
 
@@ -117,15 +128,11 @@ using Random
 
     # test symmetry_rules
     # define default symmetry_rules
-    symmetry_rules = [Array{Function, 2}(undef, 3, 0) [(x, y, z) -> x,
-                                                       (x, y, z) -> y,
-                                                       (x, y, z) -> z]]
-    other_symmetry_rules = [Array{Function, 2}(undef, 3, 0) [(x, y, z) -> y + z,
-                                                             (x, y, z) -> x + z,
-                                                             (x, y, z) -> x + y]]
-    symmetry_rules_two = [(x, y, z) -> x (x, y, z) -> y + z;
-                          (x, y, z) -> y (x, y, z) -> x + z;
-                          (x, y, z) -> z (x, y, z) -> x + y]
+    symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]]
+    other_symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["y + z", "x + z", "x + y"]]
+    symmetry_rules_two = [Array{AbstractString, 2}(undef, 3, 0) ["x" "y + z";
+                                                                 "y" "x + z";
+                                                                 "z" "x + y"]]
     symmetry_rules_two_cpy = deepcopy(symmetry_rules_two)
     @test ! is_symmetry_equal(symmetry_rules, symmetry_rules_two)
     @test ! is_symmetry_equal(symmetry_rules, other_symmetry_rules)
@@ -144,7 +151,7 @@ using Random
                                                        2.0 5.0;
                                                        3.0 6.0]),
                                               deepcopy(symmetry_rules),
-                                              true)
+                                              "P1", true)
     f2 = Framework("framework 2", UnitCube(), Atoms(
                                                     [:c, :d],
                                                     [7.0 10.0;
@@ -156,7 +163,7 @@ using Random
                                                        8.0 11.0;
                                                        9.0 12.0]),
                                               deepcopy(symmetry_rules),
-                                              true)
+                                              "P1", true)
     f3 = f1 + f2
     @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
     @test isapprox(f1.box, f3.box)

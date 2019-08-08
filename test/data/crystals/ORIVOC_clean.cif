@@ -7,7 +7,7 @@ _cell_length_c 6.65197
 _cell_angle_alpha 90
 _cell_angle_beta 90
 _cell_angle_gamma 120
-_space_group_name_H-M_alt 'R -3'
+_symmetry_space_group_name_H-M 'R -3'
 _space_group_name_Hall '-R 3'
 loop_
     _symmetry_equiv_pos_as_xyz
