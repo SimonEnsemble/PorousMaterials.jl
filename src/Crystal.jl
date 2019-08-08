@@ -101,7 +101,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 #   to extract space group name
                 space_group = reduce((x, y) -> x * " " * y, line[2:end])
                 space_group = split(space_group, ''', keepempty=false)[1]
-                @printf("Framework %s has %s space group\n", filename, space_group)
                 if space_group == "P1" || space_group == "P 1" ||
                         space_group == "-P1"
                     # simplify by only having one P1 space_group name
@@ -1016,6 +1015,11 @@ function Base.show(io::IO, framework::Framework)
 	@printf(io, "Number of atoms = %d\n", framework.atoms.n_atoms)
 	@printf(io, "Number of charges = %d\n", framework.charges.n_charges)
     println(io, "Chemical formula: ", chemical_formula(framework))
+    @printf(io, "Space Group: %s\n", framework.space_group)
+    @printf(io, "Symmetry Operations:\n")
+    for i in 1:size(framework.symmetry, 2)
+        @printf(io, "\t'%s, %s, %s'\n", framework.symmetry[:, i]...)
+    end
 end
 
 # TODO add something comparing symmetry rules
