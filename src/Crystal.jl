@@ -1041,12 +1041,12 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
-function Base.:+(frameworks::Framework...; check_overlap=true)
-    new_framework = Framework("", frameworks[1].box,
-                  Atoms(Array{Symbol, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
-                  Charges(Array{Float64, 1}(undef, 0), Array{Float64, 2}(undef, 3, 0)),
-                  frameworks[1].symmetry, frameworks[1].space_group, frameworks[1].is_p1)
-    for f in frameworks
+function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
+    new_framework = deepcopy(frameworks[1])
+    for (i, f) in enumerate(frameworks)
+        if i == 1
+            continue
+        end
         @assert isapprox(new_framework.box, f.box) @sprintf("Framework %s has a different box\n", f.name)
         @assert is_symmetry_equal(new_framework.symmetry, f.symmetry) @sprintf("Framework %s has different symmetry rules\n", f.name)
         @assert new_framework.space_group == f.space_group
@@ -1054,8 +1054,8 @@ function Base.:+(frameworks::Framework...; check_overlap=true)
         new_atoms = new_framework.atoms + f.atoms
         new_charges = new_framework.charges + f.charges
 
-        new_framework = Framework(new_framework.name * "_" * f.name, new_framework.box,
-                                 new_atoms, new_charges, new_framework.symmetry,
+        new_framework = Framework(split(new_framework.name, ".")[1] * "_" * split(f.name, ".")[1],
+                                 new_framework.box, new_atoms, new_charges, new_framework.symmetry,
                                  new_framework.space_group, new_framework.is_p1)
     end
     if check_overlap
