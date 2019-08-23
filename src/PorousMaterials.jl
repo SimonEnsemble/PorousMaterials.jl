@@ -113,7 +113,7 @@ export
     Framework, read_crystal_structure_file, remove_overlapping_atoms_and_charges,
     strip_numbers_from_atom_labels!, chemical_formula, molecular_weight, crystal_density,
     construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges,
-    is_symmetry_equal, apply_symmetry_rules, 
+    is_symmetry_equal, apply_symmetry_rules, assert_P1_symmetry,
 
     # Molecules.jl
     Molecule, n_atoms, set_fractional_coords!, translate_by!, outside_box,

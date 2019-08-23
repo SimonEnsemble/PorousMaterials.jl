@@ -862,6 +862,21 @@ function is_symmetry_equal(sym1::Array{AbstractString, 2}, sym2::Array{AbstractS
 end
 
 """
+    assert_P1_symmetry(framework_to_be_tested)
+
+Used for making sure that a framework is in P1 symmetry before running
+simulations on it. If the structure is not in P1, this will throw an
+AssertionError.
+"""
+function assert_P1_symmetry(framework::Framework)
+    @assert framework.is_p1 @sprintf("The framework %s is not in P1 symmetry.\n
+                                     try running:\n
+                                     \tframework_p1 = apply_symmetry_rules(framework)\n
+                                     and pass `framework_p1` into this simulation",
+                                    framework.name)
+end
+
+"""
     write_cif(framework, filename)
 
 Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does
