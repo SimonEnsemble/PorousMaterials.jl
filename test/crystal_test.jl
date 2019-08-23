@@ -55,11 +55,11 @@ using Random
     P1_framework.atoms.xf .= mod.(P1_framework.atoms.xf, 1.0)
     P1_framework.charges.xf .= mod.(P1_framework.charges.xf, 1.0)
 
-    @test isapprox(non_P1_framework, P1_framework) 
+    @test isapprox(non_P1_framework, P1_framework; atol=1e-2) 
     # test that fractional and cartesian produce same results
-    @test isapprox(non_P1_framework, non_P1_cartesian)
+    @test isapprox(non_P1_framework, non_P1_cartesian; atol=1e-2)
     # test that cartesian and P1 produce same results
-    @test isapprox(non_P1_cartesian, P1_framework)
+    @test isapprox(non_P1_cartesian, P1_framework; atol=1e-2)
     # test that incorrect file formats throw proper errors
     @test_throws ErrorException Framework("non_P1_no_symmetry.cif")
     # test that a file with no atoms throws error
