@@ -47,6 +47,8 @@ function it is assumed it is in P1 symmetry.
 - `symmetry::Array{Function, 2}`: 2D array of anonymous functions that represent
     the symmetry operations. If the structure is in P1 there will be one
     symmetry operation.
+- `space_group::AbstractString`: The name of the space group. This is stored
+    so that it can be written out again in the write_cif function
 - `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
     is used before any simulations such as GCMC and Henry Coefficient
 """
@@ -884,7 +886,7 @@ function assert_P1_symmetry(framework::Framework)
 end
 
 """
-    write_cif(framework, filename)
+    write_cif(framework, filename; fractional=true)
 
 Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does
 not include the .cif extension, it will automatically be added.
