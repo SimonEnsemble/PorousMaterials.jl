@@ -11,14 +11,21 @@ struct Framework
     is_p1::Bool
 end
 
+Framework(name::String, box::Box, atoms::Atoms, Charges::Charges) = Framework(
+    name, box, atoms, charges, [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]], "P1", true)
+
 """
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
                           remove_overlap=false)
     framework = Framework(name, box, atoms, charges, symmetry, space_group, is_p1)
+    framework = Framework(name, box, atoms, charges)
 
 Read a crystal structure file (.cif or .cssr) and populate a `Framework` data structure,
 or construct a `Framework` data structure directly.
+
+If the framework is constructed using the `Framework(name, box, atoms, charges)`
+function it is assumed it is in P1 symmetry.
 
 # Arguments
 - `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `joinpath(PorousMaterials.PATH_TO_DATA, "structures")`.
