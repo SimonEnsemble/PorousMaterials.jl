@@ -6,19 +6,36 @@ struct Framework
     box::Box
     atoms::Atoms
     charges::Charges
+    bonds::SimpleGraph
     symmetry::Array{AbstractString, 2}
     space_group::AbstractString
     is_p1::Bool
 end
 
 Framework(name::String, box::Box, atoms::Atoms, Charges::Charges) = Framework(
-    name, box, atoms, charges, [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]], "P1", true)
+    name, box, atoms, charges, SimpleGraph(atoms.n_atoms),
+    [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]], "P1", true)
+
+# struct for holding bonding information
+"""
+    bonding_rule = BondingRule(:Ca, :O, 0.4, 2.0)
+    bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                     BondingRule(:*, :*, 0.4, 1.9)]
+
+A rule for determining if two atoms within a framework are bonded. 
+"""
+struct BondingRule
+    species_i::Symbol
+    species_j::Symbol
+    min_dist::Float64
+    max_dist::Float64
+end
 
 """
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
                           remove_overlap=false)
-    framework = Framework(name, box, atoms, charges, symmetry, space_group, is_p1)
+    framework = Framework(name, box, atoms, charges, bonds, symmetry, space_group, is_p1)
     framework = Framework(name, box, atoms, charges)
 
 Read a crystal structure file (.cif or .cssr) and populate a `Framework` data structure,
@@ -35,6 +52,8 @@ function it is assumed it is in P1 symmetry.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
 - `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
     P1 symmetry using the symmetry rules
+- `read_bonds_from_file::Bool`: Whether or not to read bonding information from
+    cif file. If false, the bonds can be inferred later
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
@@ -44,6 +63,8 @@ function it is assumed it is in P1 symmetry.
 - `box::Box`: unit cell (Bravais Lattice)
 - `atoms::Atoms`: list of Atoms in crystal unit cell
 - `charges::Charges`: list of point charges in crystal unit cell
+- `bonds::SimpleGraph`: Unweighted, undirected graph showing all of the atoms
+    that are bonded within the framework
 - `symmetry::Array{Function, 2}`: 2D array of anonymous functions that represent
     the symmetry operations. If the structure is in P1 there will be one
     symmetry operation.
@@ -54,7 +75,8 @@ function it is assumed it is in P1 symmetry.
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
-                   remove_overlap::Bool=false, convert_to_p1::Bool=true)
+                   remove_overlap::Bool=false, convert_to_p1::Bool=true,
+                   read_bonds_from_file::Bool=true)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -395,6 +417,7 @@ construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the 
 - `replicated_frame::Framework`: Replicated framework
 """
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
+    @assert ne(framework.bonds) == 0 @sprintf("The framework %s has bonds within it. Remove the bonds to replicate, and then use `infer_bonds(framework)` to recalculate bond information", framework.name)
     # determine number of atoms in replicated framework
     n_atoms = size(framework.atoms.xf, 2) * repfactors[1] * repfactors[2] * repfactors[3]
 
@@ -883,6 +906,39 @@ function assert_P1_symmetry(framework::Framework)
                                      \tframework_p1 = apply_symmetry_rules(framework)\n
                                      and pass `framework_p1` into this simulation",
                                     framework.name)
+end
+
+"""
+    infer_bonds!(framework, bonding_rules)
+
+Populate the bonds in the framework object based on the bonding rules. If a
+pair doesn't have a suitable rule then they will not be considered bonded. 
+
+`:*` is considered a wildcard and can be substituted for any species. It is a
+good idea to include a bonding rule between two `:*` to allow any atoms to bond
+as long as they are close enough.
+"""
+function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1})
+    @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them before inferring new ones.", framework.name)
+
+    # loop over every atom
+    for i in 1:framework.n_atoms
+        # loop over every unique pair of atoms
+        for j in i+1:framework.n_atoms
+            # loop over possible bonding rules
+            for br in bonding_rules
+                # determine if the types are correct
+                if (framework.atoms.species[i] == bf.species_i && framework.atoms.species[j] == br.species_j) ||
+                    (framework.atoms.species[j] == bf.species_i && framework.atoms.species[i] == br.species_j)
+                    # determine if they are within range
+                    dist = norm(framework.atoms.xf[:, i] - framework.atoms.xf[:, j])
+                    if br.min_dist < dist && dist < br.max_dist
+                        add_edge!(framework.bonds, i, j)
+                    end
+                end
+            end
+        end
+    end
 end
 
 """
