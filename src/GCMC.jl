@@ -260,6 +260,9 @@ end
                                          load_checkpoint_file=false,
                                          show_progress_bar=false, checkpoint=Dict(),
                                          write_checkpoints=false, checkpoint_frequency=100,
+                                         write_adsorbate_snapshots=false,
+                                         snapshot_frequency=1, calculate_density_grid=false,
+                                         density_grid_dx=1.0, density_grid_species=nothing,
                                          filename_comment="")
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
