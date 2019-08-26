@@ -129,6 +129,9 @@ end
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
                                   load_checkpoint_file=false, checkpoint=Dict(),
                                   write_checkpoints=false, checkpoint_frequency=50,
+                                  write_adsorbate_snapshots=false,
+                                  snapshot_frequency=1, calculate_density_grid=false,
+                                  density_grid_dx=1.0, density_grid_species=nothing,
                                   filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
@@ -193,6 +196,9 @@ end
                                   verbose=true, ewald_precision=1e-6, eos=:ideal, 
                                   load_checkpoint_file=false, checkpoint=Dict(), 
                                   write_checkpoints=false, checkpoint_frequency=50,
+                                  write_adsorbate_snapshots=false,
+                                  snapshot_frequency=1, calculate_density_grid=false,
+                                  density_grid_dx=1.0, density_grid_species=nothing,
                                   filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
