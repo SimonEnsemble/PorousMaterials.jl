@@ -25,7 +25,23 @@ Chemical formula: Dict(:H=>8,:S=>1,:Ca=>1,:O=>6,:C=>14)
 If the file is not in P1 symmetry, it will be converted within the framework reader and this message will be displayed.
 
 ```julia
-"Name_of_file.cif is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl."
+┌ Warning: Name_of_file.cif is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.
+└ @ PorousMaterials ~/osu_undergrad/simon_ensemble/PorousMaterials.jl/src/Crystal.jl:284
+```
+
+PorousMaterials also gives the option to read in structures in the lower level
+symmetries and convert them to P1 before simulation.
+
+```julia
+framework = Framework("ORIVOC_clean.cif"; remove_overlap=true, convert_to_p1=false)
+# the remove_overlap argument is specific to this structure, not all frameworks need it
+
+###
+    Perform any operation on the structure while it is not in P1
+###
+
+framework = apply_symmetry_rules(framework)
+# the framework is now in P1 and it can be used in simulations
 ```
 
 
@@ -123,8 +139,10 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
     crystal_density
     replicate(::Framework, ::Tuple{Int, Int, Int})
     charged(::Framework; ::Bool)
-    write_cif
     assign_charges
+    apply_symmetry_rules
+    is_symmetry_equal
+    write_cif
 ```
 
 ## Grids
