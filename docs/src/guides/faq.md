@@ -15,8 +15,9 @@ Yes! See [here](https://github.com/JuliaLang/IJulia.jl).
 
 **How can I convert my `.cif` into P1 symmetry for `PorousMaterials.jl`?**
 
-We hope someone will contribute this feature to `PorousMaterials.jl` eventually. For now, you can use [OpenBabel](http://openbabel.org/wiki/Main_Page):
+`PorousMaterials.jl` will automatically do this for you! It looks for the
+`_symmetry_equiv_pos_as_xyz` and use those rules to replicate the lower level
+symmetry structure into P1 symmetry.
 
-```
-obabel -icif non-P1.cif -ocif -O P1.cif --fillUC strict
-```
+It is important to note that `PorousMaterials.jl` will read in the space group
+name, but it does **NOT** use this for converting your structure to P1.

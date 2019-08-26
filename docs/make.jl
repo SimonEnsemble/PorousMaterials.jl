@@ -39,7 +39,7 @@ using PorousMaterials
         repo = "github.com/SimonEnsemble/PorousMaterials.jl.git",
         # This is a link to the main repo and the master branch
         # target = "build",
-        julia = "1.0",
+        julia = "1.2",
         osname = "linux",
         deps = Deps.pip("mkdocs", "mkdocs-windmill", "pymdown-extensions") # These are dependencies for the site, not the package
     )

@@ -1,6 +1,6 @@
 ## Loading in Crystal Structure Files
 
-Place `.cif` and `.cssr` crystal structure files in `data/crystals`. `PorousMaterials.jl` currently takes crystals in P1 symmetry only. From here you can start julia and do the following to load a framework and start working with it.
+Place `.cif` and `.cssr` crystal structure files in `data/crystals`. `PorousMaterials.jl` can load in `.cif` files of any symmetry as long as the symmetry operations are included. From here you can start julia and do the following to load a framework and start working with it.
 
 ```julia
 using PorousMaterials
@@ -21,6 +21,13 @@ Number of atoms = 120
 Number of charges = 0
 Chemical formula: Dict(:H=>8,:S=>1,:Ca=>1,:O=>6,:C=>14)
 ```
+
+If the file is not in P1 symmetry, it will be converted within the framework reader and this message will be displayed.
+
+```julia
+"Name_of_file.cif is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl."
+```
+
 
 ## Building Blocks of PorousMaterials: Bravais lattice
 
