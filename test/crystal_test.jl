@@ -140,30 +140,22 @@ using Random
     @test is_symmetry_equal(symmetry_rules_two, symmetry_rules_two_cpy)
 
     # test framework addition
-    f1 = Framework("framework 1", UnitCube(), Atoms(
-                                                    [:a, :b],
+    f1 = Framework("framework 1", UnitCube(), Atoms([:a, :b],
                                                     [1.0 4.0;
                                                      2.0 5.0;
                                                      3.0 6.0]),
-                                              Charges(
-                                                      [0.1, 0.2],
+                                              Charges([0.1, 0.2],
                                                       [1.0 4.0;
                                                        2.0 5.0;
-                                                       3.0 6.0]),
-                                              deepcopy(symmetry_rules),
-                                              "P1", true)
-    f2 = Framework("framework 2", UnitCube(), Atoms(
-                                                    [:c, :d],
+                                                       3.0 6.0]))
+    f2 = Framework("framework 2", UnitCube(), Atoms([:c, :d],
                                                     [7.0 10.0;
                                                      8.0 11.0;
                                                      9.0 12.0]),
-                                              Charges(
-                                                      [0.3, 0.4],
+                                              Charges([0.3, 0.4],
                                                       [7.0 10.0;
                                                        8.0 11.0;
-                                                       9.0 12.0]),
-                                              deepcopy(symmetry_rules),
-                                              "P1", true)
+                                                       9.0 12.0]))
     f3 = f1 + f2
     @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
     @test isapprox(f1.box, f3.box)
