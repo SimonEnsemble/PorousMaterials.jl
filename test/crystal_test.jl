@@ -117,6 +117,13 @@ using Random
     sbmof = Framework("SBMOF-1.cif")
     replicated_sbmof = replicate(sbmof, (1, 1, 1))
     @test isapprox(sbmof, replicated_sbmof)
+    # test replication no bonds assertion
+    sbmof_bonds = Framework("SBMOF-1.cif")
+    bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                     BondingRule(:Ca, :*, 0.4, 2.3),
+                     BondingRule(:*, :*, 0.4, 1.9)]
+    infer_bonds!(sbmof_bonds, bonding_rules)
+    @test_throws AssertionError 
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)

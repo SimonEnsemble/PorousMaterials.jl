@@ -927,19 +927,31 @@ function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them before inferring new ones.", framework.name)
 
     # loop over every atom
-    for i in 1:framework.n_atoms
+    for i in 1:framework.atoms.n_atoms
         # loop over every unique pair of atoms
-        for j in i+1:framework.n_atoms
+        for j in i+1:framework.atoms.n_atoms
             # loop over possible bonding rules
             for br in bonding_rules
                 # determine if the types are correct
-                if (framework.atoms.species[i] == bf.species_i && framework.atoms.species[j] == br.species_j) ||
-                    (framework.atoms.species[j] == bf.species_i && framework.atoms.species[i] == br.species_j)
-                    # determine if they are within range
-                    dist = norm(framework.atoms.xf[:, i] - framework.atoms.xf[:, j])
-                    if br.min_dist < dist && dist < br.max_dist
-                        add_edge!(framework.bonds, i, j)
-                    end
+                # anything goes, reached the final bonding rule (if set up right)
+                species_match = false
+                if br.species_i == :* && br.species_j == :*
+                    species_match = true
+                elseif br.species_i == :* && (framework.atoms.species[i] == br.species_j ||
+                                              framework.atoms.species[j] == br.species_j)
+                    species_match = true
+                elseif br.species_j == :* && (framework.atoms.species[i] == br.species_i ||
+                                              framework.atoms.species[j] == br.species_i)
+                    species_match = true
+                elseif (framework.atoms.species[i] == br.species_i && framework.atoms.species[j] == br.species_j) ||
+                    (framework.atoms.species[j] == br.species_i && framework.atoms.species[i] == br.species_j)
+                    species_match = true
+                end
+                # determine if they are within range
+                dist = norm(framework.atoms.xf[:, i] - framework.atoms.xf[:, j])
+                if species_match && br.min_dist < dist && dist < br.max_dist
+                    add_edge!(framework.bonds, i, j)
+                    break
                 end
             end
         end
