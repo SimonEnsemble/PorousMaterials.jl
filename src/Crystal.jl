@@ -920,7 +920,7 @@ Remove all bonds from a framework structure.
 """
 function remove_bonds!(framework::Framework)
     while ne(framework.bonds) > 0
-        rem_edge!(framework.bonds, collect(edges(framework))[1].src, collect(edges(framework))[1].dst)
+        rem_edge!(framework.bonds, collect(edges(framework.bonds))[1].src, collect(edges(framework.bonds))[1].dst)
     end
 end
 

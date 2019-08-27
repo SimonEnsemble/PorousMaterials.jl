@@ -3,6 +3,7 @@ module Crystal_Test
 using PorousMaterials
 using OffsetArrays
 using LinearAlgebra
+using LightGraphs
 using Test
 using JLD2
 using Statistics
@@ -128,7 +129,7 @@ using Random
     # TODO find more robust test/confirm these are the correct numbers
     @test ne(sbmof_bonds.bonds) == 5970
     remove_bonds!(sbmof_bonds)
-    @test ne(sbmof_bonds) == 0
+    @test ne(sbmof_bonds.bonds) == 0
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)
