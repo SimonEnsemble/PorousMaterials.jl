@@ -120,10 +120,15 @@ using Random
     # test replication no bonds assertion
     sbmof_bonds = Framework("SBMOF-1.cif")
     bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
-                     BondingRule(:Ca, :*, 0.4, 2.3),
+                     BondingRule(:Ca, :O, 0.4, 2.3),
                      BondingRule(:*, :*, 0.4, 1.9)]
     infer_bonds!(sbmof_bonds, bonding_rules)
-    @test_throws AssertionError 
+    @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
+    # other bond info tests
+    # TODO find more robust test/confirm these are the correct numbers
+    @test ne(sbmof_bonds.bonds) == 5970
+    remove_bonds!(sbmof_bonds)
+    @test ne(sbmof_bonds) == 0
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)

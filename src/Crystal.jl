@@ -935,7 +935,7 @@ good idea to include a bonding rule between two `:*` to allow any atoms to bond
 as long as they are close enough.
 """
 function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1})
-    @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them before inferring new ones.", framework.name)
+    @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", framework.name)
 
     # loop over every atom
     for i in 1:framework.atoms.n_atoms
