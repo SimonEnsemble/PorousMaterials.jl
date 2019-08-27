@@ -914,6 +914,17 @@ function assert_P1_symmetry(framework::Framework)
 end
 
 """
+    remove_bonds!(framework)
+
+Remove all bonds from a framework structure.
+"""
+function remove_bonds!(framework::Framework)
+    while ne(framework.bonds) > 0
+        rem_edge!(framework.bonds, collect(edges(framework))[1].src, collect(edges(framework))[1].dst)
+    end
+end
+
+"""
     infer_bonds!(framework, bonding_rules)
 
 Populate the bonds in the framework object based on the bonding rules. If a
