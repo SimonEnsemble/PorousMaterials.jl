@@ -959,14 +959,44 @@ function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}
                     species_match = true
                 end
                 # determine if they are within range
-                dist = norm(framework.atoms.xf[:, i] - framework.atoms.xf[:, j])
-                if species_match && br.min_dist < dist && dist < br.max_dist
+                dxf = framework.atoms.xf[:, i] - framework.atoms.xf[:, j]
+                nearest_image!(dxf)
+                norm_c = norm(framework.box.f_to_c * dxf)
+                if species_match && br.min_dist < norm_c && norm_c < br.max_dist
                     add_edge!(framework.bonds, i, j)
                     break
                 end
             end
         end
     end
+end
+
+"""
+    bonds_equal = compare_bonds_in_framework(framework1, framework2)
+
+Returns whether the bonds defined in framework1 are the same as the bonds
+defined in framework2.
+"""
+function compare_bonds_in_framework(f1::Framework, f2::Framework)
+    if ne(f1.bonds) != ne(f2.bonds)
+        return false
+    end
+
+    other_bonds = deepcopy(f2.bonds)
+
+    for edge_i in collect(edges(f1.bonds))
+        set_i = Set([(f1.atoms.xf[:, edge_i.src], f1.atoms.species[edge_i.src]),
+                     (f1.atoms.xf[:, edge_i.dst], f1.atoms.species[edge_i.dst])])
+        for edge_j in collect(edges(other_bonds))
+            set_j = Set([(f2.atoms.xf[:, edge_j.src], f2.atoms.species[edge_j.src]),
+                         (f2.atoms.xf[:, edge_j.dst], f2.atoms.species[edge_j.dst])])
+            if issetequal(set_i, set_j)
+                rem_edge!(other_bonds, edge_j.src, edge_j.dst)
+                break
+            end
+        end
+    end
+    return ne(other_bonds) == 0
 end
 
 """
@@ -979,6 +1009,15 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
     if charged(framework) && (framework.atoms.n_atoms != framework.charges.n_charges)
         error("write_cif assumes equal numbers of Charges and Atoms (or zero charges)")
     end
+
+    # create dictionary for tracking label numbers
+    label_numbers = Dict{Symbol, Int}()
+    for atom in framework.atoms.species
+        if !haskey(label_numbers, atom)
+            label_numbers[atom] = 1
+        end
+    end
+
     # append ".cif" to filename if it doesn't already have the extension
     if ! occursin(".cif", filename)
         filename *= ".cif"
@@ -992,15 +1031,15 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         @printf(cif_file, "data_%s_PM\n", split(framework.name, ".")[1])
     end
 
-    @printf(cif_file, "_symmetry_space_group_name_H-M   '%s'\n", framework.space_group)
+    @printf(cif_file, "_symmetry_space_group_name_H-M\t'%s'\n", framework.space_group)
 
-    @printf(cif_file, "_cell_length_a %f\n", framework.box.a)
-    @printf(cif_file, "_cell_length_b %f\n", framework.box.b)
-    @printf(cif_file, "_cell_length_c %f\n", framework.box.c)
+    @printf(cif_file, "_cell_length_a\t%f\n", framework.box.a)
+    @printf(cif_file, "_cell_length_b\t%f\n", framework.box.b)
+    @printf(cif_file, "_cell_length_c\t%f\n", framework.box.c)
 
-    @printf(cif_file, "_cell_angle_alpha %f\n", framework.box.α * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_beta %f\n", framework.box.β * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_gamma %f\n", framework.box.γ * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_alpha\t%f\n", framework.box.α * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_beta\t%f\n", framework.box.β * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_gamma\t%f\n", framework.box.γ * 180.0 / pi)
 
     @printf(cif_file, "_symmetry_Int_Tables_number 1\n\n")
     @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n")
@@ -1009,7 +1048,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
     end
     @printf(cif_file, "\n")
 
-    @printf(cif_file, "loop_\n_atom_site_label\n")
+    @printf(cif_file, "loop_\n_atom_site_label\n_atom_site_type_symbol\n")
     if fractional
         @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
     else
@@ -1017,6 +1056,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
     end
     @printf(cif_file, "_atom_site_charge\n")
 
+    idx_to_label = Array{AbstractString, 1}(undef, framework.atoms.n_atoms)
     for i = 1:framework.atoms.n_atoms
         q = 0.0
         if charged(framework)
@@ -1025,16 +1065,33 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
+        # print label and type symbol
+        @printf(cif_file, "%s\t%s\t", string(framework.atoms.species[i]) *
+                string(label_numbers[framework.atoms.species[i]]),
+                framework.atoms.species[i])
+        # store label for this atom idx
+        idx_to_label[i] = string(framework.atoms.species[i]) *
+                    string(label_numbers[framework.atoms.species[i]])
+        # increment label
+        label_numbers[framework.atoms.species[i]] += 1
         if fractional
-            @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i],
-                    framework.atoms.xf[:, i]..., q)
+            @printf(cif_file, "%f\t%f\t%f\t%f\n", framework.atoms.xf[:, i]..., q)
         else
             
-            @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i],
-                    (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
+            @printf(cif_file, "%f\t%f\t%f\t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
         end
-     end
-     close(cif_file)
+    end
+
+    # print column names for bond information
+    @printf(cif_file, "\nloop_\n_geom_bond_atom_site_label_1\n_geom_bond_atom_site_label_2\n_geom_bond_distance\n")
+
+    for edge in collect(edges(framework.bonds))
+        dxf = framework.atoms.xf[:, edge.src] - framework.atoms.xf[:, edge.dst]
+        nearest_image!(dxf)
+        @printf(cif_file, "%s\t%s\t%0.5f\n", idx_to_label[edge.src], idx_to_label[edge.dst],
+                norm(dxf))
+    end
+    close(cif_file)
 end
 
 """

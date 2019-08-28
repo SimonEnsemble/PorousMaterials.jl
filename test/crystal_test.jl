@@ -127,9 +127,13 @@ using Random
     @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
     # other bond info tests
     # TODO find more robust test/confirm these are the correct numbers
-    @test ne(sbmof_bonds.bonds) == 5970
+    @test ne(sbmof_bonds.bonds) == 128
+    sbmof_bonds_copy = Framework("SBMOF-1.cif")
+    infer_bonds!(sbmof_bonds_copy, bonding_rules)
+    @test compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
     remove_bonds!(sbmof_bonds)
     @test ne(sbmof_bonds.bonds) == 0
+    @test !compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)

@@ -115,7 +115,7 @@ export
     chemical_formula, molecular_weight, crystal_density, construct_box,
     replicate, read_atomic_masses, charged, write_cif, assign_charges,
     is_symmetry_equal, apply_symmetry_rules, assert_P1_symmetry, infer_bonds!,
-    remove_bonds!,
+    remove_bonds!, compare_bonds_in_framework,
 
     # Molecules.jl
     Molecule, n_atoms, set_fractional_coords!, translate_by!, outside_box,
