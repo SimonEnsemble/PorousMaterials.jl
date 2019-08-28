@@ -176,7 +176,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 # =====================
                 # SYMMETRY READER
                 # =====================
-                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz")
+                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") && ! p1_symmetry
                     symmetry_info = true
 
                     symmetry_count = 0
@@ -188,7 +188,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
                         symmetry_count += 1
                         line = lines[i]
-                        sym_funcs = split(line, [' ', ',', '''], keepempty=false)
+                        sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
 
                         # store as strings so it can be written out later
                         new_sym_rule = Array{AbstractString, 1}(undef, 3)
