@@ -101,6 +101,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # default for symmetry rules is P1.
     # These will be overwritten if the user chooses to read in non-P1
     symmetry_rules = Array{AbstractString, 2}(undef, 3, 0)
+    # creating empty SimpleGraph, might not have any information read in
+    bonds = SimpleGraph()
     # used for remembering whether fractional/cartesian coordinates are read in
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
@@ -121,6 +123,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         # used for reading in symmetry options and replications
         symmetry_info = false
         atom_info = false
+        label_num_to_idx = Dict{AbstractString, Int}()
         while i <= length(lines)
             line = split(lines[i])
             # Skip empty lines
@@ -233,13 +236,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         else
                             push!(charges_simple, 0.0)
                         end
+                        # add to label_num_to_idx so that bonds can be converted later
+                        if read_bonds_from_file
+                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species_simple)
+                        end
                         # iterate to next line in file
                         i += 1
-                        # finish reading in atom_site information, skip to next
-                        #   iteration of outer while-loop
-                        # prevents skipping a line after finishing reading atoms
-                        continue
                     end
+                    # finish reading in atom_site information, skip to next
+                    #   iteration of outer while-loop
+                    # prevents skipping a line after finishing reading atoms
+                    continue
                 # =====================
                 # CARTESIAN READER
                 # =====================
@@ -265,140 +272,42 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         else
                             push!(charges_simple, 0.0)
                         end
+                        # add to label_num_to_idx so that bonds can be converted later
+                        if read_bonds_from_file
+                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species_simple)
+                        end
                         # iterate to next line in file
                         i += 1
-                        # finish reading in atom_site information, skip to next
-                        #   iteration of outer while-loop
-                        # prevents skipping a line after finishing reading atoms
-                        continue
                     end
+                    # finish reading in atom_site information, skip to next
+                    #   iteration of outer while-loop
+                    # prevents skipping a line after finishing reading atoms
+                    continue
                 # =====================
                 # BOND READER
                 # =====================
                 elseif haskey(name_to_column, "_geom_bond_atom_site_label_1") &&
                        haskey(name_to_column, "_geom_bond_atom_site_label_2") &&
                        read_bonds_from_file
-                end
+                    @printf("Inside Bond Reader\n")
+                    # set up graph of correct size
+                    bonds = SimpleGraph(length(species))
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
 
+                        atom_one_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_1"]]]
+                        atom_two_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_2"]]]
+                        @printf("Connecting: %d %d\n", atom_one_idx, atom_two_idx)
+                        add_edge!(bonds, atom_one_idx, atom_two_idx) 
 
-#= ============================================================================
-                next_line = split(lines[i+1], [' ', '\t']; keepempty=false)
-                # only read in symmetry if the structure is not in P1 symmetry
-                if occursin("_symmetry_equiv_pos", next_line[1]) && !p1_symmetry
-                    symmetry_info = true
-                    symmetry_column_name = ""
-                    # name_to_column is a dictionary that e.g. returns which column contains xyz remapping
-                    #   use example: name_to_column["_symmetry_equiv_pos_as_xyz"] gives 2
-                    name_to_column = Dict{AbstractString, Int}()
-
-                    i += 1
-                    loop_starts = i
-                    while length(split(lines[i], [''', ' ', '\t', ','], keepempty=false)) == 1
-                        name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
                         # iterate to next line in file
                         i += 1
                     end
+                    @printf("Total Number of bonds read: %d\nTotal Number of vertices: %d\n", ne(bonds), nv(bonds))
 
-                    @assert haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") "Need column name `_symmetry_equiv_pos_xyz` to parse symmetry information"
-
-                    symmetry_count = 0
-                    # CSD stores symmetry as one column in a string that ends
-                    #   up getting split on the spaces between commas (i.e. its
-                    #   not really one column) the length(name_to_column) + 2
-                    #   should catch this hopefully there aren't other weird
-                    #   ways of writing cifs...
-                    while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
-                        symmetry_count += 1
-                        line = lines[i]
-                        sym_funcs = split(line, [' ', ',', '''], keepempty=false)
-
-                        # store as strings so it can be written out later
-                        new_sym_rule = Array{AbstractString, 1}(undef, 3)
-
-                        sym_start = name_to_column["_symmetry_equiv_pos_as_xyz"] - 1
-                        for j = 1:3
-                            new_sym_rule[j] = sym_funcs[j + sym_start]
-                        end
-
-                        symmetry_rules = [symmetry_rules new_sym_rule]
-
-                        i += 1
-                    end
-
-                    @assert symmetry_count == size(symmetry_rules, 2) "number of symmetry rules must match the count"
-
-                    # finish reading in symmetry information, skip to next
-                    #   iteration of outer while-loop
+                    # skip to next iteration in outer while loop
                     continue
-                # read in keywords, store in a dictionary, then if
-                #   `_atom_site_fract_.` or `_atom_site_Cartn_.` it will
-                #   proceed to read in atom coordinate information
-                elseif ! atom_info
-                    atom_column_name = ""
-                    # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
-                    #   use example: name_to_column["_atom_site_fract_x"] gives 3
-                    name_to_column = Dict{AbstractString, Int}()
-
-                    i += 1
-                    loop_starts = i
-                    while length(split(lines[i])) == 1 && split(lines[i])[1][1] == '_'
-                        if i == loop_starts
-                            atom_column_name = split(lines[i])[1]
-                        end
-                        name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
-                        # iterate to next line in file
-                        i += 1
-                    end
-
-                    # if the file provides fractional coordinates
-                    fractional = haskey(name_to_column, "_atom_site_fract_x") &&
-                                    haskey(name_to_column, "_atom_site_fract_y") &&
-                                    haskey(name_to_column, "_atom_site_fract_z")
-                    # if the file provides cartesian coordinates
-                    cartesian = haskey(name_to_column, "_atom_site_Cartn_x") &&
-                                    haskey(name_to_column, "_atom_site_Cartn_y") &&
-                                    haskey(name_to_column, "_atom_site_Cartn_z") &&
-                                    ! fractional # if both are provided, will default
-                                                 #  to using fractional, so keep cartesian
-                                                 #  false
-                    if fractional || cartesian
-                        # found the atom_info, so don't need to check for it
-                        #   after reading in the information
-                        atom_info = true
-                        # read in atom_site info and store it in column based on
-                        #   the name_to_column dictionary
-                        while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
-                            line = split(lines[i])
-
-                            push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
-                            if fractional
-                                coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
-                                        mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
-                                        mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
-                            elseif cartesian
-                                coords_simple = [coords_simple [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
-                                        parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
-                                        parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
-                            else
-                                error("The file does not store atom information in the form '_atom_site_fract_x' or '_atom_site_Cartn_x'")
-                            end
-                            # If charges present, import them
-                            if haskey(name_to_column, "_atom_site_charge")
-                                push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
-                            else
-                                push!(charges_simple, 0.0)
-                            end
-                            # iterate to next line in file
-                            i += 1
-                        end
-
-                        # finish reading in atom_site information, skip to next
-                        #   iteration of outer while-loop
-                        # prevents skipping a line after finishing reading atoms
-                        continue
-                    end
                 end
-=# # ==========================================================================
             end
 
             # pick up unit cell lengths
@@ -446,6 +355,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
 
         if symmetry_info && convert_to_p1
+            @assert ne(bonds) == 0 @sprintf("Cannot apply symmetry rules to a structure with bonds present. Do not use the argument `read_bonds_from_file` and insterad use `infer_bonds`once the structure is read in.")
             @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.", filename)
             # loop over all symmetry rules
             for i in 1:size(symmetry_rules, 2)
@@ -517,7 +427,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     idx_nz = charge_values .!= 0.0
     charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
-    framework = Framework(filename, box, atoms, charges; symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
+    framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
