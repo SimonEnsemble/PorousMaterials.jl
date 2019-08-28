@@ -145,6 +145,143 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
             # checking for information about atom sites and symmetry
             if line[1] == "loop_"
+                # creating dictionary of column names to determine what should be done
+                atom_column_name = ""
+                # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
+                #   use example: name_to_column["_atom_site_fract_x"] gives 3
+                name_to_column = Dict{AbstractString, Int}()
+
+                i += 1
+                loop_starts = i
+                while length(split(lines[i])) == 1 && split(lines[i])[1][1] == '_'
+                    if i == loop_starts
+                        atom_column_name = split(lines[i])[1]
+                    end
+                    name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
+                    # iterate to next line in file
+                    i += 1
+                end
+
+                fractional = haskey(name_to_column, "_atom_site_fract_x") &&
+                                haskey(name_to_column, "_atom_site_fract_y") &&
+                                haskey(name_to_column, "_atom_site_fract_z")
+                # if the file provides cartesian coordinates
+                cartesian = haskey(name_to_column, "_atom_site_Cartn_x") &&
+                                haskey(name_to_column, "_atom_site_Cartn_y") &&
+                                haskey(name_to_column, "_atom_site_Cartn_z") &&
+                                ! fractional # if both are provided, will default
+                                             #  to using fractional, so keep cartesian
+                                             #  false
+
+                # =====================
+                # SYMMETRY READER
+                # =====================
+                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz")
+                    symmetry_info = true
+
+                    symmetry_count = 0
+                    # CSD stores symmetry as one column in a string that ends
+                    #   up getting split on the spaces between commas (i.e. its
+                    #   not really one column) the length(name_to_column) + 2
+                    #   should catch this hopefully there aren't other weird
+                    #   ways of writing cifs...
+                    while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
+                        symmetry_count += 1
+                        line = lines[i]
+                        sym_funcs = split(line, [' ', ',', '''], keepempty=false)
+
+                        # store as strings so it can be written out later
+                        new_sym_rule = Array{AbstractString, 1}(undef, 3)
+
+                        sym_start = name_to_column["_symmetry_equiv_pos_as_xyz"] - 1
+                        for j = 1:3
+                            new_sym_rule[j] = sym_funcs[j + sym_start]
+                        end
+
+                        symmetry_rules = [symmetry_rules new_sym_rule]
+
+                        i += 1
+                    end
+
+                    @assert symmetry_count == size(symmetry_rules, 2) "number of symmetry rules must match the count"
+
+                    # finish reading in symmetry information, skip to next
+                    #   iteration of outer while-loop
+                    continue
+                # =====================
+                # FRACTIONAL READER
+                # =====================
+                elseif fractional && ! atom_info
+                    atom_info = true
+                    atom_column_name = ""
+                    for (name, column) in name_to_column
+                        if column == 1
+                            atom_column_name = name
+                        end
+                    end
+                    
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+
+                        push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
+                        coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
+                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
+                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
+                        # If charges present, import them
+                        if haskey(name_to_column, "_atom_site_charge")
+                            push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                        else
+                            push!(charges_simple, 0.0)
+                        end
+                        # iterate to next line in file
+                        i += 1
+                        # finish reading in atom_site information, skip to next
+                        #   iteration of outer while-loop
+                        # prevents skipping a line after finishing reading atoms
+                        continue
+                    end
+                # =====================
+                # CARTESIAN READER
+                # =====================
+                elseif cartesian && ! atom_info
+                    atom_info = true
+                    atom_column_name = ""
+                    for (name, column) in name_to_column
+                        if column == 1
+                            atom_column_name = name
+                        end
+                    end
+
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+
+                        push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
+                        coords_simple = [coords_simple [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
+                                parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
+                                parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
+                        # If charges present, import them
+                        if haskey(name_to_column, "_atom_site_charge")
+                            push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                        else
+                            push!(charges_simple, 0.0)
+                        end
+                        # iterate to next line in file
+                        i += 1
+                        # finish reading in atom_site information, skip to next
+                        #   iteration of outer while-loop
+                        # prevents skipping a line after finishing reading atoms
+                        continue
+                    end
+                # =====================
+                # BOND READER
+                # =====================
+                elseif haskey(name_to_column, "_geom_bond_atom_site_label_1") &&
+                       haskey(name_to_column, "_geom_bond_atom_site_label_2") &&
+                       read_bonds_from_file
+                end
+
+
+#= ============================================================================
                 next_line = split(lines[i+1], [' ', '\t']; keepempty=false)
                 # only read in symmetry if the structure is not in P1 symmetry
                 if occursin("_symmetry_equiv_pos", next_line[1]) && !p1_symmetry
@@ -261,6 +398,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         continue
                     end
                 end
+=# # ==========================================================================
             end
 
             # pick up unit cell lengths
@@ -404,6 +542,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     return framework
+end
+
+"""
+    wrap_atoms_to_unit_cell!(framework)
+
+Wraps the coordinates of all atom and charge positions to be within the unit
+cell defined for the framework.
+"""
+function wrap_atoms_to_unit_cell!(framework::Framework)
+    framework.atoms.xf .= mod.(framework.atoms.xf, 1.0)
+    framework.charges.xf .= mod.(framework.charges.xf, 1.0)
 end
 
 """
@@ -1031,15 +1180,15 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         @printf(cif_file, "data_%s_PM\n", split(framework.name, ".")[1])
     end
 
-    @printf(cif_file, "_symmetry_space_group_name_H-M\t'%s'\n", framework.space_group)
+    @printf(cif_file, "_symmetry_space_group_name_H-M \t'%s'\n", framework.space_group)
 
-    @printf(cif_file, "_cell_length_a\t%f\n", framework.box.a)
-    @printf(cif_file, "_cell_length_b\t%f\n", framework.box.b)
-    @printf(cif_file, "_cell_length_c\t%f\n", framework.box.c)
+    @printf(cif_file, "_cell_length_a \t%f\n", framework.box.a)
+    @printf(cif_file, "_cell_length_b \t%f\n", framework.box.b)
+    @printf(cif_file, "_cell_length_c \t%f\n", framework.box.c)
 
-    @printf(cif_file, "_cell_angle_alpha\t%f\n", framework.box.α * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_beta\t%f\n", framework.box.β * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_gamma\t%f\n", framework.box.γ * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_alpha \t%f\n", framework.box.α * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_beta \t%f\n", framework.box.β * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_gamma \t%f\n", framework.box.γ * 180.0 / pi)
 
     @printf(cif_file, "_symmetry_Int_Tables_number 1\n\n")
     @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n")
@@ -1066,7 +1215,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
             end
         end
         # print label and type symbol
-        @printf(cif_file, "%s\t%s\t", string(framework.atoms.species[i]) *
+        @printf(cif_file, "%s \t%s \t", string(framework.atoms.species[i]) *
                 string(label_numbers[framework.atoms.species[i]]),
                 framework.atoms.species[i])
         # store label for this atom idx
@@ -1075,21 +1224,24 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         # increment label
         label_numbers[framework.atoms.species[i]] += 1
         if fractional
-            @printf(cif_file, "%f\t%f\t%f\t%f\n", framework.atoms.xf[:, i]..., q)
+            @printf(cif_file, "%f \t%f \t%f \t%f\n", framework.atoms.xf[:, i]..., q)
         else
             
-            @printf(cif_file, "%f\t%f\t%f\t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
+            @printf(cif_file, "%f \t%f \t%f \t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
         end
     end
 
-    # print column names for bond information
-    @printf(cif_file, "\nloop_\n_geom_bond_atom_site_label_1\n_geom_bond_atom_site_label_2\n_geom_bond_distance\n")
+    # only print bond information if it is in the framework
+    if ne(framework.bonds) > 0
+        # print column names for bond information
+        @printf(cif_file, "\nloop_\n_geom_bond_atom_site_label_1\n_geom_bond_atom_site_label_2\n_geom_bond_distance\n")
 
-    for edge in collect(edges(framework.bonds))
-        dxf = framework.atoms.xf[:, edge.src] - framework.atoms.xf[:, edge.dst]
-        nearest_image!(dxf)
-        @printf(cif_file, "%s\t%s\t%0.5f\n", idx_to_label[edge.src], idx_to_label[edge.dst],
-                norm(dxf))
+        for edge in collect(edges(framework.bonds))
+            dxf = framework.atoms.xf[:, edge.src] - framework.atoms.xf[:, edge.dst]
+            nearest_image!(dxf)
+            @printf(cif_file, "%s \t%s \t%0.5f\n", idx_to_label[edge.src], idx_to_label[edge.dst],
+                    norm(dxf))
+        end
     end
     close(cif_file)
 end
