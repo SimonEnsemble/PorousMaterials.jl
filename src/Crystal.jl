@@ -294,6 +294,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 charge_values = [charge_values; charges_simple]
                 species = [species; species_simple]
             end
+            space_group = "P1"
         elseif p1_symmetry || !convert_to_p1
             coords = deepcopy(coords_simple)
             charge_values = deepcopy(charges_simple)
