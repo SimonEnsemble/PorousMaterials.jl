@@ -17,7 +17,8 @@ Framework(name::String, box::Box, atoms::Atoms, Charges::Charges) = Framework(
 """
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
-                          remove_overlap=false)
+                          remove_overlap=false, convert_to_p1=true,
+                          wrap_to_unit_cell=true)
     framework = Framework(name, box, atoms, charges, symmetry, space_group, is_p1)
     framework = Framework(name, box, atoms, charges)
 
@@ -51,10 +52,13 @@ function it is assumed it is in P1 symmetry.
     so that it can be written out again in the write_cif function
 - `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
     is used before any simulations such as GCMC and Henry Coefficient
+- `wrap_to_unit_cell::Bool`: Whether the atom and charge positions will be
+    wrapped to the unit cell.
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
-                   remove_overlap::Bool=false, convert_to_p1::Bool=true)
+                   remove_overlap::Bool=false, convert_to_p1::Bool=true,
+                   wrap_to_unit_cell::Bool=true)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -357,6 +361,13 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     framework = Framework(filename, box, atoms, charges, symmetry_rules, space_group, p1_symmetry)
 
+    if wrap_to_unit_cell
+        framework.atoms.xf .= mod.(framework.atoms.xf, 1.0)
+        framework.charges.xf .= mod.(frameworks.charges.xf, 1.0)
+    end
+    strip_numbers_from_atom_labels!(framework)
+
+
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
             error(@sprintf("Framework %s is not charge neutral; net charge is %f e. Ignore
@@ -365,8 +376,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                             framework.name, total_charge(framework)))
         end
     end
-
-    strip_numbers_from_atom_labels!(framework)
 
     if remove_overlap
         return remove_overlapping_atoms_and_charges(framework)
