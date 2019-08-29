@@ -363,7 +363,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     if wrap_to_unit_cell
         framework.atoms.xf .= mod.(framework.atoms.xf, 1.0)
-        framework.charges.xf .= mod.(frameworks.charges.xf, 1.0)
+        framework.charges.xf .= mod.(framework.charges.xf, 1.0)
     end
     strip_numbers_from_atom_labels!(framework)
 
