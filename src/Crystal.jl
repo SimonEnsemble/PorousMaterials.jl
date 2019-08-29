@@ -243,6 +243,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         # iterate to next line in file
                         i += 1
                     end
+                    # set up graph of correct size
+                    bonds = SimpleGraph(length(species_simple))
                     # finish reading in atom_site information, skip to next
                     #   iteration of outer while-loop
                     # prevents skipping a line after finishing reading atoms
@@ -279,6 +281,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         # iterate to next line in file
                         i += 1
                     end
+                    # set up graph of correct size
+                    bonds = SimpleGraph(length(species_simple))
                     # finish reading in atom_site information, skip to next
                     #   iteration of outer while-loop
                     # prevents skipping a line after finishing reading atoms
@@ -289,21 +293,16 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 elseif haskey(name_to_column, "_geom_bond_atom_site_label_1") &&
                        haskey(name_to_column, "_geom_bond_atom_site_label_2") &&
                        read_bonds_from_file
-                    @printf("Inside Bond Reader\n")
-                    # set up graph of correct size
-                    bonds = SimpleGraph(length(species))
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
                         atom_one_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_1"]]]
                         atom_two_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_2"]]]
-                        @printf("Connecting: %d %d\n", atom_one_idx, atom_two_idx)
                         add_edge!(bonds, atom_one_idx, atom_two_idx) 
 
                         # iterate to next line in file
                         i += 1
                     end
-                    @printf("Total Number of bonds read: %d\nTotal Number of vertices: %d\n", ne(bonds), nv(bonds))
 
                     # skip to next iteration in outer while loop
                     continue
