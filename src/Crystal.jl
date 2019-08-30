@@ -18,7 +18,7 @@ Read a crystal structure file (.cif or .cssr) and populate a `Framework` data st
 or construct a `Framework` data structure directly.
 
 # Arguments
-- `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `joinpath(PorousMaterials.PATH_TO_DATA, "structures")`.
+- `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `PATH_TO_CRYSTALS`.
 - `check_charge_neutrality::Bool`: check for charge neutrality
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
@@ -43,7 +43,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     # read file
-    f = open(joinpath(PATH_TO_DATA, "crystals", filename), "r")
+    f = open(joinpath(PATH_TO_CRYSTALS, filename), "r")
     lines = readlines(f)
     close(f)
 

@@ -108,18 +108,18 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 
 # Arguments
 - `grid::Grid`: grid with associated data at each grid point.
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`.
 - `verbose::Bool`: print name of file after writing.
 """
 function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
-    if ! isdir(joinpath(PATH_TO_DATA, "grids"))
-        mkdir(joinpath(PATH_TO_DATA, "grids"))
+    if ! isdir(PATH_TO_GRIDS)
+        mkdir(PATH_TO_GRIDS)
     end
 
     if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
-    cubefile = open(joinpath(PATH_TO_DATA, "grids", filename), "w")
+    cubefile = open(joinpath(PATH_TO_GRIDS, filename), "w")
 
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
@@ -147,7 +147,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     end # loop over x points
     close(cubefile)
     if verbose
-        println("\tSee ", joinpath(PATH_TO_DATA, "grids", filename))
+        println("\tSee ", joinpath(PATH_TO_GRIDS, filename))
     end
     return
 end
@@ -158,7 +158,7 @@ end
 Read a .cube file and return a populated `Grid` data structure.
 
 # Arguments
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`grids/.
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`
 
 # Returns
 - `grid::Grid`: A grid data structure
@@ -168,7 +168,7 @@ function read_cube(filename::AbstractString)
         filename *= ".cube"
     end
 
-    cubefile = open(joinpath(PATH_TO_DATA, "grids", filename))
+    cubefile = open(joinpath(PATH_TO_GRIDS, filename))
 
     # waste two lines
     line = readline(cubefile)
