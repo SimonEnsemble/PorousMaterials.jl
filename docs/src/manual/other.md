@@ -33,7 +33,8 @@ These functions allow the user to load and save .xyz files describing where mole
 
 ## PATH\_TO\_DATA Control
 ```@docs
-    set_path_to_data
+    print_file_paths
+    set_default_file_paths
     set_tutorial_mode
 ```
 

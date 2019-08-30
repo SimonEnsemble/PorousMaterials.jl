@@ -19,17 +19,21 @@ import Base.push!
 
 
 """
-Print off paths to where PorousMaterials.jl looks for input files and writes output files.
+    print_file_paths()
+
+Print off paths where PorousMaterials.jl looks for input files and writes output files.
 """
 function print_file_paths()
     println("General data folder: ", PATH_TO_DATA)
     println("\tcrystal structures (.cif, .cssr): ", PATH_TO_CRYSTALS)
     println("\tforce field files (.csv): ", PATH_TO_FORCEFIELDS)
     println("\tmolecule input files: ", PATH_TO_MOLECULES)
-    println("\tgrids: ", PATH_TO_GRIDS)
+    println("\tgrids (.cube): ", PATH_TO_GRIDS)
 end
 
 """
+    set_default_file_paths(print_paths=true)
+
 Sets the default paths for where input files and some output files are stored.
 To see current set up, call [`print_file_paths`](@ref)
 """
