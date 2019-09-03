@@ -127,8 +127,8 @@ using Random
     @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
     # write out and compare to inferred bonds
     write_cif(sbmof_bonds, joinpath(pwd(), "data", "crystals", "SBMOF-1_inferred_bonds.cif"))
-    sbmof_read_bonds = Framework("SBMOF-1_inferred_bonds.cif"; read_bonds_from_file=true)
-    @test compare_bonds_in_framework(sbmof_bonds, sbmof_read_bonds)
+    sbmof_inferred_bonds = Framework("SBMOF-1_inferred_bonds.cif"; read_bonds_from_file=true)
+    @test compare_bonds_in_framework(sbmof_bonds, sbmof_inferred_bonds)
     # other bond info tests
     # TODO find more robust test/confirm these are the correct numbers
     @test ne(sbmof_bonds.bonds) == 128
@@ -138,6 +138,13 @@ using Random
     remove_bonds!(sbmof_bonds)
     @test ne(sbmof_bonds.bonds) == 0
     @test !compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
+
+    # test reading in bonds as part of `Framework()`
+    sbmof_read_bonds = Framework("test_bond_viz.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
+    @test ne(sbmof_read_bonds.bonds) == 5
+    write_cif(sbmof_read_bonds, joinpath(pwd(), "data", "crystals", "rewritten_sbmof_read_bonds.cif"))
+    reloaded_sbmof_read_bonds = Framework("rewritten_sbmof_read_bonds.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
+    @test compare_bonds_in_framework(sbmof_read_bonds, reloaded_sbmof_read_bonds)
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)
