@@ -127,7 +127,7 @@ using Random
     @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
     # write out and compare to inferred bonds
     write_cif(sbmof_bonds, joinpath(pwd(), "data", "crystals", "SBMOF-1_inferred_bonds.cif"))
-    sbmof_read_bonds = Framework("SBMOF-1_inferred_bonds.cif")
+    sbmof_read_bonds = Framework("SBMOF-1_inferred_bonds.cif"; read_bonds_from_file=true)
     @test compare_bonds_in_framework(sbmof_bonds, sbmof_read_bonds)
     # other bond info tests
     # TODO find more robust test/confirm these are the correct numbers

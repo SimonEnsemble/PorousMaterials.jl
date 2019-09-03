@@ -79,7 +79,7 @@ function it is assumed it is in P1 symmetry.
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
                    remove_overlap::Bool=false, convert_to_p1::Bool=true,
-                   read_bonds_from_file::Bool=true)
+                   read_bonds_from_file::Bool=false)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
