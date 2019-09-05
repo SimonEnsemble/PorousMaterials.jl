@@ -16,8 +16,7 @@ Yes! See [here](https://github.com/JuliaLang/IJulia.jl).
 **How can I convert my `.cif` into P1 symmetry for `PorousMaterials.jl`?**
 
 `PorousMaterials.jl` will automatically do this for you! It looks for the
-`_symmetry_equiv_pos_as_xyz` and use those rules to replicate the lower level
-symmetry structure into P1 symmetry.
+`_symmetry_equiv_pos_as_xyz` tag in the `.cif` file and uses those symmetry operations to replicate the structure in a lower symmetry into P1 symmetry.
 
 It is important to note that `PorousMaterials.jl` will read in the space group
 name, but it does **NOT** use this for converting your structure to P1.

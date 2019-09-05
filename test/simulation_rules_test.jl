@@ -29,5 +29,11 @@ using Test
     #   coefficient with a non-P1 framework
     @test_throws AssertionError henry_coefficient(non_P1_framework, molecule,
                                                  temp, ljff)
+
+    # Test that an assertion is thrown when a non-P1 structure is passed into
+    #   energy_grid(), and compute_accessibility_grid()
+    @test_throws AssertionError energy_grid(non_P1_framework, molecule, ljff)
+    @test_throws AssertionError compute_accessibility_grid(non_P1_framework, molecule, ljff)
+
 end
 end
