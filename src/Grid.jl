@@ -316,10 +316,10 @@ end
 
 # comparing very large numbers in grid.data, so increase rtol to account
 #  for loss of precision when writing grid.data to a cube file.
-function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
-    return (isapprox(g1.box, g2.box, rtol=rtol) &&
+function Base.isapprox(g1::Grid, g2::Grid; atol::Real=0.0, rtol::Real=atol > 0.0 ? 0.0 : sqrt(eps()))
+    return (isapprox(g1.box, g2.box, atol=atol, rtol=rtol) &&
             (g1.n_pts == g2.n_pts) &&
-            isapprox(g1.data, g2.data, rtol=rtol) &&
+            isapprox(g1.data, g2.data, atol=atol, rtol=rtol) &&
             (g1.units == g2.units) &&
             isapprox(g1.origin, g2.origin))
 end

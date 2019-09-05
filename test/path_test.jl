@@ -35,6 +35,6 @@ using Test
     old_grid_path = read_cube("test_grid.cube")
     @eval PorousMaterials PATH_TO_GRIDS = joinpath(pwd(), "other_data", "other_grids")
     new_grid_path = read_cube("test_grid.cube")
-    @test isapprox(old_grid_path, new_grid_path)
+    @test isapprox(old_grid_path, new_grid_path, atol=1e-5)
 end
 end

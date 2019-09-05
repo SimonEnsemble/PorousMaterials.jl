@@ -206,15 +206,15 @@ function Base.show(io::IO, box::Box)
     @printf(io, "\tVolume of unit cell: %f Å³\n", box.Ω)
 end
 
-function Base.isapprox(box1::Box, box2::Box; rtol::Real=sqrt(eps()))
-    return (isapprox(box1.a, box2.a, rtol=rtol) &&
-            isapprox(box1.b, box2.b, rtol=rtol) &&
-            isapprox(box1.c, box2.c, rtol=rtol) &&
-            isapprox(box1.α, box2.α, rtol=rtol) &&
-            isapprox(box1.β, box2.β, rtol=rtol) &&
-            isapprox(box1.γ, box2.γ, rtol=rtol) &&
-            isapprox(box1.Ω, box2.Ω, rtol=rtol) &&
-            isapprox(box1.f_to_c, box2.f_to_c, rtol=rtol) &&
-            isapprox(box1.c_to_f, box2.c_to_f, rtol=rtol) &&
-            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, rtol=rtol))
+function Base.isapprox(box1::Box, box2::Box; atol::Real=0.0, rtol::Real=atol > 0 ? 0.0 : sqrt(eps()))
+    return (isapprox(box1.a, box2.a, atol=atol, rtol=rtol) &&
+            isapprox(box1.b, box2.b, atol=atol, rtol=rtol) &&
+            isapprox(box1.c, box2.c, atol=atol, rtol=rtol) &&
+            isapprox(box1.α, box2.α, atol=atol, rtol=rtol) &&
+            isapprox(box1.β, box2.β, atol=atol, rtol=rtol) &&
+            isapprox(box1.γ, box2.γ, atol=atol, rtol=rtol) &&
+            isapprox(box1.Ω, box2.Ω, atol=atol, rtol=rtol) &&
+            isapprox(box1.f_to_c, box2.f_to_c, atol=atol, rtol=rtol) &&
+            isapprox(box1.c_to_f, box2.c_to_f, atol=atol, rtol=rtol) &&
+            isapprox(box1.reciprocal_lattice, box2.reciprocal_lattice, atol=atol, rtol=rtol))
 end
