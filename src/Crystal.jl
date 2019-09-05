@@ -53,7 +53,7 @@ function it is assumed it is in P1 symmetry.
 - `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
     is used before any simulations such as GCMC and Henry Coefficient
 - `wrap_to_unit_cell::Bool`: Whether the atom and charge positions will be
-    wrapped to the unit cell.
+    wrapped to the unit cell so their coordinates are in [0, 1]
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
@@ -268,12 +268,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             error("If structure is not in P1 symmetry it must have replication information")
         end
 
-        # warning that structure is not being converted to P1 symmetry
-        if ! convert_to_p1 && ! p1_symmetry
-            @warn @sprintf("%s is not in P1 symmetry and it is not being converted to P1 symmetry.\nAny simulations performed with PorousMaterials will NOT be accurate",
-                          filename)
-        end
-
         a = data["a"]
         b = data["b"]
         c = data["c"]
@@ -287,7 +281,10 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
 
         if symmetry_info && convert_to_p1
-            @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.", filename)
+            @warn @sprintf("%s is not in P1 symmetry. It is in %s symmetry.
+            We are converting it to P1 symmetry for use in PorousMaterials.jl.
+            To keep in the original lower-level symmetry, pass `convert_to_p1=false` to the `Framework` constructor.", filename, space_group)
+
             # loop over all symmetry rules
             for i in 1:size(symmetry_rules, 2)
                 new_col = Array{Float64, 1}(undef, 0)
@@ -489,7 +486,7 @@ function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::B
                         framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @warn @sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                    @warn @sprintf("Atoms %d and %d in %s are less than %f Å apart.", i, j,
                         framework.name, overlap_tol)
                 end
             end
@@ -509,7 +506,7 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
                         framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @warn @sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                    @warn @sprintf("Charges %d and %d in %s are less than %f Å apart.", i, j,
                         framework.name, overlap_tol)
                 end
             end
