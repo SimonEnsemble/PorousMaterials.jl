@@ -179,7 +179,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 # =====================
                 # SYMMETRY READER
                 # =====================
-                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") && ! p1_symmetry
+                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz")
                     symmetry_info = true
 
                     symmetry_count = 0
@@ -372,11 +372,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             species = deepcopy(species_simple)
         end
 
-        # either read in P1 or converted to P1 so should have same symmetry rules
-        if p1_symmetry || convert_to_p1
-            symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]]
-        end
-
         # if structure was stored in P1 or converted to P1, store that information for later
         p1_symmetry = p1_symmetry || convert_to_p1
 
@@ -389,6 +384,19 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             #   hard-coded ranges
             line_type = line[1:6]
             if line_type == "CRYST1" 
+                a = parse(Float64, line[7:15])
+                b = parse(Float64, line[16:24])
+                c = parse(Float64, line[25:33])
+                α = parse(Float64, line[34:40])
+                β = parse(Float64, line[41:47])
+                γ = parse(Float64, line[48:54])
+                space_group = strip(line[56:66])
+                if space_group == "P1" || space_group == "P 1" ||
+                        space_group == "-P1" || space_group == "-P 1"
+                    # simplify by only having one P1 space_group name
+                    space_group = "P1"
+                    p1_symmetry = true
+                end
             elseif line_type == "HETATM" || line_type == "ATOM  "
                 x = parse(Float64, line[31:38])
                 y = parse(Float64, line[39:46])
