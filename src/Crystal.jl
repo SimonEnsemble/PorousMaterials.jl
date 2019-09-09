@@ -380,6 +380,60 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         # if structure was stored in P1 or converted to P1, store that information for later
         p1_symmetry = p1_symmetry || convert_to_p1
 
+    # Start of pdb reader for bonding information check
+    elseif extension == "pdb"
+        # PDB's store atom locations in Å (Cartesian)
+
+        for line in lines
+            # information in PDB's is tied to specific columns, hence the
+            #   hard-coded ranges
+            line_type = line[1:6]
+            if line_type == "CRYST1" 
+            elseif line_type == "HETATM" || line_type == "ATOM  "
+                x = parse(Float64, line[31:38])
+                y = parse(Float64, line[39:46])
+                z = parse(Float64, line[47:54])
+                # Add the new coordinates
+                coords = [coords [x, y, z]]
+                # Add the new atom species
+                push!(species, Symbol(strip(line[77:78])))
+                # Add the charge (if there)
+                if length(strip(line[79:80])) == 0
+                    push!(charge_values, 0.0)
+                else
+                    push!(charge_values, parse(Float64, strip(line[79:80])))
+                end
+                # increase size of graph
+                add_vertex(bonds)
+            elseif line_type == "CONNECT"
+                connections = split(line)[2:end]
+                # Store the atom number
+                atom_num = parse(Float64, connections[1])
+                connections = connections[2:end]
+
+                # Loop through all connections this atom has and add them
+                for connection in connections
+                    add_edge!(bonds, atom_num, parse(Float64, connection))
+                end
+            # Use the Checksums! Yay Checksums!
+            elseif line_type == "MASTER"
+                number_atoms = parse(Int, line[51:55])
+                number_connections = parse(Int, line[61:65])
+                @assert number_atoms == size(coords, 2) @sprintf(
+                    "Number of coordinates does not equal checksum\nNumber of coordinates: %d\tChecksum: %d\n", size(coords, 2), number_atoms)
+                @assert number_atoms == length(charges) @sprintf(
+                    "Number of charges does not equal checksum\nNumber of charges: %d\tChecksum: %d\n", length(charges), number_atoms)
+                @assert number_atoms == length(species) @sprintf(
+                    "Number of species does not equal checksum\nNumber of species: %d\tChecksum: %d\n", length(species), number_atoms)
+                @assert number_atoms == nv(bonds) @sprintf(
+                    "Number of vertices in bond graph does not equal checksum\nNumber of vertices: %d\tChecksum: %d\n", nv(bonds), number_atoms)
+                @assert number_connections == ne(bonds) @sprintf(
+                    "Number of edges in bond graph does not equal checksum\nNumber of edges: %d\tChecksum: %d\n", ne(bonds), number_connections)
+            end
+        end
+
+
+
     # Start of cssr reader #TODO make sure this works for different .cssr files!
     elseif extension == "cssr"
         # First line contains unit cell lenghts
@@ -1089,15 +1143,15 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         @printf(cif_file, "data_%s_PM\n", split(framework.name, ".")[1])
     end
 
-    @printf(cif_file, "_symmetry_space_group_name_H-M \t'%s'\n", framework.space_group)
+    @printf(cif_file, "_symmetry_space_group_name_H-M\t'%s'\n", framework.space_group)
 
-    @printf(cif_file, "_cell_length_a \t%f\n", framework.box.a)
-    @printf(cif_file, "_cell_length_b \t%f\n", framework.box.b)
-    @printf(cif_file, "_cell_length_c \t%f\n", framework.box.c)
+    @printf(cif_file, "_cell_length_a\t%f\n", framework.box.a)
+    @printf(cif_file, "_cell_length_b\t%f\n", framework.box.b)
+    @printf(cif_file, "_cell_length_c\t%f\n", framework.box.c)
 
-    @printf(cif_file, "_cell_angle_alpha \t%f\n", framework.box.α * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_beta \t%f\n", framework.box.β * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_gamma \t%f\n", framework.box.γ * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_alpha\t%f\n", framework.box.α * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_beta\t%f\n", framework.box.β * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_gamma\t%f\n", framework.box.γ * 180.0 / pi)
 
     @printf(cif_file, "_symmetry_Int_Tables_number 1\n\n")
     @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n")
@@ -1124,7 +1178,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
             end
         end
         # print label and type symbol
-        @printf(cif_file, "%s \t%s \t", string(framework.atoms.species[i]) *
+        @printf(cif_file, "%s\t%s\t", string(framework.atoms.species[i]) *
                 string(label_numbers[framework.atoms.species[i]]),
                 framework.atoms.species[i])
         # store label for this atom idx
@@ -1133,10 +1187,10 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         # increment label
         label_numbers[framework.atoms.species[i]] += 1
         if fractional
-            @printf(cif_file, "%f \t%f \t%f \t%f\n", framework.atoms.xf[:, i]..., q)
+            @printf(cif_file, "%f\t%f\t%f\t%f\n", framework.atoms.xf[:, i]..., q)
         else
             
-            @printf(cif_file, "%f \t%f \t%f \t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
+            @printf(cif_file, "%f\t%f\t%f\t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
         end
     end
 
@@ -1148,7 +1202,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         for edge in collect(edges(framework.bonds))
             dxf = framework.atoms.xf[:, edge.src] - framework.atoms.xf[:, edge.dst]
             nearest_image!(dxf)
-            @printf(cif_file, "%s \t%s \t%0.5f\n", idx_to_label[edge.src], idx_to_label[edge.dst],
+            @printf(cif_file, "%s\t%s\t%0.5f\n", idx_to_label[edge.src], idx_to_label[edge.dst],
                     norm(dxf))
         end
     end
