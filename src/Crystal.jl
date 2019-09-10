@@ -114,9 +114,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     # Start of .cif reader
     if extension == "cif"
-        coords_simple = Array{Float64, 2}(undef, 3, 0)
-        charges_simple = Array{Float64, 1}()
-        species_simple = Array{Symbol, 1}()
         data = Dict{AbstractString, Float64}()
         loop_starts = -1
         i = 1
@@ -179,7 +176,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 # =====================
                 # SYMMETRY READER
                 # =====================
-                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz") && ! p1_symmetry
+                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz")
                     symmetry_info = true
 
                     symmetry_count = 0
@@ -226,25 +223,25 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
-                        push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
-                        coords_simple = [coords_simple [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
+                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        coords = [coords [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
                                 mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
                                 mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
                         # If charges present, import them
                         if haskey(name_to_column, "_atom_site_charge")
-                            push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                            push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
                         else
-                            push!(charges_simple, 0.0)
+                            push!(charge_values, 0.0)
                         end
                         # add to label_num_to_idx so that bonds can be converted later
                         if read_bonds_from_file
-                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species_simple)
+                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species)
                         end
                         # iterate to next line in file
                         i += 1
                     end
                     # set up graph of correct size
-                    bonds = SimpleGraph(length(species_simple))
+                    bonds = SimpleGraph(length(species))
                     # finish reading in atom_site information, skip to next
                     #   iteration of outer while-loop
                     # prevents skipping a line after finishing reading atoms
@@ -264,25 +261,25 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
-                        push!(species_simple, Symbol(line[name_to_column[atom_column_name]]))
-                        coords_simple = [coords_simple [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
+                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        coords = [coords [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
                                 parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
                                 parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
                         # If charges present, import them
                         if haskey(name_to_column, "_atom_site_charge")
-                            push!(charges_simple, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                            push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
                         else
-                            push!(charges_simple, 0.0)
+                            push!(charge_values, 0.0)
                         end
                         # add to label_num_to_idx so that bonds can be converted later
                         if read_bonds_from_file
-                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species_simple)
+                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species)
                         end
                         # iterate to next line in file
                         i += 1
                     end
                     # set up graph of correct size
-                    bonds = SimpleGraph(length(species_simple))
+                    bonds = SimpleGraph(length(species))
                     # finish reading in atom_site information, skip to next
                     #   iteration of outer while-loop
                     # prevents skipping a line after finishing reading atoms
@@ -350,35 +347,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
         # redo coordinates if they were read in cartesian
         if cartesian && ! fractional
-            coords_simple = Box(a, b, c, α, β, γ).c_to_f * coords_simple
+            coords = Box(a, b, c, α, β, γ).c_to_f * coords
         end
-
-        if symmetry_info && convert_to_p1
-            @assert ne(bonds) == 0 @sprintf("Cannot apply symmetry rules to a structure with bonds present. Do not use the argument `read_bonds_from_file` and insterad use `infer_bonds`once the structure is read in.")
-            @warn @sprintf("%s is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.", filename)
-            # loop over all symmetry rules
-            for i in 1:size(symmetry_rules, 2)
-                new_col = Array{Float64, 1}(undef, 0)
-                # loop over all atom positions from lower level symmetry
-                for j in 1:size(coords_simple, 2)
-                    coords = [coords [Base.invokelatest(eval(Meta.parse("(x, y, z) -> " * symmetry_rules[k, i])), coords_simple[:, j]...) for k in 1:3]]
-                end
-                charge_values = [charge_values; charges_simple]
-                species = [species; species_simple]
-            end
-        elseif p1_symmetry || !convert_to_p1
-            coords = deepcopy(coords_simple)
-            charge_values = deepcopy(charges_simple)
-            species = deepcopy(species_simple)
-        end
-
-        # either read in P1 or converted to P1 so should have same symmetry rules
-        if p1_symmetry || convert_to_p1
-            symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]]
-        end
-
-        # if structure was stored in P1 or converted to P1, store that information for later
-        p1_symmetry = p1_symmetry || convert_to_p1
 
     # Start of cssr reader #TODO make sure this works for different .cssr files!
     elseif extension == "cssr"
@@ -438,6 +408,12 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     strip_numbers_from_atom_labels!(framework)
+
+    if convert_to_p1 && ! read_bonds_from_file
+        return apply_symmetry_rules(framework; remove_overlap=remove_overlap,
+                                         check_charge_neutrality=check_charge_neutrality,
+                                         check_atom_and_charge_overlap=check_atom_and_charge_overlap)
+    end
 
     if remove_overlap
         return remove_overlapping_atoms_and_charges(framework)
@@ -832,7 +808,11 @@ function crystal_density(framework::Framework)
 end
 
 """
-    simulation_ready_framework = apply_symmetry_rules(non_p1_framework)
+    simulation_ready_framework = apply_symmetry_rules(non_p1_framework;
+                                                check_charge_neutrality=true,
+                                                net_charge_tol=0.001,
+                                                check_atom_and_charge_overlap=true,
+                                                remove_overlap=false)
 
 Convert a framework to P1 symmetry based on internal symmetry rules. This will
 return the new framework.
