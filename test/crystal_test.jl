@@ -121,7 +121,7 @@ using Random
     # test replication no bonds assertion
     sbmof_bonds = Framework("SBMOF-1.cif")
     bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
-                     BondingRule(:Ca, :O, 0.4, 2.3),
+                     BondingRule(:Ca, :O, 0.4, 2.5),
                      BondingRule(:*, :*, 0.4, 1.9)]
     infer_bonds!(sbmof_bonds, bonding_rules)
     @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
@@ -131,7 +131,9 @@ using Random
     @test compare_bonds_in_framework(sbmof_bonds, sbmof_inferred_bonds)
     # other bond info tests
     # TODO find more robust test/confirm these are the correct numbers
-    @test ne(sbmof_bonds.bonds) == 128
+    # replacing this test with the one below comparing pdb bond info to inferred
+    #   bond info
+    #@test ne(sbmof_bonds.bonds) == 128
     sbmof_bonds_copy = Framework("SBMOF-1.cif")
     infer_bonds!(sbmof_bonds_copy, bonding_rules)
     @test compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
@@ -145,6 +147,16 @@ using Random
     write_cif(sbmof_read_bonds, joinpath(pwd(), "data", "crystals", "rewritten_sbmof_read_bonds.cif"))
     reloaded_sbmof_read_bonds = Framework("rewritten_sbmof_read_bonds.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
     @test compare_bonds_in_framework(sbmof_read_bonds, reloaded_sbmof_read_bonds)
+
+    # Test that reading in bonding information is the same as inferring the
+    #   bonding info
+    # Bonding information is from a pdb file saved by avogadro
+    # using non-p1 because it meant copying over fewer bonds
+    read_bonds = Framework("KAXQIL_clean_cartn.cif"; convert_to_p1=false, read_bonds_from_file=true)
+    inferred_bonds = Framework("KAXQIL_clean.cif"; convert_to_p1=false)
+    # Using same bonding rules as above
+    infer_bonds!(inferred_bonds, bonding_rules)
+    @test compare_bonds_in_framework(read_bonds, inferred_bonds)
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)

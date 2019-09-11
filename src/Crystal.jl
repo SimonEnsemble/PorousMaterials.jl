@@ -113,6 +113,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
 
     # Start of .cif reader
+    ###################################
+    # CIF READER
+    ###################################
     if extension == "cif"
         data = Dict{AbstractString, Float64}()
         loop_starts = -1
@@ -351,6 +354,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
 
     # Start of cssr reader #TODO make sure this works for different .cssr files!
+    ###################################
+    # CSSR READER
+    ###################################
     elseif extension == "cssr"
         # First line contains unit cell lenghts
         line = split(lines[1])
