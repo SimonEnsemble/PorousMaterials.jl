@@ -1025,21 +1025,17 @@ function compare_bonds_in_framework(f1::Framework, f2::Framework)
         return false
     end
 
-    other_bonds = deepcopy(f2.bonds)
-
+    num_in_common = 0
     for edge_i in collect(edges(f1.bonds))
-        set_i = Set([(f1.atoms.xf[:, edge_i.src], f1.atoms.species[edge_i.src]),
-                     (f1.atoms.xf[:, edge_i.dst], f1.atoms.species[edge_i.dst])])
-        for edge_j in collect(edges(other_bonds))
-            set_j = Set([(f2.atoms.xf[:, edge_j.src], f2.atoms.species[edge_j.src]),
-                         (f2.atoms.xf[:, edge_j.dst], f2.atoms.species[edge_j.dst])])
-            if issetequal(set_i, set_j)
-                rem_edge!(other_bonds, edge_j.src, edge_j.dst)
+        for edge_j in collect(edges(f2.bonds))
+            if  (edge_i.src == edge_j.src && edge_i.dst == edge_j.dst) ||
+                (edge_i.src == edge_j.dst && edge_i.dst == edge_j.src)
+                num_in_common += 1
                 break
             end
         end
     end
-    return ne(other_bonds) == 0
+    return num_in_common == ne(f1.bonds) && num_in_common == ne(f2.bonds)
 end
 
 """
