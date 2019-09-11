@@ -476,7 +476,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     strip_numbers_from_atom_labels!(framework)
 
-    if convert_to_p1 && ! read_bonds_from_file
+    if convert_to_p1 && ! p1_symmetry && ! read_bonds_from_file
         return apply_symmetry_rules(framework; remove_overlap=remove_overlap,
                                          check_charge_neutrality=check_charge_neutrality,
                                          check_atom_and_charge_overlap=check_atom_and_charge_overlap)
@@ -898,8 +898,11 @@ return the new framework.
 function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Bool=true,
                               net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
                               remove_overlap::Bool=false)
-    new_atom_xfs = Array{Float64, 2}(undef, 3, 0)
-    new_charge_xfs = Array{Float64, 2}(undef, 3, 0)
+    if framework.is_p1
+        return framework
+    end
+    new_atom_xfs = Array{Float64, 2}(undef, 3, framework.atoms.n_atoms * size(framework.symmetry, 2))
+    new_charge_xfs = Array{Float64, 2}(undef, 3, framework.charges.n_charges * size(framework.symmetry, 2))
     new_atom_species = Array{Symbol, 1}(undef, 0)
     new_charge_qs = Array{Float64, 1}(undef, 0)
 
@@ -908,16 +911,18 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
         # loop over all atoms in lower level symmetry
         for j in 1:size(framework.atoms.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            new_atom_xfs = [new_atom_xfs [Base.invokelatest.(
+            current_atom_idx = (i - 1) * framework.atoms.n_atoms + j
+            new_atom_xfs[:, current_atom_idx] .= [Base.invokelatest.(
                         eval(Meta.parse("(x, y, z) -> " * framework.symmetry[k, i])),
-                        framework.atoms.xf[:, j]...) for k in 1:3]]
+                        framework.atoms.xf[:, j]...) for k in 1:3]
         end
         # loop over all charges in lower level symmetry
         for j in 1:size(framework.charges.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            new_charge_xfs = [new_charge_xfs [Base.invokelatest.(
+            current_charge_idx = (i - 1) * framework.charges.n_charges + j
+            new_charge_xfs[:, current_charge_idx] .= [Base.invokelatest.(
                         eval(Meta.parse("(x, y, z) -> " * framework.symmetry[k, i])),
-                        framework.charges.xf[:, j]...) for k in 1:3]]
+                        framework.charges.xf[:, j]...) for k in 1:3]
         end
         # repeat charge_qs and atom_species for every symmetry applied
         new_atom_species = [new_atom_species; framework.atoms.species]
