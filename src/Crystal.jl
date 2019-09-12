@@ -124,6 +124,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         symmetry_info = false
         atom_info = false
         label_num_to_idx = Dict{AbstractString, Int}()
+        fractional = false
+        cartesian = false
         while i <= length(lines)
             line = split(lines[i])
             # Skip empty lines
@@ -165,11 +167,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     i += 1
                 end
 
-                fractional = haskey(name_to_column, "_atom_site_fract_x") &&
+                fractional = fractional || haskey(name_to_column, "_atom_site_fract_x") &&
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
                 # if the file provides cartesian coordinates
-                cartesian = haskey(name_to_column, "_atom_site_Cartn_x") &&
+                cartesian = cartesian || haskey(name_to_column, "_atom_site_Cartn_x") &&
                                 haskey(name_to_column, "_atom_site_Cartn_y") &&
                                 haskey(name_to_column, "_atom_site_Cartn_z") &&
                                 ! fractional # if both are provided, will default
@@ -983,7 +985,7 @@ pair doesn't have a suitable rule then they will not be considered bonded.
 good idea to include a bonding rule between two `:*` to allow any atoms to bond
 as long as they are close enough.
 """
-function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1})
+function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}; include_bonds_across_periodic_boundaries::Bool=true)
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", framework.name)
 
     # loop over every atom
@@ -1009,7 +1011,9 @@ function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}
                 end
                 # determine if they are within range
                 dxf = framework.atoms.xf[:, i] - framework.atoms.xf[:, j]
-                nearest_image!(dxf)
+                if include_bonds_across_periodic_boundaries
+                    nearest_image!(dxf)
+                end
                 norm_c = norm(framework.box.f_to_c * dxf)
                 if species_match && br.min_dist < norm_c && norm_c < br.max_dist
                     add_edge!(framework.bonds, i, j)
@@ -1026,22 +1030,30 @@ end
 Returns whether the bonds defined in framework1 are the same as the bonds
 defined in framework2.
 """
-function compare_bonds_in_framework(f1::Framework, f2::Framework)
-    if ne(f1.bonds) != ne(f2.bonds)
+function compare_bonds_in_framework(fi::Framework, fj::Framework; atol::Float64=0.0)
+    if ne(fi.bonds) != ne(fj.bonds)
         return false
     end
 
     num_in_common = 0
-    for edge_i in collect(edges(f1.bonds))
-        for edge_j in collect(edges(f2.bonds))
-            if  (edge_i.src == edge_j.src && edge_i.dst == edge_j.dst) ||
-                (edge_i.src == edge_j.dst && edge_i.dst == edge_j.src)
+    for edge_i in collect(edges(fi.bonds))
+        for edge_j in collect(edges(fj.bonds))
+            # either the bond matches going src-src dst-dst
+            if  (fi.atoms.species[edge_i.src] == fj.atoms.species[edge_j.src] &&
+                 fi.atoms.species[edge_i.dst] == fj.atoms.species[edge_j.dst] &&
+                 isapprox(fi.atoms.xf[:, edge_i.src], fj.atoms.xf[:, edge_j.src]; atol=atol) &&
+                 isapprox(fi.atoms.xf[:, edge_i.dst], fj.atoms.xf[:, edge_j.dst]; atol=atol)) ||
+                # or the bond matches going src-dst dst-src
+                (fi.atoms.species[edge_i.src] == fj.atoms.species[edge_j.dst] &&
+                 fi.atoms.species[edge_i.dst] == fj.atoms.species[edge_j.src] &&
+                 isapprox(fi.atoms.xf[:, edge_i.src], fj.atoms.xf[:, edge_j.dst]; atol=atol) &&
+                 isapprox(fi.atoms.xf[:, edge_i.dst], fj.atoms.xf[:, edge_j.src]; atol=atol))
                 num_in_common += 1
                 break
             end
         end
     end
-    return num_in_common == ne(f1.bonds) && num_in_common == ne(f2.bonds)
+    return num_in_common == ne(fi.bonds) && num_in_common == ne(fj.bonds)
 end
 
 """

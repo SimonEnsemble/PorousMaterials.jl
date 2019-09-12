@@ -133,8 +133,10 @@ using Random
     # TODO find more robust test/confirm these are the correct numbers
     # replacing this test with the one below comparing pdb bond info to inferred
     #   bond info
-    #@test ne(sbmof_bonds.bonds) == 128
     sbmof_bonds_copy = Framework("SBMOF-1.cif")
+    # reverse the order of the atoms and bond info should still be the same
+    sbmof_bonds_copy.atoms.xf .= reverse(sbmof_bonds_copy.atoms.xf; dims=2)
+    sbmof_bonds_copy.atoms.species .= reverse(sbmof_bonds_copy.atoms.species)
     infer_bonds!(sbmof_bonds_copy, bonding_rules)
     @test compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
     remove_bonds!(sbmof_bonds)
@@ -156,7 +158,7 @@ using Random
     inferred_bonds = Framework("KAXQIL_clean.cif"; convert_to_p1=false)
     # Using same bonding rules as above
     infer_bonds!(inferred_bonds, bonding_rules)
-    @test compare_bonds_in_framework(read_bonds, inferred_bonds)
+    @test compare_bonds_in_framework(read_bonds, inferred_bonds; atol=1e-6)
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)
