@@ -24,8 +24,8 @@ using Optim
     df = DataFrame(P = P[ids_fit], N = N[ids_fit])
     x = fit_adsorption_isotherm(df, :P, :N, :langmuir)
     M2, K2 = x["M"], x["K"]
-    @test isapprox(M, M2)
-    @test isapprox(K, K2)
+    @test isapprox(M, M2, rtol=1e-6)
+    @test isapprox(K, K2, rtol=1e-6)
 end
 
 
