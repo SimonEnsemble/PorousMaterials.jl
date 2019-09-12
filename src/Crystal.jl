@@ -462,6 +462,7 @@ construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the 
 - `replicated_frame::Framework`: Replicated framework
 """
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
+    # TODO name the remove_bonds func
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s has bonds within it. Remove the bonds to replicate, and then use `infer_bonds(framework)` to recalculate bond information", framework.name)
     # determine number of atoms in replicated framework
     n_atoms = size(framework.atoms.xf, 2) * repfactors[1] * repfactors[2] * repfactors[3]
@@ -500,6 +501,7 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
                      symmetry=deepcopy(framework.symmetry),
                      space_group=framework.space_group, is_p1=framework.is_p1)
 end
+
 
 # doc string in Misc.jl
 function write_xyz(framework::Framework, filename::AbstractString;
@@ -985,6 +987,7 @@ pair doesn't have a suitable rule then they will not be considered bonded.
 good idea to include a bonding rule between two `:*` to allow any atoms to bond
 as long as they are close enough.
 """
+# TODO make default bonding rules with H* and **
 function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}; include_bonds_across_periodic_boundaries::Bool=true)
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", framework.name)
 
@@ -1009,15 +1012,17 @@ function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}
                     (framework.atoms.species[j] == br.species_i && framework.atoms.species[i] == br.species_j)
                     species_match = true
                 end
-                # determine if they are within range
-                dxf = framework.atoms.xf[:, i] - framework.atoms.xf[:, j]
-                if include_bonds_across_periodic_boundaries
-                    nearest_image!(dxf)
-                end
-                norm_c = norm(framework.box.f_to_c * dxf)
-                if species_match && br.min_dist < norm_c && norm_c < br.max_dist
-                    add_edge!(framework.bonds, i, j)
-                    break
+                if species_match
+                    # determine if they are within range
+                    dxf = framework.atoms.xf[:, i] - framework.atoms.xf[:, j]
+                    if include_bonds_across_periodic_boundaries
+                        nearest_image!(dxf)
+                    end
+                    norm_c = norm(framework.box.f_to_c * dxf)
+                    if br.min_dist < norm_c && norm_c < br.max_dist
+                        add_edge!(framework.bonds, i, j)
+                        break
+                    end
                 end
             end
         end
@@ -1152,6 +1157,27 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         end
     end
     close(cif_file)
+end
+
+"""
+"""
+function write_bond_information(framework::Framework, filename::AbstractString)
+    if ! occursin(".vtk", filename)
+        filename *= ".vtk"
+    end
+
+    vtk_file = open(filename, "w")
+
+    @printf(vtk_file, "# vtk DataFile Version 2.0\n%s bond information\nASCII\nDATASET POLYDATA\nPOINTS %d double\n", framework.name, nv(framework.bonds))
+
+    for i = 1:framework.atoms.n_atoms
+        @printf(vtk_file, "%0.5f\t%0.5f\t%0.5f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])...)
+    end
+    @printf(vtk_file, "\nLINES %d %d\n", ne(framework.bonds), 3 * ne(framework.bonds))
+    for edge in collect(edges(framework.bonds))
+        @printf(vtk_file, "2\t%d\t%d\n", edge.src - 1, edge.dst - 1)
+    end
+    close(vtk_file)
 end
 
 """
