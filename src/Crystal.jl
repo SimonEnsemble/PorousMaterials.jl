@@ -852,20 +852,19 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
     # for each symmetry rule
     for i in 1:size(framework.symmetry, 2)
         # loop over all atoms in lower level symmetry
+        sym_rule = eval.(Meta.parse.("(x, y, z) -> " .* framework.symmetry[:, i]))
         for j in 1:size(framework.atoms.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
             current_atom_idx = (i - 1) * framework.atoms.n_atoms + j
             new_atom_xfs[:, current_atom_idx] .= [Base.invokelatest.(
-                        eval(Meta.parse("(x, y, z) -> " * framework.symmetry[k, i])),
-                        framework.atoms.xf[:, j]...) for k in 1:3]
+                        sym_rule[k], framework.atoms.xf[:, j]...) for k in 1:3]
         end
         # loop over all charges in lower level symmetry
         for j in 1:size(framework.charges.xf, 2)
             # apply current symmetry rule to current atom for x, y, and z coordinates
             current_charge_idx = (i - 1) * framework.charges.n_charges + j
             new_charge_xfs[:, current_charge_idx] .= [Base.invokelatest.(
-                        eval(Meta.parse("(x, y, z) -> " * framework.symmetry[k, i])),
-                        framework.charges.xf[:, j]...) for k in 1:3]
+                        sym_rule[k], framework.charges.xf[:, j]...) for k in 1:3]
         end
         # repeat charge_qs and atom_species for every symmetry applied
         new_atom_species = [new_atom_species; framework.atoms.species]
