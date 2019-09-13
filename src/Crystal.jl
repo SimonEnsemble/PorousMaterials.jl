@@ -956,6 +956,7 @@ end
 Used for making sure that a framework is in P1 symmetry before running
 simulations on it. If the structure is not in P1, this will throw an
 AssertionError.
+-`framework::Framework`: The framework to be tested for P1 symmetry
 """
 function assert_P1_symmetry(framework::Framework)
     @assert framework.is_p1 @sprintf("The framework %s is not in P1 symmetry.\n
@@ -969,6 +970,9 @@ end
     remove_bonds!(framework)
 
 Remove all bonds from a framework structure.
+
+# Arguments
+-`framework::Framework`: the framework that bonds wil be removed from
 """
 function remove_bonds!(framework::Framework)
     while ne(framework.bonds) > 0
@@ -985,6 +989,12 @@ pair doesn't have a suitable rule then they will not be considered bonded.
 `:*` is considered a wildcard and can be substituted for any species. It is a
 good idea to include a bonding rule between two `:*` to allow any atoms to bond
 as long as they are close enough.
+
+# Arguments
+-`framework::Framework`: The framework that bonds will be added to
+-`bonding_rules::Array{BondingRule, 1}`: The array of bonding rules that will
+    be used to fill the bonding information. They are applied in the order that
+    they appear.
 """
 # TODO make default bonding rules with H* and **
 function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}; include_bonds_across_periodic_boundaries::Bool=true)
@@ -1032,7 +1042,12 @@ end
     bonds_equal = compare_bonds_in_framework(framework1, framework2)
 
 Returns whether the bonds defined in framework1 are the same as the bonds
-defined in framework2.
+defined in framework2. It checks whether the atoms in the same positions
+have the same bonds.
+
+# Arguments
+-`framework1::Framework`: The first framework
+-`framework2::Framework`: The second framework
 """
 function compare_bonds_in_framework(fi::Framework, fj::Framework; atol::Float64=0.0)
     if ne(fi.bonds) != ne(fj.bonds)
@@ -1159,8 +1174,17 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
 end
 
 """
+    write_bond_information(framework, filename)
+
+Writes the bond information from a framework to the selected filename.
+
+# Arguments
+-`framework::Framework`: The framework to have its bonds written to a vtk file
+-`filename::AbstractString`: The filename the bond information will be saved to
 """
 function write_bond_information(framework::Framework, filename::AbstractString)
+    if ne(framework.bonds) == 0
+        @warn("Framework %s has no bonds present. To get bonding information for this framework run `infer_bonds!` with an array of bonding rules\n", framework.name)
     if ! occursin(".vtk", filename)
         filename *= ".vtk"
     end
@@ -1177,6 +1201,7 @@ function write_bond_information(framework::Framework, filename::AbstractString)
         @printf(vtk_file, "2\t%d\t%d\n", edge.src - 1, edge.dst - 1)
     end
     close(vtk_file)
+    @printf("Saving bond information for framework %s to %s.\n", framework.name, joinpath(pwd(), filename))
 end
 
 """
@@ -1274,7 +1299,6 @@ function Base.show(io::IO, framework::Framework)
     end
 end
 
-# TODO add something comparing symmetry rules
 function Base.isapprox(f1::Framework, f2::Framework; atol::Float64=1e-6, checknames::Bool=false)
     names_flag = f1.name == f2.name
     if checknames && (! names_flag)
@@ -1293,6 +1317,7 @@ function Base.isapprox(f1::Framework, f2::Framework; atol::Float64=1e-6, checkna
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
+# TODO add bond information too
 function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
     new_framework = deepcopy(frameworks[1])
     for (i, f) in enumerate(frameworks)

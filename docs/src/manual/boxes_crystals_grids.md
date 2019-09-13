@@ -44,6 +44,66 @@ framework = apply_symmetry_rules(framework)
 # the framework is now in P1 and it can be used in simulations
 ```
 
+## Generating Bond Information for Frameworks
+
+The bonds are stored in a `SimpleGraph` from the `LightGraphs.jl` package, and
+can be accessed through the `bonds` attribute.  
+
+### Reading from a file
+
+`PorousMaterials` can read in bonds from `.cif` files if they have the tags
+`_geom_bond_atom_site_label_1` and `_geom_bond_atom_site_label_2`. To choose to
+read bonds from a file, pass `read_bonds_from_file=true` to the `Framework`
+constructor.
+
+```julia
+using PorousMaterials
+
+f = Framework("KAXQIL_clean.cif"; read_bonds_from_file=true, convert_to_p1=false)
+
+f.bonds
+```
+
+This example uses a structure that is not in P1 symmetry. `PorousMaterials`
+cannot replicate a structure or apply symmetry rules if it currently has bonds.
+However, this structure can be converted to P1 without bonds, and then bonds can
+be inferred for the full P1 structure.
+
+### Inferring bonds using `BondingRule`s
+
+`PorousMaterials` can infer bonds for a structure and populate the bond graph by
+using `BondingRule`s. Each `BondingRule` has two species of atoms that it works
+for. It also has a minimum and maximum distance that a bond can be defined for
+the two atoms.
+
+```julia
+using PorousMaterials
+
+f = Framework("SBMOF-1.cif")
+
+# define an array of BondingRule's that will be used to define bonds in the
+#   framework. These need to be in the order that they are applied
+bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                 BondingRule(:*, :*, 0.4, 1.9)]
+
+# infer the bonds for the framework f
+infer_bonds!(f, bonding_rules)
+
+# redefine bonding_rules to account for edge cases between Ca and O atoms
+bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                 BondingRule(:Ca, :O, 0.4, 2.5),
+                 BondingRule(:*, :*, 0.4, 1.9)]
+
+# remove old bonds from framework before inferring bonds with new rules
+remove_bonds!(f)
+
+# re-infer bonds
+infer_bonds!(f, bonding_rules)
+
+# output the bond information to visualize it and double check
+write_bond_information(f, "SBMOF-1_bonds.vtk")
+```
+
 
 ## Building Blocks of PorousMaterials: Bravais lattice
 
@@ -134,6 +194,7 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
     Framework
     remove_overlapping_atoms_and_charges
     strip_numbers_from_atom_labels!
+    wrap_atoms_to_unit_cell
     chemical_formula
     molecular_weight
     crystal_density
@@ -143,6 +204,11 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
     apply_symmetry_rules
     is_symmetry_equal
     write_cif
+    BondingRule
+    write_bond_information
+    infer_bonds!
+    remove_bonds!
+    compare_bonds_in_framework
 ```
 
 ## Grids
