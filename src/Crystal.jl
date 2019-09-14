@@ -472,6 +472,7 @@ construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the 
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
     # TODO name the remove_bonds func
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s has bonds within it. Remove the bonds to replicate, and then use `infer_bonds(framework)` to recalculate bond information", framework.name)
+    assert_P1_symmetry(framework)
     # determine number of atoms in replicated framework
     n_atoms = size(framework.atoms.xf, 2) * repfactors[1] * repfactors[2] * repfactors[3]
 
