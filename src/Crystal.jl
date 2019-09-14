@@ -26,6 +26,12 @@ end
                      BondingRule(:*, :*, 0.4, 1.9)]
 
 A rule for determining if two atoms within a framework are bonded. 
+
+# Attributes
+-`species_i::Symbol`: One of the atoms types for this bond rule
+-`species_j::Symbol`: The other atom type for this bond rule
+-`min_dist`: The minimum distance between the atoms for bonding to occur
+-`max_dist`: The maximum distance between the atoms for bonding to occur
 """
 struct BondingRule
     species_i::Symbol
@@ -54,7 +60,8 @@ function it is assumed it is in P1 symmetry.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
 - `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
-    P1 symmetry using the symmetry rules
+    P1 symmetry using the symmetry rules. The space groups name will not be 
+    used when converting from the lower level symmetry to P1.
 - `read_bonds_from_file::Bool`: Whether or not to read bonding information from
     cif file. If false, the bonds can be inferred later
 
@@ -72,7 +79,8 @@ function it is assumed it is in P1 symmetry.
     the symmetry operations. If the structure is in P1 there will be one
     symmetry operation.
 - `space_group::AbstractString`: The name of the space group. This is stored
-    so that it can be written out again in the write_cif function
+    so that it can be written out again in the write_cif function. The space
+    group is not used to verify the symmetry rules.
 - `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
     is used before any simulations such as GCMC and Henry Coefficient
 """
@@ -1185,6 +1193,7 @@ Writes the bond information from a framework to the selected filename.
 function write_bond_information(framework::Framework, filename::AbstractString)
     if ne(framework.bonds) == 0
         @warn("Framework %s has no bonds present. To get bonding information for this framework run `infer_bonds!` with an array of bonding rules\n", framework.name)
+    end
     if ! occursin(".vtk", filename)
         filename *= ".vtk"
     end
