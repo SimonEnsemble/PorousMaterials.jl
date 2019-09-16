@@ -155,7 +155,7 @@ function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symb
         else
             # saturation loading M is largest value of adsorption observed plus 10%
             M0 = n[end] * 1.1
-            K0 = M0 * H0
+            K0 = H0 / M0
             return Dict("M0" => M0, "K0" => K0)
         end
     else
