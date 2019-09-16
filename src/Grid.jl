@@ -321,7 +321,7 @@ function Base.isapprox(g1::Grid, g2::Grid; atol::Real=0.0, rtol::Real=atol > 0.0
             (g1.n_pts == g2.n_pts) &&
             isapprox(g1.data, g2.data, atol=atol, rtol=rtol) &&
             (g1.units == g2.units) &&
-            isapprox(g1.origin, g2.origin))
+            isapprox(g1.origin, g2.origin, atol=atol, rtol=rtol))
 end
 
 function _flood_fill!(grid::Grid, segmented_grid::Grid, 
