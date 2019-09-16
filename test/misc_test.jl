@@ -20,12 +20,17 @@ using Optim
     M = 23.0
     K = 11.9
     N = (M * K .* P) ./ (1 .+ K.*P)
-    ids_fit = [1, 11, 21, 31, 41, 51, 61, 71, 81]
+    ids_fit = [1, 6, 11, 21, 31, 36, 41, 51, 61, 71, 76, 81, 91]
     df = DataFrame(P = P[ids_fit], N = N[ids_fit])
     x = fit_adsorption_isotherm(df, :P, :N, :langmuir)
     M2, K2 = x["M"], x["K"]
     @test isapprox(M, M2, rtol=1e-6)
     @test isapprox(K, K2, rtol=1e-6)
+    df = CSV.read("Ni-MOF-74_isotherm_test.csv", copycols=true)
+    x = fit_adsorption_isotherm(df, Symbol("P(bar)"), Symbol("mol_m3"), :langmuir)
+    M3, K3 = x["M"], x["K"]
+    @test isapprox(M3, 8546.37534030619)
+    @test isapprox(K3, 1.51701035589)
 end
 
 
