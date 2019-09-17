@@ -470,8 +470,7 @@ construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the 
 - `replicated_frame::Framework`: Replicated framework
 """
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
-    # TODO name the remove_bonds func
-    @assert ne(framework.bonds) == 0 @sprintf("The framework %s has bonds within it. Remove the bonds to replicate, and then use `infer_bonds(framework)` to recalculate bond information", framework.name)
+    @assert ne(framework.bonds) == 0 @sprintf("The framework %s has bonds within it. Remove the bonds with `remove_bonds!` to replicate, and then use `infer_bonds(framework)` to recalculate bond information", framework.name)
     assert_P1_symmetry(framework)
     # determine number of atoms in replicated framework
     n_atoms = size(framework.atoms.xf, 2) * repfactors[1] * repfactors[2] * repfactors[3]
@@ -1004,9 +1003,12 @@ as long as they are close enough.
 -`bonding_rules::Array{BondingRule, 1}`: The array of bonding rules that will
     be used to fill the bonding information. They are applied in the order that
     they appear.
+-`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the
+    periodic boundary when calculating bonds
 """
-# TODO make default bonding rules with H* and **
-function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}; include_bonds_across_periodic_boundaries::Bool=true)
+function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}=
+                      [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)];
+                      include_bonds_across_periodic_boundaries::Bool=true)
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", framework.name)
 
     # loop over every atom
