@@ -1,53 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-     <loc>/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/guides/input_files/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/matter/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/boxes_crystals_grids/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/molecules/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/atomic_interactions/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/mof_simulations/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/manual/other/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/guides/faq/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>/guides/help_wanted/</loc>
-     <lastmod>2019-07-16</lastmod>
+     <loc>None</loc>
+     <lastmod>2019-09-17</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>
