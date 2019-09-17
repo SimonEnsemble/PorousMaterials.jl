@@ -33,6 +33,9 @@ using Test
     # TODO make an approximation function or find something like `@test_throws NoError`
     # GRIDS
     old_grid_path = read_cube("test_grid.cube")
+    if ! isdir(joinpath("other_data", "other_grids"))
+        mkdir(joinpath("other_data", "other_grids"))
+    end
     run(`cp data/grids/test_grid.cube other_data/other_grids/test_grid.cube`)
     @eval PorousMaterials PATH_TO_GRIDS = joinpath(pwd(), "other_data", "other_grids")
     new_grid_path = read_cube("test_grid.cube")
