@@ -18,44 +18,43 @@ using Optim
 import Base.push!
 
 
+"""
+    print_file_paths()
+
+Print off paths where PorousMaterials.jl looks for input files and writes output files.
+"""
+function print_file_paths()
+    println("General data folder: ", PATH_TO_DATA)
+    println("\tcrystal structures (.cif, .cssr): ", PATH_TO_CRYSTALS)
+    println("\tforce field files (.csv): ", PATH_TO_FORCEFIELDS)
+    println("\tmolecule input files: ", PATH_TO_MOLECULES)
+    println("\tgrids (.cube): ", PATH_TO_GRIDS)
+end
+
+"""
+    set_default_file_paths(print_paths=true)
+
+Sets the default paths for where input files and some output files are stored.
+To see current set up, call [`print_file_paths`](@ref)
+"""
+function set_default_file_paths(;print_paths::Bool=true)
+    # this is the main directory where crystal structures, forcefields, and molecules data is stored
+    global PATH_TO_DATA = joinpath(pwd(), "data")
+
+    global PATH_TO_CRYSTALS = joinpath(PATH_TO_DATA, "crystals")
+    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
+    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
+    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+    
+    if print_paths
+        print_file_paths()
+    end
+end
+
 # this runs everytime PorousMaterials is loaded, so if the user changes directory
 #   then the PATH_TO_DATA will change as well
 function __init__()
-    # this is the directory where crystal structures, forcefields, and molecules data is stored
-    global PATH_TO_DATA = joinpath(pwd(), "data")
-    if ! isdir(PATH_TO_DATA)
-        @warn @sprintf("Directory for input data, \"data\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
-    end
-end
-
-"""
-    set_path_to_data("user/path/to/data")
-    set_path_to_data()
-
-Sets PorousMaterials `PATH_TO_DATA` variable which dictates where crystal, forcefield,
-and molecule files are loaded from. This function allows the user to set `PATH_TO_DATA`
-manually to any directory or to a "/data/" folder within their current directory.
-This function WILL change the `PATH_TO_DATA` regardless of whether or not the path
-exists, but will give a warning alerting the user that PorousMaterials cannot load
-files from the chosen path.
-
-# Arguments
-- `new_path_to_data::String`: The desired `PATH_TO_DATA` in string form.
-"""
-function set_path_to_data(new_path_to_data::String)
-    global PATH_TO_DATA = new_path_to_data
-    if ! isdir(PATH_TO_DATA)
-        @warn @sprintf("The directory %s does not exist.\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", new_path_to_data)
-    end
-    @printf("PATH_TO_DATA set to %s\n", PATH_TO_DATA)
-end
-
-function set_path_to_data()
-    global PATH_TO_DATA = joinpath(pwd(), "data")
-    if ! isdir(PATH_TO_DATA)
-        @warn @sprintf("Directory for input data, \"data\", not found in present working directory, %s\nChange the PATH_TO_DATA variable to load input files from a different directory. See \"set_path_to_data()\".\n", pwd())
-    end
-    @printf("PATH_TO_DATA set to %s\n", PATH_TO_DATA)
+    set_default_file_paths(print_paths=false)
 end
 
 """
@@ -72,7 +71,11 @@ function set_tutorial_mode()
         @error @sprintf("Directory for testing data %s does not exist.\nNot entering Tutorial Mode.\n", new_path)
     else
         global PATH_TO_DATA = new_path
-        @warn "PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\nTo get access to your own data use: reset_path_to_data()\n"
+        global PATH_TO_CRYSTALS = joinpath(PATH_TO_DATA, "crystals")
+        global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
+        global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
+        global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+        @warn "PorousMaterials is now in Tutorial Mode. You have access to the testing data to experiment with PorousMaterials.\nTo reset to default file paths, call `set_default_file_paths()`\n"
     end
 end
 
@@ -95,7 +98,7 @@ include("generic_rotations.jl")
 
 export
     # PorousMaterials.jl
-    set_path_to_data, set_tutorial_mode,
+    set_default_file_paths, print_file_paths, set_tutorial_mode,
 
     # Box.jl
     Box, replicate, UnitCube, write_vtk, inside,

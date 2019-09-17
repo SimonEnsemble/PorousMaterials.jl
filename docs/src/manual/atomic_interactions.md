@@ -1,6 +1,6 @@
 ## Loading in Forcefield Files
 
-Lennard-Jones forcefield parameters are stored in comma-separated-value format in `data/forcefields/`.
+Lennard-Jones forcefield parameters are stored in comma-separated-value format in `PorousMaterials.PATH_TO_FORCEFIELDS`.
 
 Interaction of an adsorbate with the framework is modeled as pair-wise additive and with Lennard-Jones potentials of the form:
 

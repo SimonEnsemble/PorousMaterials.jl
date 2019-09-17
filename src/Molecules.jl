@@ -23,7 +23,7 @@ end
 """
     molecule = Molecule(species, assert_charge_neutrality=true)
 
-Reads molecule files in the directory `joinpath(PorousMaterials.PATH_TO_DATA, "molecules", species)`.
+Reads molecule files in the directory `joinpath(PATH_TO_MOLECULES, species)`.
 Center of mass assigned using atomic masses from `read_atomic_masses()`. The fractional
 coordinates are determined assuming a unit cube box. These must be adjusted later for
 simulations using `set_fractional_coords!(molecule, box)`.
@@ -36,15 +36,15 @@ simulations using `set_fractional_coords!(molecule, box)`.
 - `molecule::Molecule`: A fully constructed molecule data structure
 """
 function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
-    if ! isdir(joinpath(PATH_TO_DATA, "molecules", species))
+    if ! isdir(joinpath(PATH_TO_MOLECULES, species))
         error(@sprintf("No directory created for %s in %s\n", species,
-                       joinpath(PATH_TO_DATA, "molecules")))
+                       joinpath(PATH_TO_MOLECULES)))
     end
 
     ###
     #  Read in Lennard Jones spheres
     ###
-    atomsfilename = joinpath(PATH_TO_DATA, "molecules", species, "lennard_jones_spheres.csv")
+    atomsfilename = joinpath(PATH_TO_MOLECULES, species, "lennard_jones_spheres.csv")
     if ! isfile(atomsfilename)
         error(@sprintf("No file %s exists. Even if there are no Lennard Jones spheres in
         %s, include a .csv file with the proper headers but no rows.", species, atomsfilename))
@@ -77,7 +77,7 @@ function Molecule(species::AbstractString; assert_charge_neutrality::Bool=true)
     ###
     #  Read in point charges
     ###
-    chargesfilename = joinpath(PATH_TO_DATA, "molecules", species, "point_charges.csv")
+    chargesfilename = joinpath(PATH_TO_MOLECULES, species, "point_charges.csv")
     if ! isfile(chargesfilename)
         error(@sprintf("No file %s exists. Even if there are no point charges in %s,
         include a .csv file with the proper headers but no rows.", species,

@@ -108,18 +108,18 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 
 # Arguments
 - `grid::Grid`: grid with associated data at each grid point.
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`/grids/.
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`.
 - `verbose::Bool`: print name of file after writing.
 """
 function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
-    if ! isdir(joinpath(PATH_TO_DATA, "grids"))
-        mkdir(joinpath(PATH_TO_DATA, "grids"))
+    if ! isdir(PATH_TO_GRIDS)
+        mkdir(PATH_TO_GRIDS)
     end
 
     if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
-    cubefile = open(joinpath(PATH_TO_DATA, "grids", filename), "w")
+    cubefile = open(joinpath(PATH_TO_GRIDS, filename), "w")
 
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
@@ -147,7 +147,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
     end # loop over x points
     close(cubefile)
     if verbose
-        println("\tSee ", joinpath(PATH_TO_DATA, "grids", filename))
+        println("\tSee ", joinpath(PATH_TO_GRIDS, filename))
     end
     return
 end
@@ -158,7 +158,7 @@ end
 Read a .cube file and return a populated `Grid` data structure.
 
 # Arguments
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PorousMaterials.PATH_TO_DATA`grids/.
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`
 
 # Returns
 - `grid::Grid`: A grid data structure
@@ -168,7 +168,7 @@ function read_cube(filename::AbstractString)
         filename *= ".cube"
     end
 
-    cubefile = open(joinpath(PATH_TO_DATA, "grids", filename))
+    cubefile = open(joinpath(PATH_TO_GRIDS, filename))
 
     # waste two lines
     line = readline(cubefile)
@@ -316,12 +316,12 @@ end
 
 # comparing very large numbers in grid.data, so increase rtol to account
 #  for loss of precision when writing grid.data to a cube file.
-function Base.isapprox(g1::Grid, g2::Grid; rtol::Float64=0.000001)
-    return (isapprox(g1.box, g2.box, rtol=rtol) &&
+function Base.isapprox(g1::Grid, g2::Grid; atol::Real=0.0, rtol::Real=atol > 0.0 ? 0.0 : sqrt(eps()))
+    return (isapprox(g1.box, g2.box, atol=atol, rtol=rtol) &&
             (g1.n_pts == g2.n_pts) &&
-            isapprox(g1.data, g2.data, rtol=rtol) &&
+            isapprox(g1.data, g2.data, atol=atol, rtol=rtol) &&
             (g1.units == g2.units) &&
-            isapprox(g1.origin, g2.origin))
+            isapprox(g1.origin, g2.origin, atol=atol, rtol=rtol))
 end
 
 function _flood_fill!(grid::Grid, segmented_grid::Grid, 
