@@ -3,6 +3,7 @@ module Crystal_Test
 using PorousMaterials
 using OffsetArrays
 using LinearAlgebra
+using LightGraphs
 using Test
 using JLD2
 using Statistics
@@ -117,6 +118,47 @@ using Random
     sbmof = Framework("SBMOF-1.cif")
     replicated_sbmof = replicate(sbmof, (1, 1, 1))
     @test isapprox(sbmof, replicated_sbmof)
+    # test replication no bonds assertion
+    sbmof_bonds = Framework("SBMOF-1.cif")
+    bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                     BondingRule(:Ca, :O, 0.4, 2.5),
+                     BondingRule(:*, :*, 0.4, 1.9)]
+    infer_bonds!(sbmof_bonds, bonding_rules)
+    @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
+    # write out and compare to inferred bonds
+    write_cif(sbmof_bonds, joinpath(pwd(), "data", "crystals", "SBMOF-1_inferred_bonds.cif"))
+    sbmof_inferred_bonds = Framework("SBMOF-1_inferred_bonds.cif"; read_bonds_from_file=true)
+    @test compare_bonds_in_framework(sbmof_bonds, sbmof_inferred_bonds)
+    # other bond info tests
+    # TODO find more robust test/confirm these are the correct numbers
+    # replacing this test with the one below comparing pdb bond info to inferred
+    #   bond info
+    sbmof_bonds_copy = Framework("SBMOF-1.cif")
+    # reverse the order of the atoms and bond info should still be the same
+    sbmof_bonds_copy.atoms.xf .= reverse(sbmof_bonds_copy.atoms.xf; dims=2)
+    sbmof_bonds_copy.atoms.species .= reverse(sbmof_bonds_copy.atoms.species)
+    infer_bonds!(sbmof_bonds_copy, bonding_rules)
+    @test compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
+    remove_bonds!(sbmof_bonds)
+    @test ne(sbmof_bonds.bonds) == 0
+    @test !compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
+
+    # test reading in bonds as part of `Framework()`
+    sbmof_read_bonds = Framework("test_bond_viz.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
+    @test ne(sbmof_read_bonds.bonds) == 5
+    write_cif(sbmof_read_bonds, joinpath(pwd(), "data", "crystals", "rewritten_sbmof_read_bonds.cif"))
+    reloaded_sbmof_read_bonds = Framework("rewritten_sbmof_read_bonds.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
+    @test compare_bonds_in_framework(sbmof_read_bonds, reloaded_sbmof_read_bonds)
+
+    # Test that reading in bonding information is the same as inferring the
+    #   bonding info
+    # Bonding information is from a pdb file saved by avogadro
+    # using non-p1 because it meant copying over fewer bonds
+    read_bonds = Framework("KAXQIL_clean_cartn.cif"; convert_to_p1=false, read_bonds_from_file=true)
+    inferred_bonds = Framework("KAXQIL_clean.cif"; convert_to_p1=false)
+    # Using same bonding rules as above
+    infer_bonds!(inferred_bonds, bonding_rules)
+    @test compare_bonds_in_framework(read_bonds, inferred_bonds; atol=1e-6)
 
     repfactors = replication_factors(sbmof.box, 14.0)
     replicated_sbmof = replicate(sbmof, repfactors)
@@ -140,31 +182,29 @@ using Random
     @test is_symmetry_equal(symmetry_rules_two, symmetry_rules_two_cpy)
 
     # test framework addition
-    f1 = Framework("framework 1", UnitCube(), Atoms(
-                                                    [:a, :b],
+    f1 = Framework("framework 1", UnitCube(), Atoms([:a, :b],
                                                     [1.0 4.0;
                                                      2.0 5.0;
                                                      3.0 6.0]),
-                                              Charges(
-                                                      [0.1, 0.2],
+                                              Charges([0.1, 0.2],
                                                       [1.0 4.0;
                                                        2.0 5.0;
-                                                       3.0 6.0]),
-                                              deepcopy(symmetry_rules),
-                                              "P1", true)
-    f2 = Framework("framework 2", UnitCube(), Atoms(
-                                                    [:c, :d],
+                                                       3.0 6.0]))
+    f2 = Framework("framework 2", UnitCube(), Atoms([:c, :d],
                                                     [7.0 10.0;
                                                      8.0 11.0;
                                                      9.0 12.0]),
-                                              Charges(
-                                                      [0.3, 0.4],
+                                              Charges([0.3, 0.4],
                                                       [7.0 10.0;
                                                        8.0 11.0;
-                                                       9.0 12.0]),
-                                              deepcopy(symmetry_rules),
-                                              "P1", true)
+                                                       9.0 12.0]))
     f3 = f1 + f2
+    addition_bonding_rules = [BondingRule(:a, :b, 5.0, 5.3),
+                              BondingRule(:c, :d, 5.0, 5.3)]
+    infer_bonds!(f1, addition_bonding_rules)
+    infer_bonds!(f2, addition_bonding_rules)
+    infer_bonds!(f3, addition_bonding_rules)
+    @test compare_bonds_in_framework(f1 + f2, f3)
     @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
     @test isapprox(f1.box, f3.box)
     @test isapprox(f2.box, f3.box)

@@ -110,10 +110,13 @@ export
     read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_adsorption_isotherm,
 
     # Crystal.jl
-    Framework, read_crystal_structure_file, remove_overlapping_atoms_and_charges,
-    strip_numbers_from_atom_labels!, chemical_formula, molecular_weight, crystal_density,
-    construct_box, replicate, read_atomic_masses, charged, write_cif, assign_charges,
-    is_symmetry_equal, apply_symmetry_rules, assert_P1_symmetry,
+    Framework, BondingRule, read_crystal_structure_file,
+    remove_overlapping_atoms_and_charges, strip_numbers_from_atom_labels!,
+    chemical_formula, molecular_weight, crystal_density, construct_box,
+    replicate, read_atomic_masses, charged, write_cif, assign_charges,
+    is_symmetry_equal, apply_symmetry_rules, assert_P1_symmetry, infer_bonds!,
+    remove_bonds!, compare_bonds_in_framework, wrap_atoms_to_unit_cell!,
+    write_bond_information,
 
     # Molecules.jl
     Molecule, n_atoms, set_fractional_coords!, translate_by!, outside_box,
