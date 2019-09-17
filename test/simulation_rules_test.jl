@@ -7,7 +7,7 @@ using Test
 #   i.e. frameworks musts be in P1 symmetry to be used in GCMC or Henry
 #   coefficient test
 @testset "Simulation Rules Tests" begin
-    non_P1_framework = Framework("ORIVOC_clean.cif", convert_to_p1=false)
+    non_P1_framework = Framework("symmetry_test_structure.cif", convert_to_p1=false)
     molecule = Molecule("CO2")
     ljff = LJForceField("UFF.csv")
     temp = 298.0
@@ -29,5 +29,11 @@ using Test
     #   coefficient with a non-P1 framework
     @test_throws AssertionError henry_coefficient(non_P1_framework, molecule,
                                                  temp, ljff)
+
+    # Test that an assertion is thrown when a non-P1 structure is passed into
+    #   energy_grid(), and compute_accessibility_grid()
+    @test_throws AssertionError energy_grid(non_P1_framework, molecule, ljff)
+    @test_throws AssertionError compute_accessibility_grid(non_P1_framework, molecule, ljff)
+
 end
 end

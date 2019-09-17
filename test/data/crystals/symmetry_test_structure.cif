@@ -1,0 +1,393 @@
+data_2P0_publ
+
+_pd_block_id
+  2011-01-13T16:00|FE-B||Overall
+
+_audit_creation_method  "from EXP file using GSAS2CIF"
+_audit_creation_date                   2011-01-13T16:00
+_audit_author_name                     ""
+_audit_update_record
+; 2011-01-13T16:00  Initial CIF as created by GSAS2CIF
+;
+
+#=============================================================================
+# this information describes the project, paper etc. for the CIF             #
+# Acta Cryst. Section C papers and editorial correspondence is generated     #
+# from the information in this section                                       #
+#                                                                            #
+#   (from)   CIF submission form for Rietveld refinements (Acta Cryst. C)    #
+#                                                 Version 14 December 1998   #
+#=============================================================================
+# 1. SUBMISSION DETAILS
+
+_publ_contact_author_name            ?   # Name of author for correspondence
+_publ_contact_author_address             # Address of author for correspondence
+; ?
+;
+_publ_contact_author_email           ?
+_publ_contact_author_fax             ?
+_publ_contact_author_phone           ?
+
+_publ_contact_letter
+; ?
+;
+
+_publ_requested_journal              ?
+_publ_requested_coeditor_name        ?
+_publ_requested_category             ?   # Acta C: one of CI/CM/CO/FI/FM/FO
+
+#==============================================================================
+
+# 2. PROCESSING SUMMARY (IUCr Office Use Only)
+
+_journal_data_validation_number      ?
+
+_journal_date_recd_electronic        ?
+_journal_date_to_coeditor            ?
+_journal_date_from_coeditor          ?
+_journal_date_accepted               ?
+_journal_date_printers_first         ?
+_journal_date_printers_final         ?
+_journal_date_proofs_out             ?
+_journal_date_proofs_in              ?
+_journal_coeditor_name               ?
+_journal_coeditor_code               ?
+_journal_coeditor_notes
+; ?
+;
+_journal_techeditor_code             ?
+_journal_techeditor_notes
+; ?
+;
+_journal_coden_ASTM                  ?
+_journal_name_full                   ?
+_journal_year                        ?
+_journal_volume                      ?
+_journal_issue                       ?
+_journal_page_first                  ?
+_journal_page_last                   ?
+_journal_paper_category              ?
+_journal_suppl_publ_number           ?
+_journal_suppl_publ_pages            ?
+
+#==============================================================================
+
+# 3. TITLE AND AUTHOR LIST
+
+_publ_section_title
+; ?
+;
+_publ_section_title_footnote
+; ?
+;
+
+# The loop structure below should contain the names and addresses of all
+# authors, in the required order of publication. Repeat as necessary.
+
+loop_
+	_publ_author_name
+        _publ_author_footnote
+	_publ_author_address
+ ?                                   #<--'Last name, first name'
+; ?
+;
+; ?
+;
+
+#==============================================================================
+
+# 4. TEXT
+
+_publ_section_synopsis
+;  ?
+;
+_publ_section_abstract
+; ?
+;
+_publ_section_comment
+; ?
+;
+_publ_section_exptl_prep      # Details of the preparation of the sample(s)
+                              # should be given here.
+; ?
+;
+_publ_section_exptl_refinement
+; ?
+;
+_publ_section_references
+; ?
+;
+_publ_section_figure_captions
+; ?
+;
+_publ_section_acknowledgements
+; ?
+;
+
+#=============================================================================
+# 5. OVERALL REFINEMENT & COMPUTING DETAILS
+
+_refine_special_details
+; ?
+;
+_pd_proc_ls_special_details
+; ?
+;
+
+# The following items are used to identify the programs used.
+_computing_molecular_graphics     ?
+_computing_publication_material   ?
+
+_refine_ls_weighting_scheme       ?
+_refine_ls_weighting_details      ?
+_refine_ls_hydrogen_treatment     ?
+_refine_ls_extinction_method      ?
+_refine_ls_extinction_coef        ?
+_refine_ls_number_constraints     ?
+
+_refine_ls_restrained_S_all       ?
+_refine_ls_restrained_S_obs       ?
+
+#==============================================================================
+# 6. SAMPLE PREPARATION DATA
+
+# (In the unusual case where multiple samples are used in a single
+#  Rietveld study, this information should be moved into the phase
+#  blocks)
+
+# The following three fields describe the preparation of the material.
+# The cooling rate is in K/min.  The pressure at which the sample was
+# prepared is in kPa.  The temperature of preparation is in K.
+
+_pd_prep_cool_rate                ?
+_pd_prep_pressure                 ?
+_pd_prep_temperature              ?
+
+_pd_char_colour                   ?       # use ICDD colour descriptions
+data_FE-B_overall
+
+_refine_ls_shift/su_max                0.27
+_refine_ls_shift/su_mean               0.11
+_computing_structure_refinement        GSAS
+_refine_ls_number_parameters           45
+_refine_ls_goodness_of_fit_all         0.98
+_refine_ls_number_restraints           2
+_refine_ls_matrix_type                 full
+
+# pointers to the phase blocks
+loop_   _pd_phase_block_id
+      2011-01-13T16:00|FE-B_phase1|||
+# pointers to the diffraction patterns
+loop_   _pd_block_diffractogram_id
+      ?
+
+# Information for phase 1
+data_FE-B_phase_1
+
+_pd_block_id
+  2011-01-13T16:00|FE-B_phase1|||
+
+#==============================================================================
+# 7. CHEMICAL, STRUCTURAL AND CRYSTAL DATA
+
+_pd_char_particle_morphology      ?
+
+_chemical_name_systematic
+; ?
+;
+_chemical_name_common             ?
+_chemical_formula_moiety          ?
+_chemical_formula_structural      ?
+_chemical_formula_analytical      ?
+_chemical_melting_point           ?
+_chemical_compound_source         ?       # for minerals and
+                                          # natural products
+_symmetry_space_group_name_Hall   ?
+
+_exptl_crystal_F_000               ?
+_exptl_crystal_density_diffrn      ?
+_exptl_crystal_density_meas        ?
+_exptl_crystal_density_method      ?
+
+_cell_measurement_temperature     ?
+
+_cell_special_details
+; ?
+;
+
+_geom_special_details             ?
+
+# The following item identifies the program(s) used (if appropriate).
+_computing_structure_solution     ?
+
+#==============================================================================
+
+# 8. Phase information from GSAS
+
+_pd_phase_name
+                   "from /data/people/craigy/MgMOF/BT1/1108/MOF74.xtl"
+_cell_length_a                         25.5177(9)
+_cell_length_b                         25.5177
+_cell_length_c                         6.9661(4)
+_cell_angle_alpha                      90.0
+_cell_angle_beta                       90.0
+_cell_angle_gamma                      120.0
+_cell_volume                           3928.31(24)
+_symmetry_cell_setting                 trigonal
+_symmetry_space_group_name_H-M         "R -3"
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+       1 +x,+y,+z 
+       2 -y,x-y,+z 
+       3 y-x,-x,+z 
+      -1 -x,-y,-z 
+      -2 +y,y-x,-z 
+      -3 x-y,+x,-z 
+     101 +x+1/3,+y+2/3,+z+2/3 
+     102 -y+1/3,x-y+2/3,+z+2/3 
+     103 y-x+1/3,-x+2/3,+z+2/3 
+    -101 -x+2/3,-y+1/3,-z+1/3 
+    -102 +y+2/3,y-x+1/3,-z+1/3 
+    -103 x-y+2/3,+x+1/3,-z+1/3 
+     201 +x+2/3,+y+1/3,+z+1/3 
+     202 -y+2/3,x-y+1/3,+z+1/3 
+     203 y-x+2/3,-x+1/3,+z+1/3 
+    -201 -x+1/3,-y+2/3,-z+2/3 
+    -202 +y+1/3,y-x+2/3,-z+2/3 
+    -203 x-y+1/3,+x+2/3,-z+2/3 
+
+# ATOMIC COORDINATES AND DISPLACEMENT PARAMETERS
+
+
+loop_
+      _atom_site_type_symbol
+      _atom_site_label
+      _atom_site_fract_x
+      _atom_site_fract_y
+      _atom_site_fract_z
+      _atom_site_occupancy
+      _atom_site_thermal_displace_type
+      _atom_site_U_iso_or_equiv
+      _atom_site_symmetry_multiplicity
+Fe Fe      0.38873(29)  0.35262(31)  0.1477(10)   1.0        Uiso   0.0093       18
+O O1      0.3182(6)    0.2951(5)    0.3500(16)   1.0        Uiso   0.01896      18
+O O2      0.3068(5)    0.2318(6)    0.5894(17)   1.0        Uiso   0.0267       18
+O O3      0.3545(5)    0.2758(5)    0.0009(16)   1.0        Uiso   0.00934      18
+C C1      0.3189(5)    0.2489(5)    0.4144(13)   1.0        Uiso   0.00914      18
+C C2      0.3276(5)    0.2071(5)    0.2780(16)   1.0        Uiso   0.00989      18
+C C3      0.3444(5)    0.2224(5)    0.0839(15)   1.0        Uiso   0.0201       18
+C C4      0.3512(4)    0.1806(5)   -0.0277(12)   1.0        Uiso   0.01662      18
+H H       0.3596(9)    0.1861(8)   -0.1755(22)   1.0        Uiso   0.01289      18
+O O1a     0.5591(6)    0.6699(6)    0.6775(20)   0.901(8)   Uiso   0.01063      18
+O O1b     0.5236(6)    0.6317(6)    0.7955(17)   0.901(8)   Uiso   0.01161      18
+O O2a     0.5134(6)    0.6747(7)    0.2470(20)   0.866(9)   Uiso   0.03843      18
+O O2b     0.5295(7)    0.7244(6)    0.3087(26)   0.866(9)   Uiso   0.06115      18
+O O3a     0.059(4)     0.1362(25)   0.967(11)    0.221(9)   Uiso   0.05492      18
+O O3b     0.081(13)    0.183(5)     0.879(28)    0.221(9)   Uiso   0.44935      18
+
+loop_ _atom_type_symbol
+      _atom_type_number_in_cell
+                   Fe 18.0        
+                   O  125.32      
+                   C  72.0        
+                   H  18.0        
+ 
+# If you change Z, be sure to change all 3 of the following
+_chemical_formula_sum                  "C4 H Fe O6.96"
+_chemical_formula_weight               216.29
+_cell_formula_units_Z                  18
+
+# MOLECULAR GEOMETRY
+
+loop_
+      _geom_bond_atom_site_label_1
+      _geom_bond_atom_site_label_2
+      _geom_bond_distance
+      _geom_bond_site_symmetry_1
+      _geom_bond_site_symmetry_2
+      _geom_bond_publ_flag
+  Fe        O1               2.177(13)  .      1_555  N
+  Fe        O1               2.155(12)  .    103_554  N
+  Fe        O2               2.047(14)  .    202_554  N
+  Fe        O3               1.985(12)  .      1_555  N
+  Fe        O3               1.978(12)  .    202_555  N
+  Fe        O1a              2.087(15)  .     -1_666  N
+  Fe        O1b              2.103(14)  .     -1_666  N
+  O1        Fe               2.177(13)  .      1_555  N
+  O1        Fe               2.155(12)  .    202_555  N
+  O1        C1               1.269(13)  .      1_555  N
+  O2        Fe               2.047(14)  .    103_555  N
+  O2        C1               1.280(12)  .      1_555  N
+  O3        Fe               1.985(12)  .      1_555  N
+  O3        Fe               1.978(12)  .    103_554  N
+  O3        C3               1.380(17)  .      1_555  N
+  C1        O1               1.269(13)  .      1_555  N
+  C1        O2               1.280(12)  .      1_555  N
+  C1        C2               1.525(13)  .      1_555  N
+  C2        C1               1.525(13)  .      1_555  N
+  C2        C3               1.413(12)  .      1_555  N
+  C2        C4               1.389(14)  .   -201_444  N
+  C2        H                2.098(19)  .   -201_444  N
+  C3        O3               1.380(17)  .      1_555  N
+  C3        C2               1.413(12)  .      1_555  N
+  C3        C4               1.400(14)  .      1_555  N
+  C4        C2               1.389(14)  .   -201_444  N
+  C4        C3               1.400(14)  .      1_555  N
+  C4        H                1.047(17)  .      1_555  N
+  H         C2               2.098(19)  .   -201_444  N
+  H         C4               1.047(17)  .      1_555  N
+  O1a       Fe               2.087(15)  .     -1_666  N
+  O1a       O1b              1.250(16)  .      1_555  N
+  O1b       Fe               2.103(14)  .     -1_666  N
+  O1b       O1a              1.250(16)  .      1_555  N
+  O2a       O2b             1.1999(10)  .      1_555  N
+  O2b       O2a             1.1999(10)  .      1_555  N
+  O3a       O3b               1.201(4)  .      1_555  N
+  O3b       O3a               1.201(4)  .      1_555  N
+
+loop_
+      _geom_angle_atom_site_label_1
+      _geom_angle_atom_site_label_2
+      _geom_angle_atom_site_label_3
+      _geom_angle
+      _geom_angle_site_symmetry_1
+      _geom_angle_site_symmetry_2
+      _geom_angle_site_symmetry_3
+      _geom_angle_publ_flag
+  O1        Fe        O2                 84.7(5)    103_554  .    202_554  N
+  O1        Fe        O3                 78.2(4)    103_554  .      1_555  N
+  O1        Fe        O3                 89.1(6)    103_554  .    202_555  N
+  O1        Fe        O1a               160.0(6)    103_554  .     -1_666  N
+  O1        Fe        O1b               164.3(5)    103_554  .     -1_666  N
+  O2        Fe        O3                 96.2(5)    202_554  .      1_555  N
+  O2        Fe        O3                100.6(6)    202_554  .    202_555  N
+  O2        Fe        O1a               114.4(6)    202_554  .     -1_666  N
+  O2        Fe        O1b                79.9(5)    202_554  .     -1_666  N
+  O3        Fe        O3                157.9(6)      1_555  .    202_555  N
+  O3        Fe        O1a                93.1(6)      1_555  .     -1_666  N
+  O3        Fe        O1b               100.7(6)      1_555  .     -1_666  N
+  O3        Fe        O1a                92.9(5)    202_555  .     -1_666  N
+  O3        Fe        O1b                96.4(6)    202_555  .     -1_666  N
+  O1a       Fe        O1b                34.7(4)     -1_666  .     -1_666  N
+  Fe        O1        C1               134.2(10)    202_555  .      1_555  N
+  Fe        O2        C1                127.6(9)    103_555  .      1_555  N
+  Fe        O3        Fe                106.1(7)      1_555  .    103_554  N
+  Fe        O3        C3                122.1(9)      1_555  .      1_555  N
+  Fe        O3        C3                121.8(9)    103_554  .      1_555  N
+  O1        C1        O2               122.8(12)      1_555  .      1_555  N
+  O1        C1        C2               120.2(11)      1_555  .      1_555  N
+  O2        C1        C2               116.7(10)      1_555  .      1_555  N
+  C1        C2        C3               122.3(11)      1_555  .      1_555  N
+  C1        C2        C4                113.7(9)      1_555  .   -201_555  N
+  C3        C2        C4               124.0(10)      1_555  .   -201_555  N
+  O3        C3        C2               123.7(11)      1_555  .      1_555  N
+  O3        C3        C4               119.1(10)      1_555  .      1_555  N
+  C2        C3        C4               117.2(11)      1_555  .      1_555  N
+  C2        C4        C3                118.7(8)   -201_555  .      1_555  N
+  C2        C4        H                118.3(13)   -201_555  .      1_555  N
+  C3        C4        H                122.6(14)      1_555  .      1_555  N
+  Fe        O1a       O1b                73.4(9)     -1_666  .      1_555  N
+  Fe        O1b       O1a                71.9(8)     -1_666  .      1_555  N
+#--eof--eof--eof--eof--eof--eof--eof--eof--eof--eof--eof--eof--eof--eof--eof--#
+

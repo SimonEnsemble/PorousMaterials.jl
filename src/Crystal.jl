@@ -43,7 +43,8 @@ end
 """
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
-                          remove_overlap=false)
+                          remove_overlap=false, convert_to_p1=true,
+                          read_bonds_from_file=false, wrap_to_unit_cell=true)
     framework = Framework(name, box, atoms, charges; bonds=SimpleGraph(atoms.n_atoms),
                           symmetry=["x", "y", "z"], space_group="P1", is_p1=true)
 
@@ -64,6 +65,7 @@ function it is assumed it is in P1 symmetry.
     used when converting from the lower level symmetry to P1.
 - `read_bonds_from_file::Bool`: Whether or not to read bonding information from
     cif file. If false, the bonds can be inferred later
+- `wrap_to_unit_cell::Bool`: Whether the atoms and charges will be wrapped to the unit cell after being read in
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
@@ -83,11 +85,13 @@ function it is assumed it is in P1 symmetry.
     group is not used to verify the symmetry rules.
 - `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
     is used before any simulations such as GCMC and Henry Coefficient
+- `wrap_to_unit_cell::Bool`: Whether the atom and charge positions will be
+    wrapped to the unit cell so their coordinates are in [0, 1]
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
                    remove_overlap::Bool=false, convert_to_p1::Bool=true,
-                   read_bonds_from_file::Bool=false)
+                   read_bonds_from_file::Bool=false, wrap_to_unit_cell::Bool=true)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -345,12 +349,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             error("If structure is not in P1 symmetry it must have replication information")
         end
 
-        # warning that structure is not being converted to P1 symmetry
-        if ! convert_to_p1 && ! p1_symmetry
-            @warn @sprintf("%s is not in P1 symmetry and it is not being converted to P1 symmetry.\nAny simulations performed with PorousMaterials will NOT be accurate",
-                          filename)
-        end
-
         a = data["a"]
         b = data["b"]
         c = data["c"]
@@ -414,6 +412,13 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
 
+    if wrap_to_unit_cell
+        framework.atoms.xf .= mod.(framework.atoms.xf, 1.0)
+        framework.charges.xf .= mod.(framework.charges.xf, 1.0)
+    end
+    strip_numbers_from_atom_labels!(framework)
+
+
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
             error(@sprintf("Framework %s is not charge neutral; net charge is %f e. Ignore
@@ -424,6 +429,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     strip_numbers_from_atom_labels!(framework)
+    if wrap_to_unit_cell
+        wrap_atoms_to_unit_cell!(framework)
+    end
 
     if convert_to_p1 && ! p1_symmetry && ! read_bonds_from_file
         return apply_symmetry_rules(framework; remove_overlap=remove_overlap,
@@ -559,7 +567,7 @@ function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::B
                         framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @warn @sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                    @warn @sprintf("Atoms %d and %d in %s are less than %f Å apart.", i, j,
                         framework.name, overlap_tol)
                 end
             end
@@ -579,7 +587,7 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
                         framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @warn @sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                    @warn @sprintf("Charges %d and %d in %s are less than %f Å apart.", i, j,
                         framework.name, overlap_tol)
                 end
             end

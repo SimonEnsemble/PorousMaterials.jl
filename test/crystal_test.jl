@@ -42,9 +42,9 @@ using Random
     #   no atoms should overlap
     #   should place atoms in the same positions as the P1 conversion using
     #       openBabel
-    non_P1_framework = Framework("ORIVOC_clean_fract.cif", remove_overlap=true)
-    non_P1_cartesian = Framework("ORIVOC_clean.cif", remove_overlap=true)
-    P1_framework = Framework("ORIVOC_clean_P1.cif", remove_overlap=true)
+    non_P1_framework = Framework("symmetry_test_structure.cif")
+    non_P1_cartesian = Framework("symmetry_test_structure_cartn.cif")
+    P1_framework = Framework("symmetry_test_structure_P1.cif")
 
     # wrap all atoms and charges to be within the unit cell
     non_P1_framework.atoms.xf .= mod.(non_P1_framework.atoms.xf, 1.0)
@@ -72,8 +72,8 @@ using Random
 
     # test reading in non-P1 then applying symmetry later
     # read in the same files as above, then convert to P1, then compare
-    non_P1_framework_symmetry = Framework("ORIVOC_clean_fract.cif", convert_to_p1=false)
-    non_P1_cartesian_symmetry = Framework("ORIVOC_clean.cif", convert_to_p1=false)
+    non_P1_framework_symmetry = Framework("symmetry_test_structure.cif", convert_to_p1=false)
+    non_P1_cartesian_symmetry = Framework("symmetry_test_structure_cartn.cif", convert_to_p1=false)
 
     # make sure these frameworks are not in P1 symmetry when convert_to_p1 is
     #   set to false
@@ -81,17 +81,17 @@ using Random
     @test ! non_P1_cartesian_symmetry.is_p1
 
     # test write_cif in non_p1 symmetry
-    write_cif(non_P1_framework_symmetry, joinpath("data", "crystals", "rewritten_ORIVOC_clean_fract.cif"))
+    write_cif(non_P1_framework_symmetry, joinpath("data", "crystals", "rewritten_symmetry_test_structure.cif"))
     # keep this in cartesian to test both
-    write_cif(non_P1_cartesian_symmetry, joinpath("data", "crystals", "rewritten_ORIVOC_clean.cif"), fractional=false)
-    rewritten_non_p1_fractional = Framework("rewritten_ORIVOC_clean_fract.cif"; convert_to_p1=false)
-    rewritten_non_p1_cartesian = Framework("rewritten_ORIVOC_clean.cif"; convert_to_p1=false)
+    write_cif(non_P1_cartesian_symmetry, joinpath("data", "crystals", "rewritten_symmetry_test_structure_cartn.cif"), fractional=false)
+    rewritten_non_p1_fractional = Framework("rewritten_symmetry_test_structure.cif"; convert_to_p1=false)
+    rewritten_non_p1_cartesian = Framework("rewritten_symmetry_test_structure_cartn.cif"; convert_to_p1=false)
 
     @test isapprox(rewritten_non_p1_fractional, non_P1_framework_symmetry)
     @test isapprox(rewritten_non_p1_cartesian, non_P1_cartesian_symmetry)
 
-    non_P1_framework_symmetry = apply_symmetry_rules(non_P1_framework_symmetry, remove_overlap=true)
-    non_P1_cartesian_symmetry = apply_symmetry_rules(non_P1_cartesian_symmetry, remove_overlap=true)
+    non_P1_framework_symmetry = apply_symmetry_rules(non_P1_framework_symmetry)
+    non_P1_cartesian_symmetry = apply_symmetry_rules(non_P1_cartesian_symmetry)
 
     # wrap all atoms and charges to be within the unit cell
     non_P1_framework_symmetry.atoms.xf .= mod.(non_P1_framework_symmetry.atoms.xf, 1.0)
