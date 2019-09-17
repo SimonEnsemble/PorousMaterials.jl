@@ -1327,7 +1327,6 @@ function Base.isapprox(f1::Framework, f2::Framework; atol::Float64=1e-6, checkna
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
-# TODO add bond information too
 function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
     new_framework = deepcopy(frameworks[1])
     for (i, f) in enumerate(frameworks)
@@ -1341,10 +1340,16 @@ function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
         new_atoms = new_framework.atoms + f.atoms
         new_charges = new_framework.charges + f.charges
 
+        nf_n_atoms = new_framework.atoms.n_atoms
+        add_vertices!(new_framework.bonds, nf_n_atoms)
+        for edge in collect(edges(f.bonds))
+            add_edge!(nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+        end
+
         new_framework = Framework(split(new_framework.name, ".")[1] * "_" * split(f.name, ".")[1],
                                  new_framework.box, new_atoms, new_charges,
                                  symmetry=new_framework.symmetry,space_group=new_framework.space_group,
-                                 is_p1=new_framework.is_p1)
+                                 is_p1=new_framework.is_p1, bonds=new_framework.bonds)
     end
     if check_overlap
         if atom_overlap(new_framework)
