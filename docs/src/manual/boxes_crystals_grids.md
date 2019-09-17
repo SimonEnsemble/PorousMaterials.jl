@@ -1,6 +1,6 @@
 ## Loading in Crystal Structure Files
 
-Place `.cif` and `.cssr` crystal structure files in `data/crystals`. `PorousMaterials.jl` can load in `.cif` files of any symmetry as long as the symmetry operations are included. From here you can start julia and do the following to load a framework and start working with it.
+Place `.cif` and `.cssr` crystal structure files in `PorousMaterials.PATH_To_CRYSTALS`. `PorousMaterials.jl` can load in `.cif` files of any symmetry as long as the symmetry operations are included. From here you can start julia and do the following to load a framework and start working with it.
 
 ```julia
 using PorousMaterials

@@ -47,7 +47,7 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    forcefield_file_path = joinpath(PATH_TO_DATA, "forcefields", forcefieldfile)
+    forcefield_file_path = joinpath(PATH_TO_FORCEFIELDS, forcefieldfile)
 
     df = CSV.read(forcefield_file_path) # from DataFrames
 
