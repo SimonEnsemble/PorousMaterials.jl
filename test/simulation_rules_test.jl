@@ -35,5 +35,10 @@ using Test
     @test_throws AssertionError energy_grid(non_P1_framework, molecule, ljff)
     @test_throws AssertionError compute_accessibility_grid(non_P1_framework, molecule, ljff)
 
+    # Test that an assertion is thrown when trying to replicate a non-P1
+    #   structure
+    @test_throws AssertionError replicate(non_P1_framework, (2, 2, 2))
+    @test_throws AssertionError replicate(non_P1_framework, (1, 1, 1))
+
 end
 end
