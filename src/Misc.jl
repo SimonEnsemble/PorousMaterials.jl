@@ -140,8 +140,8 @@ end
 # obtain a reasonable initial guess for the optimization route in fitting adsorption 
 #  models to adsorption isotherm data
 function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol)
-    n = df[loading_col_name]
-    p = df[pressure_col_name]
+    n = df[!, loading_col_name]
+    p = df[!, pressure_col_name]
     if model == :langmuir || model == :henry
         # Henry coefficient H guess as the secant line between origin and first data point 
         #  of the adsorption isotherm
@@ -155,7 +155,7 @@ function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symb
         else
             # saturation loading M is largest value of adsorption observed plus 10%
             M0 = n[end] * 1.1
-            K0 = M0 * H0
+            K0 = H0 / M0
             return Dict("M0" => M0, "K0" => K0)
         end
     else
@@ -190,19 +190,25 @@ where N is the total adsorption, M is the maximum monolayer coverage, K is the L
 function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol, 
                                  loading_col_name::Symbol, model::Symbol)
     sort!(df, [pressure_col_name])
-    n = df[loading_col_name]
-    p = df[pressure_col_name]
+    n = df[!, loading_col_name]
+    p = df[!, pressure_col_name]
     θ0 = _guess(df, pressure_col_name, loading_col_name, model)
 
     if model == :langmuir
         objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = 1:length(n)])
-        res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], LBFGS())
+        res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead())
+        if !Optim.converged(res)
+            error("Optimization algorithm failed!")
+        end
         M, K = res.minimizer
         mse = res.minimum / length(n)
         return Dict("M" => M, "K" => K, "MSE" => mse)
     elseif model == :henry
         objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS())
+        if !Optim.converged(res)
+            error("Optimization algorithm failed!")
+        end
         H = res.minimizer
         mse = res.minimum / length(n)
         return Dict("H" => H[1], "MSE" => mse)

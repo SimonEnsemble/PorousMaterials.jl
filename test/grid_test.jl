@@ -18,7 +18,7 @@ using Random
         :kJ_mol, [1., 2., 3.])
     write_cube(grid, "test_grid.cube")
     grid2 = read_cube("test_grid.cube")
-    @test isapprox(grid, grid2)
+    @test isapprox(grid, grid2, atol=1e-5) # atol b/c loose precision when reading/writing to file
     
     # nearest neighbor ID checker
     n_pts = (10, 20, 30)
