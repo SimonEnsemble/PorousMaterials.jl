@@ -199,11 +199,12 @@ using Random
                                                        8.0 11.0;
                                                        9.0 12.0]))
     f3 = f1 + f2
-    addition_bonding_rules = [BondingRule(:a, :b, 5.0, 5.3),
-                              BondingRule(:c, :d, 5.0, 5.3)]
-    infer_bonds!(f1, addition_bonding_rules)
-    infer_bonds!(f2, addition_bonding_rules)
-    infer_bonds!(f3, addition_bonding_rules)
+    addition_bonding_rules = [BondingRule(:a, :b, 4.5, 5.3),
+                              BondingRule(:c, :d, 4.5, 5.3)]
+    infer_bonds!(f1, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
+    infer_bonds!(f2, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
+    @test ! compare_bonds_in_framework(f1 + f2, f3)
+    infer_bonds!(f3, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
     @test compare_bonds_in_framework(f1 + f2, f3)
     @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
     @test isapprox(f1.box, f3.box)

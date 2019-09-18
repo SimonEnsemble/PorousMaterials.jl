@@ -1353,7 +1353,7 @@ function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
         nf_n_atoms = new_framework.atoms.n_atoms
         add_vertices!(new_framework.bonds, nf_n_atoms)
         for edge in collect(edges(f.bonds))
-            add_edge!(nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+            add_edge!(new_framework.bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
         end
 
         new_framework = Framework(split(new_framework.name, ".")[1] * "_" * split(f.name, ".")[1],
