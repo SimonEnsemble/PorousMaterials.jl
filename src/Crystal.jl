@@ -230,12 +230,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 # =====================
                 elseif fractional && ! atom_info
                     atom_info = true
-                    atom_column_name = ""
-                    for (name, column) in name_to_column
-                        if column == 1
-                            atom_column_name = name
-                        end
-                    end
+                    atom_column_name = [name for (name, column) in name_to_column if column == 1][end]
                     
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
