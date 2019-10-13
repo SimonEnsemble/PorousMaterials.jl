@@ -407,12 +407,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
     framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
 
-    if wrap_to_unit_cell
-        framework.atoms.xf .= mod.(framework.atoms.xf, 1.0)
-        framework.charges.xf .= mod.(framework.charges.xf, 1.0)
-    end
-    strip_numbers_from_atom_labels!(framework)
-
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
