@@ -83,8 +83,8 @@ function it is assumed it is in P1 symmetry.
 - `space_group::AbstractString`: The name of the space group. This is stored
     so that it can be written out again in the write_cif function. The space
     group is not used to verify the symmetry rules.
-- `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. This
-    is used before any simulations such as GCMC and Henry Coefficient
+- `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. Prior
+    to GCMC and Widom insertion simulations this is checked.
 - `wrap_to_unit_cell::Bool`: Whether the atom and charge positions will be
     wrapped to the unit cell so their coordinates are in [0, 1]
 """
@@ -542,9 +542,9 @@ write_xyz(framework::Framework; comment::AbstractString="", center::Bool=false) 
     comment=comment, center=center)
 
 """
-    is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
+    overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
 
-Return true iff any two `Atoms` in the crystal overlap by calculating the distance
+Return true if any two `Atoms` in the crystal overlap by calculating the distance
 between every pair of atoms and ensuring distance is greater than
 `overlap_tol`. If verbose, print the pair of atoms which are culprits.
 
@@ -612,7 +612,8 @@ end
 
 #TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1, verbose=true)
+    new_framework = remove_overlapping_atoms_and_charges(framework, atom_overlap_tol=0.1, 
+                                                        charge_overlap_tol=0.1, verbose=true)
 
 Takes in a framework and returns a new framework with where overlapping atoms and overlapping
 charges were removed. i.e. if there is an overlapping pair, one in the pair is removed.
@@ -623,6 +624,7 @@ must be identical.
 - `framework::Framework`: The framework containing the crystal structure information
 - `atom_overlap_tol::Float64`: The minimum distance between two atoms that is tolerated
 - `charge_overlap_tol::Float64`: The minimum distance between two charges that is tolerated
+- `verbose::Bool`: Will print out information regarding the function call
 
 # Returns
 - `new_framework::Framework`: A new framework where identical atoms have been removed.
@@ -997,7 +999,8 @@ function remove_bonds!(framework::Framework)
 end
 
 """
-    infer_bonds!(framework, bonding_rules)
+    infer_bonds!(framework, bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)],
+                    include_bonds_across_periodic_boundaries=true)
 
 Populate the bonds in the framework object based on the bonding rules. If a
 pair doesn't have a suitable rule then they will not be considered bonded. 
@@ -1005,6 +1008,8 @@ pair doesn't have a suitable rule then they will not be considered bonded.
 `:*` is considered a wildcard and can be substituted for any species. It is a
 good idea to include a bonding rule between two `:*` to allow any atoms to bond
 as long as they are close enough.
+
+The bonding rules are hierarchical, i.e. the first bonding rule takes precedence over the latter ones.
 
 # Arguments
 -`framework::Framework`: The framework that bonds will be added to
@@ -1058,7 +1063,7 @@ function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}
 end
 
 """
-    bonds_equal = compare_bonds_in_framework(framework1, framework2)
+    bonds_equal = compare_bonds_in_framework(framework1, framework2, atol=0.0)
 
 Returns whether the bonds defined in framework1 are the same as the bonds
 defined in framework2. It checks whether the atoms in the same positions
@@ -1067,6 +1072,10 @@ have the same bonds.
 # Arguments
 -`framework1::Framework`: The first framework
 -`framework2::Framework`: The second framework
+-`atol::Float64`: absolute tolerance for the comparison of coordinates in the framework
+
+# Returns
+-`bonds_equal::Bool`: Wether the bonds in framework1 and framework2 are equal
 """
 function compare_bonds_in_framework(fi::Framework, fj::Framework; atol::Float64=0.0)
     if ne(fi.bonds) != ne(fj.bonds)
