@@ -183,10 +183,10 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
                 # if the file provides cartesian coordinates
-                cartesian = cartesian || haskey(name_to_column, "_atom_site_Cartn_x") &&
+                cartesian = cartesian || ! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
                                 haskey(name_to_column, "_atom_site_Cartn_y") &&
-                                haskey(name_to_column, "_atom_site_Cartn_z") &&
-                                ! fractional # if both are provided, will default
+                                haskey(name_to_column, "_atom_site_Cartn_z")
+                                             # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
 
@@ -304,9 +304,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 # =====================
                 # BOND READER
                 # =====================
-                elseif haskey(name_to_column, "_geom_bond_atom_site_label_1") &&
-                       haskey(name_to_column, "_geom_bond_atom_site_label_2") &&
-                       read_bonds_from_file
+                elseif read_bonds_from_file &&
+                       haskey(name_to_column, "_geom_bond_atom_site_label_1") &&
+                       haskey(name_to_column, "_geom_bond_atom_site_label_2")
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
