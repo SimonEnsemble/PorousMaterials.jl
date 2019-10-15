@@ -41,6 +41,22 @@ struct BondingRule
 end
 
 """
+    default_bondingrules = default_bondingrules()
+
+Returns the default bonding rules. Using `append!` and/or `prepend!` to add to the default bonding rules:
+
+# Example
+```
+bond_rules = default_bondingrules()
+prepend!(bond_rules, BondingRule(:Cu, :*, 0.1, 2.6))
+```
+
+# Returns
+-`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:*, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
+"""
+default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]
+
+"""
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
                           remove_overlap=false, convert_to_p1=true,
@@ -1276,6 +1292,26 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     return new_framework
 end
 
+"""
+    are_atoms_bonded = is_bonded(framework, i, j, bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)],
+                                 include_bonds_across_periodic_boundaries=true)
+
+Checks to see if atoms `i` and `j` in `framework` are bonded according to the `bonding_rules`.
+
+# Arguments
+-`framework::Framework`: The framework that bonds will be added to
+-`i::Int`: Index of the first atom
+-`j::Int`: Index of the second atom
+-`bonding_rules::Array{BondingRule, 1}`: The array of bonding rules that will
+    be used to fill the bonding information. They are applied in the order that
+    they appear.
+-`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the
+    periodic boundary when calculating bonds
+
+# Returns
+-`are_atoms_bonded::Bool`: Whether atoms `i` and `j` are bonded according to `bonding_rules`
+
+"""
 function is_bonded(framework::Framework, i::Int64, j::Int64,
                    bonding_rules::Array{BondingRule, 1}=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)];
                    include_bonds_across_periodic_boundaries::Bool=true)
