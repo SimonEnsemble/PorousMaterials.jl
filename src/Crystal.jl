@@ -1017,35 +1017,8 @@ function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}
     for i in 1:framework.atoms.n_atoms
         # loop over every unique pair of atoms
         for j in i+1:framework.atoms.n_atoms
-            # loop over possible bonding rules
-            for br in bonding_rules
-                # determine if the types are correct
-                # anything goes, reached the final bonding rule (if set up right)
-                species_match = false
-                if br.species_i == :* && br.species_j == :*
-                    species_match = true
-                elseif br.species_i == :* && (framework.atoms.species[i] == br.species_j ||
-                                              framework.atoms.species[j] == br.species_j)
-                    species_match = true
-                elseif br.species_j == :* && (framework.atoms.species[i] == br.species_i ||
-                                              framework.atoms.species[j] == br.species_i)
-                    species_match = true
-                elseif (framework.atoms.species[i] == br.species_i && framework.atoms.species[j] == br.species_j) ||
-                    (framework.atoms.species[j] == br.species_i && framework.atoms.species[i] == br.species_j)
-                    species_match = true
-                end
-                if species_match
-                    # determine if they are within range
-                    dxf = framework.atoms.xf[:, i] - framework.atoms.xf[:, j]
-                    if include_bonds_across_periodic_boundaries
-                        nearest_image!(dxf)
-                    end
-                    norm_c = norm(framework.box.f_to_c * dxf)
-                    if br.min_dist < norm_c && norm_c < br.max_dist
-                        add_edge!(framework.bonds, i, j)
-                        break
-                    end
-                end
+            if is_bonded(framework, i, j, bonding_rules; include_bonds_across_periodic_boundaries=include_bonds_across_periodic_boundaries)
+                add_edge!(framework.bonds, i, j)
             end
         end
     end
@@ -1303,6 +1276,43 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
 
     return new_framework
 end
+
+function is_bonded(framework::Framework, i::Int64, j::Int64,
+                   bonding_rules::Array{BondingRule, 1}=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)];
+                   include_bonds_across_periodic_boundaries::Bool=true)
+    species_i = framework.atoms.species[i]
+    species_j = framework.atoms.species[j]
+    x_i = framework.atoms.xf[:, i]
+    x_j = framework.atoms.xf[:, j]
+    # loop over possible bonding rules
+    for br in bonding_rules
+        # determine if the atom species correspond to the species in `bonding_rules`
+        species_match = false
+        if br.species_i == :* && br.species_j == :*
+            species_match = true
+        elseif br.species_i == :* && (species_i == br.species_j || species_j == br.species_j)
+            species_match = true
+        elseif br.species_j == :* && (species_i == br.species_i || species_j == br.species_j)
+            species_match = true
+        elseif (species_i == br.species_i && species_j == br.species_j) || (species_j == br.species_i && species_i == br.species_j)
+            species_match = true
+        end
+
+        if species_match
+            # determine if the atoms are close enough to bond
+            dxf = x_i - x_j
+            if include_bonds_across_periodic_boundaries
+                nearest_image!(dxf)
+            end
+            cartesian_dist_between_atoms = norm(framework.box.f_to_c * dxf)
+            if br.min_dist < cartesian_dist_between_atoms && br.max_dist > cartesian_dist_between_atoms
+                return true
+            end
+        end
+    end
+    return false
+end
+
 
 function Base.show(io::IO, framework::Framework)
     println(io, "Name: ", framework.name)

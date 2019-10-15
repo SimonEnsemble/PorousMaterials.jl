@@ -201,6 +201,8 @@ using Random
     f3 = f1 + f2
     addition_bonding_rules = [BondingRule(:a, :b, 4.5, 5.3),
                               BondingRule(:c, :d, 4.5, 5.3)]
+    @test is_bonded(f1, 1, 2, [BondingRule(:a, :b, 1.0, 5.5)]; include_bonds_across_periodic_boundaries=false)
+    @test ! is_bonded(f2, 1, 2, [BondingRule(:c, :d, 1.0, 4.5)]; include_bonds_across_periodic_boundaries=false)
     infer_bonds!(f1, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
     infer_bonds!(f2, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
     @test ! compare_bonds_in_framework(f1 + f2, f3)
