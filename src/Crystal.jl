@@ -417,7 +417,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
     end
 
-    strip_numbers_from_atom_labels!(framework)
     if wrap_to_unit_cell
         wrap_atoms_to_unit_cell!(framework)
     end
