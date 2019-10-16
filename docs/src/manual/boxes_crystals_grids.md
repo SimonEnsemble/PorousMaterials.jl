@@ -209,6 +209,7 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
     infer_bonds!
     remove_bonds!
     compare_bonds_in_framework
+    default_bondingrules
 ```
 
 ## Grids
