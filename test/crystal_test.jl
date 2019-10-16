@@ -33,8 +33,10 @@ using Random
     #   more write_cif tests below with symmetry tests
     write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2.cif"))
     framework_rewritten = Framework("rewritten_test_structure2.cif")
+    strip_numbers_from_atom_labels!(framework_rewritten)
     write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2_cartn.cif"); fractional=false)
     framework_rewritten_cartn = Framework("rewritten_test_structure2_cartn.cif")
+    strip_numbers_from_atom_labels!(framework_rewritten_cartn)
     @test isapprox(framework, framework_rewritten)
     @test isapprox(framework, framework_rewritten_cartn)
 
@@ -43,8 +45,11 @@ using Random
     #   should place atoms in the same positions as the P1 conversion using
     #       openBabel
     non_P1_framework = Framework("symmetry_test_structure.cif")
+    strip_numbers_from_atom_labels!(non_P1_framework)
     non_P1_cartesian = Framework("symmetry_test_structure_cartn.cif")
+    strip_numbers_from_atom_labels!(non_P1_cartesian)
     P1_framework = Framework("symmetry_test_structure_P1.cif")
+    strip_numbers_from_atom_labels!(P1_framework)
 
     # wrap all atoms and charges to be within the unit cell
     non_P1_framework.atoms.xf .= mod.(non_P1_framework.atoms.xf, 1.0)
@@ -73,7 +78,9 @@ using Random
     # test reading in non-P1 then applying symmetry later
     # read in the same files as above, then convert to P1, then compare
     non_P1_framework_symmetry = Framework("symmetry_test_structure.cif", convert_to_p1=false)
+    strip_numbers_from_atom_labels!(non_P1_framework_symmetry)
     non_P1_cartesian_symmetry = Framework("symmetry_test_structure_cartn.cif", convert_to_p1=false)
+    strip_numbers_from_atom_labels!(non_P1_cartesian_symmetry)
 
     # make sure these frameworks are not in P1 symmetry when convert_to_p1 is
     #   set to false
@@ -85,7 +92,9 @@ using Random
     # keep this in cartesian to test both
     write_cif(non_P1_cartesian_symmetry, joinpath("data", "crystals", "rewritten_symmetry_test_structure_cartn.cif"), fractional=false)
     rewritten_non_p1_fractional = Framework("rewritten_symmetry_test_structure.cif"; convert_to_p1=false)
+    strip_numbers_from_atom_labels!(rewritten_non_p1_fractional)
     rewritten_non_p1_cartesian = Framework("rewritten_symmetry_test_structure_cartn.cif"; convert_to_p1=false)
+    strip_numbers_from_atom_labels!(rewritten_non_p1_cartesian)
 
     @test isapprox(rewritten_non_p1_fractional, non_P1_framework_symmetry)
     @test isapprox(rewritten_non_p1_cartesian, non_P1_cartesian_symmetry)
@@ -116,10 +125,12 @@ using Random
 
     # test replicate framework
     sbmof = Framework("SBMOF-1.cif")
+    strip_numbers_from_atom_labels!(sbmof)
     replicated_sbmof = replicate(sbmof, (1, 1, 1))
     @test isapprox(sbmof, replicated_sbmof)
     # test replication no bonds assertion
     sbmof_bonds = Framework("SBMOF-1.cif")
+    strip_numbers_from_atom_labels!(sbmof_bonds)
     bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
                      BondingRule(:Ca, :O, 0.4, 2.5),
                      BondingRule(:*, :*, 0.4, 1.9)]
@@ -128,12 +139,14 @@ using Random
     # write out and compare to inferred bonds
     write_cif(sbmof_bonds, joinpath(pwd(), "data", "crystals", "SBMOF-1_inferred_bonds.cif"))
     sbmof_inferred_bonds = Framework("SBMOF-1_inferred_bonds.cif"; read_bonds_from_file=true)
+    strip_numbers_from_atom_labels!(sbmof_inferred_bonds)
     @test compare_bonds_in_framework(sbmof_bonds, sbmof_inferred_bonds)
     # other bond info tests
     # TODO find more robust test/confirm these are the correct numbers
     # replacing this test with the one below comparing pdb bond info to inferred
     #   bond info
     sbmof_bonds_copy = Framework("SBMOF-1.cif")
+    strip_numbers_from_atom_labels!(sbmof_bonds_copy)
     # reverse the order of the atoms and bond info should still be the same
     sbmof_bonds_copy.atoms.xf .= reverse(sbmof_bonds_copy.atoms.xf; dims=2)
     sbmof_bonds_copy.atoms.species .= reverse(sbmof_bonds_copy.atoms.species)
@@ -145,9 +158,11 @@ using Random
 
     # test reading in bonds as part of `Framework()`
     sbmof_read_bonds = Framework("test_bond_viz.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
+    strip_numbers_from_atom_labels!(sbmof_read_bonds)
     @test ne(sbmof_read_bonds.bonds) == 5
     write_cif(sbmof_read_bonds, joinpath(pwd(), "data", "crystals", "rewritten_sbmof_read_bonds.cif"))
     reloaded_sbmof_read_bonds = Framework("rewritten_sbmof_read_bonds.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
+    strip_numbers_from_atom_labels!(reloaded_sbmof_read_bonds)
     @test compare_bonds_in_framework(sbmof_read_bonds, reloaded_sbmof_read_bonds)
 
     # Test that reading in bonding information is the same as inferring the
@@ -155,7 +170,9 @@ using Random
     # Bonding information is from a pdb file saved by avogadro
     # using non-p1 because it meant copying over fewer bonds
     read_bonds = Framework("KAXQIL_clean_cartn.cif"; convert_to_p1=false, read_bonds_from_file=true)
+    strip_numbers_from_atom_labels!(read_bonds)
     inferred_bonds = Framework("KAXQIL_clean.cif"; convert_to_p1=false)
+    strip_numbers_from_atom_labels!(inferred_bonds)
     # Using same bonding rules as above
     infer_bonds!(inferred_bonds, bonding_rules)
     @test compare_bonds_in_framework(read_bonds, inferred_bonds; atol=1e-6)
