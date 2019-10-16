@@ -4,7 +4,7 @@ using FileIO
 using Test
 
 @testset "Henry Checkpoint Tests" begin
-    framework = Framework("FIQCEN_clean_min_charges.cif")
+    framework = Framework("FIQCEN_clean.cif")
     strip_numbers_from_atom_labels!(framework)
     co2 = Molecule("CO2")
     ljff = LJForceField("UFF.csv")
