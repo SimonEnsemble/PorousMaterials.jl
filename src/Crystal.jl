@@ -1180,12 +1180,13 @@ end
 
 """
     write_bond_information(framework, filename)
+    write_bond_information(framework)
 
 Writes the bond information from a framework to the selected filename.
 
 # Arguments
 -`framework::Framework`: The framework to have its bonds written to a vtk file
--`filename::AbstractString`: The filename the bond information will be saved to
+-`filename::AbstractString`: The filename the bond information will be saved to. If left out, will default to framework name.
 """
 function write_bond_information(framework::Framework, filename::AbstractString)
     if ne(framework.bonds) == 0
@@ -1209,6 +1210,8 @@ function write_bond_information(framework::Framework, filename::AbstractString)
     close(vtk_file)
     @printf("Saving bond information for framework %s to %s.\n", framework.name, joinpath(pwd(), filename))
 end
+
+write_bond_information(framework::Framework) = write_bond_information(framework, framework.name * "_bonds.vtk")
 
 """
     new_framework = assign_charges(framework, charges, net_charge_tol=1e-5)
