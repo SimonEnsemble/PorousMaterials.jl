@@ -1003,8 +1003,8 @@ function remove_bonds!(framework::Framework)
 end
 
 """
-    infer_bonds!(framework, bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)],
-                    include_bonds_across_periodic_boundaries=true)
+    infer_bonds!(framework, include_bonds_across_periodic_boundaries, 
+                    bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)])
 
 Populate the bonds in the framework object based on the bonding rules. If a
 pair doesn't have a suitable rule then they will not be considered bonded. 
@@ -1017,15 +1017,15 @@ The bonding rules are hierarchical, i.e. the first bonding rule takes precedence
 
 # Arguments
 -`framework::Framework`: The framework that bonds will be added to
+-`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the
+    periodic boundary when calculating bonds
 -`bonding_rules::Array{BondingRule, 1}`: The array of bonding rules that will
     be used to fill the bonding information. They are applied in the order that
     they appear.
--`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the
-    periodic boundary when calculating bonds
 """
-function infer_bonds!(framework::Framework, bonding_rules::Array{BondingRule, 1}=
-                      [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)];
-                      include_bonds_across_periodic_boundaries::Bool=true)
+function infer_bonds!(framework::Framework, include_bonds_across_periodic_boundaries::Bool,
+                      bonding_rules::Array{BondingRule, 1}=
+                      [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)])
     @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", framework.name)
 
     # loop over every atom

@@ -134,7 +134,7 @@ using Random
     bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
                      BondingRule(:Ca, :O, 0.4, 2.5),
                      BondingRule(:*, :*, 0.4, 1.9)]
-    infer_bonds!(sbmof_bonds, bonding_rules)
+    infer_bonds!(sbmof_bonds, true, bonding_rules)
     @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
     # write out and compare to inferred bonds
     write_cif(sbmof_bonds, joinpath(pwd(), "data", "crystals", "SBMOF-1_inferred_bonds.cif"))
@@ -150,7 +150,7 @@ using Random
     # reverse the order of the atoms and bond info should still be the same
     sbmof_bonds_copy.atoms.xf .= reverse(sbmof_bonds_copy.atoms.xf; dims=2)
     sbmof_bonds_copy.atoms.species .= reverse(sbmof_bonds_copy.atoms.species)
-    infer_bonds!(sbmof_bonds_copy, bonding_rules)
+    infer_bonds!(sbmof_bonds_copy, true, bonding_rules)
     @test compare_bonds_in_framework(sbmof_bonds, sbmof_bonds_copy)
     remove_bonds!(sbmof_bonds)
     @test ne(sbmof_bonds.bonds) == 0
@@ -174,7 +174,7 @@ using Random
     inferred_bonds = Framework("KAXQIL_clean.cif"; convert_to_p1=false)
     strip_numbers_from_atom_labels!(inferred_bonds)
     # Using same bonding rules as above
-    infer_bonds!(inferred_bonds, bonding_rules)
+    infer_bonds!(inferred_bonds, true, bonding_rules)
     @test compare_bonds_in_framework(read_bonds, inferred_bonds; atol=1e-6)
 
     repfactors = replication_factors(sbmof.box, 14.0)
@@ -220,10 +220,10 @@ using Random
                               BondingRule(:c, :d, 4.5, 5.3)]
     @test is_bonded(f1, 1, 2, [BondingRule(:a, :b, 1.0, 5.5)]; include_bonds_across_periodic_boundaries=false)
     @test ! is_bonded(f2, 1, 2, [BondingRule(:c, :d, 1.0, 4.5)]; include_bonds_across_periodic_boundaries=false)
-    infer_bonds!(f1, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
-    infer_bonds!(f2, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
+    infer_bonds!(f1, false, addition_bonding_rules)
+    infer_bonds!(f2, false, addition_bonding_rules)
     @test ! compare_bonds_in_framework(f1 + f2, f3)
-    infer_bonds!(f3, addition_bonding_rules; include_bonds_across_periodic_boundaries=false)
+    infer_bonds!(f3, false, addition_bonding_rules)
     @test compare_bonds_in_framework(f1 + f2, f3)
     @test_throws AssertionError f1 + sbmof # only allow frameworks with same box
     @test isapprox(f1.box, f3.box)
