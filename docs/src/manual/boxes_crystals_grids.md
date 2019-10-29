@@ -86,19 +86,21 @@ f = Framework("SBMOF-1.cif")
 bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
                  BondingRule(:*, :*, 0.4, 1.9)]
 
-# infer the bonds for the framework f
-infer_bonds!(f, bonding_rules)
+# Alternatively, you could get the above bonding rules with the following command
+bonding_rules = default_bondingrules()
 
-# redefine bonding_rules to account for edge cases between Ca and O atoms
-bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
-                 BondingRule(:Ca, :O, 0.4, 2.5),
-                 BondingRule(:*, :*, 0.4, 1.9)]
+# infer the bonds for the framework f with bonds across periodic boundaries
+infer_bonds!(f, true, bonding_rules)
+
+# redefine bonding_rules to account for edge cases between Ca and O atoms. `pushfirst!` adds the newly
+#   defined Bondingrule to the front of `bonding_rules`
+pushfirst!(BondingRule(:Ca, :O, 0.4, 2.5), bonding_rules)
 
 # remove old bonds from framework before inferring bonds with new rules
 remove_bonds!(f)
 
 # re-infer bonds
-infer_bonds!(f, bonding_rules)
+infer_bonds!(f, true, bonding_rules)
 
 # output the bond information to visualize it and double check
 write_bond_information(f, "SBMOF-1_bonds.vtk")
