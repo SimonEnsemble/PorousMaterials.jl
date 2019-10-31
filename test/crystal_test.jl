@@ -250,6 +250,16 @@ using Random
     @test rbox.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
     @test all(rbox.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
 
+    # write bond information to manually inspect if bonds are in order
+    hkust1 = Framework("FIQCEN_clean.cif")
+    strip_numbers_from_atom_labels!(hkust1)
+    br = default_bondingrules()
+    pushfirst!(br, BondingRule(:Cu, :O, 0.3, 2.4))
+    infer_bonds!(hkust1, true, br)
+    reference_bonds = loadgraph("hkust1_reference_bonds.lgz")
+    @test reference_bonds == hkust1.bonds
+
+
 #=    ## .cssr reader test
     # test replicate framework
     sbmof = Framework("SBMOF-1.cif")
