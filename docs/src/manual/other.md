@@ -21,7 +21,7 @@ To use absolute file paths when reading in e.g. crystals via the `Framework` con
 Call `set_default_file_paths()` to set input/output file paths back to default.
 
 
-The PATH\_TO\_DATA is crucial for loading in data files. These functions allow the user to control this after they have done `using PorusMaterials`. The `set_tutorial_mode()` function has been discussed before, and it allows you to recreate our example and try PorouMaterials before loading your data. The other functions allow the user to reset the PATH\_TO\_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.
+The PATH\_TO\_DATA is crucial for loading in data files. These functions allow the user to control this after they have done `using PorousMaterials`. The `set_tutorial_mode()` function has been discussed before, and it allows you to recreate our example and try PorousMaterials before loading your data. The other functions allow the user to reset the PATH\_TO\_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.
 
 ## Reading in Atomic Values
 
