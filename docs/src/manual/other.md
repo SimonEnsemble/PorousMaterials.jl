@@ -21,7 +21,7 @@ To use absolute file paths when reading in e.g. crystals via the `Framework` con
 Call `set_default_file_paths()` to set input/output file paths back to default.
 
 
-The PATH\_TO\_DATA is crucial for loading in data files. These functions allow the user to control this after they have done `using PorusMaterials`. The `set_tutorial_mode()` function has been discussed before, and it allows you to recreate our example and try PorouMaterials before loading your data. The other functions allow the user to reset the PATH\_TO\_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.
+The PATH\_TO\_DATA is crucial for loading in data files. These functions allow the user to control this after they have done `using PorousMaterials`. The `set_tutorial_mode()` function has been discussed before, and it allows you to recreate our example and try PorousMaterials before loading your data. The other functions allow the user to reset the PATH\_TO\_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.
 
 ## Reading in Atomic Values
 
@@ -30,6 +30,28 @@ These functions are used to read in the `atomicmasses.csv`, `atom_properties.csv
 ## Using .xyz files
 
 These functions allow the user to load and save .xyz files describing where molecules appear in a given space. This can be used to save the location of molecules in the middle of a simulation or to visualize what is happening.
+
+## Fitting data to adsorption models
+
+PorousMaterials allows for a `DataFrame` to be read in and fitted to a single-site Langmuir model or to a Henry's law model.
+```
+using PorousMaterials
+using DataFrames
+
+adsorption_data = DataFrame(Dict("Pressure (bar)" => [0.008045, 0.042218, 0.078772, 0.108018, 0.156741, 0.312670, 0.414986, 0.517303, 0.619628, 
+                                                      0.719519, 0.821872, 0.863296, 0.912055, 0.960878, 0.982918, 0.990353, 0.995361, 0.998043,
+                                                      1.000610, 1.005600, 1.005720],
+                                 "Adsorption (mmol/g)" => [4.062603, 4.462196, 4.560714, 4.659598, 4.707321, 4.950402, 5.045670, 5.140938,
+                                                           5.286339, 5.431875, 5.727768, 5.826027, 6.074420, 6.673929, 7.324955, 8.026830,
+                                                           8.778973, 10.133170, 10.835313, 11.487143, 12.189375]))
+# We can fit the adsorption data to a Langmuir isotherm with the following call. Note that we need to enter the column names for the pressure and adsorption.
+results = fit_adsorption_isotherm(adsorption_data, Symbol("Pressure (bar)"), Symbol("Adsorption (mmol/g)"), :langmuir)
+M, K = results["M"], results["K"]
+
+# We can also use the function to get the Henry Coefficient
+results = fit_adsorption_isotherm(adsorption_data, Symbol("Pressure (bar)"), Symbol("Adsorption (mmol/g)"), :henry)
+H = results["H"]
+```
 
 ## PATH\_TO\_DATA Control
 ```@docs
@@ -54,4 +76,9 @@ These functions allow the user to load and save .xyz files describing where mole
 ## Generic Rotations
 ```@docs
     rotation_matrix
+```
+
+## Fitting data
+```@docs
+    fit_adsorption_isotherm
 ```
