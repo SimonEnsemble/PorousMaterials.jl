@@ -39,6 +39,8 @@
           ]},
           {title: "Using .xyz files", url: "#using-xyz-files", children: [
           ]},
+          {title: "Fitting data to adsorption models", url: "#fitting-data-to-adsorption-models", children: [
+          ]},
           {title: "PATH_TO_DATA Control", url: "#path_to_data-control", children: [
           ]},
           {title: "Reading in Atomic Values", url: "#reading-in-atomic-values_1", children: [
@@ -46,6 +48,8 @@
           {title: "Using .xyz files", url: "#using-xyz-files_1", children: [
           ]},
           {title: "Generic Rotations", url: "#generic-rotations", children: [
+          ]},
+          {title: "Fitting data", url: "#fitting-data", children: [
           ]},
         ];
 
@@ -113,13 +117,34 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 </code></pre>
 
 <p>Call <code>set_default_file_paths()</code> to set input/output file paths back to default.</p>
-<p>The PATH_TO_DATA is crucial for loading in data files. These functions allow the user to control this after they have done <code>using PorusMaterials</code>. The <code>set_tutorial_mode()</code> function has been discussed before, and it allows you to recreate our example and try PorouMaterials before loading your data. The other functions allow the user to reset the PATH_TO_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.</p>
+<p>The PATH_TO_DATA is crucial for loading in data files. These functions allow the user to control this after they have done <code>using PorousMaterials</code>. The <code>set_tutorial_mode()</code> function has been discussed before, and it allows you to recreate our example and try PorousMaterials before loading your data. The other functions allow the user to reset the PATH_TO_DATA to the data folder in their current directory or to another directory on their machine if their files are stored in many places.</p>
 <p><a id='Reading-in-Atomic-Values-1'></a></p>
 <h2 id="reading-in-atomic-values">Reading in Atomic Values<a class="headerlink" href="#reading-in-atomic-values" title="Permanent link">#</a></h2>
 <p>These functions are used to read in the <code>atomicmasses.csv</code>, <code>atom_properties.csv</code>, and <code>cpk_atom_colors.csv</code> files from the current <code>PATH_TO_DATA</code> directory. They contain information on the masses, radii, and cpk color scheme for atoms.</p>
 <p><a id='Using-.xyz-files-1'></a></p>
 <h2 id="using-xyz-files">Using .xyz files<a class="headerlink" href="#using-xyz-files" title="Permanent link">#</a></h2>
 <p>These functions allow the user to load and save .xyz files describing where molecules appear in a given space. This can be used to save the location of molecules in the middle of a simulation or to visualize what is happening.</p>
+<p><a id='Fitting-data-to-adsorption-models-1'></a></p>
+<h2 id="fitting-data-to-adsorption-models">Fitting data to adsorption models<a class="headerlink" href="#fitting-data-to-adsorption-models" title="Permanent link">#</a></h2>
+<p>PorousMaterials allows for a <code>DataFrame</code> to be read in and fitted to a single-site Langmuir model or to a Henry's law model.</p>
+<pre><code>using PorousMaterials
+using DataFrames
+
+adsorption_data = DataFrame(Dict(&quot;Pressure (bar)&quot; =&gt; [0.008045, 0.042218, 0.078772, 0.108018, 0.156741, 0.312670, 0.414986, 0.517303, 0.619628, 
+                                                      0.719519, 0.821872, 0.863296, 0.912055, 0.960878, 0.982918, 0.990353, 0.995361, 0.998043,
+                                                      1.000610, 1.005600, 1.005720],
+                                 &quot;Adsorption (mmol/g)&quot; =&gt; [4.062603, 4.462196, 4.560714, 4.659598, 4.707321, 4.950402, 5.045670, 5.140938,
+                                                           5.286339, 5.431875, 5.727768, 5.826027, 6.074420, 6.673929, 7.324955, 8.026830,
+                                                           8.778973, 10.133170, 10.835313, 11.487143, 12.189375]))
+# We can fit the adsorption data to a Langmuir isotherm with the following call. Note that we need to enter the column names for the pressure and adsorption.
+results = fit_adsorption_isotherm(adsorption_data, Symbol(&quot;Pressure (bar)&quot;), Symbol(&quot;Adsorption (mmol/g)&quot;), :langmuir)
+M, K = results[&quot;M&quot;], results[&quot;K&quot;]
+
+# We can also use the function to get the Henry Coefficient
+results = fit_adsorption_isotherm(adsorption_data, Symbol(&quot;Pressure (bar)&quot;), Symbol(&quot;Adsorption (mmol/g)&quot;), :henry)
+H = results[&quot;H&quot;]
+</code></pre>
+
 <p><a id='PATH_TO_DATA-Control-1'></a></p>
 <h2 id="path_to_data-control">PATH_TO_DATA Control<a class="headerlink" href="#path_to_data-control" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.print_file_paths' href='#PorousMaterials.print_file_paths'>#</a>
@@ -128,21 +153,21 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 </code></pre>
 
 <p>Print off paths where PorousMaterials.jl looks for input files and writes output files.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/PorousMaterials.jl#L21-L25' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/PorousMaterials.jl#L21-L25' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.set_default_file_paths' href='#PorousMaterials.set_default_file_paths'>#</a>
 <strong><code>PorousMaterials.set_default_file_paths</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>set_default_file_paths(print_paths=true)
 </code></pre>
 
 <p>Sets the default paths for where input files and some output files are stored. To see current set up, call <a href="./#PorousMaterials.print_file_paths"><code>print_file_paths</code></a></p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/PorousMaterials.jl#L34-L39' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/PorousMaterials.jl#L34-L39' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.set_tutorial_mode' href='#PorousMaterials.set_tutorial_mode'>#</a>
 <strong><code>PorousMaterials.set_tutorial_mode</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>set_tutorial_mode()
 </code></pre>
 
 <p>Places PorousMaterials in "Tutorial Mode". It changes the <code>PATH_TO_DATA</code> variable to the directory where the PorousMaterials test data is stored. It can be used to follow examples shown in the README. It displays a warning so that the user knows They are no longer using their own data.</p>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/PorousMaterials.jl#L60-L67' class='documenter-source'>source</a><br></p>
 <p><a id='Reading-in-Atomic-Values-2'></a></p>
 <h2 id="reading-in-atomic-values_1">Reading in Atomic Values<a class="headerlink" href="#reading-in-atomic-values_1" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.read_atomic_radii' href='#PorousMaterials.read_atomic_radii'>#</a>
@@ -155,7 +180,7 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 <ul>
 <li><code>atomic_radii::Dict{Symbol, Float64}</code>: A dictionary linking an element symbol to its' corresponding atomic radius</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Misc.jl#L95-L103' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.read_atomic_masses' href='#PorousMaterials.read_atomic_masses'>#</a>
 <strong><code>PorousMaterials.read_atomic_masses</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>atomic_masses = read_atomic_masses()
@@ -166,7 +191,7 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 <ul>
 <li><code>atomic_masses::Dict{Symbol, Float64}</code>: A dictionary containing the atomic masses of each atom stored in <code>data/atomicmasses.csv</code></li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Misc.jl#L115-L123' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.read_cpk_colors' href='#PorousMaterials.read_cpk_colors'>#</a>
 <strong><code>PorousMaterials.read_cpk_colors</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>atom_colors = read_cpk_colors()
@@ -177,7 +202,7 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 <ul>
 <li><code>atom_colors::Dict{Symbol, Tuple{Int, Int, Int}}</code>: A dictionary linking an element symbol to its' corresponding CPK color in RGB</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Misc.jl#L76-L85' class='documenter-source'>source</a><br></p>
 <p><a id='Using-.xyz-files-2'></a></p>
 <h2 id="using-xyz-files_1">Using .xyz files<a class="headerlink" href="#using-xyz-files_1" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.read_xyz' href='#PorousMaterials.read_xyz'>#</a>
@@ -198,7 +223,7 @@ if (is_top_frame) { $('body').addClass('wm-top-page'); }
 <ul>
 <li><code>x::Array{Float64, 2}</code>: The Cartesian coordinates of the atoms. <code>x[:, k]</code> will return cartesian coordinates of the k-th atom</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Misc.jl#L1-L15' class='documenter-source'>source</a><br></p>
 <p><a id='PorousMaterials.write_xyz' href='#PorousMaterials.write_xyz'>#</a>
 <strong><code>PorousMaterials.write_xyz</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>write_xyz(atoms, x, filename; comment=&quot;&quot;)
@@ -223,7 +248,7 @@ write_xyz(framework, filename; comment=&quot;&quot;, center=false)
 <li><code>comment::AbstractString</code>: comment if you'd like to write to the file.</li>
 <li><code>center::Bool</code>: shift atoms so that origin is the center of the <code>framework.box</code></li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Misc.jl#L35-L52' class='documenter-source'>source</a><br></p>
 <pre><code>write_xyz(box, molecules, xyz_file)
 </code></pre>
 
@@ -235,7 +260,7 @@ write_xyz(framework, filename; comment=&quot;&quot;, center=false)
 <li><code>molecules::Array{Molecule, 1}</code>: The array of molecules to be written to the file</li>
 <li><code>xyz_file::IOStream</code>: The open 'write' file stream the data will be saved to</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Molecules.jl#L169-L184' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Molecules.jl#L169-L184' class='documenter-source'>source</a><br></p>
 <p><a id='Generic-Rotations-1'></a></p>
 <h2 id="generic-rotations">Generic Rotations<a class="headerlink" href="#generic-rotations" title="Permanent link">#</a></h2>
 <p><a id='PorousMaterials.rotation_matrix' href='#PorousMaterials.rotation_matrix'>#</a>
@@ -249,7 +274,7 @@ write_xyz(framework, filename; comment=&quot;&quot;, center=false)
 <ul>
 <li><code>r::Array{Float64, 2}</code>: A 3x3 random rotation matrix</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/Molecules.jl#L280-L290' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Molecules.jl#L280-L290' class='documenter-source'>source</a><br></p>
 <pre><code>R = rotation_matrix(θ, u, assume_unit_vector=false) # 3 by 3 rotation matrix, angle θ about vector u
 R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 </code></pre>
@@ -268,7 +293,29 @@ R = rotation_matrix(θ, dim) # 3 by 3 rotation matrix, angle θ about axis `dim`
 <ul>
 <li><code>R::Array{Float64, 2}</code>: 3D rotation matrix. so <code>R * x</code> will rotate vector <code>x</code> as desired.</li>
 </ul>
-<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/e4023712dbfcb5edc82eb9b7d0fdb58e399aa769/src/generic_rotations.jl#L1-L18' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/generic_rotations.jl#L1-L18' class='documenter-source'>source</a><br></p>
+<p><a id='Fitting-data-1'></a></p>
+<h2 id="fitting-data">Fitting data<a class="headerlink" href="#fitting-data" title="Permanent link">#</a></h2>
+<p><a id='PorousMaterials.fit_adsorption_isotherm' href='#PorousMaterials.fit_adsorption_isotherm'>#</a>
+<strong><code>PorousMaterials.fit_adsorption_isotherm</code></strong> &mdash; <em>Function</em>.</p>
+<pre><code>params = fit_adsorption_isotherm(df, pressure_col_name, loading_col_name, model)
+</code></pre>
+
+<p>Takes in a DataFrame <code>df</code> containing adsorption isotherm data and fits an analytical model  to the data to identify its parameters of best fit, returned as a dictionary. Available models are <code>:henry</code> and <code>:langmuir</code></p>
+<p>The Henry model takes the following form: N = HP The identified Henry coefficient is <code>params["H"]</code>.</p>
+<p>The Langmuir model takes the following form: N = (MKP)/(1+KP) where N is the total adsorption, M is the maximum monolayer coverage, K is the Langmuir constant. and P is the pressure of the gas.</p>
+<p><strong>Arguments</strong></p>
+<ul>
+<li><code>df::DataFrame</code>: The DataFrame containing the pressure and adsorption data for the isotherm</li>
+<li><code>pressure_col_name::Symbol</code>: The header of the pressure column. Can be found with <code>names(df)</code></li>
+<li><code>loading_col_name::Symbol</code>: The header of the loading/adsorption column. Can be found with <code>names(df)</code></li>
+<li><code>model::Symbol</code>: The model chosen to fit to the adsorption isotherm data</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>params::Dict{AbstractString, Float64}</code>: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. <code>:langmuir</code> contains "M" and "K". <code>:henry</code> contains "H".</li>
+</ul>
+<p><a target='_blank' href='https://github.com/SimonEnsemble/PorousMaterials.jl/blob/7329a05a31383c0a753ed6cc13fad81f9a35746e/src/Misc.jl#L166-L189' class='documenter-source'>source</a><br></p>
 
   <br>
     
