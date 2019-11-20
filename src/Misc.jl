@@ -189,10 +189,10 @@ where N is the total adsorption, M is the maximum monolayer coverage, K is the L
 """
 function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol, 
                                  loading_col_name::Symbol, model::Symbol)
-    sort!(df, [pressure_col_name])
-    n = df[!, loading_col_name]
-    p = df[!, pressure_col_name]
-    θ0 = _guess(df, pressure_col_name, loading_col_name, model)
+    _df = sort(df, [pressure_col_name])
+    n = _df[!, loading_col_name]
+    p = _df[!, pressure_col_name]
+    θ0 = _guess(_df, pressure_col_name, loading_col_name, model)
 
     if model == :langmuir
         objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = 1:length(n)])
