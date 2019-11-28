@@ -438,7 +438,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         @warn @sprintf("Framework %s has %s space group. We are converting it to P1 symmetry for use in molecular simulations.
         To afrain from this, pass `convert_to_p1=false` to the `Framework` constructor.\n",
             framework.name, framework.space_group)
-        framework = apply_symmetry_rules(framework; remove_overlap=remove_overlap,
+        return apply_symmetry_rules(framework; remove_overlap=remove_overlap,
                                          check_charge_neutrality=check_charge_neutrality,
                                          check_atom_and_charge_overlap=check_atom_and_charge_overlap)
     end
@@ -848,7 +848,8 @@ end
                                                 check_charge_neutrality=true,
                                                 net_charge_tol=0.001,
                                                 check_atom_and_charge_overlap=true,
-                                                remove_overlap=false)
+                                                remove_overlap=false,
+                                                wrap_to_unit_cell=true)
 
 Convert a framework to P1 symmetry based on internal symmetry rules. This will
 return the new framework.
@@ -859,6 +860,7 @@ return the new framework.
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
+- `wrap_to_unit_cell::Bool`: if true, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
 
 # Returns
 - `P1_framework::Framework`: The framework after it has been converted to P1
@@ -866,7 +868,7 @@ return the new framework.
 """
 function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Bool=true,
                               net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
-                              remove_overlap::Bool=false)
+                              remove_overlap::Bool=false, wrap_to_unit_cell::Bool=true)
     if framework.is_p1
         return framework
     end
@@ -908,6 +910,10 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
             net charge tolerance `net_charge_tol`\n",
                             new_framework.name, total_charge(new_framework)))
         end
+    end
+        
+    if wrap_to_unit_cell
+        wrap_atoms_to_unit_cell!(framework)
     end
 
     if remove_overlap
