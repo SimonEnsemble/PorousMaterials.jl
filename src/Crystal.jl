@@ -6,16 +6,69 @@ struct Framework
     box::Box
     atoms::Atoms
     charges::Charges
+    bonds::SimpleGraph
+    symmetry::Array{AbstractString, 2}
+    space_group::AbstractString
+    is_p1::Bool
 end
+
+function Framework(name::AbstractString, box::Box, atoms::Atoms, charges::Charges;
+                   bonds::SimpleGraph=SimpleGraph(atoms.n_atoms),
+                   symmetry::Array{AbstractString, 2}=[Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]],
+                   space_group::AbstractString="P1", is_p1::Bool=true)
+    return Framework(name, box, atoms, charges, bonds, symmetry, space_group, is_p1)
+end
+
+# struct for holding bonding information
+"""
+    bonding_rule = BondingRule(:Ca, :O, 0.4, 2.0)
+    bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                     BondingRule(:*, :*, 0.4, 1.9)]
+
+A rule for determining if two atoms within a framework are bonded. 
+
+# Attributes
+-`species_i::Symbol`: One of the atoms types for this bond rule
+-`species_j::Symbol`: The other atom type for this bond rule
+-`min_dist`: The minimum distance between the atoms for bonding to occur
+-`max_dist`: The maximum distance between the atoms for bonding to occur
+"""
+struct BondingRule
+    species_i::Symbol
+    species_j::Symbol
+    min_dist::Float64
+    max_dist::Float64
+end
+
+"""
+    default_bondingrules = default_bondingrules()
+
+Returns the default bonding rules. Using `append!` and/or `prepend!` to add to the default bonding rules:
+
+# Example
+```
+bond_rules = default_bondingrules()
+prepend!(bond_rules, BondingRule(:Cu, :*, 0.1, 2.6))
+```
+
+# Returns
+-`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:*, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
+"""
+default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]
 
 """
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
-                          remove_overlap=false)
-    framework = Framework(name, box, atoms, charges)
+                          remove_overlap=false, convert_to_p1=true,
+                          read_bonds_from_file=false, wrap_to_unit_cell=true)
+    framework = Framework(name, box, atoms, charges; bonds=SimpleGraph(atoms.n_atoms),
+                          symmetry=["x", "y", "z"], space_group="P1", is_p1=true)
 
 Read a crystal structure file (.cif or .cssr) and populate a `Framework` data structure,
 or construct a `Framework` data structure directly.
+
+If the framework is constructed using the `Framework(name, box, atoms, charges)`
+function it is assumed it is in P1 symmetry.
 
 # Arguments
 - `filename::AbstractString`: the name of the crystal structure file (include ".cif" or ".cssr") read from `PATH_TO_CRYSTALS`.
@@ -23,6 +76,12 @@ or construct a `Framework` data structure directly.
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
+- `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
+    P1 symmetry using the symmetry rules from the `_symmetry_equiv_pos_as_xyz` list in the .cif file. 
+    (We do not use the space groups name to look up symmetry rules).
+- `read_bonds_from_file::Bool`: Whether or not to read bonding information from
+    cif file. If false, the bonds can be inferred later. note that, if the crystal is not in P1 symmetry, we cannot *both* read bonds and convert to P1 symmetry.
+- `wrap_to_unit_cell::Bool`: if true, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
@@ -32,10 +91,23 @@ or construct a `Framework` data structure directly.
 - `box::Box`: unit cell (Bravais Lattice)
 - `atoms::Atoms`: list of Atoms in crystal unit cell
 - `charges::Charges`: list of point charges in crystal unit cell
+- `bonds::SimpleGraph`: Unweighted, undirected graph showing all of the atoms
+    that are bonded within the framework
+- `symmetry::Array{Function, 2}`: 2D array of anonymous functions that represent
+    the symmetry operations. If the structure is in P1 there will be one
+    symmetry operation.
+- `space_group::AbstractString`: The name of the space group. This is stored
+    so that it can be written out again in the write_cif function. The space
+    group is not used to verify the symmetry rules.
+- `is_p1::Bool`: Stores whether the framework is currently in P1 symmetry. Prior
+    to GCMC and Widom insertion simulations this is checked.
+- `wrap_to_unit_cell::Bool`: Whether the atom and charge positions will be
+    wrapped to the unit cell so their coordinates are in [0, 1]
 """
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
-                   remove_overlap::Bool=false)
+                   remove_overlap::Bool=false, convert_to_p1::Bool=true,
+                   read_bonds_from_file::Bool=false, wrap_to_unit_cell::Bool=true)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -54,34 +126,211 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     yf = Array{Float64, 1}()
     zf = Array{Float64, 1}()
     coords = Array{Float64, 2}(undef, 3, 0)
+    # default for symmetry rules is P1.
+    # These will be overwritten if the user chooses to read in non-P1
+    symmetry_rules = Array{AbstractString, 2}(undef, 3, 0)
+    # creating empty SimpleGraph, might not have any information read in
+    bonds = SimpleGraph()
+    # used for remembering whether fractional/cartesian coordinates are read in
+    # placed here so it will be defined for the if-stmt after the box is defined
+    fractional = false
+    cartesian = false
+    # used for determining if the framework is in P1 symmetry for simulations
+    p1_symmetry = false
+    space_group = ""
 
 
     # Start of .cif reader
+    ###################################
+    # CIF READER
+    ###################################
     if extension == "cif"
         data = Dict{AbstractString, Float64}()
         loop_starts = -1
-        for (i, line) in enumerate(lines)
-            line = split(line)
+        i = 1
+        # used for reading in symmetry options and replications
+        symmetry_info = false
+        atom_info = false
+        label_num_to_idx = Dict{AbstractString, Int}()
+        fractional = false
+        cartesian = false
+        while i <= length(lines)
+            line = split(lines[i])
             # Skip empty lines
             if length(line) == 0
+                i += 1
                 continue
             end
 
             # Make sure the space group is P1
             if line[1] == "_symmetry_space_group_name_H-M"
-                if length(line) == 3
-                    @assert (occursin("P1", line[2] * line[3]) ||
-                            occursin("P 1", line[2] * line[3]) ||
-                            occursin("-P1", line[2] * line[3]))
-                            "cif must have P1 symmetry.\n"
-                elseif length(line) == 2
-                    @assert (occursin("P1", line[2]) ||
-                            occursin("P 1", line[2]) ||
-                            occursin("-P1", line[2]))
-                            "cif must have P1 symmetry.\n"
-                else
-                    println(line)
-                    error("Does this .cif have P1 symmetry? Use `convert_cif_to_P1_symmetry` to convert to P1 symmetry")
+                # use anonymous function to combine all terms past the first
+                #   to extract space group name
+                space_group = reduce((x, y) -> x * " " * y, line[2:end])
+                space_group = split(space_group, [''', '"'], keepempty=false)[1]
+                if space_group == "P1" || space_group == "P 1" ||
+                        space_group == "-P1"
+                    # simplify by only having one P1 space_group name
+                    space_group = "P1"
+                    p1_symmetry = true
+                end
+            end
+
+            # checking for information about atom sites and symmetry
+            if line[1] == "loop_"
+                # creating dictionary of column names to determine what should be done
+                atom_column_name = ""
+                # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
+                #   use example: name_to_column["_atom_site_fract_x"] gives 3
+                name_to_column = Dict{AbstractString, Int}()
+
+                i += 1
+                loop_starts = i
+                while length(split(lines[i])) == 1 && split(lines[i])[1][1] == '_'
+                    if i == loop_starts
+                        atom_column_name = split(lines[i])[1]
+                    end
+                    name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
+                    # iterate to next line in file
+                    i += 1
+                end
+
+                fractional = fractional || haskey(name_to_column, "_atom_site_fract_x") &&
+                                haskey(name_to_column, "_atom_site_fract_y") &&
+                                haskey(name_to_column, "_atom_site_fract_z")
+                # if the file provides cartesian coordinates
+                cartesian = cartesian || ! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
+                                haskey(name_to_column, "_atom_site_Cartn_y") &&
+                                haskey(name_to_column, "_atom_site_Cartn_z")
+                                             # if both are provided, will default
+                                             #  to using fractional, so keep cartesian
+                                             #  false
+
+                # =====================
+                # SYMMETRY READER
+                # =====================
+                if haskey(name_to_column, "_symmetry_equiv_pos_as_xyz")
+                    symmetry_info = true
+
+                    symmetry_count = 0
+                    # CSD stores symmetry as one column in a string that ends
+                    #   up getting split on the spaces between commas (i.e. its
+                    #   not really one column) the length(name_to_column) + 2
+                    #   should catch this hopefully there aren't other weird
+                    #   ways of writing cifs...
+                    while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
+                        symmetry_count += 1
+                        line = lines[i]
+                        sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
+
+                        # store as strings so it can be written out later
+                        new_sym_rule = Array{AbstractString, 1}(undef, 3)
+
+                        sym_start = name_to_column["_symmetry_equiv_pos_as_xyz"] - 1
+                        for j = 1:3
+                            new_sym_rule[j] = sym_funcs[j + sym_start]
+                        end
+
+                        symmetry_rules = [symmetry_rules new_sym_rule]
+
+                        i += 1
+                    end
+
+                    @assert symmetry_count == size(symmetry_rules, 2) "number of symmetry rules must match the count"
+
+                    # finish reading in symmetry information, skip to next
+                    #   iteration of outer while-loop
+                    continue
+                # =====================
+                # FRACTIONAL READER
+                # =====================
+                elseif fractional && ! atom_info
+                    atom_info = true
+                    atom_column_name = [name for (name, column) in name_to_column if column == 1][end]
+                    
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+
+                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        coords = [coords [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
+                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
+                                mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
+                        # If charges present, import them
+                        if haskey(name_to_column, "_atom_site_charge")
+                            push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                        else
+                            push!(charge_values, 0.0)
+                        end
+                        # add to label_num_to_idx so that bonds can be converted later
+                        if read_bonds_from_file
+                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species)
+                        end
+                        # iterate to next line in file
+                        i += 1
+                    end
+                    # set up graph of correct size
+                    bonds = SimpleGraph(length(species))
+                    # finish reading in atom_site information, skip to next
+                    #   iteration of outer while-loop
+                    # prevents skipping a line after finishing reading atoms
+                    continue
+                # =====================
+                # CARTESIAN READER
+                # =====================
+                elseif cartesian && ! atom_info
+                    atom_info = true
+                    atom_column_name = ""
+                    for (name, column) in name_to_column
+                        if column == 1
+                            atom_column_name = name
+                        end
+                    end
+
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+
+                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        coords = [coords [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
+                                parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
+                                parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
+                        # If charges present, import them
+                        if haskey(name_to_column, "_atom_site_charge")
+                            push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
+                        else
+                            push!(charge_values, 0.0)
+                        end
+                        # add to label_num_to_idx so that bonds can be converted later
+                        if read_bonds_from_file
+                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species)
+                        end
+                        # iterate to next line in file
+                        i += 1
+                    end
+                    # set up graph of correct size
+                    bonds = SimpleGraph(length(species))
+                    # finish reading in atom_site information, skip to next
+                    #   iteration of outer while-loop
+                    # prevents skipping a line after finishing reading atoms
+                    continue
+                # =====================
+                # BOND READER
+                # =====================
+                elseif read_bonds_from_file &&
+                       haskey(name_to_column, "_geom_bond_atom_site_label_1") &&
+                       haskey(name_to_column, "_geom_bond_atom_site_label_2")
+                    while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
+                        line = split(lines[i])
+
+                        atom_one_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_1"]]]
+                        atom_two_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_2"]]]
+                        add_edge!(bonds, atom_one_idx, atom_two_idx) 
+
+                        # iterate to next line in file
+                        i += 1
+                    end
+
+                    # skip to next iteration in outer while loop
+                    continue
                 end
             end
 
@@ -99,51 +348,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 end
             end
 
-            # As soon as we reach the coordinate loop, we break this for-loop
-            # and replace it with a while-loop further down
-            if line[1] == "loop_"
-                next_line = split(lines[i+1])
-                if occursin("_atom_site", next_line[1])
-                    loop_starts = i + 1
-                    break
-                end
-            end
+            i += 1
         end # End loop over lines
 
-        if loop_starts == -1
+        if !atom_info
             error("Could not find _atom_site* after loop_ in .cif file\n")
         end
 
-        atom_column_name = ""
-        # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
-        #   use example: name_to_column["_atom_site_fract_x"] gives 3
-        name_to_column = Dict{AbstractString, Int}()
-
-        i = loop_starts
-        while length(split(lines[i])) == 1
-            if i == loop_starts
-                atom_column_name = split(lines[i])[1]
-            end
-            name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
-            i += 1
-        end
-
-        for i = loop_starts+length(name_to_column):length(lines)
-            line = split(lines[i])
-            if length(line) != length(name_to_column)
-                break
-            end
-
-            push!(species, Symbol(line[name_to_column[atom_column_name]]))
-            coords = [coords [mod(parse(Float64, line[name_to_column["_atom_site_fract_x"]]), 1.0),
-                    mod(parse(Float64, line[name_to_column["_atom_site_fract_y"]]), 1.0),
-                    mod(parse(Float64, line[name_to_column["_atom_site_fract_z"]]), 1.0)]]
-            # If charges present, import them
-            if haskey(name_to_column, "_atom_site_charge")
-                push!(charge_values, parse(Float64, line[name_to_column["_atom_site_charge"]]))
-            else
-                push!(charge_values, 0.0)
-            end
+        # Structure must either be in P1 symmetry or have replication information
+        if !p1_symmetry && !symmetry_info
+            error(@sprintf("%s is not in P1 symmetry and the .cif does not have a _symmetry_equiv_pos_as_xyz column 
+            for us to apply symmetry operations to convert into P1 symmetry.", filename))
         end
 
         a = data["a"]
@@ -153,7 +368,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         β = data["beta"]
         γ = data["gamma"]
 
+        # redo coordinates if they were read in cartesian
+        if cartesian && ! fractional
+            coords = Box(a, b, c, α, β, γ).c_to_f * coords
+        end
+
     # Start of cssr reader #TODO make sure this works for different .cssr files!
+    ###################################
+    # CSSR READER
+    ###################################
     elseif extension == "cssr"
         # First line contains unit cell lenghts
         line = split(lines[1])
@@ -184,6 +407,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         for i = 1:n_atoms
             coords = [ coords [xf[i], yf[i], zf[i]] ]
         end
+
+        # add P1 symmetry rules for consistency
+        symmetry_rules = [symmetry_rules ["x", "y", "z"]]
+        p1_symmetry = true
+        space_group = "P1"
     end
 
     # Construct the unit cell box
@@ -194,7 +422,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     idx_nz = charge_values .!= 0.0
     charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
-    framework = Framework(filename, box, atoms, charges)
+    framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
+
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
@@ -203,6 +432,19 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
             net charge tolerance `net_charge_tol`\n",
                             framework.name, total_charge(framework)))
         end
+    end
+
+    if convert_to_p1 && ! p1_symmetry && ! read_bonds_from_file
+        @warn @sprintf("Framework %s has %s space group. We are converting it to P1 symmetry for use in molecular simulations.
+        To afrain from this, pass `convert_to_p1=false` to the `Framework` constructor.\n",
+            framework.name, framework.space_group)
+        return apply_symmetry_rules(framework; remove_overlap=remove_overlap,
+                                         check_charge_neutrality=check_charge_neutrality,
+                                         check_atom_and_charge_overlap=check_atom_and_charge_overlap)
+    end
+    
+    if wrap_to_unit_cell
+        wrap_atoms_to_unit_cell!(framework)
     end
 
     if remove_overlap
@@ -220,6 +462,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 end
 
 """
+    wrap_atoms_to_unit_cell!(framework)
+
+Wraps the coordinates of all atom and charge positions to be within the unit
+cell defined for the framework.
+"""
+function wrap_atoms_to_unit_cell!(framework::Framework)
+    framework.atoms.xf .= mod.(framework.atoms.xf, 1.0)
+    framework.charges.xf .= mod.(framework.charges.xf, 1.0)
+end
+
+"""
     replicated_frame = replicate(framework, repfactors)
 
 Replicates the atoms and charges in a `Framework` in positive directions to
@@ -233,6 +486,8 @@ construct a new `Framework`. Note `replicate(framework, (1, 1, 1))` returns the 
 - `replicated_frame::Framework`: Replicated framework
 """
 function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
+    @assert ne(framework.bonds) == 0 @sprintf("The framework %s has bonds within it. Remove the bonds with `remove_bonds!` to replicate, and then use `infer_bonds(framework)` to recalculate bond information", framework.name)
+    assert_P1_symmetry(framework)
     # determine number of atoms in replicated framework
     n_atoms = size(framework.atoms.xf, 2) * repfactors[1] * repfactors[2] * repfactors[3]
 
@@ -266,8 +521,11 @@ function replicate(framework::Framework, repfactors::Tuple{Int, Int, Int})
 
     @assert (new_charges.n_charges == framework.charges.n_charges * prod(repfactors))
     @assert (new_atoms.n_atoms == framework.atoms.n_atoms * prod(repfactors))
-    return Framework(framework.name, new_box, new_atoms, new_charges)
+    return Framework(framework.name, new_box, new_atoms, new_charges,
+                     symmetry=deepcopy(framework.symmetry),
+                     space_group=framework.space_group, is_p1=framework.is_p1)
 end
+
 
 # doc string in Misc.jl
 function write_xyz(framework::Framework, filename::AbstractString;
@@ -287,14 +545,14 @@ function write_xyz(framework::Framework, filename::AbstractString;
     write_xyz(atoms, x, filename, comment=comment)
 end
 write_xyz(framework::Framework; comment::AbstractString="", center::Bool=false) = write_xyz(
-    framework, 
+    framework,
     replace(replace(framework.name, ".cif" => ""), ".cssr" => "") * ".xyz",
     comment=comment, center=center)
 
 """
-    is_overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
+    overlap = atom_overlap(framework; overlap_tol=0.1, verbose=false)
 
-Return true iff any two `Atoms` in the crystal overlap by calculating the distance
+Return true if any two `Atoms` in the crystal overlap by calculating the distance
 between every pair of atoms and ensuring distance is greater than
 `overlap_tol`. If verbose, print the pair of atoms which are culprits.
 
@@ -317,7 +575,7 @@ function atom_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose::B
                         framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @warn @sprintf("Atoms %d and %d in %s are less than %d Å apart.", i, j,
+                    @warn @sprintf("Atoms %d and %d in %s are less than %f Å apart.", i, j,
                         framework.name, overlap_tol)
                 end
             end
@@ -337,7 +595,7 @@ function charge_overlap(framework::Framework; overlap_tol::Float64=0.1, verbose:
                         framework.box, overlap_tol)
                 overlap = true
                 if verbose
-                    @warn @sprintf("Charges %d and %d in %s are less than %d Å apart.", i, j,
+                    @warn @sprintf("Charges %d and %d in %s are less than %f Å apart.", i, j,
                         framework.name, overlap_tol)
                 end
             end
@@ -350,7 +608,7 @@ end
 #   do overlap, and can then use that number to determine if they overlap or are repeats
 function _overlap(xf_1::Array{Float64, 1}, xf_2::Array{Float64, 1},
                   box::Box, overlap_tol::Float64)
-    dxf = xf_1 .- xf_2
+    dxf = mod.(xf_1, 1.0) .- mod.(xf_2, 1.0)
     nearest_image!(dxf)
     dxc = box.f_to_c * dxf
     return norm(dxc) < overlap_tol
@@ -362,7 +620,8 @@ end
 
 #TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms_and_charges(framework, overlap_tol=0.1, verbose=true)
+    new_framework = remove_overlapping_atoms_and_charges(framework, atom_overlap_tol=0.1, 
+                                                        charge_overlap_tol=0.1, verbose=true)
 
 Takes in a framework and returns a new framework with where overlapping atoms and overlapping
 charges were removed. i.e. if there is an overlapping pair, one in the pair is removed.
@@ -373,6 +632,7 @@ must be identical.
 - `framework::Framework`: The framework containing the crystal structure information
 - `atom_overlap_tol::Float64`: The minimum distance between two atoms that is tolerated
 - `charge_overlap_tol::Float64`: The minimum distance between two charges that is tolerated
+- `verbose::Bool`: Will print out information regarding the function call
 
 # Returns
 - `new_framework::Framework`: A new framework where identical atoms have been removed.
@@ -381,7 +641,7 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     atom_overlap_tol::Float64=0.1, charge_overlap_tol::Float64=0.1, verbose::Bool=true)
 
     atoms_to_keep = trues(framework.atoms.n_atoms)
-    charges_to_keep = trues(framework.atoms.n_atoms)
+    charges_to_keep = trues(framework.charges.n_charges)
 
     for i = 1:framework.atoms.n_atoms
         for j =  1:framework.atoms.n_atoms
@@ -441,7 +701,9 @@ function remove_overlapping_atoms_and_charges(framework::Framework;
     atoms = Atoms(framework.atoms.species[atoms_to_keep], atom_coords_to_keep)
     charges = Charges(framework.charges.q[charges_to_keep], charge_coords_to_keep)
 
-    new_framework = Framework(framework.name, framework.box, atoms, charges)
+    new_framework = Framework(framework.name, framework.box, atoms, charges,
+                              symmetry=deepcopy(framework.symmetry),
+                              space_group=framework.space_group, is_p1=framework.is_p1)
 
     @assert (! atom_overlap(new_framework, overlap_tol=atom_overlap_tol))
     @assert (! charge_overlap(new_framework, overlap_tol=charge_overlap_tol))
@@ -582,15 +844,271 @@ function crystal_density(framework::Framework)
 end
 
 """
-    write_cif(framework, filename)
+    simulation_ready_framework = apply_symmetry_rules(non_p1_framework;
+                                                check_charge_neutrality=true,
+                                                net_charge_tol=0.001,
+                                                check_atom_and_charge_overlap=true,
+                                                remove_overlap=false,
+                                                wrap_to_unit_cell=true)
+
+Convert a framework to P1 symmetry based on internal symmetry rules. This will
+return the new framework.
+
+# Arguments
+- `f::Framework`: The framework to be converted to P1 symmetry
+- `check_charge_neutrality::Bool`: check for charge neutrality
+- `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
+- `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
+- `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
+- `wrap_to_unit_cell::Bool`: if true, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
+
+# Returns
+- `P1_framework::Framework`: The framework after it has been converted to P1
+    symmetry. The new symmetry rules will be the P1 symmetry rules
+"""
+function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Bool=true,
+                              net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
+                              remove_overlap::Bool=false, wrap_to_unit_cell::Bool=true)
+    if framework.is_p1
+        return framework
+    end
+    new_atom_xfs = Array{Float64, 2}(undef, 3, framework.atoms.n_atoms * size(framework.symmetry, 2))
+    new_charge_xfs = Array{Float64, 2}(undef, 3, framework.charges.n_charges * size(framework.symmetry, 2))
+    new_atom_species = Array{Symbol, 1}(undef, 0)
+    new_charge_qs = Array{Float64, 1}(undef, 0)
+
+    # for each symmetry rule
+    for i in 1:size(framework.symmetry, 2)
+        # loop over all atoms in lower level symmetry
+        sym_rule = eval.(Meta.parse.("(x, y, z) -> " .* framework.symmetry[:, i]))
+        for j in 1:size(framework.atoms.xf, 2)
+            # apply current symmetry rule to current atom for x, y, and z coordinates
+            current_atom_idx = (i - 1) * framework.atoms.n_atoms + j
+            new_atom_xfs[:, current_atom_idx] .= [Base.invokelatest.(
+                        sym_rule[k], framework.atoms.xf[:, j]...) for k in 1:3]
+        end
+        # loop over all charges in lower level symmetry
+        for j in 1:size(framework.charges.xf, 2)
+            # apply current symmetry rule to current atom for x, y, and z coordinates
+            current_charge_idx = (i - 1) * framework.charges.n_charges + j
+            new_charge_xfs[:, current_charge_idx] .= [Base.invokelatest.(
+                        sym_rule[k], framework.charges.xf[:, j]...) for k in 1:3]
+        end
+        # repeat charge_qs and atom_species for every symmetry applied
+        new_atom_species = [new_atom_species; framework.atoms.species]
+        new_charge_qs = [new_charge_qs; framework.charges.q]
+    end
+
+    new_framework = Framework(framework.name, framework.box,
+        Atoms(new_atom_species, new_atom_xfs),
+        Charges(new_charge_qs, new_charge_xfs))
+
+    if check_charge_neutrality
+        if ! charge_neutral(new_framework, net_charge_tol)
+            error(@sprintf("Framework %s is not charge neutral; net charge is %f e. Ignore
+            this error message by passing check_charge_neutrality=false or increasing the
+            net charge tolerance `net_charge_tol`\n",
+                            new_framework.name, total_charge(new_framework)))
+        end
+    end
+        
+    if wrap_to_unit_cell
+        wrap_atoms_to_unit_cell!(framework)
+    end
+
+    if remove_overlap
+        return remove_overlapping_atoms_and_charges(new_framework)
+    end
+
+    if check_atom_and_charge_overlap
+        if atom_overlap(new_framework) | charge_overlap(new_framework)
+            error(@sprintf("At least one pair of atoms/charges overlap in %s.
+            Consider passing `remove_overlap=true`\n", new_framework.name))
+        end
+    end
+
+    return new_framework
+end
+
+"""
+    symmetry_equal = is_symmetry_equal(framework1.symmetry, framework2.symmetry)
+
+Returns true if both symmetry rules can create the same set from the same set
+of coordinates. Returns false if they don't contain the same number of rules or
+if they create different sets of points.
+
+# Arguments
+- `sym1::Array{AbstractString, 2}`: Array of strings that represent
+    symmetry operations
+- `sym2::Array{AbstractString, 2}`: Array of strings that represent
+    symmetry operations
+
+# Returns
+- `is_equal::Bool`: True if they are the same set of symmetry rules
+    False if they are different
+"""
+function is_symmetry_equal(sym1::Array{AbstractString, 2}, sym2::Array{AbstractString, 2})
+    # need same number of symmetry operations
+    if size(sym1, 2) != size(sym2, 2)
+        return false
+    end
+    # define a test array that operations will be performed on
+    test_array = [0.0 0.25 0.0  0.0  0.0  0.25 0.25 0.25;
+                  0.0 0.0  0.25 0.0  0.25 0.0  0.25 0.25;
+                  0.0 0.0  0.0  0.25 0.25 0.25 0.25 0.25]
+    # set up both arrays for storing replicated coords
+    sym1_applied_to_test = Array{Float64, 2}(undef, 3, 0)
+    sym2_applied_to_test = Array{Float64, 2}(undef, 3, 0)
+
+    # loop over all positions in the test_array
+    for i in 1:size(test_array, 2)
+        # loop over f1 symmetry rules
+        for j in 1:size(sym1, 2)
+            sym1_applied_to_test = [sym1_applied_to_test [Base.invokelatest.(
+                eval(Meta.parse("(x, y, z) -> " * sym1[k, j])), test_array[:, i]...) for k in 1:3]]
+        end
+        # loop over f2 symmetry rules
+        for j in 1:size(sym2, 2)
+            sym2_applied_to_test = [sym2_applied_to_test [Base.invokelatest.(
+                eval(Meta.parse("(x, y, z) -> " * sym2[k, j])), test_array[:, i]...) for k in 1:3]]
+        end
+    end
+
+    # convert to sets for using issetequal, symmetry rules might be in a a different order
+    sym1_set = Set([sym1_applied_to_test[:, i] for i in 1:size(sym1_applied_to_test, 2)])
+    sym2_set = Set([sym2_applied_to_test[:, i] for i in 1:size(sym2_applied_to_test, 2)])
+
+    # return if the sets of coords are equal
+    return issetequal(sym1_set, sym2_set)
+end
+
+"""
+    assert_P1_symmetry(framework_to_be_tested)
+
+Used for making sure that a framework is in P1 symmetry before running
+simulations on it. If the structure is not in P1, this will throw an
+AssertionError.
+-`framework::Framework`: The framework to be tested for P1 symmetry
+"""
+function assert_P1_symmetry(framework::Framework)
+    @assert framework.is_p1 @sprintf("The framework %s is not in P1 symmetry.\n
+                                     try running:\n
+                                     \tframework_p1 = apply_symmetry_rules(framework)\n
+                                     and pass `framework_p1` into this simulation",
+                                    framework.name)
+end
+
+"""
+    remove_bonds!(framework)
+
+Remove all bonds from a framework structure.
+
+# Arguments
+-`framework::Framework`: the framework that bonds wil be removed from
+"""
+function remove_bonds!(framework::Framework)
+    while ne(framework.bonds) > 0
+        rem_edge!(framework.bonds, collect(edges(framework.bonds))[1].src, collect(edges(framework.bonds))[1].dst)
+    end
+end
+
+"""
+    infer_bonds!(framework, include_bonds_across_periodic_boundaries, 
+                    bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)])
+
+Populate the bonds in the framework object based on the bonding rules. If a
+pair doesn't have a suitable rule then they will not be considered bonded. 
+
+`:*` is considered a wildcard and can be substituted for any species. It is a
+good idea to include a bonding rule between two `:*` to allow any atoms to bond
+as long as they are close enough.
+
+The bonding rules are hierarchical, i.e. the first bonding rule takes precedence over the latter ones.
+
+# Arguments
+-`framework::Framework`: The framework that bonds will be added to
+-`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the
+    periodic boundary when calculating bonds
+-`bonding_rules::Array{BondingRule, 1}`: The array of bonding rules that will
+    be used to fill the bonding information. They are applied in the order that
+    they appear.
+"""
+function infer_bonds!(framework::Framework, include_bonds_across_periodic_boundaries::Bool,
+                      bonding_rules::Array{BondingRule, 1}=
+                      [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)])
+    @assert ne(framework.bonds) == 0 @sprintf("The framework %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", framework.name)
+
+    # loop over every atom
+    for i in 1:framework.atoms.n_atoms
+        # loop over every unique pair of atoms
+        for j in i+1:framework.atoms.n_atoms
+            if is_bonded(framework, i, j, bonding_rules; include_bonds_across_periodic_boundaries=include_bonds_across_periodic_boundaries)
+                add_edge!(framework.bonds, i, j)
+            end
+        end
+    end
+end
+
+"""
+    bonds_equal = compare_bonds_in_framework(framework1, framework2, atol=0.0)
+
+Returns whether the bonds defined in framework1 are the same as the bonds
+defined in framework2. It checks whether the atoms in the same positions
+have the same bonds.
+
+# Arguments
+-`framework1::Framework`: The first framework
+-`framework2::Framework`: The second framework
+-`atol::Float64`: absolute tolerance for the comparison of coordinates in the framework
+
+# Returns
+-`bonds_equal::Bool`: Wether the bonds in framework1 and framework2 are equal
+"""
+function compare_bonds_in_framework(fi::Framework, fj::Framework; atol::Float64=0.0)
+    if ne(fi.bonds) != ne(fj.bonds)
+        return false
+    end
+
+    num_in_common = 0
+    for edge_i in collect(edges(fi.bonds))
+        for edge_j in collect(edges(fj.bonds))
+            # either the bond matches going src-src dst-dst
+            if  (fi.atoms.species[edge_i.src] == fj.atoms.species[edge_j.src] &&
+                 fi.atoms.species[edge_i.dst] == fj.atoms.species[edge_j.dst] &&
+                 isapprox(fi.atoms.xf[:, edge_i.src], fj.atoms.xf[:, edge_j.src]; atol=atol) &&
+                 isapprox(fi.atoms.xf[:, edge_i.dst], fj.atoms.xf[:, edge_j.dst]; atol=atol)) ||
+                # or the bond matches going src-dst dst-src
+                (fi.atoms.species[edge_i.src] == fj.atoms.species[edge_j.dst] &&
+                 fi.atoms.species[edge_i.dst] == fj.atoms.species[edge_j.src] &&
+                 isapprox(fi.atoms.xf[:, edge_i.src], fj.atoms.xf[:, edge_j.dst]; atol=atol) &&
+                 isapprox(fi.atoms.xf[:, edge_i.dst], fj.atoms.xf[:, edge_j.src]; atol=atol))
+                num_in_common += 1
+                break
+            end
+        end
+    end
+    return num_in_common == ne(fi.bonds) && num_in_common == ne(fj.bonds)
+end
+
+"""
+    write_cif(framework, filename; fractional=true)
 
 Write a `framework::Framework` to a .cif file with `filename::AbstractString`. If `filename` does
 not include the .cif extension, it will automatically be added.
 """
-function write_cif(framework::Framework, filename::AbstractString)
+function write_cif(framework::Framework, filename::AbstractString; fractional::Bool=true)
     if charged(framework) && (framework.atoms.n_atoms != framework.charges.n_charges)
         error("write_cif assumes equal numbers of Charges and Atoms (or zero charges)")
     end
+
+    # create dictionary for tracking label numbers
+    label_numbers = Dict{Symbol, Int}()
+    for atom in framework.atoms.species
+        if !haskey(label_numbers, atom)
+            label_numbers[atom] = 1
+        end
+    end
+
     # append ".cif" to filename if it doesn't already have the extension
     if ! occursin(".cif", filename)
         filename *= ".cif"
@@ -604,23 +1122,32 @@ function write_cif(framework::Framework, filename::AbstractString)
         @printf(cif_file, "data_%s_PM\n", split(framework.name, ".")[1])
     end
 
-    @printf(cif_file, "_symmetry_space_group_name_H-M   'P 1'\n")
+    @printf(cif_file, "_symmetry_space_group_name_H-M\t'%s'\n", framework.space_group)
 
-    @printf(cif_file, "_cell_length_a %f\n", framework.box.a)
-    @printf(cif_file, "_cell_length_b %f\n", framework.box.b)
-    @printf(cif_file, "_cell_length_c %f\n", framework.box.c)
+    @printf(cif_file, "_cell_length_a\t%f\n", framework.box.a)
+    @printf(cif_file, "_cell_length_b\t%f\n", framework.box.b)
+    @printf(cif_file, "_cell_length_c\t%f\n", framework.box.c)
 
-    @printf(cif_file, "_cell_angle_alpha %f\n", framework.box.α * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_beta %f\n", framework.box.β * 180.0 / pi)
-    @printf(cif_file, "_cell_angle_gamma %f\n", framework.box.γ * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_alpha\t%f\n", framework.box.α * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_beta\t%f\n", framework.box.β * 180.0 / pi)
+    @printf(cif_file, "_cell_angle_gamma\t%f\n", framework.box.γ * 180.0 / pi)
 
     @printf(cif_file, "_symmetry_Int_Tables_number 1\n\n")
-    @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n 'x, y, z'\n\n")
+    @printf(cif_file, "loop_\n_symmetry_equiv_pos_as_xyz\n")
+    for i in 1:size(framework.symmetry, 2)
+        @printf(cif_file, "'%s,%s,%s'\n", framework.symmetry[:, i]...)
+    end
+    @printf(cif_file, "\n")
 
-    @printf(cif_file, "loop_\n_atom_site_label\n")
-    @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
+    @printf(cif_file, "loop_\n_atom_site_label\n_atom_site_type_symbol\n")
+    if fractional
+        @printf(cif_file, "_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n")
+    else
+        @printf(cif_file, "_atom_site_Cartn_x\n_atom_site_Cartn_y\n_atom_site_Cartn_z\n")
+    end
     @printf(cif_file, "_atom_site_charge\n")
 
+    idx_to_label = Array{AbstractString, 1}(undef, framework.atoms.n_atoms)
     for i = 1:framework.atoms.n_atoms
         q = 0.0
         if charged(framework)
@@ -629,12 +1156,72 @@ function write_cif(framework::Framework, filename::AbstractString)
                 error("write_cif assumes charges correspond to LJspheres")
             end
         end
-        @printf(cif_file, "%s %f %f %f %f\n", framework.atoms.species[i], 
-                framework.atoms.xf[1, i], framework.atoms.xf[2, i], 
-                framework.atoms.xf[3, i], q)
-     end
-     close(cif_file)
+        # print label and type symbol
+        @printf(cif_file, "%s\t%s\t", string(framework.atoms.species[i]) *
+                string(label_numbers[framework.atoms.species[i]]),
+                framework.atoms.species[i])
+        # store label for this atom idx
+        idx_to_label[i] = string(framework.atoms.species[i]) *
+                    string(label_numbers[framework.atoms.species[i]])
+        # increment label
+        label_numbers[framework.atoms.species[i]] += 1
+        if fractional
+            @printf(cif_file, "%f\t%f\t%f\t%f\n", framework.atoms.xf[:, i]..., q)
+        else
+            
+            @printf(cif_file, "%f\t%f\t%f\t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
+        end
+    end
+
+    # only print bond information if it is in the framework
+    if ne(framework.bonds) > 0
+        # print column names for bond information
+        @printf(cif_file, "\nloop_\n_geom_bond_atom_site_label_1\n_geom_bond_atom_site_label_2\n_geom_bond_distance\n")
+
+        for edge in collect(edges(framework.bonds))
+            dxf = framework.atoms.xf[:, edge.src] - framework.atoms.xf[:, edge.dst]
+            nearest_image!(dxf)
+            @printf(cif_file, "%s\t%s\t%0.5f\n", idx_to_label[edge.src], idx_to_label[edge.dst],
+                    norm(dxf))
+        end
+    end
+    close(cif_file)
 end
+
+"""
+    write_bond_information(framework, filename)
+    write_bond_information(framework)
+
+Writes the bond information from a framework to the selected filename.
+
+# Arguments
+-`framework::Framework`: The framework to have its bonds written to a vtk file
+-`filename::AbstractString`: The filename the bond information will be saved to. If left out, will default to framework name.
+"""
+function write_bond_information(framework::Framework, filename::AbstractString)
+    if ne(framework.bonds) == 0
+        @warn("Framework %s has no bonds present. To get bonding information for this framework run `infer_bonds!` with an array of bonding rules\n", framework.name)
+    end
+    if ! occursin(".vtk", filename)
+        filename *= ".vtk"
+    end
+
+    vtk_file = open(filename, "w")
+
+    @printf(vtk_file, "# vtk DataFile Version 2.0\n%s bond information\nASCII\nDATASET POLYDATA\nPOINTS %d double\n", framework.name, nv(framework.bonds))
+
+    for i = 1:framework.atoms.n_atoms
+        @printf(vtk_file, "%0.5f\t%0.5f\t%0.5f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])...)
+    end
+    @printf(vtk_file, "\nLINES %d %d\n", ne(framework.bonds), 3 * ne(framework.bonds))
+    for edge in collect(edges(framework.bonds))
+        @printf(vtk_file, "2\t%d\t%d\n", edge.src - 1, edge.dst - 1)
+    end
+    close(vtk_file)
+    @printf("Saving bond information for framework %s to %s.\n", framework.name, joinpath(pwd(), filename))
+end
+
+write_bond_information(framework::Framework) = write_bond_information(framework, framework.name * "_bonds.vtk")
 
 """
     new_framework = assign_charges(framework, charges, net_charge_tol=1e-5)
@@ -704,7 +1291,9 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     charges = Charges(charge_vals, charge_coords)
 
     # construct new framework
-    new_framework = Framework(framework.name, framework.box, framework.atoms, charges)
+    new_framework = Framework(framework.name, framework.box, framework.atoms, charges,
+                              symmetry=deepcopy(framework.symmetry),
+                              space_group=framework.space_group, is_p1=framework.is_p1)
 
     # check for charge neutrality
     if abs(total_charge(new_framework)) > net_charge_tol
@@ -716,15 +1305,77 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
     return new_framework
 end
 
+"""
+    are_atoms_bonded = is_bonded(framework, i, j, bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)],
+                                 include_bonds_across_periodic_boundaries=true)
+
+Checks to see if atoms `i` and `j` in `framework` are bonded according to the `bonding_rules`.
+
+# Arguments
+-`framework::Framework`: The framework that bonds will be added to
+-`i::Int`: Index of the first atom
+-`j::Int`: Index of the second atom
+-`bonding_rules::Array{BondingRule, 1}`: The array of bonding rules that will
+    be used to fill the bonding information. They are applied in the order that
+    they appear.
+-`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the
+    periodic boundary when calculating bonds
+
+# Returns
+-`are_atoms_bonded::Bool`: Whether atoms `i` and `j` are bonded according to `bonding_rules`
+
+"""
+function is_bonded(framework::Framework, i::Int64, j::Int64,
+                   bonding_rules::Array{BondingRule, 1}=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)];
+                   include_bonds_across_periodic_boundaries::Bool=true)
+    species_i = framework.atoms.species[i]
+    species_j = framework.atoms.species[j]
+    x_i = framework.atoms.xf[:, i]
+    x_j = framework.atoms.xf[:, j]
+    # loop over possible bonding rules
+    for br in bonding_rules
+        # determine if the atom species correspond to the species in `bonding_rules`
+        species_match = false
+        if br.species_i == :* && br.species_j == :*
+            species_match = true
+        elseif br.species_i == :* && (species_i == br.species_j || species_j == br.species_j)
+            species_match = true
+        elseif br.species_j == :* && (species_i == br.species_i || species_j == br.species_j)
+            species_match = true
+        elseif (species_i == br.species_i && species_j == br.species_j) || (species_j == br.species_i && species_i == br.species_j)
+            species_match = true
+        end
+
+        if species_match
+            # determine if the atoms are close enough to bond
+            dxf = x_i - x_j
+            if include_bonds_across_periodic_boundaries
+                nearest_image!(dxf)
+            end
+            cartesian_dist_between_atoms = norm(framework.box.f_to_c * dxf)
+            if br.min_dist < cartesian_dist_between_atoms && br.max_dist > cartesian_dist_between_atoms
+                return true
+            end
+        end
+    end
+    return false
+end
+
+
 function Base.show(io::IO, framework::Framework)
     println(io, "Name: ", framework.name)
     println(io, framework.box)
 	@printf(io, "Number of atoms = %d\n", framework.atoms.n_atoms)
 	@printf(io, "Number of charges = %d\n", framework.charges.n_charges)
     println(io, "Chemical formula: ", chemical_formula(framework))
+    @printf(io, "Space Group: %s\n", framework.space_group)
+    @printf(io, "Symmetry Operations:\n")
+    for i in 1:size(framework.symmetry, 2)
+        @printf(io, "\t'%s, %s, %s'\n", framework.symmetry[:, i]...)
+    end
 end
 
-function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
+function has_same_sets_of_atoms_and_charges(f1::Framework, f2::Framework; atol::Float64=1e-6, checknames::Bool=false)
     names_flag = f1.name == f2.name
     if checknames && (! names_flag)
         return false
@@ -736,7 +1387,60 @@ function Base.isapprox(f1::Framework, f2::Framework; checknames::Bool=false)
     if f1.atoms.n_atoms != f2.atoms.n_atoms
         return false
     end
+    charges_flag = has_same_set_of_charges(f1.charges, f2.charges; atol=atol)
+    atoms_flag = has_same_set_of_atoms(f1.atoms, f2.atoms; atol=atol)
+    symmetry_flag = is_symmetry_equal(f1.symmetry, f2.symmetry)
+    return box_flag && charges_flag && atoms_flag && symmetry_flag
+end
+
+
+function Base.isapprox(f1::Framework, f2::Framework)
+    box_flag = isapprox(f1.box, f2.box)
+    if f1.charges.n_charges != f2.charges.n_charges
+        return false
+    end
+    if f1.atoms.n_atoms != f2.atoms.n_atoms
+        return false
+    end
     charges_flag = isapprox(f1.charges, f2.charges)
     atoms_flag = isapprox(f1.atoms, f2.atoms)
-    return box_flag && charges_flag && atoms_flag
+    symmetry_flag = is_symmetry_equal(f1.symmetry, f2.symmetry)
+    return box_flag && charges_flag && atoms_flag && symmetry_flag
+end
+
+function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
+    new_framework = deepcopy(frameworks[1])
+    for (i, f) in enumerate(frameworks)
+        if i == 1
+            continue
+        end
+        @assert isapprox(new_framework.box, f.box) @sprintf("Framework %s has a different box\n", f.name)
+        @assert is_symmetry_equal(new_framework.symmetry, f.symmetry) @sprintf("Framework %s has different symmetry rules\n", f.name)
+        @assert new_framework.space_group == f.space_group
+
+        new_atoms = new_framework.atoms + f.atoms
+        new_charges = new_framework.charges + f.charges
+
+        nf_n_atoms = new_framework.atoms.n_atoms
+        add_vertices!(new_framework.bonds, nf_n_atoms)
+        for edge in collect(edges(f.bonds))
+            add_edge!(new_framework.bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+        end
+
+        new_framework = Framework(split(new_framework.name, ".")[1] * "_" * split(f.name, ".")[1],
+                                 new_framework.box, new_atoms, new_charges,
+                                 symmetry=new_framework.symmetry,space_group=new_framework.space_group,
+                                 is_p1=new_framework.is_p1, bonds=new_framework.bonds)
+    end
+    if check_overlap
+        if atom_overlap(new_framework)
+            @warn "This new framework has overlapping atoms, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+        end
+
+        if charge_overlap(new_framework)
+            @warn "This new framework has overlapping charges, use:\n`remove_overlapping_atoms_and_charges(framework)`\nto remove them"
+        end
+    end
+
+    return new_framework
 end

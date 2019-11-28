@@ -46,6 +46,10 @@ function henry_coefficient(framework::Framework, molecule_::Molecule, temperatur
                            write_checkpoint::Bool=false, load_checkpoint::Bool=false,
                            checkpoint_frequency::Int=10000,
                            accessibility_grid::Union{Nothing, Grid{Bool}}=nothing)
+
+    # simulation only works if framework is in P1
+    assert_P1_symmetry(framework)
+
     time_start = time()
     if verbose
         print("Simulating Henry coefficient of ")

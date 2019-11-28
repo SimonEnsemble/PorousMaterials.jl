@@ -246,6 +246,7 @@ function energy_grid(framework::Framework, molecule::Molecule, ljforcefield::LJF
                      n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, 
                      temperature::Float64=NaN, units::Symbol=:kJ_mol, center::Bool=false,
                      verbose::Bool=true)
+    assert_P1_symmetry(framework)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
@@ -626,6 +627,7 @@ function compute_accessibility_grid(framework::Framework, probe::Molecule, force
                                     energy_tol::Float64=10.0,  energy_units::Symbol=:kJ_mol,
                                     verbose::Bool=true, write_b4_after_grids::Bool=true, 
                                     block_inaccessible_pockets::Bool=true)
+    assert_P1_symmetry(framework)
     if verbose
         printstyled(@sprintf("Computing accessibility grid of %s using %f %s potential energy tol and %s probe...\n",
             framework.name, energy_tol, energy_units, probe.species), color=:green)

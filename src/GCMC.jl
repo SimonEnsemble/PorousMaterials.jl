@@ -129,6 +129,9 @@ end
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
                                   load_checkpoint_file=false, checkpoint=Dict(),
                                   write_checkpoints=false, checkpoint_frequency=50,
+                                  write_adsorbate_snapshots=false,
+                                  snapshot_frequency=1, calculate_density_grid=false,
+                                  density_grid_dx=1.0, density_grid_species=nothing,
                                   filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
@@ -157,6 +160,10 @@ function stepwise_adsorption_isotherm(framework::Framework,
                                       density_grid_dx::Float64=1.0, 
                                       density_grid_species::Union{Nothing, Symbol}=nothing,
                                       filename_comment::AbstractString="")
+
+    # simulation only works if framework is in P1
+    assert_P1_symmetry(framework)
+
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule[] # initiate with empty framework
     for (i, pressure) in enumerate(pressures)
@@ -189,6 +196,9 @@ end
                                   verbose=true, ewald_precision=1e-6, eos=:ideal, 
                                   load_checkpoint_file=false, checkpoint=Dict(), 
                                   write_checkpoints=false, checkpoint_frequency=50,
+                                  write_adsorbate_snapshots=false,
+                                  snapshot_frequency=1, calculate_density_grid=false,
+                                  density_grid_dx=1.0, density_grid_species=nothing,
                                   filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
@@ -213,6 +223,10 @@ function adsorption_isotherm(framework::Framework,
                              density_grid_dx::Float64=1.0, 
                              density_grid_species::Union{Nothing, Symbol}=nothing,
                              filename_comment::AbstractString="")
+
+    # simulation only works if framework is in P1
+    assert_P1_symmetry(framework)
+
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
                                                       pressure, ljforcefield,
@@ -252,6 +266,9 @@ end
                                          load_checkpoint_file=false,
                                          show_progress_bar=false, checkpoint=Dict(),
                                          write_checkpoints=false, checkpoint_frequency=100,
+                                         write_adsorbate_snapshots=false,
+                                         snapshot_frequency=1, calculate_density_grid=false,
+                                         density_grid_dx=1.0, density_grid_species=nothing,
                                          filename_comment="")
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
@@ -306,6 +323,9 @@ function gcmc_simulation(framework::Framework, molecule_::Molecule, temperature:
     write_adsorbate_snapshots::Bool=false, snapshot_frequency::Int=1,
     calculate_density_grid::Bool=false, density_grid_dx::Float64=1.0, 
     density_grid_species::Union{Nothing, Symbol}=nothing, filename_comment::AbstractString="")
+
+    # simulation only works if framework is in P1
+    assert_P1_symmetry(framework)
 
     start_time = time()
     # to avoid changing the outside object `molecule_` inside this function, we make

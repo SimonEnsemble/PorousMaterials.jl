@@ -1,6 +1,6 @@
 ## Loading in Crystal Structure Files
 
-Place `.cif` and `.cssr` crystal structure files in `PorousMaterials.PATH_TO_CRYSTALS`. `PorousMaterials.jl` currently takes crystals in P1 symmetry only. From here you can start julia and do the following to load a framework and start working with it.
+Place `.cif` and `.cssr` crystal structure files in `PorousMaterials.PATH_To_CRYSTALS`. `PorousMaterials.jl` can load in `.cif` files of any symmetry as long as the symmetry operations are included. From here you can start julia and do the following to load a framework and start working with it.
 
 ```julia
 using PorousMaterials
@@ -21,6 +21,91 @@ Number of atoms = 120
 Number of charges = 0
 Chemical formula: Dict(:H=>8,:S=>1,:Ca=>1,:O=>6,:C=>14)
 ```
+
+If the file is not in P1 symmetry, it will be converted within the framework reader and this message will be displayed.
+
+```julia
+┌ Warning: Name_of_file.cif is not in P1 symmetry. It is being converted to P1 for use in PorousMaterials.jl.
+└ @ PorousMaterials ~/osu_undergrad/simon_ensemble/PorousMaterials.jl/src/Crystal.jl:284
+```
+
+PorousMaterials also gives the option to read in structures in the lower level
+symmetries and convert them to P1 before simulation.
+
+```julia
+framework = Framework("ORIVOC_clean.cif"; remove_overlap=true, convert_to_p1=false)
+# the remove_overlap argument is specific to this structure, not all frameworks need it
+
+###
+    Perform any operation on the structure while it is not in P1
+###
+
+framework = apply_symmetry_rules(framework)
+# the framework is now in P1 and it can be used in simulations
+```
+
+## Generating Bond Information for Frameworks
+
+The bonds are stored in a `SimpleGraph` from the `LightGraphs.jl` package, and
+can be accessed through the `bonds` attribute.  
+
+### Reading from a file
+
+`PorousMaterials` can read in bonds from `.cif` files if they have the tags
+`_geom_bond_atom_site_label_1` and `_geom_bond_atom_site_label_2`. To choose to
+read bonds from a file, pass `read_bonds_from_file=true` to the `Framework`
+constructor.
+
+```julia
+using PorousMaterials
+
+f = Framework("KAXQIL_clean.cif"; read_bonds_from_file=true, convert_to_p1=false)
+
+f.bonds
+```
+
+This example uses a structure that is not in P1 symmetry. `PorousMaterials`
+cannot replicate a structure or apply symmetry rules if it currently has bonds.
+However, this structure can be converted to P1 without bonds, and then bonds can
+be inferred for the full P1 structure.
+
+### Inferring bonds using `BondingRule`s
+
+`PorousMaterials` can infer bonds for a structure and populate the bond graph by
+using `BondingRule`s. Each `BondingRule` has two species of atoms that it works
+for. It also has a minimum and maximum distance that a bond can be defined for
+the two atoms.
+
+```julia
+using PorousMaterials
+
+f = Framework("SBMOF-1.cif")
+
+# define an array of BondingRule's that will be used to define bonds in the
+#   framework. These need to be in the order that they are applied
+bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
+                 BondingRule(:*, :*, 0.4, 1.9)]
+
+# Alternatively, you could get the above bonding rules with the following command
+bonding_rules = default_bondingrules()
+
+# infer the bonds for the framework f with bonds across periodic boundaries
+infer_bonds!(f, true, bonding_rules)
+
+# redefine bonding_rules to account for edge cases between Ca and O atoms. `pushfirst!` adds the newly
+#   defined Bondingrule to the front of `bonding_rules`
+pushfirst!(BondingRule(:Ca, :O, 0.4, 2.5), bonding_rules)
+
+# remove old bonds from framework before inferring bonds with new rules
+remove_bonds!(f)
+
+# re-infer bonds
+infer_bonds!(f, true, bonding_rules)
+
+# output the bond information to visualize it and double check
+write_bond_information(f, "SBMOF-1_bonds.vtk")
+```
+
 
 ## Building Blocks of PorousMaterials: Bravais lattice
 
@@ -111,13 +196,22 @@ write_cube(grid, "CH4_in_SBMOF1.cube")
     Framework
     remove_overlapping_atoms_and_charges
     strip_numbers_from_atom_labels!
+    wrap_atoms_to_unit_cell
     chemical_formula
     molecular_weight
     crystal_density
     replicate(::Framework, ::Tuple{Int, Int, Int})
     charged(::Framework; ::Bool)
-    write_cif
     assign_charges
+    apply_symmetry_rules
+    is_symmetry_equal
+    write_cif
+    BondingRule
+    write_bond_information
+    infer_bonds!
+    remove_bonds!
+    compare_bonds_in_framework
+    default_bondingrules
 ```
 
 ## Grids

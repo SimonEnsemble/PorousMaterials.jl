@@ -1,6 +1,7 @@
 """
     box = Box(a, b, c, α, β, γ, volume, f_to_c, c_to_f, reciprocal_lattice)
     box = Box(a, b, c, α, β, γ)
+    box = Box(a, b, c) # α=β=γ=π/2 assumed.
     box = Box(f_to_c)
 
 Data structure to describe a unit cell box (Bravais lattice) and convert between
@@ -114,6 +115,7 @@ This function generates a unit cube, each side is 1.0 Angstrom long, and all the
 corners are right angles.
 """
 UnitCube() = Box(1.0, 1.0, 1.0, π/2, π/2, π/2)
+Box(a::Float64, b::Float64, c::Float64) = Box(a, b, c, π/2, π/2, π/2) # right angle box
 
 """
     new_box = replicate(original_box, repfactors)

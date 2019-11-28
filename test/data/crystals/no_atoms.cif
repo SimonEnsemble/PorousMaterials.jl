@@ -1,0 +1,36 @@
+
+#######################################################################
+#
+#                 Cambridge Crystallographic Data Centre
+#                                CCDC 
+#
+#######################################################################
+#
+# If this CIF has been generated from an entry in the Cambridge 
+# Structural Database, then it will include bibliographic, chemical, 
+# crystal, experimental, refinement or atomic coordinate data resulting 
+# from the CCDC's data processing and validation procedures.
+#
+#######################################################################
+
+data_casdb
+_symmetry_cell_setting           monoclinic
+_symmetry_space_group_name_H-M   'P 21/n'
+_symmetry_Int_Tables_number      14
+_space_group_name_Hall           '-P 2yn'
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 x,y,z
+2 1/2-x,1/2+y,1/2-z
+3 -x,-y,-z
+4 1/2+x,1/2-y,1/2+z
+_cell_length_a                   11.8214(3)
+_cell_length_b                   5.56730(13)
+_cell_length_c                   22.7603(5)
+_cell_angle_alpha                90.00
+_cell_angle_beta                 100.356(2)
+_cell_angle_gamma                90.00
+_cell_volume                     1473.53
+
+#END
