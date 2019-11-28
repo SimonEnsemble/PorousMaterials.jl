@@ -77,11 +77,11 @@ function it is assumed it is in P1 symmetry.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
 - `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
-    P1 symmetry using the symmetry rules. The space groups name will not be 
-    used when converting from the lower level symmetry to P1.
+    P1 symmetry using the symmetry rules from the `_symmetry_equiv_pos_as_xyz` list in the .cif file. 
+    (We do not use the space groups name to look up symmetry rules).
 - `read_bonds_from_file::Bool`: Whether or not to read bonding information from
-    cif file. If false, the bonds can be inferred later
-- `wrap_to_unit_cell::Bool`: Whether the atoms and charges will be wrapped to the unit cell after being read in
+    cif file. If false, the bonds can be inferred later. note that, if the crystal is not in P1 symmetry, we cannot *both* read bonds and convert to P1 symmetry.
+- `wrap_to_unit_cell::Bool`: if true, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
@@ -357,7 +357,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
         # Structure must either be in P1 symmetry or have replication information
         if !p1_symmetry && !symmetry_info
-            error("If structure is not in P1 symmetry it must have replication information")
+            error(@sprintf("%s is not in P1 symmetry and the .cif does not have a _symmetry_equiv_pos_as_xyz column 
+            for us to apply symmetry operations to convert into P1 symmetry.", filename))
         end
 
         a = data["a"]
@@ -433,14 +434,17 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         end
     end
 
-    if wrap_to_unit_cell
-        wrap_atoms_to_unit_cell!(framework)
-    end
-
     if convert_to_p1 && ! p1_symmetry && ! read_bonds_from_file
-        return apply_symmetry_rules(framework; remove_overlap=remove_overlap,
+        @warn @sprintf("Framework %s has %s space group. We are converting it to P1 symmetry for use in molecular simulations.
+        To afrain from this, pass `convert_to_p1=false` to the `Framework` constructor.\n",
+            framework.name, framework.space_group)
+        framework = apply_symmetry_rules(framework; remove_overlap=remove_overlap,
                                          check_charge_neutrality=check_charge_neutrality,
                                          check_atom_and_charge_overlap=check_atom_and_charge_overlap)
+    end
+    
+    if wrap_to_unit_cell
+        wrap_atoms_to_unit_cell!(framework)
     end
 
     if remove_overlap
