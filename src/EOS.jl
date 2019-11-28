@@ -69,12 +69,12 @@ and returns a complete `PengRobinsonFluid` data structure.
 """
 function PengRobinsonFluid(fluid::Symbol)
     df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinson_fluid_props.csv"); comment="#")
-    if ! (string(fluid) in df[:fluid])
+    if ! (string(fluid) in df[!,:fluid])
         error(@sprintf("fluid %s properties not found in %sPengRobinson_fluid_props.csv", fluid, PATH_TO_DATA))
     end
-    Tc = df[df[:fluid].== string(fluid), Symbol("Tc(K)")][1]
-    Pc = df[df[:fluid].== string(fluid), Symbol("Pc(bar)")][1]
-    ω = df[df[:fluid].== string(fluid), Symbol("acentric_factor")][1]
+    Tc = df[df[!,:fluid].== string(fluid), Symbol("Tc(K)")][1]
+    Pc = df[df[!,:fluid].== string(fluid), Symbol("Pc(bar)")][1]
+    ω = df[df[!,:fluid].== string(fluid), Symbol("acentric_factor")][1]
     return PengRobinsonFluid(fluid, Tc, Pc, ω)
 end
 
