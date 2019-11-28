@@ -1365,7 +1365,7 @@ function Base.show(io::IO, framework::Framework)
     end
 end
 
-function Base.isapprox(f1::Framework, f2::Framework; atol::Float64=1e-6, checknames::Bool=false)
+function has_same_sets_of_atoms_and_charges(f1::Framework, f2::Framework; atol::Float64=1e-6, checknames::Bool=false)
     names_flag = f1.name == f2.name
     if checknames && (! names_flag)
         return false
@@ -1377,8 +1377,23 @@ function Base.isapprox(f1::Framework, f2::Framework; atol::Float64=1e-6, checkna
     if f1.atoms.n_atoms != f2.atoms.n_atoms
         return false
     end
-    charges_flag = isapprox(f1.charges, f2.charges; atol=atol)
-    atoms_flag = isapprox(f1.atoms, f2.atoms; atol=atol)
+    charges_flag = has_same_set_of_charges(f1.charges, f2.charges; atol=atol)
+    atoms_flag = has_same_set_of_atoms(f1.atoms, f2.atoms; atol=atol)
+    symmetry_flag = is_symmetry_equal(f1.symmetry, f2.symmetry)
+    return box_flag && charges_flag && atoms_flag && symmetry_flag
+end
+
+
+function Base.isapprox(f1::Framework, f2::Framework)
+    box_flag = isapprox(f1.box, f2.box)
+    if f1.charges.n_charges != f2.charges.n_charges
+        return false
+    end
+    if f1.atoms.n_atoms != f2.atoms.n_atoms
+        return false
+    end
+    charges_flag = isapprox(f1.charges, f2.charges)
+    atoms_flag = isapprox(f1.atoms, f2.atoms)
     symmetry_flag = is_symmetry_equal(f1.symmetry, f2.symmetry)
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
