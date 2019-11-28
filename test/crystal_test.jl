@@ -15,19 +15,19 @@ using Random
     @test framework.name == "test_structure2.cif"
     @test isapprox(framework.box, Box(10.0, 20.0, 30.0, 90*π/180, 45*π/180, 120*π/180))
     @test framework.atoms.n_atoms == 2
-    @test isapprox(framework.atoms, Atoms([:Ca, :O], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
-    @test isapprox(framework.charges, Charges([1.0, -1.0], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
+    @test has_same_set_of_atoms(framework.atoms, Atoms([:Ca, :O], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
+    @test has_same_set_of_charges(framework.charges, Charges([1.0, -1.0], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
     new_frame = assign_charges(framework, Dict(:Ca => -2.0, :O => 2.0))
-    @test isapprox(new_frame.charges, Charges([-2.0, 2.0], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
+    @test has_same_set_of_charges(new_frame.charges, Charges([-2.0, 2.0], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
     new_frame = assign_charges(framework, [4.0, -4.0])
-    @test isapprox(new_frame.charges, Charges([4.0, -4.0], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
+    @test has_same_set_of_charges(new_frame.charges, Charges([4.0, -4.0], [0.2 0.6; 0.5 0.3; 0.7 0.1]))
     @test charged(framework)
     @test chemical_formula(framework) == Dict(:Ca => 1, :O => 1)
     @test molecular_weight(framework) ≈ 15.9994 + 40.078
     # same as test_structure.cif but with overlapping atoms.
     framework2 = Framework("test_structure2B.cif", remove_overlap=true, check_charge_neutrality=false)
     strip_numbers_from_atom_labels!(framework2)
-    @test isapprox(framework.atoms, framework2.atoms) && isapprox(framework.charges, framework2.charges)
+    @test has_same_set_of_atoms(framework.atoms, framework2.atoms) && has_same_set_of_charges(framework.charges, framework2.charges)
 
     # test .cif writer; write, read in, assert equal
     #   more write_cif tests below with symmetry tests
@@ -37,8 +37,8 @@ using Random
     write_cif(framework, joinpath("data", "crystals", "rewritten_test_structure2_cartn.cif"); fractional=false)
     framework_rewritten_cartn = Framework("rewritten_test_structure2_cartn.cif")
     strip_numbers_from_atom_labels!(framework_rewritten_cartn)
-    @test isapprox(framework, framework_rewritten)
-    @test isapprox(framework, framework_rewritten_cartn)
+    @test has_same_sets_of_atoms_and_charges(framework, framework_rewritten)
+    @test has_same_sets_of_atoms_and_charges(framework, framework_rewritten_cartn)
 
     # test .cif reader for non-P1 symmetry
     #   no atoms should overlap
@@ -61,11 +61,11 @@ using Random
     P1_framework.atoms.xf .= mod.(P1_framework.atoms.xf, 1.0)
     P1_framework.charges.xf .= mod.(P1_framework.charges.xf, 1.0)
 
-    @test isapprox(non_P1_framework, P1_framework; atol=1e-2) 
+    @test has_same_sets_of_atoms_and_charges(non_P1_framework, P1_framework; atol=1e-2) 
     # test that fractional and cartesian produce same results
-    @test isapprox(non_P1_framework, non_P1_cartesian; atol=1e-2)
+    @test has_same_sets_of_atoms_and_charges(non_P1_framework, non_P1_cartesian; atol=1e-2)
     # test that cartesian and P1 produce same results
-    @test isapprox(non_P1_cartesian, P1_framework; atol=1e-2)
+    @test has_same_sets_of_atoms_and_charges(non_P1_cartesian, P1_framework; atol=1e-2)
     # test that incorrect file formats throw proper errors
     @test_throws ErrorException Framework("non_P1_no_symmetry.cif")
     # test that a file with no atoms throws error
@@ -121,7 +121,7 @@ using Random
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     framework_from_cssr = Framework("test_structure2.cssr")
     strip_numbers_from_atom_labels!(framework_from_cssr)
-    @test isapprox(framework_from_cssr, framework, checknames=false)
+    @test has_same_sets_of_atoms_and_charges(framework_from_cssr, framework, checknames=false)
 
     # test replicate framework
     sbmof = Framework("SBMOF-1.cif")

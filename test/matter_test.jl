@@ -26,7 +26,7 @@ using Test
     a1_mismatch = Atoms([:b, :a], [1.0 4.0;
                                    2.0 5.0;
                                    3.0 6.0])
-    @test ! isapprox(a1, a1_mismatch)
+    @test ! has_same_set_of_atoms(a1, a1_mismatch)
 
     # testing addition for charges type
     c1 = Charges([0.1, 0.2], [1.0 4.0;
@@ -49,7 +49,7 @@ using Test
     c1_mismatch = Charges([0.2, 0.1], [1.0 4.0;
                                        2.0 5.0;
                                        3.0 6.0])
-    @test ! isapprox(c1, c1_mismatch)
+    @test ! has_same_set_of_charges(c1, c1_mismatch)
 
 end
 end
