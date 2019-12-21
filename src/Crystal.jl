@@ -1050,6 +1050,40 @@ function infer_bonds!(framework::Framework, include_bonds_across_periodic_bounda
 end
 
 """
+    sane_bonds = bond_sanity_check(framework)
+
+Run sanity checks on `framework.bonds`.
+* is the bond graph fully connected? i.e. does every vertex (=atom) in the bond graph have at least one edge?
+* each hydrogen can have only one bond
+* each carbon can have a maximum of four bonds
+
+if sanity checks fail, refer to [`write_bond_information`](@ref) to write a .vtk to visualize the bonds.
+
+Print warnings when sanity checks fail.
+Return `true` if sanity checks pass, `false` otherwise.
+"""
+function bond_sanity_check(framework::Framework)
+    sane_bonds = true
+    for a = 1:framework.atoms.n_atoms
+        ns = neighbors(framework.bonds, a)
+        # is the graph fully connected?
+        if length(ns) == 0
+            @warn "atom $a = $(framework.atoms.species[a]) in $(framework.name) is not bonded to any other atom."
+            sane_bonds = false
+        end
+        # does hydrogen have only one bond?
+        if (framework.atoms.species[a] == :H) && (length(ns) > 1)
+            @warn "hydrogen atom $a in $(framework.name) is bonded to more than one atom!"
+        end
+        # does carbon have greater than four bonds?
+        if (framework.atoms.species[a] == :C) && (length(ns) > 4)
+            @warn "carbon atom $a in $(framework.name) is bonded to more than four atoms!"
+        end
+    end
+    return sane_bonds
+end
+
+"""
     bonds_equal = compare_bonds_in_framework(framework1, framework2, atol=0.0)
 
 Returns whether the bonds defined in framework1 are the same as the bonds
