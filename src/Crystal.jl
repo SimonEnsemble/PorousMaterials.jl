@@ -1306,6 +1306,27 @@ function assign_charges(framework::Framework, charges::Union{Dict{Symbol, Float6
 end
 
 """
+    r = distance(framework, i, j, apply_pbc)
+
+Calculate the (Cartesian) distance between atoms `i` and `j` in a crystal.
+`if apply_pbc`, use the nearest image convention to apply periodic boundary conditions.
+`if ! apply_pbc`, do not apply periodic boundary conditions
+
+# Arguments
+-`framework::Framework`: the crystal structure
+-`i::Int`: index of the first atom
+-`j::Int`: Index of the second atom
+- `apply_pbc::Bool`: `true` if we wish to apply periodic boundary conditions, `false` otherwise
+"""
+function distance(framework::Framework, i::Int, j::Int, apply_pbc::Bool)
+    dxf = framework.atoms.xf[:, i] - framework.atoms.xf[:, j]
+    if apply_pbc
+        nearest_image!(dxf)
+    end
+    return norm(framework.box.f_to_c * dxf)
+end
+
+"""
     are_atoms_bonded = is_bonded(framework, i, j, bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)],
                                  include_bonds_across_periodic_boundaries=true)
 
@@ -1330,8 +1351,9 @@ function is_bonded(framework::Framework, i::Int64, j::Int64,
                    include_bonds_across_periodic_boundaries::Bool=true)
     species_i = framework.atoms.species[i]
     species_j = framework.atoms.species[j]
-    x_i = framework.atoms.xf[:, i]
-    x_j = framework.atoms.xf[:, j]
+
+    cartesian_dist_between_atoms = distance(framework, i, j, include_bonds_across_periodic_boundaries)
+
     # loop over possible bonding rules
     for br in bonding_rules
         # determine if the atom species correspond to the species in `bonding_rules`
@@ -1348,11 +1370,6 @@ function is_bonded(framework::Framework, i::Int64, j::Int64,
 
         if species_match
             # determine if the atoms are close enough to bond
-            dxf = x_i - x_j
-            if include_bonds_across_periodic_boundaries
-                nearest_image!(dxf)
-            end
-            cartesian_dist_between_atoms = norm(framework.box.f_to_c * dxf)
             if br.min_dist < cartesian_dist_between_atoms && br.max_dist > cartesian_dist_between_atoms
                 return true
             end
@@ -1360,7 +1377,6 @@ function is_bonded(framework::Framework, i::Int64, j::Int64,
     end
     return false
 end
-
 
 function Base.show(io::IO, framework::Framework)
     println(io, "Name: ", framework.name)
