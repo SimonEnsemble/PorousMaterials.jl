@@ -104,6 +104,9 @@ infer_bonds!(f, true, bonding_rules)
 
 # output the bond information to visualize it and double check
 write_bond_information(f, "SBMOF-1_bonds.vtk")
+
+# run sanity checks
+bond_sanity_check(framework)
 ```
 
 
