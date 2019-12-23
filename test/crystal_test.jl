@@ -259,6 +259,13 @@ using Random
     reference_bonds = loadgraph("hkust1_reference_bonds.lgz")
     @test reference_bonds == hkust1.bonds
 
+    # test distance function (via Avogadro)
+    frame = Framework("simple_test.cif")
+    @test distance(frame, 1, 1, true) == 0.0
+    @test isapprox(distance(frame, 2, 5, true), 4.059, atol=0.001)
+    @test isapprox(distance(frame, 2, 5, false), 4.059, atol=0.001)
+    @test isapprox(distance(frame, 1, 5, false), 17.279, atol=0.001)
+    @test isapprox(distance(frame, 1, 5, true), 1.531, atol=0.001)
 
 #=    ## .cssr reader test
     # test replicate framework
