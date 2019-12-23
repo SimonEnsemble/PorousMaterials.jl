@@ -32,15 +32,11 @@ makedocs(
 
             "FAQ" => "guides/faq.md",
             "Help Wanted" => "guides/help_wanted.md",
-            ]
+            ],
     format = Documenter.HTML(assets = ["assets/flux.css"])
 )
 
 deploydocs(
     repo = "github.com/SimonEnsemble/PorousMaterials.jl.git",
-    # This is a link to the main repo and the master branch
-    # target = "build",
-    julia = "1.3",
-    osname = "linux",
     deps = Deps.pip("mkdocs", "mkdocs-material", "pymdown-extensions") # These are dependencies for the site, not the package
 )

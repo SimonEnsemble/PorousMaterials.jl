@@ -15,21 +15,21 @@ Designed for high-throughput computations to minimize input files and querying r
 
 ## Installation
 
-1. Download and install the [Julia programming language](https://julialang.org/), v1.0.
+1. Download and install the [Julia programming language](https://julialang.org/), v1.3 or higher.
 
 2. In Julia, open the package manager (using `]`) and enter the following:
 
 ```julia
-add PorousMaterials
+pkg> add PorousMaterials
 ```
 
 3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
 
 ```julia
-using PorousMaterials # that's it
+julia> using PorousMaterials # that's it
 ```
 
 ## Tests
-Run the unit-ish tests in the script `tests/runtests.jl` manually or type `Pkg.test("PorousMaterials")` into Julia.
+Run the tests in the script `tests/runtests.jl` manually or type `Pkg.test("PorousMaterials")` into Julia.
 
-Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and are found in `tests/henry_test.jl` and `tests/gcmc_test.jl`.
+Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and must be run separately; they are found in `tests/henry_test.jl` and `tests/gcmc_test.jl`.
