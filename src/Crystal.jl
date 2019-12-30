@@ -195,6 +195,11 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     i += 1
                 end
 
+		# Warn about partial occupancy data (rest of code assumes full site occupancy for all atoms)
+                if haskey(name_to_column, "_atom_site_occupancy")
+                    @warn @sprintf("Partial occupancy coefficients in %s.", filename)
+                end
+						
                 fractional = fractional || haskey(name_to_column, "_atom_site_fract_x") &&
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
