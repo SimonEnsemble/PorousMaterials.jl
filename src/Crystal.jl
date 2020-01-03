@@ -25,7 +25,7 @@ end
     bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
                      BondingRule(:*, :*, 0.4, 1.9)]
 
-A rule for determining if two atoms within a framework are bonded. 
+A rule for determining if two atoms within a framework are bonded.
 
 # Attributes
 -`species_i::Symbol`: One of the atoms types for this bond rule
@@ -56,6 +56,42 @@ prepend!(bond_rules, BondingRule(:Cu, :*, 0.1, 2.6))
 """
 default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]
 
+
+"""
+    check_site_occupancy = check_site_occupancy(filetext, line_no, name_to_column, warn = true)
+
+Scans CIF data over the lines of a loop_ containing an _atom_site_occupancy column, looking for partial occupancy.
+Set warn = false to suppress warning message output.
+Function returns 0 if no partial occupancy is detected; otherwise it returns 1.
+"""
+function check_site_occupancy(filetext, line_no, name_to_column, warn = true)
+    # Find data block
+    # First, find next occurance of "loop_"
+    next_loop = [i for i in line_no:length(filetext) if filetext[i] == "loop_"][1]
+    # Now, take all data lines in our loop_
+    data = [line for line in filetext[line_no:next_loop] if length(split(line, " ")) == length(name_to_column)]
+    # Scan the data block for non-1 entries in the _atom_site_occupancy column
+    occ_col = name_to_column["_atom_site_occupancy"]
+    warn_count = 0
+    for (i, row) in enumerate(data)
+        # Check if an occupancy datum exist for the row, and if it is not equivalent to 1
+        if isnumeric(row[occ_col]) && convert(AbstractFloat, row[occ_col]) != 1.0
+            warn_count += 1
+        end
+    end
+
+    if warn_count != 0 && warn
+        @warn @sprintf("There are %d partially-occupied sites between lines %d and %d.", warn_count, line_no, next_loop)
+    end
+
+    if warn_count == 0
+        return 0
+    else
+        return 1
+    end
+end
+
+
 """
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
@@ -77,7 +113,7 @@ function it is assumed it is in P1 symmetry.
 - `check_atom_and_charge_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `remove_overlap::Bool`: remove identical atoms automatically. Identical atoms are the same element atoms which overlap.
 - `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
-    P1 symmetry using the symmetry rules from the `_symmetry_equiv_pos_as_xyz` list in the .cif file. 
+    P1 symmetry using the symmetry rules from the `_symmetry_equiv_pos_as_xyz` list in the .cif file.
     (We do not use the space groups name to look up symmetry rules).
 - `read_bonds_from_file::Bool`: Whether or not to read bonding information from
     cif file. If false, the bonds can be inferred later. note that, if the crystal is not in P1 symmetry, we cannot *both* read bonds and convert to P1 symmetry.
@@ -195,11 +231,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     i += 1
                 end
 
-		# Warn about partial occupancy data (rest of code assumes full site occupancy for all atoms)
-                if haskey(name_to_column, "_atom_site_occupancy")
-                    @warn @sprintf("Partial occupancy coefficients in %s.", filename)
-                end
-						
                 fractional = fractional || haskey(name_to_column, "_atom_site_fract_x") &&
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
@@ -210,6 +241,18 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
+
+
+                # =====================
+                # PARTIAL OCCUPANCY CHECK
+                # =====================
+
+                # Check to see if this loop_ has site occupancy data; if so, scan the loop_ for non-unity values.
+                site_occupancy = haskey(name_to_column, "_atom_site_occupancy")
+                if site_occupancy && (fractional || cartesian)
+                    check_site_occupancy(lines, i, name_to_column)
+                end
+
 
                 # =====================
                 # SYMMETRY READER
@@ -252,7 +295,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                 elseif fractional && ! atom_info
                     atom_info = true
                     atom_column_name = [name for (name, column) in name_to_column if column == 1][end]
-                    
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
@@ -328,7 +370,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
                         atom_one_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_1"]]]
                         atom_two_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_2"]]]
-                        add_edge!(bonds, atom_one_idx, atom_two_idx) 
+                        add_edge!(bonds, atom_one_idx, atom_two_idx)
 
                         # iterate to next line in file
                         i += 1
@@ -362,7 +404,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
 
         # Structure must either be in P1 symmetry or have replication information
         if !p1_symmetry && !symmetry_info
-            error(@sprintf("%s is not in P1 symmetry and the .cif does not have a _symmetry_equiv_pos_as_xyz column 
+            error(@sprintf("%s is not in P1 symmetry and the .cif does not have a _symmetry_equiv_pos_as_xyz column
             for us to apply symmetry operations to convert into P1 symmetry.", filename))
         end
 
@@ -447,7 +489,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                          check_charge_neutrality=check_charge_neutrality,
                                          check_atom_and_charge_overlap=check_atom_and_charge_overlap)
     end
-    
+
     if wrap_to_unit_cell
         wrap_atoms_to_unit_cell!(framework)
     end
@@ -625,7 +667,7 @@ end
 
 #TODO write tests for this! one with diff elements
 """
-    new_framework = remove_overlapping_atoms_and_charges(framework, atom_overlap_tol=0.1, 
+    new_framework = remove_overlapping_atoms_and_charges(framework, atom_overlap_tol=0.1,
                                                         charge_overlap_tol=0.1, verbose=true)
 
 Takes in a framework and returns a new framework with where overlapping atoms and overlapping
@@ -916,7 +958,7 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
                             new_framework.name, total_charge(new_framework)))
         end
     end
-        
+
     if wrap_to_unit_cell
         wrap_atoms_to_unit_cell!(framework)
     end
@@ -1018,11 +1060,11 @@ function remove_bonds!(framework::Framework)
 end
 
 """
-    infer_bonds!(framework, include_bonds_across_periodic_boundaries, 
+    infer_bonds!(framework, include_bonds_across_periodic_boundaries,
                     bonding_rules=[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)])
 
 Populate the bonds in the framework object based on the bonding rules. If a
-pair doesn't have a suitable rule then they will not be considered bonded. 
+pair doesn't have a suitable rule then they will not be considered bonded.
 
 `:*` is considered a wildcard and can be substituted for any species. It is a
 good idea to include a bonding rule between two `:*` to allow any atoms to bond
@@ -1207,7 +1249,7 @@ function write_cif(framework::Framework, filename::AbstractString; fractional::B
         if fractional
             @printf(cif_file, "%f\t%f\t%f\t%f\n", framework.atoms.xf[:, i]..., q)
         else
-            
+
             @printf(cif_file, "%f\t%f\t%f\t%f\n", (framework.box.f_to_c * framework.atoms.xf[:, i])..., q)
         end
     end
