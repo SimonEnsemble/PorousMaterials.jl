@@ -188,7 +188,8 @@ where N is the total adsorption, M is the maximum monolayer coverage, K is the L
 - `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "H".
 """
 function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol, 
-                                 loading_col_name::Symbol, model::Symbol)
+                                 loading_col_name::Symbol, model::Symbol, 
+                                 options::Optim.Options=Optim.Options())
     _df = sort(df, [pressure_col_name])
     n = _df[!, loading_col_name]
     p = _df[!, pressure_col_name]
@@ -196,7 +197,7 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
 
     if model == :langmuir
         objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = 1:length(n)])
-        res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead())
+        res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead(), options)
         if !Optim.converged(res)
             error("Optimization algorithm failed!")
         end
@@ -205,7 +206,7 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
         return Dict("M" => M, "K" => K, "MSE" => mse)
     elseif model == :henry
         objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
-        res = optimize(objective_function_henry, [θ0["H0"]], LBFGS())
+        res = optimize(objective_function_henry, [θ0["H0"]], LBFGS(), options)
         if !Optim.converged(res)
             error("Optimization algorithm failed!")
         end

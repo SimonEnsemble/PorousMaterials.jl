@@ -15,6 +15,8 @@ using Random
     df = DataFrame(P = [0.0, 0.56, 1.333], N = [0.0, 0.534, 1.295])
     henry = fit_adsorption_isotherm(df, :P, :N, :henry)["H"]
     @test isapprox(henry, 0.9688044280548711)
+    henry = fit_adsorption_isotherm(df, :P, :N, :henry, Optim.Options(iterations=100))["H"]
+    @test isapprox(henry, 0.9688044280548711)
     
     # Langmuir
     P = range(0, stop=1, length=100)
