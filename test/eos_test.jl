@@ -9,6 +9,12 @@ using Statistics
 using Random
 
 @testset "EOS Tests" begin
+    # test that we are reading in params correctly
+    fluid = PengRobinsonFluid(:Xe)
+    @test isapprox(fluid.Tc, 289.733, atol=0.001)
+    @test isapprox(fluid.Pc, 58.420, atol=0.001)
+    @test isapprox(fluid.ω, 0.00363, atol=0.00001)
+
     # Peng-Robinsion EOS test for methane.
     fluid = PengRobinsonFluid(:CH4)
     props = calculate_properties(fluid, 298.0, 65.0, verbose=false)

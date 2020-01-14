@@ -49,7 +49,7 @@ function LJForceField(forcefieldfile::AbstractString; cutoffradius::Float64=14.0
 
     forcefield_file_path = joinpath(PATH_TO_FORCEFIELDS, forcefieldfile)
 
-    df = CSV.read(forcefield_file_path) # from DataFrames
+    df = CSV.read(forcefield_file_path, comment="#") # from DataFrames
 
     ljff = LJForceField(forcefieldfile, Dict(), Dict(), Dict(), Dict(), cutoffradius ^ 2)
 
