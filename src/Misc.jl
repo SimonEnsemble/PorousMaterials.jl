@@ -137,10 +137,11 @@ function read_atomic_masses()
     return atomic_masses
 end
 
+# create our own Exception for when fitting routine fails
 struct FitError <: Exception
-    method::AbstractString
+    method::AbstractString # will be Henry or Langmuir
 end
-Base.showerror(io::IO, e::FitError) = print(io, e.method, " Fitting failed!")
+Base.showerror(io::IO, e::FitError) = print(io, e.method, " fitting failed!")
 
 # obtain a reasonable initial guess for the optimization route in fitting adsorption 
 #  models to adsorption isotherm data
@@ -203,9 +204,8 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
     if model == :langmuir
         objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = 1:length(n)])
         res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead(), options)
-        if !Optim.converged(res)
+        if ! Optim.converged(res)
             throw(FitError(String(model)))
-            #error("Optimization algorithm failed!")
         end
         M, K = res.minimizer
         mse = res.minimum / length(n)
@@ -213,9 +213,8 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
     elseif model == :henry
         objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS(), options)
-        if !Optim.converged(res)
+        if ! Optim.converged(res)
             throw(FitError(String(model)))
-            #error("Optimization algorithm failed!")
         end
         H = res.minimizer
         mse = res.minimum / length(n)
