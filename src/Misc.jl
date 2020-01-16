@@ -137,6 +137,11 @@ function read_atomic_masses()
     return atomic_masses
 end
 
+struct FitError <: Exception
+    method::AbstractString
+end
+Base.showerror(io::IO, e::FitError) = print(io, e.method, " Fitting failed!")
+
 # obtain a reasonable initial guess for the optimization route in fitting adsorption 
 #  models to adsorption isotherm data
 function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol)
@@ -199,7 +204,8 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
         objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = 1:length(n)])
         res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead(), options)
         if !Optim.converged(res)
-            error("Optimization algorithm failed!")
+            throw(FitError(String(model)))
+            #error("Optimization algorithm failed!")
         end
         M, K = res.minimizer
         mse = res.minimum / length(n)
@@ -208,7 +214,8 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
         objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS(), options)
         if !Optim.converged(res)
-            error("Optimization algorithm failed!")
+            throw(FitError(String(model)))
+            #error("Optimization algorithm failed!")
         end
         H = res.minimizer
         mse = res.minimum / length(n)
