@@ -52,7 +52,7 @@ prepend!(bond_rules, BondingRule(:Cu, :*, 0.1, 2.6))
 ```
 
 # Returns
--`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:*, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
+-`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
 """
 default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]
 
@@ -219,9 +219,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     #   should catch this hopefully there aren't other weird
                     #   ways of writing cifs...
                     while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
-                        symmetry_count += 1
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
+
+                        if length(sym_funcs) != 3
+                            i += 1
+                            break
+                        end
+
+                        symmetry_count += 1
 
                         # store as strings so it can be written out later
                         new_sym_rule = Array{AbstractString, 1}(undef, 3)
