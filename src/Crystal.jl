@@ -1,5 +1,3 @@
-using Test
-
 # Data structure for a framework; user-friendly constructor below
 struct Framework
     name::AbstractString
