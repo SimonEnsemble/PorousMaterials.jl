@@ -1,5 +1,3 @@
-using Test
-
 # Data structure for a framework; user-friendly constructor below
 struct Framework
     name::AbstractString
@@ -60,7 +58,8 @@ default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4
     framework = Framework(filename, check_charge_neutrality=true,
                           net_charge_tol=0.001, check_atom_and_charge_overlap=true,
                           remove_overlap=false, convert_to_p1=true,
-                          read_bonds_from_file=false, wrap_to_unit_cell=true)
+                          read_bonds_from_file=false, wrap_to_unit_cell=true,
+                          include_zero_charges=false)
     framework = Framework(name, box, atoms, charges; bonds=SimpleGraph(atoms.n_atoms),
                           symmetry=["x", "y", "z"], space_group="P1", is_p1=true)
 
@@ -81,7 +80,9 @@ function it is assumed it is in P1 symmetry.
     (We do not use the space groups name to look up symmetry rules).
 - `read_bonds_from_file::Bool`: Whether or not to read bonding information from
     cif file. If false, the bonds can be inferred later. note that, if the crystal is not in P1 symmetry, we cannot *both* read bonds and convert to P1 symmetry.
-- `wrap_to_unit_cell::Bool`: if true, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
+- `wrap_to_unit_cell::Bool`: if `true`, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
+- `include_zero_charges::Bool`: if `false`, do not include in `framework.charges` atoms which have zero charges, in order to speed up the electrostatic calculations.
+    If `true,` include the atoms in `framework.charges` that have zero charge, ensuring that the number of atoms is equal to the number of charges and that `framework.charges.xf` and framework.atoms.xf` are the same.
 
 # Returns
 - `framework::Framework`: A framework containing the crystal structure information
@@ -107,7 +108,8 @@ function it is assumed it is in P1 symmetry.
 function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                    net_charge_tol::Float64=0.001, check_atom_and_charge_overlap::Bool=true,
                    remove_overlap::Bool=false, convert_to_p1::Bool=true,
-                   read_bonds_from_file::Bool=false, wrap_to_unit_cell::Bool=true)
+                   read_bonds_from_file::Bool=false, wrap_to_unit_cell::Bool=true,
+                   include_zero_charges::Bool=false)
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
@@ -418,9 +420,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     box = Box(a, b, c, α, β, γ)
     # construct atoms attribute of framework
     atoms = Atoms(species, coords)
-    # construct charges attribute of framework; include only nonzero charges
-    idx_nz = charge_values .!= 0.0
-    charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
+    # construct charges attribute of framework
+    if ! include_zero_charges
+        # include only nonzero charges
+        idx_nz = charge_values .!= 0.0
+        charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
+    else
+        # include all charges, even if some are zero.
+        charges = Charges(charge_values, coords)
+    end
 
     framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
 
