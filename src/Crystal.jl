@@ -199,9 +199,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
                 # if the file provides cartesian coordinates
-                cartesian = cartesian || ! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
+                cartesian = cartesian || (! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
                                 haskey(name_to_column, "_atom_site_Cartn_y") &&
-                                haskey(name_to_column, "_atom_site_Cartn_z")
+                                haskey(name_to_column, "_atom_site_Cartn_z"))
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
@@ -222,7 +222,7 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
 
-                        if length(sym_funcs) != 3
+                        if length(collect(keys(name_to_column))) + 2 != length(sym_funcs)
                             i += 1
                             break
                         end
@@ -429,7 +429,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     charges = Charges(charge_values[idx_nz], coords[:, idx_nz])
 
     framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
-
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
