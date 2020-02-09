@@ -12,51 +12,54 @@ module PorousMaterials
  # using Statistics
 using Printf
 using LinearAlgebra
- # using LightGraphs
+using LightGraphs
  # using Distributed
  # using Optim
  # import Base.push!
  # 
 
- # """
- #     print_file_paths()
- # 
- # print off paths where porousmaterials.jl looks for input files and writes output files.
- # """
- # function print_file_paths()
- #     println("general data folder: ", path_to_data)
- #     println("\tcrystal structures (.cif, .cssr): ", path_to_crystals)
- #     println("\tforce field files (.csv): ", path_to_forcefields)
- #     println("\tmolecule input files: ", path_to_molecules)
- #     println("\tgrids (.cube): ", path_to_grids)
- # end
- # 
- # """
- #     set_default_file_paths(print_paths=true)
- # 
- # sets the default paths for where input files and some output files are stored.
- # to see current set up, call [`print_file_paths`](@ref)
- # """
- # function set_default_file_paths(;print_paths::bool=true)
- #     # this is the main directory where crystal structures, forcefields, and molecules data is stored
- #     global path_to_data = joinpath(pwd(), "data")
- # 
- #     global path_to_crystals = joinpath(path_to_data, "crystals")
- #     global path_to_forcefields = joinpath(path_to_data, "forcefields")
- #     global path_to_molecules = joinpath(path_to_data, "molecules")
- #     global path_to_grids = joinpath(path_to_data, "grids")
- #     
- #     if print_paths
- #         print_file_paths()
- #     end
- # end
- # 
- # # this runs everytime porousmaterials is loaded, so if the user changes directory
- # #   then the path_to_data will change as well
- # function __init__()
- #     set_default_file_paths(print_paths=false)
- # end
- # 
+# atoms are considered to overlap if this close.
+const R²_OVERLAP = 0.1 # Units: Angstrom²
+
+"""
+    print_file_paths()
+
+print off paths where PorousMaterials.jl looks for input files and writes output files.
+"""
+function print_file_paths()
+    println("general data folder: ", PATH_TO_DATA)
+    println("\tcrystal structures (.cif, .cssr): ", PATH_TO_CRYSTALS)
+    println("\tforce field files (.csv): ", PATH_TO_FORCEFIELDS)
+    println("\tmolecule input files: ", PATH_TO_MOLECULES)
+    println("\tgrids (.cube): ", PATH_TO_GRIDS)
+end
+
+"""
+    set_default_file_paths(print_paths=true)
+
+sets the default paths for where input files and some output files are stored.
+to see current set up, call [`print_file_paths`](@ref)
+"""
+function set_default_file_paths(;print_paths::Bool=true)
+    # this is the main directory where crystal structures, forcefields, and molecules data is stored
+    global PATH_TO_DATA = joinpath(pwd(), "data")
+
+    global PATH_TO_CRYSTALS = joinpath(PATH_TO_DATA, "crystals")
+    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
+    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
+    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+    
+    if print_paths
+        print_file_paths()
+    end
+end
+
+# this runs everytime porousmaterials is loaded, so if the user changes directory
+#   then the path_to_data will change as well
+function __init__()
+    set_default_file_paths(print_paths=false)
+end
+
  # """
  #     set_tutorial_mode()
  # 
@@ -81,9 +84,9 @@ using LinearAlgebra
  # 
 include("matter.jl")
 include("box.jl")
- # include("nearestimage.jl")
+include("distance.jl")
  # include("misc.jl")
- # include("crystal.jl")
+include("crystal.jl")
  # include("molecules.jl")
  # include("forcefield.jl")
  # include("energetics_util.jl")
@@ -101,21 +104,21 @@ export
  #     set_default_file_paths, print_file_paths, set_tutorial_mode,
  # 
     # matter.jl
-    Coords, Frac, Cart, Atoms, Charges,
+    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge,
     
     # box.jl
-    Box, replicate, unit_cube, write_vtk, inside, fractional_coords, cartesian_coords
+    Box, replicate, unit_cube, write_vtk, inside, fractional_coords, cartesian_coords,
 
- # 
- #     # nearestimage.jl
- #     nearest_image!, nearest_r², nearest_r,
- # 
+    # distance.jl
+    nearest_image!, distance, overlap,
+
  #     # misc.jl
  #     read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_adsorption_isotherm,
  # 
- #     # crystal.jl
+    # crystal.jl
+    Crystal, strip_numbers_from_atom_labels!, assign_charges
  #     framework, bondingrule, read_crystal_structure_file,
- #     remove_overlapping_atoms_and_charges, strip_numbers_from_atom_labels!,
+ #     remove_overlapping_atoms_and_charges, 
  #     chemical_formula, molecular_weight, crystal_density, construct_box,
  #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
  #     is_symmetry_equal, apply_symmetry_rules, assert_p1_symmetry, infer_bonds!,

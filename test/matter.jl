@@ -52,7 +52,6 @@ using Test
     @test a3_f.species[3:4] == s2
     @test a3_f.coords.xf[:, 1:2] == f1.xf
     @test a3_f.coords.xf[:, 3:4] == f2.xf
-    
 
     ## Charges
     q_vals_1 = [1.0, 4.0]
@@ -60,6 +59,7 @@ using Test
 
     q1_c = Charges(q_vals_1, c1)
     q2_c = Charges(q_vals_2, c2)
+    @test ! neutral(q1_c)
 
     q1_f = Charges(q_vals_1, f1)
     q2_f = Charges(q_vals_2, f2)
@@ -84,5 +84,24 @@ using Test
     @test q3_f.q[3:4] == q_vals_2
     @test q3_f.coords.xf[:, 1:2] == f1.xf
     @test q3_f.coords.xf[:, 3:4] == f2.xf
+
+    # wrap
+    f = Frac([0.1 -0.1;
+              2.2 0.56;
+             -0.4 1.2]
+             )
+    fw = Frac([0.1 0.9;
+               0.2 0.56;
+               0.6 0.2]
+             )
+    wrap!(f)
+    @test isapprox(f, fw)
+    
+    q = Charges([-0.1, 0.2, -0.1], Frac(zeros(3, 3)))
+    @test neutral(q)
+    @test isapprox(net_charge(q), 0.0)
+    q.q[2] = 0.0
+    @test ! neutral(q)
+    @test isapprox(net_charge(q), -0.2)
 end
 end
