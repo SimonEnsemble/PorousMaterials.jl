@@ -1,7 +1,7 @@
 module PorousMaterials
- # 
- # using CSV
- # using DataFrames
+
+using CSV
+using DataFrames
  # using Roots # for fzero
  # using OffsetArrays # used for Ewald sum
  # using SpecialFunctions # for erfc
@@ -14,7 +14,7 @@ using Printf
 using LinearAlgebra
 using LightGraphs
  # using Distributed
- # using Optim
+using Optim
  # import Base.push!
  # 
 
@@ -85,7 +85,8 @@ end
 include("matter.jl")
 include("box.jl")
 include("distance.jl")
- # include("misc.jl")
+include("misc.jl")
+include("isotherm_fitting.jl")
 include("crystal.jl")
  # include("molecules.jl")
  # include("forcefield.jl")
@@ -112,14 +113,17 @@ export
     # distance.jl
     nearest_image!, distance, overlap,
 
- #     # misc.jl
- #     read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_adsorption_isotherm,
- # 
+    # misc.jl
+    read_xyz, read_cpk_colors, write_xyz, read_atomic_masses,
+    
+    # isotherm_fitting.jl
+    fit_adsorption_isotherm,
+
     # crystal.jl
-    Crystal, strip_numbers_from_atom_labels!, assign_charges
- #     framework, bondingrule, read_crystal_structure_file,
- #     remove_overlapping_atoms_and_charges, 
- #     chemical_formula, molecular_weight, crystal_density, construct_box,
+    Crystal, strip_numbers_from_atom_labels!, assign_charges,
+    chemical_formula, molecular_weight, crystal_density, write_cif, has_charges,
+    apply_symmetry_operations
+ #     construct_box,
  #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
  #     is_symmetry_equal, apply_symmetry_rules, assert_p1_symmetry, infer_bonds!,
  #     remove_bonds!, compare_bonds_in_framework, wrap_atoms_to_unit_cell!,

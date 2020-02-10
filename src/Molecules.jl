@@ -7,10 +7,10 @@ Data structure for a molecule/adsorbate.
 - `charges::Charges`: array of point charges comprising the molecule
 - `xf_com::Array{Float64, 1}`: center of mass of the molecule in fractional coordinates
 """
-struct Molecule
+struct Molecule{T}
     species::Symbol
-    atoms::Atoms
-    charges::Charges
+    atoms::Atoms{T}
+    charges::Charges{T}
     xf_com::Array{Float64, 1}
 end
 

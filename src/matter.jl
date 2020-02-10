@@ -6,13 +6,13 @@ abstract type Coords end
 struct Frac<:Coords
     xf::Array{Float64, 2}
 end
-Base.isapprox(c1::Frac, c2::Frac) = isapprox(c1.xf, c2.xf)
+Base.isapprox(c1::Frac, c2::Frac; atol::Real=0) = isapprox(c1.xf, c2.xf, atol=atol)
 Base.hcat(c1::Frac, c2::Frac) = Frac(hcat(c1.xf, c2.xf))
 
 struct Cart<:Coords
     x::Array{Float64, 2}
 end
-Base.isapprox(c1::Cart, c2::Cart) = isapprox(c1.x, c2.x)
+Base.isapprox(c1::Cart, c2::Cart; atol::Real=0) = isapprox(c1.x, c2.x, atol=atol)
 Base.hcat(c1::Cart, c2::Cart) = Cart(hcat(c1.x, c2.x))
 
 # helpers for single vectors
@@ -41,7 +41,7 @@ struct Atoms{T}
 end
 Atoms(species::Array{Symbol, 1}, coords::Coords) = Atoms(length(species), species, coords)
 
-Base.isapprox(a1::Atoms, a2::Atoms) = (a1.species == a2.species) && isapprox(a1.coords, a2.coords)
+Base.isapprox(a1::Atoms, a2::Atoms; atol::Real=0) = (a1.species == a2.species) && isapprox(a1.coords, a2.coords, atol=atol)
 Base.:+(a1::Atoms, a2::Atoms) = Atoms(a1.n + a2.n, [a1.species; a2.species], hcat(a1.coords, a2.coords))
 
 
@@ -55,7 +55,7 @@ struct Charges{T}
 end
 Charges(q::Array{Float64, 1}, coords::Coords) = Charges(length(q), q, coords)
 
-Base.isapprox(c1::Charges, c2::Charges) = isapprox(c1.q, c2.q) && isapprox(c1.coords, c2.coords)
+Base.isapprox(c1::Charges, c2::Charges; atol::Real=0) = isapprox(c1.q, c2.q) && isapprox(c1.coords, c2.coords, atol=atol)
 Base.:+(c1::Charges, c2::Charges) = Charges(c1.n + c2.n, [c1.q; c2.q], hcat(c1.coords, c2.coords))
 
 """
