@@ -24,4 +24,11 @@ using Test
     new_f = subtract_atoms(f, ids_to_remove)
 
     @test num_bonds_original == num_sulfur_bonds + ne(new_f.bonds)
+
+    # write out the original xyz and bonds plus the new xyz and bonds
+    write_xyz(f)
+    write_bond_information(f)
+
+    write_xyz(new_f)
+    write_bond_information(new_f)
 end
