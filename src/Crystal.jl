@@ -921,7 +921,7 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
     end
         
     if wrap_to_unit_cell
-        wrap_atoms_to_unit_cell!(framework)
+        wrap_atoms_to_unit_cell!(new_framework)
     end
 
     if remove_overlap
