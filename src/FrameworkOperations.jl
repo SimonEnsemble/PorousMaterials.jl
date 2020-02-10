@@ -27,15 +27,18 @@ function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
         new_charges = new_framework.charges + f.charges
 
         nf_n_atoms = new_framework.atoms.n_atoms
-        add_vertices!(new_framework.bonds, nf_n_atoms)
+        new_bonds = SimpleGraph(nf_n_atoms + f.atoms.n_atoms)
         for edge in collect(edges(f.bonds))
-            add_edge!(new_framework.bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+            if !add_edge!(new_bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+                @warn @sprintf("Edge %d->%d in framework %s is not being added correctly\nThe new edge should be %d->%d",
+                               edge.src, edge.dst, f.name, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+            end
         end
 
         new_framework = Framework(split(new_framework.name, ".")[1] * "_" * split(f.name, ".")[1],
                                  new_framework.box, new_atoms, new_charges,
                                  symmetry=new_framework.symmetry,space_group=new_framework.space_group,
-                                 is_p1=new_framework.is_p1, bonds=new_framework.bonds)
+                                 is_p1=new_framework.is_p1, bonds=new_bonds)
     end
     if check_overlap
         if atom_overlap(new_framework)
