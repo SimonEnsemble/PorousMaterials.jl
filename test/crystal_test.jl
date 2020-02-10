@@ -252,6 +252,11 @@ using Random
     sbmof1_rebuilt = +(sbmof1_partitions...)
     @test isapprox(sbmof1, sbmof1_rebuilt)
 
+    # test framework partitioning with the errors it should throw
+    lo_hi = vcat(collect(1:20), collect(101:120))
+    @test_throws ErrorException partition_framework(sbmof1, [lo, hi])
+    @test_throws ErrorException partition_framework(sbmof1, [lo, mid, hi, lo_hi])
+
     # more xtal tests
     sbmof1 = Framework("SBMOF-1.cif")
     @test !charged(sbmof1)
