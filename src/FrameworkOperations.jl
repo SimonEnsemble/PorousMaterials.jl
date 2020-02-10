@@ -90,9 +90,25 @@ function partition_framework(framework::Framework,
         atoms = Atoms(atoms_species, atoms_xf)
         charges = Charges(Array{Float64, 1}(undef, 0),
                           Array{Float64, 2}(undef, 3, 0))
+        old_to_new = Dict(partition_ids[i] => i for i in 1:length(partition_ids))
+        bonds = SimpleGraph(length(partition_ids))
+        for edge in collect(edges(framework.bonds))
+            if edge.src in partition_ids && edge.dst in partition_ids
+                add_edge!(bonds, old_to_new[edge.src], old_to_new[edge.dst])
+            end
+        end
         partitioned_framework = Framework(framework.name * "_partition_" * string(i),
-                                        framework.box, atoms, charges)
+                                        framework.box, atoms, charges; bonds=bonds)
         push!(framework_partitions, partitioned_framework)
+    end
+    #if setdiff(collect(edges(framework.bonds)), [collect(edges(framework_partitions[i].bonds)) for i in 1:length(all_partition_ids)]...) != []
+    if ne(framework.bonds) != sum(ne.([framework_partitions[i].bonds for i in 1:length(framework_partitions)])) && 
+        complete_partition && !atoms_in_multiple_partitions
+        @warn @sprintf("Some bonds present in %s are between partitions and have been lost\n", framework.name)
+    end
+
+    if !complete_partition || atoms_in_multiple_partitions
+        @warn "Some bonds may be missing from the original structure"
     end
     return framework_partitions
 end
