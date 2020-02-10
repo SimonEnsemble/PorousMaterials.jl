@@ -124,7 +124,7 @@ export
     distance, bond_sanity_check,
 
     # FrameworkOperations.jl
-    partition_framework,
+    partition_framework, subtract_atoms,
 
     # Molecules.jl
     Molecule, n_atoms, set_fractional_coords!, translate_by!, outside_box,

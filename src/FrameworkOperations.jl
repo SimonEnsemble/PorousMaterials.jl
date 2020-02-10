@@ -112,3 +112,35 @@ function partition_framework(framework::Framework,
     end
     return framework_partitions
 end
+
+"""
+    updated_framework = subtract_atoms(framework, ids_to_remove)
+
+removes the atoms given from the framework. It then updates the bond graph
+accordingly. This does not work for charged frameworks
+"""
+function subtract_atoms(framework::Framework, ids_to_remove::Array{Int, 1})
+    # does not allow charged frameworks
+    @assert !charged(framework)
+    # get array of ids to keep
+    ids_to_keep = setdiff(collect(1:framework.atoms.n_atoms), ids_to_remove)
+    # create dictionary to get new atom id from old atom id
+    old_to_new = Dict(ids_to_keep[i] => i for i in 1:length(ids_to_keep))
+    # get the atom locations
+    atoms_xf = framework.atoms.xf[:, ids_to_keep]
+    atoms_species = framework.atoms.species[ids_to_keep]
+    atoms = Atoms(atoms_species, atoms_xf)
+    # create emtpy charges group
+    charges = Charges(Array{Float64, 1}(undef, 0),
+                      Array{Float64, 2}(undef, 3, 0))
+    # create the new bonding graph
+    bonds = SimpleGraph(length(ids_to_keep))
+    for edge in collect(edges(framework.bonds))
+        if edge.src in ids_to_keep && edge.dst in ids_to_keep
+            add_edge!(bonds, old_to_new[edge.src], old_to_new[edge.dst])
+        end
+    end
+
+    return Framework("removed_atoms_" * framework.name, framework.box, atoms,
+                     charges, bonds=bonds)
+end
