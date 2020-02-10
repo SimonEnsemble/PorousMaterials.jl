@@ -71,9 +71,18 @@ function partition_framework(framework::Framework,
                              all_partition_ids::Array{Array{Int, 1}, 1};
                              complete_partition::Bool=true,
                              atoms_in_multiple_partitions::Bool=false)
+    if complete_partition && !issetequal(collect(1:framework.atoms.n_atoms),
+                                         unique(vcat(all_partition_ids...)))
+        error("Not all atoms in %s are accounted for in the partition ids\n\trun again with `complete_partition=false` to only partition some atoms")
+    end
+
+    if !atoms_in_multiple_partitions && !allunique(vcat(all_partition_ids...))
+        error("Atoms appear in multiple partitions\n\trun again with `atoms_in_multiple_partitions=false` to allow atoms to appear in more than one partition")
+    end
+
     # charges are not paired with atoms, so will only partition when there are
     #   no charges present
-    @assert !charged(framework)
+    @assert !charged(framework) "Cannot partition a charged framework"
     framework_partitions = []
     for (i, partition_ids) in enumerate(all_partition_ids)
         atoms_xf = framework.atoms.xf[:, partition_ids]
