@@ -192,6 +192,11 @@ using Random
     symmetry_rules_two = [Array{AbstractString, 2}(undef, 3, 0) ["x" "y + z";
                                                                  "y" "x + z";
                                                                  "z" "x + y"]]
+    # test that whitespace in a blank line after symmetry rules doesn't cause
+    #   errors in reading in a file
+    ignore_whitespace = Framework("NiPyC2.cif")
+    @test ignore_whitespace.space_group == "P1"
+
     symmetry_rules_two_cpy = deepcopy(symmetry_rules_two)
     @test ! is_symmetry_equal(symmetry_rules, symmetry_rules_two)
     @test ! is_symmetry_equal(symmetry_rules, other_symmetry_rules)

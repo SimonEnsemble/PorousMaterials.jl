@@ -50,7 +50,7 @@ prepend!(bond_rules, BondingRule(:Cu, :*, 0.1, 2.6))
 ```
 
 # Returns
--`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:*, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
+-`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
 """
 default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]
 
@@ -199,9 +199,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
                 # if the file provides cartesian coordinates
-                cartesian = cartesian || ! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
+                cartesian = cartesian || (! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
                                 haskey(name_to_column, "_atom_site_Cartn_y") &&
-                                haskey(name_to_column, "_atom_site_Cartn_z")
+                                haskey(name_to_column, "_atom_site_Cartn_z"))
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
@@ -219,9 +219,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     #   should catch this hopefully there aren't other weird
                     #   ways of writing cifs...
                     while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
-                        symmetry_count += 1
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
+
+                        if length(collect(keys(name_to_column))) + 2 != length(sym_funcs)
+                            i += 1
+                            break
+                        end
+
+                        symmetry_count += 1
 
                         # store as strings so it can be written out later
                         new_sym_rule = Array{AbstractString, 1}(undef, 3)
@@ -431,7 +437,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
-
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
