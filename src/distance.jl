@@ -19,16 +19,18 @@ Warning: this assumes the two molecules are in the box described by fractional c
 end
 
 """
-    r = distance(frac_coords, box, i, j, apply_pbc)
-    r = distance(crystal, i, j, apply_pbc) # atoms i and j
+    r = distance(coords, box, i, j, apply_pbc)
+    r = distance(atoms, box, i, j, apply_pbc) # atoms i and j
+    r = distance(charges, box, i, j, apply_pbc) # atoms i and j
 
 calculate the (Cartesian) distance between particles `i` and `j`.
 
 apply periodic boundary conditions if and only if `apply_pbc` is `true`.
 
-# Arguments
-- `coords::Frac`: the fractional coordinates (`Frac>:Coords`)
-- `crystal::Crystal`: a crystal
+# arguments
+- `coords::Coords`: the coordinates (`Frac>:Coords` or `Cart>:Coords`)
+- `atoms::Atoms`: atoms
+- `charges::charges`: atoms
 - `box::Box`: unit cell information
 - `i::Int`: index of the first particle
 - `j::Int`: Index of the second particle
@@ -41,6 +43,20 @@ function distance(coords::Frac, box::Box, i::Int, j::Int, apply_pbc::Bool)
     end
     return norm(box.f_to_c * dxf)
 end
+
+function distance(coords::Cart, box::Box, i::Int, j::Int, apply_pbc::Bool)
+    dx = coords.x[:, i] - coords.x[:, j]
+    if apply_pbc
+        dxf = box.c_to_f * dx
+        nearest_image!(dxf)
+        return norm(box.f_to_c * dxf)
+    else
+        return norm(dx)
+    end
+end
+
+distance(atoms::Atoms, box::Box, i::Int, j::Int, apply_pbc::Bool) = distance(atoms.coords, box, i, j, apply_pbc)
+distance(charges::Charges, box::Box, i::Int, j::Int, apply_pbc::Bool) = distance(charges.coords, box, i, j, apply_pbc)
 
 """
     overlap_flag, overlap_pairs = overlap(frac_coords, box, apply_pbc; tol=0.1)
@@ -75,13 +91,3 @@ function overlap(coords::Frac, box::Box, apply_pbc::Bool; tol::Float64=0.1)
     end
     return overlap_flag, overlap_ids
 end
- # function distance(coords::Cart, box::Box, i::Int, j::Int, apply_pbc::Bool)
- #     dx = coords.x[:, i] - coords.x[:, j]
- #     if ! apply_pbc
- #         return norm(dx)
- #     else
- #         dxf = box.c_to_f * dx
- #         nearest_image!(dxf)
- #         return norm(box.f_to_c * dxf)
- #     end
- # end
