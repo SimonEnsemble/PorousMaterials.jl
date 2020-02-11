@@ -131,8 +131,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # default for symmetry rules is P1.
     # These will be overwritten if the user chooses to read in non-P1
     symmetry_rules = Array{AbstractString, 2}(undef, 3, 0)
-    # creating empty SimpleGraph, might not have any information read in
-    bonds = SimpleGraph()
     # used for remembering whether fractional/cartesian coordinates are read in
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
@@ -414,6 +412,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         symmetry_rules = [symmetry_rules ["x", "y", "z"]]
         p1_symmetry = true
         space_group = "P1"
+        # creating empty SimpleGraph, might not have any information read in
+        bonds = SimpleGraph(n_atoms)
     end
 
     # Construct the unit cell box
@@ -921,7 +921,7 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
     end
         
     if wrap_to_unit_cell
-        wrap_atoms_to_unit_cell!(framework)
+        wrap_atoms_to_unit_cell!(new_framework)
     end
 
     if remove_overlap
