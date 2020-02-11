@@ -40,6 +40,8 @@ struct Atoms{T}
     coords::T # coordinates
 end
 Atoms(species::Array{Symbol, 1}, coords::Coords) = Atoms(length(species), species, coords)
+# safe pre-allocation
+Atoms(n::Int) = Atoms([:blah for a = 1:n], [NaN for i = 1:3, a = 1:n])
 
 Base.isapprox(a1::Atoms, a2::Atoms; atol::Real=0) = (a1.species == a2.species) && isapprox(a1.coords, a2.coords, atol=atol)
 Base.:+(a1::Atoms, a2::Atoms) = Atoms(a1.n + a2.n, [a1.species; a2.species], hcat(a1.coords, a2.coords))
@@ -54,6 +56,7 @@ struct Charges{T}
     coords::T
 end
 Charges(q::Array{Float64, 1}, coords::Coords) = Charges(length(q), q, coords)
+Charges(n::Int) = Atoms([NaN for a = 1:n], [NaN for i = 1:3, a = 1:n])
 
 Base.isapprox(c1::Charges, c2::Charges; atol::Real=0) = isapprox(c1.q, c2.q) && isapprox(c1.coords, c2.coords, atol=atol)
 Base.:+(c1::Charges, c2::Charges) = Charges(c1.n + c2.n, [c1.q; c2.q], hcat(c1.coords, c2.coords))

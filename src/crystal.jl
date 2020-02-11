@@ -357,6 +357,7 @@ function Crystal(filename::String;
         γ = parse(Float64, line[3]) * pi / 180.0
 
         n_atoms = parse(Int, split(lines[3])[1])
+        bonds = SimpleGraph(n_atoms)
 
         # Read in atoms and fractional coordinates
         for i = 1:n_atoms
@@ -409,9 +410,7 @@ function Crystal(filename::String;
         @warn @sprintf("Crystal %s has %s space group. We are converting it to P1 symmetry for use in molecular simulations.
         To afrain from this, pass `convert_to_p1=false` to the `Crystal` constructor.\n",
             crystal.name, crystal.symmetry.space_group)
-        return apply_symmetry_operations(crystal;
-                                         check_neutrality=check_neutrality,
-                                         check_overlap=check_overlap)
+        crytal = apply_symmetry_operations(crystal)
     end
     
     if wrap_coords
@@ -430,8 +429,7 @@ overlap(crystal::Crystal) = overlap(crystal.atoms.coords, crystal.box, true)
 function _check_overlap(crystal::Crystal)
     overlap_flag, overlapping_pairs = overlap(crystal)
     if overlap_flag
-        for p in overlapping_pairs
-            i, j = p
+        for (i, j) in overlapping_pairs
             @warn @sprintf("atom %d (%s) and %d (%s) are overlapping\n", i, crystal.atoms.species[i],
                 j, crystal.atoms.species[j])
         end
@@ -451,59 +449,62 @@ end
 net_charge(crystal::Crystal) = net_charge(crystal.charges)
 
 """
-    replicated_frame = replicate(crystal, repfactors)
+    replicated_crystal = replicate(crystal, repfactors)
 
-Replicates the atoms and charges in a `Crystal` in positive directions to
-construct a new `Crystal`. Note `replicate(crystal, (1, 1, 1))` returns the same `Crystal`.
+replicate the atoms and charges in a `Crystal` in positive directions to construct a new 
+`Crystal`. Note `replicate(crystal, (1, 1, 1))` returns the same `Crystal`. the fractional
+coordinates will be rescaled to be in [0, 1].
 
-# Arguments
+# arguments
 - `crystal::Crystal`: The crystal to replicate
-- `repfactors::Tuple{Int, Int, Int}`: The factors by which to replicate the crystal structure in each direction.
+- `repfactors::Tuple{Int, Int, Int}`: The factors by which to replicate the crystal structure in each crystallographic direction (a, b, c).
 
-# Returns
-- `replicated_frame::Crystal`: Replicated crystal
+# returns
+- `replicated_frame::Crystal`: replicated crystal
 """
 function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
     if ne(crystal.bonds) != 0 
-        error(@sprintf("The crystal %s has bonds within it. Remove the bonds with `remove_bonds!` to replicate, and then use `infer_bonds(crystal)` to recalculate bond information", crystal.name))
+        error("the crystal " * crystal.name * " has assigned bonds. to replicate, remove 
+        its bonds with `remove_bonds!(crystal)`. then use `infer_bonds(crystal)` to 
+        reassign the bonds")
     end
 
     assert_P1_symmetry(crystal)
-    # determine number of atoms in replicated crystal
-    n_atoms = crystal.atoms.n * repfactors[1] * repfactors[2] * repfactors[3]
+    
+    n_atoms = crystal.atoms.n * prod(repfactors)
+    n_charges = crystal.charges.n * prod(repfactors)
 
-    # replicate box
-    new_box = replicate(crystal.box, repfactors)
+    box = replicate(crystal.box, repfactors)
+    atoms = Atoms([:blah for i = 1:n_atoms], zeros(3, n_atoms))
+    charges = Charges([0.0 for i = 1:n_charges], zeros(3, n_charges))
 
-    # replicate atoms and charges
-    charge_coords = Array{Float64, 2}(undef, 3, 0)
-    charge_vals = Array{Float64, 1}()
-    atom_coords = Array{Float64, 2}(undef, 3, 0)
-    species = Array{Symbol, 1}()
+    atom_counter = 0
+    charge_counter = 0
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
+        xf_shift = 1.0 * [ra, rb, rc]
+        
+        # replicate atoms
         for i = 1:crystal.atoms.n
-            xf = crystal.atoms.coords.xf[:, i] + 1.0 * [ra, rb, rc]
-            # scale fractional coords
-            xf = xf ./ repfactors
-            atom_coords = [atom_coords xf]
-            push!(species, Symbol(crystal.atoms.species[i]))
+            atom_counter += 1
+
+            atoms.species[atom_counter] = crystal.atoms.species[i]
+            
+            xf = crystal.atoms.coords.xf[:, i] + xf_shift
+            atoms.coords.xf[:, atom_counter] = xf ./ repfactors
         end
-        for j = 1:crystal.charges.n
-            xf = crystal.charges.coords.xf[:, j] + 1.0 * [ra, rb, rc]
-            # scale fractional coords
-            xf = xf ./ repfactors
-            charge_coords = [charge_coords xf]
-            push!(charge_vals, crystal.charges.q[j])
+        
+        # replicate charges
+        for i = 1:crystal.charges.n
+            charge_counter += 1
+            
+            charges.q[i] = crystal.charges.q[i]
+            
+            xf = crystal.charges.coords.xf[:, i] + xf_shift
+            charges.coords[:, charge_counter] = xf ./ repfactors
         end
     end
 
-    new_atoms = Atoms(species, Frac(atom_coords))
-    new_charges = Charges(charge_vals, Frac(charge_coords))
-
-    @assert (new_charges.n == crystal.charges.n * prod(repfactors))
-    @assert (new_atoms.n == crystal.atoms.n * prod(repfactors))
-    return Crystal(crystal.name, new_box, new_atoms, new_charges, 
-                   deepcopy(crystal.bonds), deepcopy(crystal.symmetry))
+    return Crystal(crystal.name, box, atoms, charges, SimpleGraph(n_atoms), crystal.symmetry)
 end
 
 # doc string in Misc.jl
@@ -516,8 +517,9 @@ function write_xyz(crystal::Crystal; comment::AbstractString="", center::Bool=fa
         x_c = crystal.box.f_to_c * [0.5, 0.5, 0.5]
         atoms.coords.x .-= x_c
         write_xyz(atoms, xyz_filename, comment=comment)
+    else
+        write_xyz(atoms, xyz_filename, comment=comment)
     end
-    write_xyz(atoms, xyz_filename, comment=comment)
 end
 
 # docstring in matter.jl
@@ -557,7 +559,6 @@ function strip_numbers_from_atom_labels!(crystal::Crystal)
 end
 
 write_vtk(crystal::Crystal) = write_vtk(crystal.box, split(crystal.name, ".")[1])
-
 
 """
     formula = chemical_formula(crystal, verbose=false)
@@ -636,14 +637,13 @@ Compute the crystal density of a crystal. Pulls atomic masses from [`read_atomic
 crystal_density(crystal::Crystal) = molecular_weight(crystal) / crystal.box.Ω * 1660.53892  # --> kg/m3
 
 """
-    simulation_ready_crystal = apply_symmetry_operations(non_p1_crystal;
+    simulation_ready_crystal = apply_symmetry_operations(non_p1_crystal)
                                                          check_neutrality=true,
                                                          net_charge_tol=0.001,
                                                          check_overlap=true,
                                                          wrap_coordstrue)
 
-Convert a crystal to P1 symmetry based on internal symmetry rules. This will
-return a new crystal.
+Convert a crystal to P1 symmetry based on internal symmetry rules. This will return a new crystal.
 
 # Arguments
 - `non_p1_crystal::Crystal`: The crystal to be converted to P1 symmetry
@@ -662,10 +662,14 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
     if crystal.symmetry.is_p1
         return crystal
     end
-    new_atom_xfs = Array{Float64, 2}(undef, 3, crystal.atoms.n * size(crystal.symmetry.operations, 2))
-    new_charge_xfs = Array{Float64, 2}(undef, 3, crystal.charges.n * size(crystal.symmetry.operations, 2))
-    new_atom_species = Array{Symbol, 1}(undef, 0)
-    new_charge_qs = Array{Float64, 1}(undef, 0)
+    n_atoms = crystal.atoms.n * size(crystal.symmetry.operations, 2)
+    n_charges = crystal.charges.n * size(crystal.symmetry.operations, 2)
+    atoms = Atoms([:blah for _ = 1:n_atoms], zeros(3, n_atoms))
+    charges = Atoms(zeros(n_charges), zeros(3, n_atoms))
+    atom_xfs = Array{Float64, 2}(undef, 3, crystal.atoms.n * size(crystal.symmetry.operations, 2))
+    charge_xfs = Array{Float64, 2}(undef, 3, crystal.charges.n * size(crystal.symmetry.operations, 2))
+    atom_species = Array{Symbol, 1}(undef, 0)
+    charge_qs = Array{Float64, 1}(undef, 0)
 
     # for each symmetry rule
     for i in 1:size(crystal.symmetry.operations, 2)
@@ -674,42 +678,24 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
         for j in 1:crystal.atoms.n
             # apply current symmetry rule to current atom for x, y, and z coordinates
             current_atom_idx = (i - 1) * crystal.atoms.n + j
-            new_atom_xfs[:, current_atom_idx] .= [Base.invokelatest.(
+            atom_xfs[:, current_atom_idx] .= [Base.invokelatest.(
                         sym_rule[k], crystal.atoms.coords.xf[:, j]...) for k in 1:3]
         end
         # loop over all charges in lower level symmetry
         for j in 1:crystal.charges.n
             # apply current symmetry rule to current atom for x, y, and z coordinates
             current_charge_idx = (i - 1) * crystal.charges.n + j
-            new_charge_xfs[:, current_charge_idx] .= [Base.invokelatest.(
+            charge_xfs[:, current_charge_idx] .= [Base.invokelatest.(
                         sym_rule[k], crystal.charges.coords.xf[:, j]...) for k in 1:3]
         end
         # repeat charge_qs and atom_species for every symmetry applied
-        new_atom_species = [new_atom_species; crystal.atoms.species]
-        new_charge_qs = [new_charge_qs; crystal.charges.q]
+        atom_species = [atom_species; crystal.atoms.species]
+        charge_qs = [charge_qs; crystal.charges.q]
     end
 
-    new_crystal = Crystal(crystal.name, crystal.box,
-        Atoms(new_atom_species, Frac(new_atom_xfs)),
-        Charges(new_charge_qs, Frac(new_charge_xfs)))
-
-    if check_neutrality
-        if ! neutral(new_crystal, net_charge_tol)
-            error(@sprintf("Crystal %s is not charge neutral; net charge is %f e. Ignore
-            this error message by passing check_charge_neutrality=false or increasing the
-            net charge tolerance `net_charge_tol`\n", new_crystal.name, net_charge(new_crystal)))
-        end
-    end
-        
-    if wrap_coords
-        wrap!(crystal)
-    end
-
-    if check_overlap
-        _check_overlap(crystal)
-    end
-
-    return new_crystal
+    return Crystal(crystal.name, crystal.box,
+        Atoms(atom_species, Frac(atom_xfs)),
+        Charges(charge_qs, Frac(charge_xfs)))
 end
 
  # """
@@ -771,9 +757,9 @@ Throw an error if and only if the crystal is not in P1 symmetry.
 """
 function assert_P1_symmetry(crystal::Crystal)
     if ! crystal.symmetry.is_p1 
-        error("The crystal %s is not in P1 symmetry.\n
+        error("the crystal " * crystal.name * " is not in P1 symmetry.\n
                To convert to P1 symmetry, try:\n
-               \tcrystal_p1 = apply_symmetry_operations(crystal)", crystal.name)
+               \tcrystal_p1 = apply_symmetry_operations(crystal)")
     end
 end
 
@@ -926,11 +912,6 @@ function assign_charges(crystal::Crystal, species_to_charge::Dict{Symbol, Float6
     end
 
     return new_crystal
-end
-
-# docs in distance.jl
-function distance(crystal::Crystal, i::Int, j::Int, apply_pbc::Bool)
-    return distance(crystal.atoms.coords, crystal.box, i, j, apply_pbc)
 end
 
 function Base.show(io::IO, crystal::Crystal)
