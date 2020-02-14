@@ -145,5 +145,6 @@ function subtract_atoms(framework::Framework, ids_to_remove::Array{Int, 1})
     end
 
     return Framework("removed_atoms_" * framework.name, framework.box, atoms,
-                     charges, bonds=bonds)
+                     charges, bonds=bonds, symmetry=framework.symmetry,
+		     space_group=framework.space_group, is_p1=framework.is_p1)
 end
