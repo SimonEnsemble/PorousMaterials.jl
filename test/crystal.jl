@@ -1,6 +1,7 @@
 module Crystal_Test
 
 using PorousMaterials
+using LinearAlgebra
 using Test
 
 @testset "Crystal Tests" begin
@@ -63,23 +64,36 @@ using Test
     strip_numbers_from_atom_labels!(crystal_reloaded) # TODO Arthur remove this necessity from write_cif
     @test isapprox(crystal, crystal_reloaded, atol=0.0001)
  #     rm(rewrite_filename) # clean up.
-
+    
+    ### apply_symmetry_operations
     # test .cif reader for non-P1 symmetry
     #   no atoms should overlap
     #   should place atoms in the same positions as the P1 conversion using
     #       openBabel
-    non_P1_crystal = Crystal("symmetry_test_structure.cif")
-    strip_numbers_from_atom_labels!(non_P1_crystal)
-    non_P1_cartesian = Crystal("symmetry_test_structure_cartn.cif")
-    strip_numbers_from_atom_labels!(non_P1_cartesian)
-    P1_crystal = Crystal("symmetry_test_structure_P1.cif")
-    strip_numbers_from_atom_labels!(P1_crystal)
+    #     test it wraps coords to [0, 1]
+    non_P1_crystal = Crystal("symmetry_test_structure.cif", wrap_coords=false)
+    @test any(non_P1_crystal.atoms.coords.xf .> 1.0)
+    non_P1_crystal = Crystal("symmetry_test_structure.cif", wrap_coords=true) # default
+    @test all(non_P1_crystal.atoms.coords.xf .< 1.0)
+    @test all(non_P1_crystal.atoms.coords.xf .> 0.0)
 
-    @test isapprox(non_P1_crystal, P1_crystal, atol=0.0001)
-    # test that fractional and cartesian produce same results
-    @test isapprox(non_P1_crystal, non_P1_cartesian, atol=0.0001)
-    # test that cartesian and P1 produce same results
-    @test isapprox(non_P1_cartesian, P1_crystal, atol=0.0001)
+    non_P1_crystal = Crystal("symmetry_test_structure.cif") # not in P1 original
+    strip_numbers_from_atom_labels!(non_P1_crystal)
+    
+    P1_crystal = Crystal("symmetry_test_structure_P1.cif") # in P1 originally
+    strip_numbers_from_atom_labels!(P1_crystal)
+    
+    @test isapprox(non_P1_crystal.box, P1_crystal.box)
+    @test equal_sets(non_P1_crystal.atoms, P1_crystal.atoms)
+    @test equal_sets(non_P1_crystal.charges, P1_crystal.charges)
+
+    non_P1_cartesian = Crystal("symmetry_test_structure_cartn.cif") # not in P1 originally
+    strip_numbers_from_atom_labels!(non_P1_cartesian)
+
+    @test isapprox(non_P1_crystal.box, non_P1_cartesian.box)
+    @test equal_sets(non_P1_crystal.atoms, non_P1_cartesian.atoms)
+    @test equal_sets(non_P1_crystal.charges, non_P1_cartesian.charges)
+    
     # test that incorrect file formats throw proper errors
     @test_throws ErrorException Crystal("non_P1_no_symmetry.cif")
     # test that a file with no atoms throws error
@@ -122,73 +136,36 @@ using Test
     #   when reading then converting to P1
     @test isapprox(non_P1_crystal, non_P1_crystal_symmetry)
     @test isapprox(non_P1_cartesian, non_P1_cartesian_symmetry)
+
+    # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
+    xtal_cssr = Crystal("test_structure2.cssr")
+    strip_numbers_from_atom_labels!(xtal_cssr)
+    xtal_cif = Crystal("test_structure2.cif")
+    strip_numbers_from_atom_labels!(xtal_cif)
+    @test isapprox(xtal_cif, xtal_cssr)
+
+    # sanity checks on replicate crystal
+    sbmof = Crystal("SBMOF-1.cif")
+    strip_numbers_from_atom_labels!(sbmof)
+    replicated_sbmof = replicate(sbmof, (1, 1, 1))
+    @test isapprox(sbmof, replicated_sbmof)
+    @test isapprox(2 * 2 * molecular_weight(sbmof), molecular_weight(replicate(sbmof, (2, 2, 1))))
+    @test isapprox(2 * sbmof.box.a, replicate(sbmof, (2, 3, 4)).box.a)
+
+    repfactors = replication_factors(sbmof.box, 14.0)
+    replicated_sbmof = replicate(sbmof, repfactors)
+    @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
+    @test isapprox(sbmof.atoms.coords.xf[:, 1] ./ repfactors, replicated_sbmof.atoms.coords.xf[:, 1])
+    @test isapprox(replicated_sbmof.box.reciprocal_lattice, 2 * π * inv(replicated_sbmof.box.f_to_c))
+    @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
+    @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
+
+    sbmof1 = Crystal("SBMOF-1.cif")
+    rbox = replicate(sbmof1.box, (2, 3, 4))
+    @test rbox.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
+    @test all(rbox.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
+
  # 
- #     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
- #     crystal_from_cssr = Crystal("test_structure2.cssr")
- #     strip_numbers_from_atom_labels!(crystal_from_cssr)
- #     @test has_same_sets_of_atoms_and_charges(crystal_from_cssr, crystal, checknames=false)
- # 
- #     # test replicate crystal
- #     sbmof = Crystal("SBMOF-1.cif")
- #     strip_numbers_from_atom_labels!(sbmof)
- #     replicated_sbmof = replicate(sbmof, (1, 1, 1))
- #     @test isapprox(sbmof, replicated_sbmof)
- #     # test replication no bonds assertion
- #     sbmof_bonds = Crystal("SBMOF-1.cif")
- #     strip_numbers_from_atom_labels!(sbmof_bonds)
- #     bonding_rules = [BondingRule(:H, :*, 0.4, 1.2),
- #                      BondingRule(:Ca, :O, 0.4, 2.5),
- #                      BondingRule(:*, :*, 0.4, 1.9)]
- #     infer_bonds!(sbmof_bonds, true, bonding_rules)
- #     @test_throws AssertionError replicate(sbmof_bonds, (2, 2, 2))
- #     # write out and compare to inferred bonds
- #     write_cif(sbmof_bonds, joinpath(pwd(), "data", "crystals", "SBMOF-1_inferred_bonds.cif"))
- #     sbmof_inferred_bonds = Crystal("SBMOF-1_inferred_bonds.cif"; read_bonds_from_file=true)
- #     strip_numbers_from_atom_labels!(sbmof_inferred_bonds)
- #     @test compare_bonds_in_crystal(sbmof_bonds, sbmof_inferred_bonds)
- #     # other bond info tests
- #     # TODO find more robust test/confirm these are the correct numbers
- #     # replacing this test with the one below comparing pdb bond info to inferred
- #     #   bond info
- #     sbmof_bonds_copy = Crystal("SBMOF-1.cif")
- #     strip_numbers_from_atom_labels!(sbmof_bonds_copy)
- #     # reverse the order of the atoms and bond info should still be the same
- #     sbmof_bonds_copy.atoms.xf .= reverse(sbmof_bonds_copy.atoms.xf; dims=2)
- #     sbmof_bonds_copy.atoms.species .= reverse(sbmof_bonds_copy.atoms.species)
- #     infer_bonds!(sbmof_bonds_copy, true, bonding_rules)
- #     @test compare_bonds_in_crystal(sbmof_bonds, sbmof_bonds_copy)
- #     remove_bonds!(sbmof_bonds)
- #     @test ne(sbmof_bonds.bonds) == 0
- #     @test !compare_bonds_in_crystal(sbmof_bonds, sbmof_bonds_copy)
- # 
- #     # test reading in bonds as part of `Crystal()`
- #     sbmof_read_bonds = Crystal("test_bond_viz.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
- #     strip_numbers_from_atom_labels!(sbmof_read_bonds)
- #     @test ne(sbmof_read_bonds.bonds) == 5
- #     write_cif(sbmof_read_bonds, joinpath(pwd(), "data", "crystals", "rewritten_sbmof_read_bonds.cif"))
- #     reloaded_sbmof_read_bonds = Crystal("rewritten_sbmof_read_bonds.cif"; read_bonds_from_file=true, check_atom_and_charge_overlap=false)
- #     strip_numbers_from_atom_labels!(reloaded_sbmof_read_bonds)
- #     @test compare_bonds_in_crystal(sbmof_read_bonds, reloaded_sbmof_read_bonds)
- # 
- #     # Test that reading in bonding information is the same as inferring the
- #     #   bonding info
- #     # Bonding information is from a pdb file saved by avogadro
- #     # using non-p1 because it meant copying over fewer bonds
- #     read_bonds = Crystal("KAXQIL_clean_cartn.cif"; convert_to_p1=false, read_bonds_from_file=true)
- #     strip_numbers_from_atom_labels!(read_bonds)
- #     inferred_bonds = Crystal("KAXQIL_clean.cif"; convert_to_p1=false)
- #     strip_numbers_from_atom_labels!(inferred_bonds)
- #     # Using same bonding rules as above
- #     infer_bonds!(inferred_bonds, true, bonding_rules)
- #     @test compare_bonds_in_crystal(read_bonds, inferred_bonds; atol=1e-6)
- # 
- #     repfactors = replication_factors(sbmof.box, 14.0)
- #     replicated_sbmof = replicate(sbmof, repfactors)
- #     @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
- #     @test isapprox(sbmof.atoms.xf[:, 1] ./ repfactors, replicated_sbmof.atoms.xf[:, 1])
- #     @test isapprox(replicated_sbmof.box.reciprocal_lattice, 2 * π * inv(replicated_sbmof.box.f_to_c))
- #     @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
- #     @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
  # 
  #     # test symmetry_rules
  #     # define default symmetry_rules
@@ -242,69 +219,19 @@ using Test
  #     @test isapprox(f4.atoms, f1.atoms + f2.atoms + f3.atoms)
  #     @test isapprox(f4.charges, f1.charges + f2.charges + f3.charges)
  # 
- #     # more xtal tests
- #     sbmof1 = Crystal("SBMOF-1.cif")
- #     @test !charged(sbmof1)
- #     @test isapprox(sbmof1.box.reciprocal_lattice, 2 * π * inv(sbmof1.box.f_to_c))
- #     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
- #     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
- # 
- #     # replicating the unit cell to construct simulation box
- #     sbmof1 = Crystal("SBMOF-1.cif")
- #     rbox = replicate(sbmof1.box, (2, 3, 4))
- #     @test rbox.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
- #     @test all(rbox.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
- # 
- #     # write bond information to manually inspect if bonds are in order
- #     hkust1 = Crystal("FIQCEN_clean.cif")
- #     strip_numbers_from_atom_labels!(hkust1)
- #     br = default_bondingrules()
- #     pushfirst!(br, BondingRule(:Cu, :O, 0.3, 2.4))
- #     infer_bonds!(hkust1, true, br)
- #     reference_bonds = loadgraph("hkust1_reference_bonds.lgz")
- #     @test reference_bonds == hkust1.bonds
- # 
- #     # test distance function (via Avogadro)
- #     frame = Crystal("simple_test.cif")
- #     @test distance(frame, 1, 1, true) == 0.0
- #     @test isapprox(distance(frame, 2, 5, true), 4.059, atol=0.001)
- #     @test isapprox(distance(frame, 2, 5, false), 4.059, atol=0.001)
- #     @test isapprox(distance(frame, 1, 5, false), 17.279, atol=0.001)
- #     @test isapprox(distance(frame, 1, 5, true), 1.531, atol=0.001)
- # 
-    # test reading crystals and include 0.0 charges
-    frame1 = Crystal("ATIBOU01_clean.cif")
+    # more xtal tests
+    sbmof1 = Crystal("SBMOF-1.cif")
+    @test ! has_charges(sbmof1)
+    @test isapprox(sbmof1.box.reciprocal_lattice, 2 * π * inv(sbmof1.box.f_to_c))
+    @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
+    @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
+    
+    # including zero charges or not, when reading in a .cif `include_zero_charges` flag to Crystal constructor
+    frame1 = Crystal("ATIBOU01_clean.cif") # has four zero charges in it
     @test ! any(frame1.charges.q .== 0.0)
     @test frame1.charges.n == frame1.atoms.n - 4 # 4 charges are zero
     frame2 = Crystal("ATIBOU01_clean.cif"; include_zero_charges=true)
     @test frame2.charges.n == frame2.atoms.n
     @test isapprox(frame2.charges.coords, frame2.atoms.coords)
- # 
- # #=    ## .cssr reader test
- #     # test replicate crystal
- #     sbmof = Crystal("SBMOF-1.cif")
- #     replicated_sbmof = replicate(sbmof, (1, 1, 1))
- #     @test isapprox(sbmof, replicated_sbmof)
- # 
- #     repfactors = replication_factors(sbmof.box, 14.0)
- #     replicated_sbmof = replicate(sbmof, repfactors)
- #     @test replication_factors(replicated_sbmof.box, 14.0) == (1, 1, 1)
- #     @test isapprox(sbmof.atoms.xf[:, 1] ./ repfactors, replicated_sbmof.atoms.xf[:, 1])
- #     @test isapprox(replicated_sbmof.box.reciprocal_lattice, 2 * π * inv(replicated_sbmof.box.f_to_c))
- #     @test chemical_formula(sbmof) == chemical_formula(replicated_sbmof)
- #     @test isapprox(crystal_density(sbmof), crystal_density(replicated_sbmof), atol=1e-7)
- # 
- #     # more xtal tests
- #     sbmof1 = Crystal("SBMOF-1.cif")
- #     @test !charged(sbmof1)
- #     @test isapprox(sbmof1.box.reciprocal_lattice, 2 * π * inv(sbmof1.box.f_to_c))
- #     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
- #     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
- # 
- #     # replicating the unit cell to construct simulation box
- #     sbmof1 = Crystal("SBMOF-1.cif")
- #     rbox = replicate(sbmof1.box, (2, 3, 4))
- #     @test rbox.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
- #     @test all(rbox.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])=#
 end
 end

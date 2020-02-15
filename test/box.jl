@@ -27,6 +27,22 @@ using Test
     @test box.Ω ≈ 1.0
     @test isapprox(replicate(box, (3, 5, 4)), Box(3.0, 5.0, 4.0))
     
+    box = Box(10.0, 10.0, 10.0)
+    f = Frac([0.1 0.1;
+              0.3 0.2;
+              0.5 0.6]
+             )
+    atoms = Atoms([:C, :O], f)
+    atoms_c = Cart(atoms, box)
+    @test atoms_c.species == atoms.species
+    @test isapprox(atoms_c.coords.x, box.f_to_c * atoms.coords.xf)
+    @test isapprox(atoms, Frac(atoms_c, box))
+    charges = Charges([1.0, -1.0], f)
+    charges_c = Cart(charges, box)
+    @test isapprox(charges_c.q, charges.q)
+    @test isapprox(charges_c.coords.x, box.f_to_c * charges.coords.xf)
+    @test isapprox(charges, Frac(charges_c, box))
+    
     # inside box function
     box = Box(1.0, 20.0, 30.0)
     f = Frac([0.1 0.6;

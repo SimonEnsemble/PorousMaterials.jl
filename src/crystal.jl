@@ -398,19 +398,20 @@ function Crystal(filename::String;
     symmetry = SymmetryInfo(operations, space_group, is_p1)
     crystal = Crystal(filename, box, atoms, charges, bonds, symmetry)
 
+    if convert_to_p1 && ! is_p1 && ! read_bonds_from_file
+        @info @sprintf("Crystal %s has %s space group. I am converting it to P1 symmetry.
+        To afrain from this, pass `convert_to_p1=false` to the `Crystal` constructor.\n",
+            crystal.name, crystal.symmetry.space_group)
+        return apply_symmetry_operations(crystal, wrap_coords=wrap_coords, check_overlap=check_overlap, 
+            check_neutrality=check_neutrality, net_charge_tol=net_charge_tol)
+    end
+    
     if check_neutrality
         if ! neutral(crystal, net_charge_tol)
             error(@sprintf("Crystal %s is not charge neutral; net charge is %f e. Ignore
             this error message by passing check_charge_neutrality=false or increasing the
             net charge tolerance `net_charge_tol`\n", crystal.name, net_charge(crystal)))
         end
-    end
-
-    if convert_to_p1 && ! is_p1 && ! read_bonds_from_file
-        @warn @sprintf("Crystal %s has %s space group. We are converting it to P1 symmetry for use in molecular simulations.
-        To afrain from this, pass `convert_to_p1=false` to the `Crystal` constructor.\n",
-            crystal.name, crystal.symmetry.space_group)
-        crytal = apply_symmetry_operations(crystal)
     end
     
     if wrap_coords
@@ -475,8 +476,8 @@ function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
     n_charges = crystal.charges.n * prod(repfactors)
 
     box = replicate(crystal.box, repfactors)
-    atoms = Atoms([:blah for i = 1:n_atoms], zeros(3, n_atoms))
-    charges = Charges([0.0 for i = 1:n_charges], zeros(3, n_charges))
+    atoms = Atoms{Frac}(n_atoms)
+    charges = Charges{Frac}(n_charges)
 
     atom_counter = 0
     charge_counter = 0
@@ -658,44 +659,60 @@ Convert a crystal to P1 symmetry based on internal symmetry rules. This will ret
 """
 function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true,
                                    net_charge_tol::Float64=0.001, check_overlap::Bool=true,
-                                   wrap_coords::Bool=true)
+                                   wrap_coords::Bool=true, throw_away_outside_box::Bool=true)
     if crystal.symmetry.is_p1
         return crystal
     end
-    n_atoms = crystal.atoms.n * size(crystal.symmetry.operations, 2)
-    n_charges = crystal.charges.n * size(crystal.symmetry.operations, 2)
-    atoms = Atoms([:blah for _ = 1:n_atoms], zeros(3, n_atoms))
-    charges = Atoms(zeros(n_charges), zeros(3, n_atoms))
-    atom_xfs = Array{Float64, 2}(undef, 3, crystal.atoms.n * size(crystal.symmetry.operations, 2))
-    charge_xfs = Array{Float64, 2}(undef, 3, crystal.charges.n * size(crystal.symmetry.operations, 2))
-    atom_species = Array{Symbol, 1}(undef, 0)
-    charge_qs = Array{Float64, 1}(undef, 0)
+    
+    nb_symmetry_ops = size(crystal.symmetry.operations, 2)
+
+    n_atoms = crystal.atoms.n * nb_symmetry_ops
+    atoms = Atoms{Frac}(n_atoms)
+
+    n_charges = crystal.charges.n * nb_symmetry_ops
+    charges = Charges{Frac}(n_charges)
 
     # for each symmetry rule
-    for i in 1:size(crystal.symmetry.operations, 2)
+    for sr in 1:nb_symmetry_ops
         # loop over all atoms in lower level symmetry
-        sym_rule = eval.(Meta.parse.("(x, y, z) -> " .* crystal.symmetry.operations[:, i]))
-        for j in 1:crystal.atoms.n
+        sym_rule = eval.(Meta.parse.("(x, y, z) -> " .* crystal.symmetry.operations[:, sr]))
+        for a in 1:crystal.atoms.n
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            current_atom_idx = (i - 1) * crystal.atoms.n + j
-            atom_xfs[:, current_atom_idx] .= [Base.invokelatest.(
-                        sym_rule[k], crystal.atoms.coords.xf[:, j]...) for k in 1:3]
+            atom_id = (sr - 1) * crystal.atoms.n + a
+            atoms.species[atom_id] = crystal.atoms.species[a]
+            atoms.coords.xf[:, atom_id] .= [Base.invokelatest.(
+                        sym_rule[k], crystal.atoms.coords.xf[:, a]...) for k in 1:3]
         end
+
         # loop over all charges in lower level symmetry
-        for j in 1:crystal.charges.n
+        for c in 1:crystal.charges.n
             # apply current symmetry rule to current atom for x, y, and z coordinates
-            current_charge_idx = (i - 1) * crystal.charges.n + j
-            charge_xfs[:, current_charge_idx] .= [Base.invokelatest.(
-                        sym_rule[k], crystal.charges.coords.xf[:, j]...) for k in 1:3]
+            charge_id = (sr - 1) * crystal.charges.n + c
+            charges.q[c] = crystal.charges.q[c]
+            charges.coords.xf[:, charge_id] .= [Base.invokelatest.(
+                        sym_rule[k], crystal.charges.coords.xf[:, c]...) for k in 1:3]
         end
-        # repeat charge_qs and atom_species for every symmetry applied
-        atom_species = [atom_species; crystal.atoms.species]
-        charge_qs = [charge_qs; crystal.charges.q]
     end
 
-    return Crystal(crystal.name, crystal.box,
-        Atoms(atom_species, Frac(atom_xfs)),
-        Charges(charge_qs, Frac(charge_xfs)))
+    crystal = Crystal(crystal.name, crystal.box, atoms, charges)
+    
+    if check_neutrality
+        if ! neutral(crystal, net_charge_tol)
+            error(@sprintf("Crystal %s is not charge neutral; net charge is %f e. Ignore
+            this error message by passing check_charge_neutrality=false or increasing the
+            net charge tolerance `net_charge_tol`\n", crystal.name, net_charge(crystal)))
+        end
+    end
+    
+    if wrap_coords
+        wrap!(crystal) # do before checking overlap!
+    end
+
+    if check_overlap
+        _check_overlap(crystal)
+    end
+
+    return crystal
 end
 
  # """
@@ -928,6 +945,7 @@ function Base.show(io::IO, crystal::Crystal)
 end
 
 function Base.isapprox(c1::Crystal, c2::Crystal; atol::Real=0.0)
+    # name not included
     box_flag = isapprox(c1.box, c2.box)
     if c1.charges.n != c2.charges.n
         return false
