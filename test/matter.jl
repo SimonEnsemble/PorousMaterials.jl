@@ -103,5 +103,59 @@ using Test
     q.q[2] = 0.0
     @test ! neutral(q)
     @test isapprox(net_charge(q), -0.2)
+    q = Charges{Frac}(0)
+    @test net_charge(q) == 0.0
+    q = Charges{Cart}(0)
+    @test net_charge(q) == 0.0
+    
+    # safe constructors
+    atoms = Atoms{Frac}(10)
+    @test all(isnan.(atoms.coords.xf))
+    @test all(atoms.species .== :_)
+    atoms = Atoms{Cart}(10)
+    @test all(isnan.(atoms.coords.x))
+    @test all(atoms.species .== :_)
+
+    charges = Charges{Frac}(10)
+    @test all(isnan.(charges.coords.xf))
+    @test all(isnan.(charges.q))
+    charges = Charges{Cart}(10)
+    @test all(isnan.(charges.coords.x))
+    @test all(isnan.(charges.q))
+
+    # set equal
+    f = rand(3, 6)
+    s = [:a, :b, :c, :d, :e, :f]
+    q = rand(6)
+    ids = [3, 6, 5, 4, 2, 1]
+
+    a = Atoms(s, Frac(f))
+    as = Atoms(s[ids], Frac(f[:, ids]))
+    @test equal_sets(a, as)
+    @test ! isapprox(a, as)
+    a.coords.xf[2, 3] += 0.005
+    @test ! equal_sets(a, as)
+    @test equal_sets(a, as, digits=1)
+
+    c = Charges(q, Frac(f))
+    cs = Charges(q[ids], Frac(f[:, ids]))
+    @test equal_sets(c, cs)
+    @test ! isapprox(c, cs)
+    c.coords.xf[2, 3] += 0.005
+    @test ! equal_sets(c, cs)
+    @test equal_sets(c, cs, digits=1)
+    
+    # getindex (array indexing!)
+    atoms = Crystal("SBMOF-1.cif").atoms
+    @test isapprox(atoms[3:4].coords, atoms.coords[3:4])
+    @test isapprox(atoms[3:4].coords.xf, atoms.coords.xf[:, 3:4])
+    @test atoms[3:4].species == atoms.species[3:4]
+    @test length(atoms[6:10].species) == 5 == atoms[6:10].n
+
+    charges = Crystal("ATIBOU01_clean.cif").charges
+    @test isapprox(charges[3:4].coords, charges.coords[3:4])
+    @test isapprox(charges[3:4].coords.xf, charges.coords.xf[:, 3:4])
+    @test isapprox(charges[3:4].q, charges.q[3:4])
+    @test length(charges[6:10].q) == 5 == charges[6:10].n
 end
 end

@@ -88,8 +88,8 @@ include("distance.jl")
 include("misc.jl")
 include("isotherm_fitting.jl")
 include("crystal.jl")
+include("forcefield.jl")
  # include("molecules.jl")
- # include("forcefield.jl")
  # include("energetics_util.jl")
  # include("vdwenergetics.jl")
  # include("electrostaticenergetics.jl")
@@ -105,7 +105,7 @@ export
  #     set_default_file_paths, print_file_paths, set_tutorial_mode,
  # 
     # matter.jl
-    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge,
+    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, equal_sets,
     
     # box.jl
     Box, replicate, unit_cube, write_vtk, inside, fractional_coords, cartesian_coords,
@@ -122,7 +122,7 @@ export
     # crystal.jl
     Crystal, strip_numbers_from_atom_labels!, assign_charges,
     chemical_formula, molecular_weight, crystal_density, write_cif, has_charges,
-    apply_symmetry_operations
+    apply_symmetry_operations, 
  #     construct_box,
  #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
  #     is_symmetry_equal, apply_symmetry_rules, assert_p1_symmetry, infer_bonds!,
@@ -136,8 +136,8 @@ export
  #     rand_point_on_unit_sphere, charged, pairwise_atom_distances,
  #     pairwise_charge_distances, ion, bond_length_drift,
  # 
- #     # Forcefield.jl
- #     LJForceField, replication_factors, check_forcefield_coverage,
+    # Forcefield.jl
+    LJForceField, replication_factors, check_forcefield_coverage
  # 
  #     # Energetics_Util.jl
  #     PotentialEnergy, SystemPotentialEnergy,
