@@ -642,6 +642,7 @@ crystal_density(crystal::Crystal) = molecular_weight(crystal) / crystal.box.Ω *
                                                          check_neutrality=true,
                                                          net_charge_tol=0.001,
                                                          check_overlap=true,
+                                                         remove_duplicates=true,
                                                          wrap_coordstrue)
 
 Convert a crystal to P1 symmetry based on internal symmetry rules. This will return a new crystal.
@@ -659,7 +660,7 @@ Convert a crystal to P1 symmetry based on internal symmetry rules. This will ret
 """
 function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true,
                                    net_charge_tol::Float64=0.001, check_overlap::Bool=true,
-                                   wrap_coords::Bool=true, throw_away_outside_box::Bool=true)
+                                   wrap_coords::Bool=true, remove_duplicates::Bool=true)
     if crystal.symmetry.is_p1
         return crystal
     end
@@ -693,8 +694,12 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
                         sym_rule[k], crystal.charges.coords.xf[:, c]...) for k in 1:3]
         end
     end
-
+    
     crystal = Crystal(crystal.name, crystal.box, atoms, charges)
+
+    if remove_duplicates
+        crystal = remove_duplicate_atoms_and_charges(crystal)
+    end
     
     if check_neutrality
         if ! neutral(crystal, net_charge_tol)
@@ -882,6 +887,26 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
         end
     end
     close(cif_file)
+end
+
+"""
+    crystal = remove_duplicate_atoms_and_charges(crystal, r_tol=0.1, q_tol=0.0001, verbose=false)
+
+Remove duplicate atoms and charges from a crystal. See [`remove_duplicates`](@ref).
+
+# arguments
+- `crystal::Crystal`: a crystal
+- `r_tol::Float64`: atoms/charges are overlapping if within `r_tol` distance (PBC applied)
+- `q_tol::Float64`: charges have the same charge value if their charges are within `q_tol` of each other
+- `verbose::Bool`: print off which dupicates are removed
+
+# returns
+- `crystal::Crystal`: crystal with duplicate atoms and charges removed.
+"""
+function remove_overlapping_atoms_and_charges(crystal::Crystal, r_tol::Float64=0.1, q_tol::Float64=0.0001)
+    atoms = remove_duplicates(crystal.atoms, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
+    charges = remove_duplicates(crystal.charges, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
+    return Crystal(crystal.name, crystal.box, atoms, charges)
 end
 
 """

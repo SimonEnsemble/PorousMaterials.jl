@@ -22,6 +22,9 @@ Cart(x::Array{Float64, 1}) = Cart(reshape(x, (3, 1)))
 Base.getindex(coords::Frac, ids) = Frac(coords.xf[:, ids])
 Base.getindex(coords::Cart, ids) = Cart(coords.x[:, ids])
 
+Base.length(coords::Cart) = size(coords.x, 2)
+Base.length(coords::Frac) = size(coords.xf, 2)
+
 """
     wrap!(f::Frac)
     wrap!(crystal::Crystal)
