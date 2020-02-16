@@ -76,6 +76,25 @@ using LinearAlgebra
     @test isapprox(distance(crystal.atoms, crystal.box, 2, 5, false), 4.059, atol=0.001)
     @test isapprox(distance(crystal.atoms, crystal.box, 1, 5, false), 17.279, atol=0.001)
     @test isapprox(distance(crystal.atoms, crystal.box, 1, 5, true), 1.531, atol=0.001)
-
+    
+    ###
+    #   remove duplicates
+    ###
+    atoms = Crystal("SBMOF-1.cif").atoms
+    box = Crystal("SBMOF-1.cif").box
+    # no duplicates in SBMOF-1
+    atoms_dm = remove_duplicates(atoms, box, true)
+    @test isapprox(atoms, atoms_dm)
+    # if atoms overlap but not same species, not duplicate
+    atoms.coords.xf[:, 5] = atoms.coords.xf[:, end] # atoms 5 and end now overlap, but 5 is C and end is Ca
+    atoms_dm = remove_duplicates(atoms, box, true)
+    @test isapprox(atoms, atoms_dm)
+    # finally introduce overlap between atom 5, 6, 7, all C
+    atoms.coords.xf[:, 6] = atoms.coords.xf[:, 5] # atoms 5 and 7 now overlap
+    atoms.coords.xf[:, 7] = atoms.coords.xf[:, 5] # atoms 5 and 7 now overlap
+    atoms_dm = remove_duplicates(atoms, box, true)
+    @test atoms_dm.n == atoms.n - 2
+    @test isapprox(atoms[1:5], atoms_dm[1:5])
+    @test isapprox(atoms[8:end], atoms_dm[6:end])
 end
 end

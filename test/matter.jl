@@ -133,19 +133,19 @@ using Test
 
     a = Atoms(s, Frac(f))
     as = Atoms(s[ids], Frac(f[:, ids]))
-    @test equal_sets(a, as)
+    @test equal_multisets(a, as)
     @test ! isapprox(a, as)
     a.coords.xf[2, 3] += 0.005
-    @test ! equal_sets(a, as)
-    @test equal_sets(a, as, digits=1)
+    @test ! equal_multisets(a, as)
+    @test equal_multisets(a, as, digits=1)
 
     c = Charges(q, Frac(f))
     cs = Charges(q[ids], Frac(f[:, ids]))
-    @test equal_sets(c, cs)
+    @test equal_multisets(c, cs)
     @test ! isapprox(c, cs)
     c.coords.xf[2, 3] += 0.005
-    @test ! equal_sets(c, cs)
-    @test equal_sets(c, cs, digits=1)
+    @test ! equal_multisets(c, cs)
+    @test equal_multisets(c, cs, digits=1)
     
     # getindex (array indexing!)
     atoms = Crystal("SBMOF-1.cif").atoms
