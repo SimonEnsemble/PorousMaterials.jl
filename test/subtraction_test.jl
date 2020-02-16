@@ -31,4 +31,23 @@ using Test
 
     write_xyz(new_f)
     write_bond_information(new_f)
+
+ #      # test framework partitioning
+ #      sbmof1 = Framework("SBMOF-1.cif")
+ #      # create 3 partitions to test splitting the framework
+ #      #   there are 120 atoms in sbmof1, so each partition will have 40 atoms
+ #      lo = collect(1:40)
+ #      mid = collect(41:80)
+ #      hi = collect(81:120)
+ #      sbmof1_partitions = partition_framework(sbmof1, [lo, mid, hi])
+ #      @test length(lo) == sbmof1_partitions[1].atoms.n_atoms
+ #      @test length(mid) == sbmof1_partitions[2].atoms.n_atoms
+ #      @test length(hi) == sbmof1_partitions[3].atoms.n_atoms
+ #      # add the framework partitions back together
+ #      sbmof1_rebuilt = +(sbmof1_partitions...)
+ #      @test isapprox(sbmof1, sbmof1_rebuilt)
+ #  
+ #      # test framework partitioning with the errors it should throw
+ #      lo_hi = vcat(collect(1:20), collect(101:120))
+ #      @test_throws ErrorException partition_framework(sbmof1, [lo, hi])
 end

@@ -49,11 +49,13 @@ using Test
                0.9 0.8;
                0.8 0.9]
               )
-    @test inside(f, box)
+    @test inside(f)
     f.xf[2, 2] = -0.1
-    @test ! inside(f, box)
+    @test ! inside(f)
     f.xf[2, 2] = 1.2
-    @test ! inside(f, box)
+    @test ! inside(f)
+    @test ids_inside_box(f) == [1]
+
     c = Cart([0.1 0.4;
               4.5 13.0;
               22. 10.1]
@@ -66,7 +68,7 @@ using Test
 
     box = Box(11.6, 5.5, 22.9, 90.0 * π / 180, 100.8 * π / 180.0, 90.0 * π / 180.0)
     f = Frac([0.1, 0.8, 0.9])
-    @test inside(f, box)
+    @test inside(f)
     @test inside(Cart(f, box), box)
 end
 end

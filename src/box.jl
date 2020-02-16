@@ -202,16 +202,17 @@ function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true,
 end
 
 """
-    inside_box = inside(coords, box) # true or false
+    inside_box = inside(frac_coords) # true or false
+    inside_box = inside(cart_coords, box) # true or false
 
 Determine whether coords are all inside a box.
 
 # Arguments
 * `coords::Coords` the coordinates (works for `Cart` and `Frac`)
-* `box::Box` the box
+* `box::Box` the box (only needed if Cartesian)
 """
-inside(coords::Frac, box::Box) = all(coords.xf .<= 1.0) && all(coords.xf .>= 0.0)
-inside(coords::Cart, box::Box) = inside(Frac(coords, box), box)
+inside(coords::Frac) = all(coords.xf .<= 1.0) && all(coords.xf .>= 0.0)
+inside(coords::Cart, box::Box) = inside(Frac(coords, box))
 
 function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
