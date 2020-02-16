@@ -244,3 +244,4 @@ end
 
 write_bond_information(crystal::Crystal) = write_bond_information(crystal, crystal.name * "_bonds.vtk")
 
+# TODO remove bonds with atom i?

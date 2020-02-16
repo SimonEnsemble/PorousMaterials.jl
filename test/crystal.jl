@@ -196,24 +196,42 @@ end
  #     @test is_symmetry_equal(symmetry_rules, symmetry_rules)
  #     @test is_symmetry_equal(symmetry_rules_two, symmetry_rules_two_cpy)
  # 
- #     # test crystal addition
- #     f1 = Crystal("crystal 1", UnitCube(), Atoms([:a, :b],
- #                                                     [1.0 4.0;
- #                                                      2.0 5.0;
- #                                                      3.0 6.0]),
- #                                               Charges([0.1, 0.2],
- #                                                       [1.0 4.0;
- #                                                        2.0 5.0;
- #                                                        3.0 6.0]))
- #     f2 = Crystal("crystal 2", UnitCube(), Atoms([:c, :d],
- #                                                     [7.0 10.0;
- #                                                      8.0 11.0;
- #                                                      9.0 12.0]),
- #                                               Charges([0.3, 0.4],
- #                                                       [7.0 10.0;
- #                                                        8.0 11.0;
- #                                                        9.0 12.0]))
- #     f3 = f1 + f2
+    # test crystal addition
+    c1 = Crystal("crystal 1", unit_cube(), Atoms([:a, :b],
+                                                 Frac([1.0 4.0;
+                                                       2.0 5.0;
+                                                       3.0 6.0]
+                                                     )
+                                                ),
+                                            Charges([0.1, 0.2],
+                                                    Frac([1.0 4.0;
+                                                          2.0 5.0;
+                                                          3.0 6.0]
+                                                        )
+                                                   )
+                )
+    c2 = Crystal("crystal 2", unit_cube(), Atoms([:c, :d],
+                                                 Frac([7.0 10.0;
+                                                       8.0 11.0;
+                                                       9.0 12.0]
+                                                     ),
+                                                ),
+                                           Charges([0.3, 0.4],
+                                                   Frac([7.0 10.0;
+                                                        8.0 11.0;
+                                                        9.0 12.0]
+                                                       )
+                                                  )
+                )
+    c = c1 + c2
+    @test_throws AssertionError c1 + sbmof # only allow crystals with same box
+    @test isapprox(c1.box, c.box)
+    @test isapprox(c2.box, c.box)
+    @test isapprox(c1.atoms + c2.atoms, c.atoms)
+    @test isapprox(c1.charges + c2.charges, c.charges)
+    @test isapprox(c[1:2], c1) # indexing test
+    @test isapprox(c[3:4], c2) # indexing test
+    # TODO test bonds too.
  #     addition_bonding_rules = [BondingRule(:a, :b, 4.5, 5.3),
  #                               BondingRule(:c, :d, 4.5, 5.3)]
  #     @test is_bonded(f1, 1, 2, [BondingRule(:a, :b, 1.0, 5.5)]; include_bonds_across_periodic_boundaries=false)
@@ -223,24 +241,26 @@ end
  #     @test ! compare_bonds_in_crystal(f1 + f2, f3)
  #     infer_bonds!(f3, false, addition_bonding_rules)
  #     @test compare_bonds_in_crystal(f1 + f2, f3)
- #     @test_throws AssertionError f1 + sbmof # only allow crystals with same box
- #     @test isapprox(f1.box, f3.box)
- #     @test isapprox(f2.box, f3.box)
- #     @test isapprox(f1.atoms + f2.atoms, f3.atoms)
- #     @test isapprox(f1.charges + f2.charges, f3.charges)
- # 
- #     # test infinite crystal_addition
- #     f4 = +(f1, f2, f3; check_overlap=false)
- #     @test isapprox(f3.box, f4.box)
- #     @test isapprox(f4.atoms, f1.atoms + f2.atoms + f3.atoms)
- #     @test isapprox(f4.charges, f1.charges + f2.charges + f3.charges)
- # 
+
+    # test overlap crystal addition
+    c_overlap = +(c1, c2, c; check_overlap=false)
+    @test isapprox(c_overlap.box, c.box)
+    @test isapprox(c_overlap.atoms, c1.atoms + c2.atoms + c.atoms)
+    @test isapprox(c_overlap.charges, c1.charges + c2.charges + c.charges)
+
     # more xtal tests
     sbmof1 = Crystal("SBMOF-1.cif")
     @test ! has_charges(sbmof1)
     @test isapprox(sbmof1.box.reciprocal_lattice, 2 * π * inv(sbmof1.box.f_to_c))
     @test sbmof1.box.Ω ≈ det(sbmof1.box.f_to_c) # sneak in crystal test
     @test isapprox(crystal_density(sbmof1), 1570.4, atol=0.5) # kg/m3
+
+    # indexing
+    sbmof1_sub = sbmof1[10:15]
+    @test sbmof1_sub.atoms.n == 6
+    @test sbmof1_sub.charges.n == 0
+    @test sbmof1_sub.atoms.species == sbmof1.atoms.species[10:15]
+    @test sbmof1_sub.atoms.coords.xf == sbmof1.atoms.coords.xf[:, 10:15]
     
     # including zero charges or not, when reading in a .cif `include_zero_charges` flag to Crystal constructor
     frame1 = Crystal("ATIBOU01_clean.cif") # has four zero charges in it
