@@ -125,28 +125,6 @@ using Test
     @test all(isnan.(charges.coords.x))
     @test all(isnan.(charges.q))
 
-    # set equal
-    f = rand(3, 6)
-    s = [:a, :b, :c, :d, :e, :f]
-    q = rand(6)
-    ids = [3, 6, 5, 4, 2, 1]
-
-    a = Atoms(s, Frac(f))
-    as = Atoms(s[ids], Frac(f[:, ids]))
-    @test equal_multisets(a, as)
-    @test ! isapprox(a, as)
-    a.coords.xf[2, 3] += 0.005
-    @test ! equal_multisets(a, as)
-    @test equal_multisets(a, as, digits=1)
-
-    c = Charges(q, Frac(f))
-    cs = Charges(q[ids], Frac(f[:, ids]))
-    @test equal_multisets(c, cs)
-    @test ! isapprox(c, cs)
-    c.coords.xf[2, 3] += 0.005
-    @test ! equal_multisets(c, cs)
-    @test equal_multisets(c, cs, digits=1)
-    
     # getindex (array indexing!)
     atoms = Crystal("SBMOF-1.cif").atoms
     @test isapprox(atoms[3:4].coords, atoms.coords[3:4])

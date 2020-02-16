@@ -988,32 +988,55 @@ function Base.isapprox(c1::Crystal, c2::Crystal; atol::Real=0.0)
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
+function Base.getindex(crystal::Crystal, ids)
+    # TODO relax this. allow ids::Array{Int} and ::Array{Bool}
+    if ne(crystal.bonds) != 0
+        error("indexing a crystal with bonds is not supported.")
+    end
+
+    if crystal.charges.n == 0
+        return Crystal(crystal.name, crystal.box, crystal.atoms[ids],
+            crystal.charges, crystal.bonds, crystal.symmetry)
+    elseif (crystal.charges.n == crystal.atoms.n) && isapprox(crystal.charges.coords, 
+                                                              crystal.atoms.coords)
+        return Crystal(crystal.name, crystal.box, crystal.atoms[ids],
+            crystal.charges[ids], crystal.bonds, crystal.symmetry)
+    else
+        error("for getindex(crystal), crystal must have 0 charges or an equal number of charges and atoms
+        that share coordinates")
+    end
+    
+    return crystal
+end
+
 function Base.:+(crystals::Crystal...; check_overlap::Bool=true)
-    new_crystal = deepcopy(crystals[1])
+    crystal = deepcopy(crystals[1])
     for (i, f) in enumerate(crystals)
         if i == 1
             continue
         end
-        @assert isapprox(new_crystal.box, f.box) @sprintf("Crystal %s has a different box\n", f.name)
-        @assert is_symmetry_equal(new_crystal.symmetry, f.symmetry) @sprintf("Crystal %s has different symmetry rules\n", f.name)
-        @assert new_crystal.symmetry.space_group == f.symmetry.space_group
+        @assert isapprox(crystal.box, f.box) @sprintf("Crystal %s has a different box\n", f.name)
+ #         @assert is_symmetry_equal(crystal.symmetry, f.symmetry) @sprintf("Crystal %s has different symmetry rules\n", f.name)
+        @assert crystal.symmetry != f.symmetry @sprintf("Crystal %s has different symmetry rules\n", f.name)
+        @assert crystal.symmetry.space_group == f.symmetry.space_group
 
-        new_atoms = new_crystal.atoms + f.atoms
-        new_charges = new_crystal.charges + f.charges
+        atoms = crystal.atoms + f.atoms
+        charges = crystal.charges + f.charges
 
-        nf_n_atoms = new_crystal.atoms.n
-        add_vertices!(new_crystal.bonds, nf_n_atoms)
+        nf_n_atoms = crystal.atoms.n
+        add_vertices!(crystal.bonds, nf_n_atoms)
         for edge in collect(edges(f.bonds))
-            add_edge!(new_crystal.bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+            add_edge!(crystal.bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
         end
 
-        new_crystal = Crystal(split(new_crystal.name, ".")[1] * "_" * split(f.name, ".")[1],
-                                 new_crystal.box, new_atoms, new_charges, new_crystal.bonds,
-                                 new_crystal.symmetry)
+        crystal = Crystal(split(crystal.name, ".")[1] * "_" * split(f.name, ".")[1],
+                                 crystal.box, atoms, charges, crystal.bonds,
+                                 crystal.symmetry)
     end
+
     if check_overlap
         _check_overlap(crystal)
     end
 
-    return new_crystal
+    return crystal
 end
