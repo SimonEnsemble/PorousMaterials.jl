@@ -889,6 +889,8 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
     close(cif_file)
 end
 
+write_cif(crystal::Crystal) = write_cif(crystal, crystal.name)
+
 """
     crystal = remove_duplicate_atoms_and_charges(crystal, r_tol=0.1, q_tol=0.0001, verbose=false)
 
@@ -903,7 +905,7 @@ Remove duplicate atoms and charges from a crystal. See [`remove_duplicates`](@re
 # returns
 - `crystal::Crystal`: crystal with duplicate atoms and charges removed.
 """
-function remove_overlapping_atoms_and_charges(crystal::Crystal, r_tol::Float64=0.1, q_tol::Float64=0.0001)
+function remove_duplicate_atoms_and_charges(crystal::Crystal, r_tol::Float64=0.1, q_tol::Float64=0.0001)
     atoms = remove_duplicates(crystal.atoms, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
     charges = remove_duplicates(crystal.charges, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
     return Crystal(crystal.name, crystal.box, atoms, charges)

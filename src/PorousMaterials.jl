@@ -105,13 +105,13 @@ export
  #     set_default_file_paths, print_file_paths, set_tutorial_mode,
  # 
     # matter.jl
-    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, equal_sets,
+    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge,
     
     # box.jl
     Box, replicate, unit_cube, write_vtk, inside, fractional_coords, cartesian_coords,
 
     # distance.jl
-    nearest_image!, distance, overlap,
+    nearest_image!, distance, overlap, remove_duplicates,
 
     # misc.jl
     read_xyz, read_cpk_colors, write_xyz, read_atomic_masses,

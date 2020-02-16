@@ -54,7 +54,6 @@ using Test
     @test ! inside(f)
     f.xf[2, 2] = 1.2
     @test ! inside(f)
-    @test ids_inside_box(f) == [1]
 
     c = Cart([0.1 0.4;
               4.5 13.0;

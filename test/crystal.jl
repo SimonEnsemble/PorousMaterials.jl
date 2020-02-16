@@ -4,6 +4,17 @@ using PorousMaterials
 using LinearAlgebra
 using Test
 
+# for test only
+# if the multi sets are equal, then when you remove duplicates,
+#  you will be left with ac1.
+function equal_multisets(ac1::Union{Atoms{Frac}, Charges{Frac}}, 
+                         ac2::Union{Atoms{Frac}, Charges{Frac}},
+                         box::Box)
+    ac = ac1 + ac2
+    ac_dm = remove_duplicates(ac, box, true)
+    return isapprox(ac_dm, ac1)
+end
+
 @testset "Crystal Tests" begin
     # cif reader
     xtal = Crystal("test_structure2.cif")
@@ -84,15 +95,15 @@ using Test
     strip_numbers_from_atom_labels!(P1_crystal)
     
     @test isapprox(non_P1_crystal.box, P1_crystal.box)
-    @test equal_sets(non_P1_crystal.atoms, P1_crystal.atoms)
-    @test equal_sets(non_P1_crystal.charges, P1_crystal.charges)
+    @test equal_multisets(non_P1_crystal.atoms, P1_crystal.atoms, P1_crystal.box)
+    @test equal_multisets(non_P1_crystal.charges, P1_crystal.charges, P1_crystal.box)
 
     non_P1_cartesian = Crystal("symmetry_test_structure_cartn.cif") # not in P1 originally
     strip_numbers_from_atom_labels!(non_P1_cartesian)
 
     @test isapprox(non_P1_crystal.box, non_P1_cartesian.box)
-    @test equal_sets(non_P1_crystal.atoms, non_P1_cartesian.atoms)
-    @test equal_sets(non_P1_crystal.charges, non_P1_cartesian.charges)
+    @test equal_multisets(non_P1_crystal.atoms, non_P1_cartesian.atoms, P1_crystal.box)
+    @test equal_multisets(non_P1_crystal.charges, non_P1_cartesian.charges, non_P1_cartesian.box)
     
     # test that incorrect file formats throw proper errors
     @test_throws ErrorException Crystal("non_P1_no_symmetry.cif")
@@ -114,6 +125,11 @@ using Test
     #   set to false
     @test ! non_P1_crystal_symmetry.symmetry.is_p1
     @test ! non_P1_cartesian_symmetry.symmetry.is_p1
+
+    hk = Crystal("HKUST-1_low_symm.cif")
+    strip_numbers_from_atom_labels!(hk)
+    hk_p1 = Crystal("HKUST-1_P1.cif") # from avogadro
+    @test equal_multisets(hk.atoms, hk_p1.atoms, hk.box)
 
     # test write_cif in non_p1 symmetry
     write_cif(non_P1_crystal_symmetry, joinpath("data", "crystals", "rewritten_symmetry_test_structure.cif"))
