@@ -528,9 +528,10 @@ neutral(crystal::Crystal, tol::Float64=1e-5) = neutral(crystal.charges, tol)
 
 
 """
-    charged = has_charges(crystal)
+    charged = has_charges(crystal) # true or false
+    charged = has_charges(molecule) # true or false
 
-`true` if any only if `crystal::Crystal` has point charges.
+`true` if any only if `crystal::Crystal`/`molecule::Molecule` has point charges.
 """
 has_charges(crystal::Crystal) = crystal.charges.n > 0
 
@@ -910,6 +911,8 @@ function remove_duplicate_atoms_and_charges(crystal::Crystal, r_tol::Float64=0.1
     charges = remove_duplicates(crystal.charges, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
     return Crystal(crystal.name, crystal.box, atoms, charges)
 end
+
+inside(crystal::Crystal) = inside(crystal.atoms.coords) && inside(crystal.charges.coords)
 
 """
     crystal_with_charges = assign_charges(crystal, species_to_charge, net_charge_tol=1e-5)

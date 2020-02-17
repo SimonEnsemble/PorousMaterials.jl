@@ -31,6 +31,8 @@ end
 """
     write_xyz(atoms, filename; comment="")
     write_xyz(crystal; comment="", center=false)
+    write_xyz(molecules, box, filename; comment="") # fractional
+    write_xyz(molecules, box, filename; comment="") # Cartesian
 
 write atoms to an .xyz file.
 
