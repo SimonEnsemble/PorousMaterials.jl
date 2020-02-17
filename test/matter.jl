@@ -137,5 +137,31 @@ using Test
     @test isapprox(charges[3:4].coords.xf, charges.coords.xf[:, 3:4])
     @test isapprox(charges[3:4].q, charges.q[3:4])
     @test length(charges[6:10].q) == 5 == charges[6:10].n
+    
+    # translate_by
+    f = Frac([1.0 4.0;
+              2.0 5.0;
+              3.0 6.0]
+              )
+    dxf = Frac([1.0, 3.0, -1.0])
+    translate_by!(f, dxf)
+    @test isapprox(f, Frac([2.0 5.0;
+                            5.0 8.0;
+                            2.0 5.0]
+                           )
+                  )
+    
+    c = Cart([1.0 4.0;
+              2.0 5.0;
+              3.0 6.0]
+              )
+    dx = Cart([1.0, 3.0, -1.0])
+    translate_by!(c, dx)
+    @test isapprox(c, Cart([2.0 5.0;
+                            5.0 8.0;
+                            2.0 5.0]
+                           )
+                   )
+
 end
 end

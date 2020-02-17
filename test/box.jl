@@ -69,5 +69,29 @@ using Test
     f = Frac([0.1, 0.8, 0.9])
     @test inside(f)
     @test inside(Cart(f, box), box)
+
+    # translate_by!
+    box = Box(1.0, 10.0, 40.0)
+    f = Frac([0.1 0.2;
+              0.2 0.5;
+              0.3 0.8]
+            )
+    dx = Cart([0.2, 1.0, 4.0])
+    translate_by!(f, dx, box)
+    @test isapprox(f, Frac([0.3 0.4;
+                             0.3 0.6;
+                             0.4 0.9]
+                            )
+                  )
+
+    c = Cart([1.0 0.0;
+              10.0 0.0;
+              40.0 0.0]) #corner of box
+    dxf = Frac([-1.0, -1.0, -1.0])
+    translate_by!(c, dxf, box)
+    @test isapprox(c, Cart([0.0 -1.0;
+                            0.0 -10.0;
+                            0.0 -40.0])
+                  )
 end
 end

@@ -203,16 +203,27 @@ end
 
 """
     inside_box = inside(frac_coords) # true or false
-    inside_box = inside(cart_coords, box) # true or false
+    inside_box = inside(cart_coords, box)
+    inside_box = inside(molecule, box) # in Cartesian
+    inside_box = inside(molecule) # in fractional
+    inside_box = inside(crystal) # in fractional
 
-Determine whether coords are all inside a box.
+returns true if coords are all inside a box and false otherwise.
+
+if a molecule or crystal is passed, both atoms and charges must be inside the box.
 
 # Arguments
 * `coords::Coords` the coordinates (works for `Cart` and `Frac`)
+* `molecule::Molecule{T}`: a molecule in either `T::Frac` or `T::Cart` coords
+* `crystal::Crystal`: a crystal
 * `box::Box` the box (only needed if Cartesian)
 """
 inside(coords::Frac) = all(coords.xf .<= 1.0) && all(coords.xf .>= 0.0)
 inside(coords::Cart, box::Box) = inside(Frac(coords, box))
+
+# documented in matter.jl
+translate_by!(coords::Frac, dx::Cart, box::Box) = translate_by!(coords, Frac(dx, box))
+translate_by!(coords::Cart, dx::Frac, box::Box) = translate_by!(coords, Cart(dx, box))
 
 function Base.show(io::IO, box::Box)
     println(io, "Bravais unit cell of a crystal.")
