@@ -35,9 +35,8 @@ makedocs(
             ],
     format = Documenter.HTML(assets = ["assets/flux.css"])
 )
-
-deploydocs(
-    repo = "github.com/SimonEnsemble/PorousMaterials.jl.git"
+ # deploydocs(
+ #     repo = "github.com/SimonEnsemble/PorousMaterials.jl.git",
  #     push_preview=false,
  #     deps = Deps.pip("mkdocs", "mkdocs-material", "pymdown-extensions") # These are dependencies for the site, not the package
-)
+ # )
