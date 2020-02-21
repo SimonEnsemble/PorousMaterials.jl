@@ -50,7 +50,7 @@ prepend!(bond_rules, BondingRule(:Cu, :*, 0.1, 2.6))
 ```
 
 # Returns
--`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:*, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
+-`default_bondingrules::Array{BondingRule, 1}`: The default bonding rules: `[BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]`
 """
 default_bondingrules() = [BondingRule(:H, :*, 0.4, 1.2), BondingRule(:*, :*, 0.4, 1.9)]
 
@@ -131,8 +131,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     # default for symmetry rules is P1.
     # These will be overwritten if the user chooses to read in non-P1
     symmetry_rules = Array{AbstractString, 2}(undef, 3, 0)
-    # creating empty SimpleGraph, might not have any information read in
-    bonds = SimpleGraph()
     # used for remembering whether fractional/cartesian coordinates are read in
     # placed here so it will be defined for the if-stmt after the box is defined
     fractional = false
@@ -201,9 +199,9 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                                 haskey(name_to_column, "_atom_site_fract_y") &&
                                 haskey(name_to_column, "_atom_site_fract_z")
                 # if the file provides cartesian coordinates
-                cartesian = cartesian || ! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
+                cartesian = cartesian || (! fractional && haskey(name_to_column, "_atom_site_Cartn_x") &&
                                 haskey(name_to_column, "_atom_site_Cartn_y") &&
-                                haskey(name_to_column, "_atom_site_Cartn_z")
+                                haskey(name_to_column, "_atom_site_Cartn_z"))
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
@@ -221,9 +219,15 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
                     #   should catch this hopefully there aren't other weird
                     #   ways of writing cifs...
                     while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
-                        symmetry_count += 1
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
+
+                        if length(collect(keys(name_to_column))) + 2 != length(sym_funcs)
+                            i += 1
+                            break
+                        end
+
+                        symmetry_count += 1
 
                         # store as strings so it can be written out later
                         new_sym_rule = Array{AbstractString, 1}(undef, 3)
@@ -414,6 +418,8 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
         symmetry_rules = [symmetry_rules ["x", "y", "z"]]
         p1_symmetry = true
         space_group = "P1"
+        # creating empty SimpleGraph, might not have any information read in
+        bonds = SimpleGraph(n_atoms)
     end
 
     # Construct the unit cell box
@@ -431,7 +437,6 @@ function Framework(filename::AbstractString; check_charge_neutrality::Bool=true,
     end
 
     framework = Framework(filename, box, atoms, charges; bonds=bonds, symmetry=symmetry_rules, space_group=space_group, is_p1=p1_symmetry)
-
 
     if check_charge_neutrality
         if ! charge_neutral(framework, net_charge_tol)
@@ -921,7 +926,7 @@ function apply_symmetry_rules(framework::Framework; check_charge_neutrality::Boo
     end
         
     if wrap_to_unit_cell
-        wrap_atoms_to_unit_cell!(framework)
+        wrap_atoms_to_unit_cell!(new_framework)
     end
 
     if remove_overlap
