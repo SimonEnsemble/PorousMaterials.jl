@@ -28,7 +28,13 @@ function Base.:+(frameworks::Framework...; check_overlap::Bool=true)
 
         nf_n_atoms = new_framework.atoms.n_atoms
         new_bonds = SimpleGraph(nf_n_atoms + f.atoms.n_atoms)
-        for edge in collect(edges(f.bonds))
+        for edge in collect(edges(new_framework.bonds))
+            if !add_edge!(new_bonds, edge.src, edge.dst)
+                @warn @sprintf("Edge %d->%d in framework %s is not being added correctly\nThe new edge should be %d->%d",
+                               edge.src, edge.dst, f.name, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
+            end
+        end
+	for edge in collect(edges(f.bonds))
             if !add_edge!(new_bonds, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
                 @warn @sprintf("Edge %d->%d in framework %s is not being added correctly\nThe new edge should be %d->%d",
                                edge.src, edge.dst, f.name, nf_n_atoms + edge.src, nf_n_atoms + edge.dst)
@@ -145,5 +151,6 @@ function subtract_atoms(framework::Framework, ids_to_remove::Array{Int, 1})
     end
 
     return Framework("removed_atoms_" * framework.name, framework.box, atoms,
-                     charges, bonds=bonds)
+                     charges, bonds=bonds, symmetry=framework.symmetry,
+		     space_group=framework.space_group, is_p1=framework.is_p1)
 end
