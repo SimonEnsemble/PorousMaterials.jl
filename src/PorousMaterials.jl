@@ -88,6 +88,7 @@ include("distance.jl")
 include("misc.jl")
 include("isotherm_fitting.jl")
 include("crystal.jl")
+include("bonds.jl")
 include("forcefield.jl")
  # include("molecules.jl")
  # include("energetics_util.jl")
@@ -123,6 +124,10 @@ export
     Crystal, strip_numbers_from_atom_labels!, assign_charges,
     chemical_formula, molecular_weight, crystal_density, write_cif, has_charges,
     apply_symmetry_operations, 
+
+    # bonds.jl
+    infer_bonds!, write_bond_information,
+
  #     construct_box,
  #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
  #     is_symmetry_equal, apply_symmetry_rules, assert_p1_symmetry, infer_bonds!,
