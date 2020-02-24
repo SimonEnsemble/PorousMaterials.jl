@@ -907,9 +907,12 @@ Remove duplicate atoms and charges from a crystal. See [`remove_duplicates`](@re
 - `crystal::Crystal`: crystal with duplicate atoms and charges removed.
 """
 function remove_duplicate_atoms_and_charges(crystal::Crystal, r_tol::Float64=0.1, q_tol::Float64=0.0001)
+    if ne(crystals.bonds) != 0
+        error("cannot remove duplicates with bonds assigned")
+    end
     atoms = remove_duplicates(crystal.atoms, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
     charges = remove_duplicates(crystal.charges, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
-    return Crystal(crystal.name, crystal.box, atoms, charges)
+    return Crystal(crystal.name, crystal.box, atoms, charges, SimpleGraph(crystal.atoms.n), crystal.symmetry)
 end
 
 inside(crystal::Crystal) = inside(crystal.atoms.coords) && inside(crystal.charges.coords)
@@ -1010,6 +1013,14 @@ function Base.getindex(crystal::Crystal, ids)
     end
     
     return crystal
+end
+
+function Base.lastindex(crystal::Crystal)
+    if (crystal.atoms.n == crystal.charges.n) || (crystal.charges.n == 0)
+        return crystal.atoms.n
+    else
+        error("to index the crystal, it must have 0 charges or an equal number of charges and atoms")
+    end
 end
 
 function Base.:+(crystals::Crystal...; check_overlap::Bool=true)
