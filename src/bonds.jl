@@ -59,8 +59,8 @@ function is_bonded(crystal::Crystal, i::Int64, j::Int64,
                    include_bonds_across_periodic_boundaries::Bool=true)
     species_i = crystal.atoms.species[i]
     species_j = crystal.atoms.species[j]
-
-    cartesian_dist_between_atoms = distance(crystal, i, j, include_bonds_across_periodic_boundaries)
+    
+    r = distance(crystal.atoms, crystal.box, i, j, include_bonds_across_periodic_boundaries)
 
     # loop over possible bonding rules
     for br in bonding_rules
@@ -78,12 +78,14 @@ function is_bonded(crystal::Crystal, i::Int64, j::Int64,
 
         if species_match
             # determine if the atoms are close enough to bond
-            if br.min_dist < cartesian_dist_between_atoms && br.max_dist > cartesian_dist_between_atoms
+            if br.min_dist < r && br.max_dist > r
                 return true
+            else
+                return false # found relevant bonding rule, don't apply others
             end
         end
     end
-    return false
+    return false # no bonding rule applied
 end
 
 """
@@ -168,6 +170,7 @@ function bond_sanity_check(crystal::Crystal)
     return sane_bonds
 end
 
+# TODO remove? why is this needed?
 """
     bonds_equal = compare_bonds_in_crystal(crystal1, crystal2, atol=0.0)
 
