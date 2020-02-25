@@ -907,7 +907,7 @@ Remove duplicate atoms and charges from a crystal. See [`remove_duplicates`](@re
 - `crystal::Crystal`: crystal with duplicate atoms and charges removed.
 """
 function remove_duplicate_atoms_and_charges(crystal::Crystal, r_tol::Float64=0.1, q_tol::Float64=0.0001)
-    if ne(crystals.bonds) != 0
+    if ne(crystal.bonds) != 0
         error("cannot remove duplicates with bonds assigned")
     end
     atoms = remove_duplicates(crystal.atoms, crystal.box, true, r_tol=r_tol, q_tol=q_tol)
