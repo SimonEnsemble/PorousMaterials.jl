@@ -26,6 +26,9 @@ Base.length(coords::Cart) = size(coords.x, 2)
 Base.length(coords::Frac) = size(coords.xf, 2)
 Base.lastindex(coords::Coords) = length(coords)
 
+Base.size(coords::Cart) = size(coords.x)
+Base.size(coords::Frac) = size(coords.xf)
+
 """
     translate_by!(coords, dx)
     translate_by!(coords, dx, box)
@@ -73,7 +76,14 @@ struct Atoms{T}
     species::Array{Symbol, 1} # list of species
     coords::T # coordinates
 end
-Atoms(species::Array{Symbol, 1}, coords::Coords) = Atoms(length(species), species, coords)
+
+function Atoms(species::Array{Symbol, 1}, coords::Coords)
+    @assert length(species) == size(coords)[2]
+    @assert size(coords)[1] == 3
+    return Atoms(length(species), species, coords)
+end
+
+Atoms(species::Symbol, coords::Coords) = Atoms([species], coords)
 Atoms{Frac}(n::Int) = Atoms([:_ for a = 1:n], Frac([NaN for i = 1:3, a = 1:n])) # safe pre-allocation
 Atoms{Cart}(n::Int) = Atoms([:_ for a = 1:n], Cart([NaN for i = 1:3, a = 1:n])) # safe pre-allocation
 
@@ -91,7 +101,13 @@ struct Charges{T}
     q::Array{Float64, 1}
     coords::T
 end
-Charges(q::Array{Float64, 1}, coords::Coords) = Charges(length(q), q, coords)
+function Charges(q::Array{Float64, 1}, coords::Coords)
+    @assert length(q) == size(coords)[2]
+    @assert size(coords)[1] == 3
+    return Charges(length(q), q, coords)
+end
+
+Charges(q::Float64, coords::Coords) = Charges([q], coords) # for one charge
 Charges{Frac}(n::Int) = Charges([NaN for c = 1:n], Frac([NaN for i = 1:3, c = 1:n])) # safe pre-allocation
 Charges{Cart}(n::Int) = Charges([NaN for c = 1:n], Cart([NaN for i = 1:3, c = 1:n])) # safe pre-allocation
 
