@@ -994,7 +994,7 @@ function Base.isapprox(c1::Crystal, c2::Crystal; atol::Real=0.0)
     return box_flag && charges_flag && atoms_flag && symmetry_flag
 end
 
-function Base.getindex(crystal::Crystal, ids)
+function Base.getindex(crystal::Crystal, ids::Union{BitArray{1}, Array{Int, 1}, UnitRange{Int}})
     # TODO relax this. allow ids::Array{Int} and ::Array{Bool}
     if ne(crystal.bonds) != 0
         error("indexing a crystal with bonds is not supported.")
