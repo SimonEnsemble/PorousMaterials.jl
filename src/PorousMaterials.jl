@@ -134,6 +134,9 @@ export
  #     remove_bonds!, compare_bonds_in_framework, wrap_atoms_to_unit_cell!,
  #     write_bond_information, is_bonded, default_bondingrules, has_same_sets_of_atoms_and_charges, 
  #     distance, bond_sanity_check,
+ #
+ #     # FrameworkOperations.jl
+ #     partition_framework, subtract_atoms,
  # 
     # molecule.jl
     Molecule, translate_by!, translate_to!, rotate!, rotation_matrix,

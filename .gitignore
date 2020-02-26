@@ -5,6 +5,7 @@ Tester.jl
 VisualizeTester.jl
 *.swp
 *.cif
+*.xyz
 *.sh
 *.jld2
 docs/build/
