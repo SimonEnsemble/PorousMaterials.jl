@@ -1,4 +1,4 @@
-const ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+#const ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
 
 """
 Data structure for a molecule/adsorbate.
@@ -17,7 +17,7 @@ struct Molecule{T} # T = Frac or Cart
 end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
-    return (m1.species == m2.species) && isapprox(m1.xf_com, m2.xf_com) &&
+    return (m1.species == m2.species) && isapprox(m1.com, m2.com) &&
          isapprox(m1.atoms, m2.atoms) && isapprox(m1.charges, m2.charges)
 end
 
@@ -85,7 +85,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
 end
 
 # documented in matter.jl
-net_charge = net_charge(molecule.charges)
+net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 # convert a molecule to fractional coordinates
 function Frac(molecule::Molecule, box::Box)
@@ -168,19 +168,33 @@ end
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
-    println(io, "Center of mass (fractional coords): ", molecule.xf_com)
-    if molecule.atoms.n_atoms > 0
+    println(io, "Center of mass (fractional coords): ", molecule.com)
+    if molecule.atoms.n > 0
         print(io, "Atoms:\n")
-        for i = 1:molecule.atoms.n_atoms
-            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
-                    molecule.atoms.xf[1, i], molecule.atoms.xf[2, i], molecule.atoms.xf[3, i])
+        if typeof(molecule.atoms.coords) == Frac
+            for i = 1:molecule.atoms.n
+                @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                        molecule.atoms.coords[i].xf...)
+            end
+        elseif typeof(molecule.atoms.coords) == Cart
+            for i = 1:molecule.atoms.n
+                @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                        molecule.atoms.coords[i].x...)
+            end
         end
     end
-    if molecule.charges.n_charges > 0
+    if molecule.charges.n > 0
         print(io, "\nPoint charges: ")
-        for i = 1:molecule.charges.n_charges
-            @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
-                    molecule.charges.xf[1, i], molecule.charges.xf[2, i], molecule.charges.xf[3, i])
+        if typeof(molecule.charges.coords) == Frac
+            for i = 1:molecule.charges.n
+                @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                        molecule.charges.coords[i].xf...)
+            end
+        elseif typeof(molecule.charges.coords) == Cart
+            for i = 1:molecule.charges.n
+                @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                        molecule.charges.coords[i].x...)
+            end
         end
     end
 end
@@ -237,6 +251,7 @@ The box is needed because the molecule contains only its fractional coordinates.
 - `box::Box`: The molecule only contains fractional coordinates, so the box is needed for a correct rotation
 """
 function rotate!(molecule::Molecule, box::Box)
+    #TODO make this work with Cart and Frac
     # generate a random rotation matrix
     #    but use c_to_f, f_to_c for fractional
     r = rotation_matrix()
