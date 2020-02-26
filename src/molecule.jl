@@ -147,6 +147,8 @@ end
 
 """
     translate_to!(molecule, xf)
+    translate_to!(molecule, x)
+    translate_to!(molecule, xf, box)
     translate_to!(molecule, x, box)
 
 Translate a molecule a molecule to point `xf` in fractional coordinate space or to `x` in
@@ -157,14 +159,19 @@ molecule is translated such that its center of mass is at `xf`/x`.
 - `molecule::Molecule`: The molecule which will be translated to `xf`
 - `xf::Array{Float64, 1}`: A vector containing the coordinates of the final destination of the molecule
 """
-function translate_to!(molecule::Molecule, xf::Array{Float64, 1})
-    dxf = xf - molecule.xf_com
+function translate_to!(molecule::Molecule{Cart}, x::Cart)
+    dx = Cart(broadcast(-, x, molecule.com))
+    translate_by!(molecule, dx)
+end
+
+function translate_to!(molecule::Molecule{Frac}, xf::Frac)
+    dxf = Frac(broadcast(-, xf, molecule.com))
     translate_by!(molecule, dxf)
 end
 
-function translate_to!(molecule::Molecule, x::Array{Float64, 1}, box::Box)
-    translate_to!(molecule, box.c_to_f * x)
-end
+translate_to!(molecule::Molecule{Frac}, x::Cart, box::Box) = translate_to!(molecule, Frac(box.c_to_f * x.x))
+
+translate_to!(molecule::Molecule{Cart}, xf::Frac, box::Box) = translate_to!(molecule, Cart(box.f_to_c * xf.xf))
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
@@ -178,7 +185,7 @@ function Base.show(io::IO, molecule::Molecule)
             end
         elseif typeof(molecule.atoms.coords) == Cart
             for i = 1:molecule.atoms.n
-                @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
                         molecule.atoms.coords[i].x...)
             end
         end
