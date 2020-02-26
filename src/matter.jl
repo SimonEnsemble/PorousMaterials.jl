@@ -71,7 +71,7 @@ end
 #   Atoms
 ###
 # c is either Cart or Frac
-struct Atoms{T}
+struct Atoms{T<:Coords} # enforce that the type specified is `Coords`
     n::Int # how many atoms?
     species::Array{Symbol, 1} # list of species
     coords::T # coordinates
@@ -96,7 +96,7 @@ Base.lastindex(atoms::Atoms) = atoms.n
 ###
 #   Charges
 ###
-struct Charges{T}
+struct Charges{T<:Coords} # enforce that the type specified is `Coords`
     n::Int
     q::Array{Float64, 1}
     coords::T
