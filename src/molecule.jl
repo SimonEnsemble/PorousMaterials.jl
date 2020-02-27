@@ -1,4 +1,6 @@
-const ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+function _define_atomic_mass()
+    global ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+end
 
 """
 Data structure for a molecule/adsorbate.
@@ -22,7 +24,10 @@ function Base.isapprox(m1::Molecule, m2::Molecule)
 end
 
 function center_of_mass(molecule::Molecule{Cart})
-    #ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+    if ! @isdefined ATOMIC_MASS
+        println("READING ATOMIC MASS ONCE")
+        _define_atomic_mass()
+    end
     total_mass = 0.0 # total mass
     x_com = [0.0, 0.0, 0.0] # center of mass
     for a = 1:molecule.atoms.n
@@ -86,6 +91,12 @@ function Molecule(species::String; check_neutrality::Bool=true)
 end
 
 # documented in matter.jl
+function wrap!(molecule::Molecule{Frac})
+    wrap!(molecule.atoms.coords)
+    wrap!(molecule.charges.coords)
+end
+
+# documented in matter.jl
 net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 # convert a molecule to fractional coordinates
@@ -93,7 +104,7 @@ function Frac(molecule::Molecule, box::Box)
     return Molecule(molecule.species,
         Frac(molecule.atoms, box),
         Frac(molecule.charges, box),
-        Frac(molecule.x_com, box)
+        Frac(molecule.com, box)
         )
 end
 
@@ -200,7 +211,7 @@ function Base.show(io::IO, molecule::Molecule)
             end
         elseif typeof(molecule.charges.coords) == Cart
             for i = 1:molecule.charges.n
-                @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                @printf(io, "\n\tcharge = %f, x = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
                         molecule.charges.coords[i].x...)
             end
         end
@@ -250,9 +261,11 @@ end
 
 """
     rotate!(molecule, box)
+    rotate!(molecule)
 
 Conduct a random rotation of the molecule about its center of mass.
-The box is needed because the molecule contains only its fractional coordinates.
+The box is needed when the molecule contains fractional coordinates,
+but if cartesian coordinates are used, only the molecule argument suffices.
 
 # Arguments
 - `molecule::Molecule`: The molecule which will be subject to a random rotation
@@ -266,16 +279,33 @@ function rotate!(molecule::Molecule{Frac}, box::Box)
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
     # shift to origin
-    molecule.atoms.coords.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
-    molecule.charges.xf[:] = broadcast(-, molecule.charges.xf, molecule.xf_com)
+    molecule.atoms.coords.xf[:,:] = broadcast(-, molecule.atoms.coords.xf, molecule.com.xf)
+    molecule.charges.coords.xf[:,:] = broadcast(-, molecule.charges.coords.xf, molecule.com.xf)
     # conduct the rotation
-    molecule.atoms.xf[:] = r * molecule.atoms.xf
-    molecule.charges.xf[:] = r * molecule.charges.xf
+    molecule.atoms.coords.xf[:,:] = r * molecule.atoms.coords.xf
+    molecule.charges.coords.xf[:,:] = r * molecule.charges.coords.xf
     # shift back to center of mass
-    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, molecule.xf_com)
-    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, molecule.xf_com)
+    molecule.atoms.coords.xf[:,:] = broadcast(+, molecule.atoms.coords.xf, molecule.com.xf)
+    molecule.charges.coords.xf[:,:] = broadcast(+, molecule.charges.coords.xf, molecule.com.xf)
     return nothing
 end
+
+function rotate!(molecule::Molecule{Cart})
+    r = rotation_matrix()
+    # conduct the rotation
+    # shift to origin
+    molecule.atoms.coords.x[:,:] = broadcast(-, molecule.atoms.coords.x, molecule.com.x)
+    molecule.charges.coords.x[:,:] = broadcast(-, molecule.charges.coords.x, molecule.com.x)
+    # conduct the rotation
+    molecule.atoms.coords.x[:,:] = r * molecule.atoms.coords.x
+    molecule.charges.coords.x[:,:] = r * molecule.charges.coords.x
+    # shift back to center of mass
+    molecule.atoms.coords.x[:,:] = broadcast(+, molecule.atoms.coords.x, molecule.com.x)
+    molecule.charges.coords.x[:,:] = broadcast(+, molecule.charges.coords.x, molecule.com.x)
+    return nothing
+end
+
+
 
 inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.atoms.coords, box) && inside(molecule.charges.coords, box)
 inside(molecule::Molecule{Frac}) = inside(molecule.atoms.coords) && inside(molecule.charges.coords)
