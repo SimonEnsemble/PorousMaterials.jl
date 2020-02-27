@@ -1,4 +1,4 @@
-#const ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+const ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
 
 """
 Data structure for a molecule/adsorbate.
@@ -22,9 +22,10 @@ function Base.isapprox(m1::Molecule, m2::Molecule)
 end
 
 function center_of_mass(molecule::Molecule{Cart})
+    #ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
     total_mass = 0.0 # total mass
     x_com = [0.0, 0.0, 0.0] # center of mass
-    for a = 1:atoms.n
+    for a = 1:molecule.atoms.n
         m = ATOMIC_MASS[molecule.atoms.species[a]]
         total_mass += m 
         x_com += m * molecule.atoms.coords.x[:, a]
@@ -73,7 +74,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
     molecule = Molecule(Symbol(species), atoms, charges, Cart([NaN, NaN, NaN]))
 
     # compute center of mass
-    molecule.x_com.x .= center_of_mass(molecule).x
+    molecule.com.x .= center_of_mass(molecule).x
 
     # check for charge neutrality
     if (! neutral(molecule.charges)) && check_neutrality
@@ -257,7 +258,7 @@ The box is needed because the molecule contains only its fractional coordinates.
 - `molecule::Molecule`: The molecule which will be subject to a random rotation
 - `box::Box`: The molecule only contains fractional coordinates, so the box is needed for a correct rotation
 """
-function rotate!(molecule::Molecule, box::Box)
+function rotate!(molecule::Molecule{Frac}, box::Box)
     #TODO make this work with Cart and Frac
     # generate a random rotation matrix
     #    but use c_to_f, f_to_c for fractional
@@ -265,7 +266,7 @@ function rotate!(molecule::Molecule, box::Box)
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
     # shift to origin
-    molecule.atoms.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
+    molecule.atoms.coords.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
     molecule.charges.xf[:] = broadcast(-, molecule.charges.xf, molecule.xf_com)
     # conduct the rotation
     molecule.atoms.xf[:] = r * molecule.atoms.xf

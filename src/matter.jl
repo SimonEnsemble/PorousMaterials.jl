@@ -3,6 +3,8 @@
 ###
 abstract type Coords end
 
+#Base.IndexStyle(::Type{<:Coords}) = IndexLinear()
+
 struct Frac<:Coords
     xf::Array{Float64, 2}
 end
@@ -22,9 +24,13 @@ Cart(x::Array{Float64, 1}) = Cart(reshape(x, (3, 1)))
 Base.getindex(coords::Frac, ids) = Frac(coords.xf[:, ids])
 Base.getindex(coords::Cart, ids) = Cart(coords.x[:, ids])
 
+
 Base.length(coords::Cart) = size(coords.x, 2)
 Base.length(coords::Frac) = size(coords.xf, 2)
 Base.lastindex(coords::Coords) = length(coords)
+
+Base.setindex!(coords::Frac, val::Array{Float64, 1}, ids) = (coords.xf[:, ids] = val)
+Base.setindex!(coords::Cart, val::Array{Float64, 1}, ids) = (coords.x[:, ids] = val)
 
 Base.size(coords::Cart) = size(coords.x)
 Base.size(coords::Frac) = size(coords.xf)
