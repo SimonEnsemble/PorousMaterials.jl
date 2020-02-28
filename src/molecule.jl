@@ -172,12 +172,12 @@ molecule is translated such that its center of mass is at `xf`/x`.
 - `xf::Array{Float64, 1}`: A vector containing the coordinates of the final destination of the molecule
 """
 function translate_to!(molecule::Molecule{Cart}, x::Cart)
-    dx = Cart(broadcast(-, x, molecule.com))
+    dx = Cart(broadcast(-, x.x, molecule.com.x))
     translate_by!(molecule, dx)
 end
 
 function translate_to!(molecule::Molecule{Frac}, xf::Frac)
-    dxf = Frac(broadcast(-, xf, molecule.com))
+    dxf = Frac(broadcast(-, xf.xf, molecule.com.xf))
     translate_by!(molecule, dxf)
 end
 
