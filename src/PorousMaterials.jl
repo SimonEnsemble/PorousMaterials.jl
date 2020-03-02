@@ -126,7 +126,7 @@ export
     apply_symmetry_operations, 
 
     # bonds.jl
-    infer_bonds!, write_bond_information,
+    infer_bonds!, write_bond_information, BondingRule, bond_sanity_check,
 
  #     construct_box,
  #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
