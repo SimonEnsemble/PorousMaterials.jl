@@ -501,7 +501,7 @@ function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
             charges.q[i] = crystal.charges.q[i]
             
             xf = crystal.charges.coords.xf[:, i] + xf_shift
-            charges.coords[:, charge_counter] = xf ./ repfactors
+            charges.coords.xf[:, charge_counter] = xf ./ repfactors
         end
     end
 
@@ -509,12 +509,12 @@ function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
 end
 
 # doc string in Misc.jl
-function write_xyz(crystal::Crystal; comment::AbstractString="", center::Bool=false)
+function write_xyz(crystal::Crystal; comment::AbstractString="", center_at_origin::Bool=false)
     xyz_filename = replace(replace(crystal.name, ".cif" => ""), ".cssr" => "") * ".xyz"
     atoms = Atoms(crystal.atoms.species,
                   Cart(crystal.atoms.coords, crystal.box)
                   ) # put in Cartesian
-    if center
+    if center_at_origin
         x_c = crystal.box.f_to_c * [0.5, 0.5, 0.5]
         atoms.coords.x .-= x_c
         write_xyz(atoms, xyz_filename, comment=comment)
@@ -560,7 +560,7 @@ function strip_numbers_from_atom_labels!(crystal::Crystal)
 	end
 end
 
-write_vtk(crystal::Crystal) = write_vtk(crystal.box, split(crystal.name, ".")[1])
+write_vtk(crystal::Crystal; center_at_origin::Bool=false) = write_vtk(crystal.box, split(crystal.name, ".")[1], center_at_origin=center_at_origin)
 
 """
     formula = chemical_formula(crystal, verbose=false)

@@ -214,15 +214,16 @@ end
  
 """
     write_bond_information(crystal, filename)
-    write_bond_information(crystal)
+    write_bond_information(crystal, center_at_origin=false)
 
 Writes the bond information from a crystal to the selected filename.
 
 # Arguments
 -`crystal::Crystal`: The crystal to have its bonds written to a vtk file
--`filename::AbstractString`: The filename the bond information will be saved to. If left out, will default to crystal name.
+-`filename::String`: The filename the bond information will be saved to. If left out, will default to crystal name.
+- `center_at_origin::Bool`: center the coordinates at the origin of the crystal
 """
-function write_bond_information(crystal::Crystal, filename::AbstractString)
+function write_bond_information(crystal::Crystal, filename::String; center_at_origin::Bool=false)
     if ne(crystal.bonds) == 0
         @warn("Crystal %s has no bonds present. To get bonding information for this crystal run `infer_bonds!` with an array of bonding rules\n", crystal.name)
     end
@@ -235,7 +236,11 @@ function write_bond_information(crystal::Crystal, filename::AbstractString)
     @printf(vtk_file, "# vtk DataFile Version 2.0\n%s bond information\nASCII\nDATASET POLYDATA\nPOINTS %d double\n", crystal.name, nv(crystal.bonds))
 
     for i = 1:crystal.atoms.n
-        @printf(vtk_file, "%0.5f\t%0.5f\t%0.5f\n", (crystal.box.f_to_c * crystal.atoms.coords.xf[:, i])...)
+        if center_at_origin
+            @printf(vtk_file, "%0.5f\t%0.5f\t%0.5f\n", (crystal.box.f_to_c * (crystal.atoms.coords.xf[:, i] - [0.5, 0.5, 0.5]))...)
+        else
+            @printf(vtk_file, "%0.5f\t%0.5f\t%0.5f\n", (crystal.box.f_to_c * crystal.atoms.coords.xf[:, i])...)
+        end
     end
     @printf(vtk_file, "\nLINES %d %d\n", ne(crystal.bonds), 3 * ne(crystal.bonds))
     for edge in collect(edges(crystal.bonds))
@@ -245,6 +250,6 @@ function write_bond_information(crystal::Crystal, filename::AbstractString)
     @printf("Saving bond information for crystal %s to %s.\n", crystal.name, joinpath(pwd(), filename))
 end
 
-write_bond_information(crystal::Crystal) = write_bond_information(crystal, crystal.name * "_bonds.vtk")
+write_bond_information(crystal::Crystal; center_at_origin::Bool=false) = write_bond_information(crystal, split(crystal.name, ".")[1] * "_bonds.vtk", center_at_origin=center_at_origin)
 
 # TODO remove bonds with atom i?
