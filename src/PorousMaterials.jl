@@ -90,9 +90,9 @@ include("isotherm_fitting.jl")
 include("crystal.jl")
 include("bonds.jl")
 include("forcefield.jl")
- # include("molecules.jl")
+include("molecule.jl")
  # include("energetics_util.jl")
- # include("vdwenergetics.jl")
+include("vdwenergetics.jl")
  # include("electrostaticenergetics.jl")
  # include("mchelpers.jl")
  # include("grid.jl")
@@ -138,20 +138,18 @@ export
  #     # FrameworkOperations.jl
  #     partition_framework, subtract_atoms,
  # 
- #     # molecules.jl
- #     molecule, n_atoms, set_fractional_coords!, translate_by!, outside_box,
- #     set_fractional_coords_to_unit_cube!, translate_to!, rotate!, rotation_matrix,
- #     rand_point_on_unit_sphere, charged, pairwise_atom_distances,
- #     pairwise_charge_distances, ion, bond_length_drift,
- # 
+    # molecule.jl
+    Molecule, translate_by!, translate_to!, rotate!, rotation_matrix,
+    rand_point_on_unit_sphere, ion,
+  
     # Forcefield.jl
-    LJForceField, replication_factors, check_forcefield_coverage
+    LJForceField, replication_factors, check_forcefield_coverage,
  # 
  #     # Energetics_Util.jl
  #     PotentialEnergy, SystemPotentialEnergy,
  # 
- #     # VdWEnergetics.jl
- #     lennard_jones, vdw_energy, vdw_energy_no_PBC,
+      # VdWEnergetics.jl
+      lennard_jones, vdw_energy#, vdw_energy_no_PBC
  # 
  #     # ElectrostaticEnergetics.jl
  #     electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,

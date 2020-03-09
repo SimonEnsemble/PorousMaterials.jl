@@ -1,4 +1,6 @@
-const ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+function _define_atomic_mass()
+    global ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
+end
 
 """
 Data structure for a molecule/adsorbate.
@@ -17,14 +19,17 @@ struct Molecule{T} # T = Frac or Cart
 end
 
 function Base.isapprox(m1::Molecule, m2::Molecule)
-    return (m1.species == m2.species) && isapprox(m1.xf_com, m2.xf_com) &&
+    return (m1.species == m2.species) && isapprox(m1.com, m2.com) &&
          isapprox(m1.atoms, m2.atoms) && isapprox(m1.charges, m2.charges)
 end
 
 function center_of_mass(molecule::Molecule{Cart})
+    if ! @isdefined ATOMIC_MASS
+        _define_atomic_mass()
+    end
     total_mass = 0.0 # total mass
     x_com = [0.0, 0.0, 0.0] # center of mass
-    for a = 1:atoms.n
+    for a = 1:molecule.atoms.n
         m = ATOMIC_MASS[molecule.atoms.species[a]]
         total_mass += m 
         x_com += m * molecule.atoms.coords.x[:, a]
@@ -73,7 +78,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
     molecule = Molecule(Symbol(species), atoms, charges, Cart([NaN, NaN, NaN]))
 
     # compute center of mass
-    molecule.x_com.x .= center_of_mass(molecule).x
+    molecule.com.x .= center_of_mass(molecule).x
 
     # check for charge neutrality
     if (! neutral(molecule.charges)) && check_neutrality
@@ -85,15 +90,31 @@ function Molecule(species::String; check_neutrality::Bool=true)
 end
 
 # documented in matter.jl
-net_charge = net_charge(molecule.charges)
+function wrap!(molecule::Molecule{Frac})
+    wrap!(molecule.atoms.coords)
+    wrap!(molecule.charges.coords)
+    wrap!(molecule.com)
+end
+
+# documented in matter.jl
+net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 # convert a molecule to fractional coordinates
-function Frac(molecule::Molecule, box::Box)
+function Frac(molecule::Molecule{Cart}, box::Box)
     return Molecule(molecule.species,
         Frac(molecule.atoms, box),
         Frac(molecule.charges, box),
-        Frac(molecule.x_com, box)
+        Frac(molecule.com, box)
         )
+end
+
+# convert a molecule to cartesian coordinates
+function Cart(molecule::Molecule{Frac}, box::Box)
+    return Molecule(molecule.species,
+        Cart(molecule.atoms, box),
+        Cart(molecule.charges, box),
+        Cart(molecule.com, box)
+       )
 end
 
  # """
@@ -147,6 +168,8 @@ end
 
 """
     translate_to!(molecule, xf)
+    translate_to!(molecule, x)
+    translate_to!(molecule, xf, box)
     translate_to!(molecule, x, box)
 
 Translate a molecule a molecule to point `xf` in fractional coordinate space or to `x` in
@@ -157,30 +180,49 @@ molecule is translated such that its center of mass is at `xf`/x`.
 - `molecule::Molecule`: The molecule which will be translated to `xf`
 - `xf::Array{Float64, 1}`: A vector containing the coordinates of the final destination of the molecule
 """
-function translate_to!(molecule::Molecule, xf::Array{Float64, 1})
-    dxf = xf - molecule.xf_com
+function translate_to!(molecule::Molecule{Cart}, x::Cart)
+    dx = Cart(broadcast(-, x.x, molecule.com.x))
+    translate_by!(molecule, dx)
+end
+
+function translate_to!(molecule::Molecule{Frac}, xf::Frac)
+    dxf = Frac(broadcast(-, xf.xf, molecule.com.xf))
     translate_by!(molecule, dxf)
 end
 
-function translate_to!(molecule::Molecule, x::Array{Float64, 1}, box::Box)
-    translate_to!(molecule, box.c_to_f * x)
-end
+translate_to!(molecule::Molecule{Frac}, x::Cart, box::Box) = translate_to!(molecule, Frac(box.c_to_f * x.x))
+
+translate_to!(molecule::Molecule{Cart}, xf::Frac, box::Box) = translate_to!(molecule, Cart(box.f_to_c * xf.xf))
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
-    println(io, "Center of mass (fractional coords): ", molecule.xf_com)
-    if molecule.atoms.n_atoms > 0
+    println(io, "Center of mass (fractional coords): ", molecule.com)
+    if molecule.atoms.n > 0
         print(io, "Atoms:\n")
-        for i = 1:molecule.atoms.n_atoms
-            @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
-                    molecule.atoms.xf[1, i], molecule.atoms.xf[2, i], molecule.atoms.xf[3, i])
+        if typeof(molecule.atoms.coords) == Frac
+            for i = 1:molecule.atoms.n
+                @printf(io, "\n\tatom = %s, xf = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                        molecule.atoms.coords[i].xf...)
+            end
+        elseif typeof(molecule.atoms.coords) == Cart
+            for i = 1:molecule.atoms.n
+                @printf(io, "\n\tatom = %s, x = [%.3f, %.3f, %.3f]", molecule.atoms.species[i],
+                        molecule.atoms.coords[i].x...)
+            end
         end
     end
-    if molecule.charges.n_charges > 0
+    if molecule.charges.n > 0
         print(io, "\nPoint charges: ")
-        for i = 1:molecule.charges.n_charges
-            @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
-                    molecule.charges.xf[1, i], molecule.charges.xf[2, i], molecule.charges.xf[3, i])
+        if typeof(molecule.charges.coords) == Frac
+            for i = 1:molecule.charges.n
+                @printf(io, "\n\tcharge = %f, xf = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                        molecule.charges.coords[i].xf...)
+            end
+        elseif typeof(molecule.charges.coords) == Cart
+            for i = 1:molecule.charges.n
+                @printf(io, "\n\tcharge = %f, x = [%.3f, %.3f, %.3f]", molecule.charges.q[i],
+                        molecule.charges.coords[i].x...)
+            end
         end
     end
 end
@@ -228,37 +270,57 @@ end
 
 """
     rotate!(molecule, box)
+    rotate!(molecule)
 
 Conduct a random rotation of the molecule about its center of mass.
-The box is needed because the molecule contains only its fractional coordinates.
+The box is needed when the molecule contains fractional coordinates,
+but if cartesian coordinates are used, only the molecule argument suffices.
 
 # Arguments
 - `molecule::Molecule`: The molecule which will be subject to a random rotation
 - `box::Box`: The molecule only contains fractional coordinates, so the box is needed for a correct rotation
 """
-function rotate!(molecule::Molecule, box::Box)
+function rotate!(molecule::Molecule{Frac}, box::Box)
+    #TODO make this work with Cart and Frac
     # generate a random rotation matrix
     #    but use c_to_f, f_to_c for fractional
     r = rotation_matrix()
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
     # shift to origin
-    molecule.atoms.xf[:] = broadcast(-, molecule.atoms.xf, molecule.xf_com)
-    molecule.charges.xf[:] = broadcast(-, molecule.charges.xf, molecule.xf_com)
+    molecule.atoms.coords.xf[:,:] = broadcast(-, molecule.atoms.coords.xf, molecule.com.xf)
+    molecule.charges.coords.xf[:,:] = broadcast(-, molecule.charges.coords.xf, molecule.com.xf)
     # conduct the rotation
-    molecule.atoms.xf[:] = r * molecule.atoms.xf
-    molecule.charges.xf[:] = r * molecule.charges.xf
+    molecule.atoms.coords.xf[:,:] = r * molecule.atoms.coords.xf
+    molecule.charges.coords.xf[:,:] = r * molecule.charges.coords.xf
     # shift back to center of mass
-    molecule.atoms.xf[:] = broadcast(+, molecule.atoms.xf, molecule.xf_com)
-    molecule.charges.xf[:] = broadcast(+, molecule.charges.xf, molecule.xf_com)
+    molecule.atoms.coords.xf[:,:] = broadcast(+, molecule.atoms.coords.xf, molecule.com.xf)
+    molecule.charges.coords.xf[:,:] = broadcast(+, molecule.charges.coords.xf, molecule.com.xf)
     return nothing
 end
+
+function rotate!(molecule::Molecule{Cart})
+    r = rotation_matrix()
+    # conduct the rotation
+    # shift to origin
+    molecule.atoms.coords.x[:,:] = broadcast(-, molecule.atoms.coords.x, molecule.com.x)
+    molecule.charges.coords.x[:,:] = broadcast(-, molecule.charges.coords.x, molecule.com.x)
+    # conduct the rotation
+    molecule.atoms.coords.x[:,:] = r * molecule.atoms.coords.x
+    molecule.charges.coords.x[:,:] = r * molecule.charges.coords.x
+    # shift back to center of mass
+    molecule.atoms.coords.x[:,:] = broadcast(+, molecule.atoms.coords.x, molecule.com.x)
+    molecule.charges.coords.x[:,:] = broadcast(+, molecule.charges.coords.x, molecule.com.x)
+    return nothing
+end
+
+
 
 inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.atoms.coords, box) && inside(molecule.charges.coords, box)
 inside(molecule::Molecule{Frac}) = inside(molecule.atoms.coords) && inside(molecule.charges.coords)
 
 # docstring in Misc.jl
-function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
+function write_xyz(molecules::Array{<:Molecule, 1}, box::Box, filename::AbstractString;
     comment::AbstractString="")
     
     # append all atoms of the molecule together
