@@ -25,7 +25,6 @@ end
 
 function center_of_mass(molecule::Molecule{Cart})
     if ! @isdefined ATOMIC_MASS
-        println("READING ATOMIC MASS ONCE")
         _define_atomic_mass()
     end
     total_mass = 0.0 # total mass
@@ -94,18 +93,28 @@ end
 function wrap!(molecule::Molecule{Frac})
     wrap!(molecule.atoms.coords)
     wrap!(molecule.charges.coords)
+    wrap!(molecule.com)
 end
 
 # documented in matter.jl
 net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 # convert a molecule to fractional coordinates
-function Frac(molecule::Molecule, box::Box)
+function Frac(molecule::Molecule{Cart}, box::Box)
     return Molecule(molecule.species,
         Frac(molecule.atoms, box),
         Frac(molecule.charges, box),
         Frac(molecule.com, box)
         )
+end
+
+# convert a molecule to cartesian coordinates
+function Cart(molecule::Molecule{Frac}, box::Box)
+    return Molecule(molecule.species,
+        Cart(molecule.atoms, box),
+        Cart(molecule.charges, box),
+        Cart(molecule.com, box)
+       )
 end
 
  # """
@@ -311,7 +320,7 @@ inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.atoms.coords, box) 
 inside(molecule::Molecule{Frac}) = inside(molecule.atoms.coords) && inside(molecule.charges.coords)
 
 # docstring in Misc.jl
-function write_xyz(molecules::Array{Molecule, 1}, box::Box, filename::AbstractString;
+function write_xyz(molecules::Array{<:Molecule, 1}, box::Box, filename::AbstractString;
     comment::AbstractString="")
     
     # append all atoms of the molecule together
