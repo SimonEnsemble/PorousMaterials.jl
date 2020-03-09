@@ -8,16 +8,13 @@ using JLD2
 using Statistics
 using Random
 
-function pairwise_atom_distances(molecule::Molecule, box::Box; verbose::Bool=false)
+function pairwise_atom_distances(molecule::Molecule, box::Box)
     bond_lengths = zeros(molecule.atoms.n, molecule.atoms.n)
     for i = 1:molecule.atoms.n
         for j = (i+1):molecule.atoms.n
             dx = 0.0
             if typeof(molecule.atoms.coords) == Frac
                 dx = box.f_to_c * (molecule.atoms.coords.xf[:, i] - molecule.atoms.coords.xf[:, j])
-                if verbose
-                    println(dx)
-                end
             else
                 dx = molecule.atoms.coords.x[:, i] - molecule.atoms.coords.x[:, j]
             end
@@ -290,7 +287,7 @@ end
     atom_distances = pairwise_atom_distances(co2, unit_cube())
     charge_distances = pairwise_charge_distances(co2, unit_cube())
     co2 = Frac(co2, box)
-    @test isapprox(atom_distances, pairwise_atom_distances(co2, box; verbose=true))
+    @test isapprox(atom_distances, pairwise_atom_distances(co2, box))
     @test isapprox(charge_distances, pairwise_charge_distances(co2, box))
     for i = 1:100000
         translate_to!(co2, Frac([rand(), rand(), rand()]))
@@ -299,7 +296,7 @@ end
         translate_by!(co2, Frac(4.0 * [rand(), rand(), rand()]))
         rotate!(co2, box)
     end
-    println("atom dist ", pairwise_atom_distances(co2, box; verbose=true))
+    println("atom dist ", pairwise_atom_distances(co2, box))
     println("charge dist ", pairwise_charge_distances(co2, box))
     println("com ", co2.com.xf)
     println("atom coords ", co2.atoms.coords.xf)
