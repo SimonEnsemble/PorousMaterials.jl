@@ -185,9 +185,12 @@ function Crystal(filename::String;
                     #   should catch this hopefully there aren't other weird
                     #   ways of writing cifs...
                     while i <= length(lines) && length(lines[i]) > 0 && lines[i][1] != '_' && !occursin("loop_", lines[i])
-                        symmetry_count += 1
                         line = lines[i]
                         sym_funcs = split(line, [' ', ',', ''', '"'], keepempty=false)
+                        if length(sym_funcs) == 0
+                            break
+                        end
+                        symmetry_count += 1
 
                         # store as strings so it can be written out later
                         new_sym_rule = Array{AbstractString, 1}(undef, 3)
@@ -996,18 +999,25 @@ end
 
 function Base.getindex(crystal::Crystal, ids::Union{BitArray{1}, Array{Int, 1},
                                                     UnitRange{Int}})
-    # TODO relax this. allow ids::Array{Int} and ::Array{Bool}
-    if ne(crystal.bonds) != 0
-        error("indexing a crystal with bonds is not supported.")
+#    if ne(crystal.bonds) != 0
+#        error("indexing a crystal with bonds is not supported.")
+#    end
+
+    old_to_new = Dict(ids[i] => i for i in 1:length(ids))
+    bonds = SimpleGraph(length(ids))
+    for edge in collect(edges(crystal.bonds))
+        if edge.src in ids && edge.dst in ids
+            add_edge!(bonds, old_to_new[edge.src], old_to_new[edge.dst])
+        end
     end
 
     if crystal.charges.n == 0
         return Crystal(crystal.name, crystal.box, crystal.atoms[ids],
-            crystal.charges, crystal.bonds, crystal.symmetry)
+            crystal.charges, bonds, crystal.symmetry)
     elseif (crystal.charges.n == crystal.atoms.n) && isapprox(crystal.charges.coords, 
                                                               crystal.atoms.coords)
         return Crystal(crystal.name, crystal.box, crystal.atoms[ids],
-            crystal.charges[ids], crystal.bonds, crystal.symmetry)
+            crystal.charges[ids], bonds, crystal.symmetry)
     else
         error("for getindex(crystal), crystal must have 0 charges or an equal number of charges and atoms
         that share coordinates")
