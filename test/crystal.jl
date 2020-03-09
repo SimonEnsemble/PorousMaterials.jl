@@ -57,7 +57,7 @@ end
     atoms_read = read_xyz(xtal_xyz_filename) # Atoms{Cart}
     atoms_read_f = Frac(atoms_read, xtal.box) # Atoms{Frac}
     @test isapprox(atoms_read_f, xtal.atoms, atol=0.001)
-    write_xyz(xtal, center=true, comment="blah") #center coords
+    write_xyz(xtal, center_at_origin=true, comment="blah") #center coords
     atoms_read = read_xyz(xtal_xyz_filename) # Atoms{Cart}
     atoms_read_f = Frac(atoms_read, xtal.box) # Atoms{Frac}
     @test isapprox(atoms_read_f.coords.xf, xtal.atoms.coords.xf .- [0.5, 0.5, 0.5], atol=0.001)
