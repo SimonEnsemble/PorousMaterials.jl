@@ -161,10 +161,12 @@ function bond_sanity_check(crystal::Crystal)
         # does hydrogen have only one bond?
         if (crystal.atoms.species[a] == :H) && (length(ns) > 1)
             @warn "hydrogen atom $a in $(crystal.name) is bonded to more than one atom!"
+            sane_bonds = false
         end
         # does carbon have greater than four bonds?
         if (crystal.atoms.species[a] == :C) && (length(ns) > 4)
             @warn "carbon atom $a in $(crystal.name) is bonded to more than four atoms!"
+            sane_bonds = false
         end
     end
     return sane_bonds
