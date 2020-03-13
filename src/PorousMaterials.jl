@@ -112,6 +112,7 @@ export
 
     # Misc.jl
     read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_adsorption_isotherm,
+    isotherm_sim_results_to_dataframe,
 
     # Crystal.jl
     Framework, BondingRule, read_crystal_structure_file,
