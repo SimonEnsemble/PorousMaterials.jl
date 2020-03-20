@@ -112,7 +112,6 @@ export
 
     # Misc.jl
     read_xyz, read_cpk_colors, read_atomic_radii, write_xyz, fit_adsorption_isotherm,
-    isotherm_sim_results_to_dataframe,
 
     # Crystal.jl
     Framework, BondingRule, read_crystal_structure_file,
@@ -159,7 +158,7 @@ export
 
     # GCMC.jl
     gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
-    gcmc_result_savename, GCMCstats, MarkovCounts,
+    gcmc_result_savename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
 
     # Henry.jl
     henry_coefficient, henry_result_savename,
