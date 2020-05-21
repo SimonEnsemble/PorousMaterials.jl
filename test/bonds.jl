@@ -19,5 +19,13 @@ using Test
     c_blue = getindex(c, conn_comps[2])
     @test ne(c_red.bonds) + ne(c_blue.bonds) == ne(c.bonds)
 
+    c = Crystal("FIQCEN_clean.cif")
+    strip_numbers_from_atom_labels!(c)
+    infer_geometry_based_bonds!(c, true)
+    @test length(connected_components(c.bonds)) == 1
+    cov_radii = cordero_covalent_atomic_radii()
+    cov_radii[:Cu] = 2.5
+    remove_bonds!(c)
+    infer_geometry_based_bonds!(c, true, covalent_radii=cov_radii)
 end
 end
