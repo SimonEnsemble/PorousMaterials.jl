@@ -137,6 +137,186 @@ function infer_bonds!(crystal::Crystal, include_bonds_across_periodic_boundaries
 end
 
 """
+    atom_to_radius = cordero_covalent_atomic_radii()
+
+Create a dictionary with the Cordero covalent radius for each element
+
+# Returns
+-`atom_to_radius::Dict{Symbol, Float64}`: A dictionary with elements as keys and their respective cordero covalent radii as the values.
+"""
+function cordero_covalent_atomic_radii()
+    df = CSV.read(joinpath(PATH_TO_DATA, "covalent_radii.csv"), comment="#")
+    atom_to_radius = Dict{Symbol, Float64}()
+    for atom in eachrow(df)
+        atom_to_radius[Symbol(atom[:atom])] = atom[:covalent_radius_A]
+    end
+    return atom_to_radius
+end
+
+"""
+    a = adjacency_matrix(crystal, apply_pbc)
+
+Compute the adjacency matrix `a` of the crystal, where `a[i, j]` is the
+distance between atom `i` and `j`. This matrix is symmetric. If `apply_pbc = true`,
+periodic boundary conditions are applied when computing the distance.
+
+# Arguments
+-`crystal::Crystal`: crystal structure
+-`apply_pbc::Bool`: whether or not to apply periodic boundary conditions when computing the distance
+
+# Returns
+-`a::Array{Float64, 2}`: symmetric, square adjacency matrix with zeros on the diagonal
+"""
+function adjacency_matrix(crystal::Crystal, apply_pbc::Bool)
+    A = zeros(crystal.atoms.n, crystal.atoms.n)
+    for i = 1:crystal.atoms.n
+        for j = (i+1):crystal.atoms.n
+            A[i, j] = distance(crystal.atoms, crystal.box, i, j, apply_pbc)
+            A[j, i] = A[i, j] # symmetric
+        end
+    end
+    return A
+end
+
+"""
+    ids_neighbors, xs, rs = neighborhood(crystal, i, r, am)
+
+Find and characterize the neighborhood of atom `i` in the crystal `crystal`.
+A neighborhood is defined as all atoms within a distance `r` from atom `i`.
+The adjacency matrix `am` is used to find the distances of all other atoms in the crystal from atom `i`.
+
+# Arguments
+-`crystal::Crystal`: crystal structure
+-`i::Int`: Index of the atom (in `crystal`) which the neighborhood is to be characterized.
+-`r::Float64`: The maximum distance the neighborhood will be characterized.
+-`am::Array{Float64, 2}`: The adjacency matrix, see [`adjacency_matrix`](@ref)
+
+# Returns
+-`ids_neighbors::Array{Int, 1}`: indices of `crystal.atoms` within the neighborhood of atom `i`.
+-`xs::Array{Array{Float64, 1}, 1}`: array of Cartesian positions of the atoms surrounding atom `i`.
+    The nearest image convention has been applied to find the nearest periodic image. Also, the coordinates of atom `i`
+    have been subtracted off from these coordinates so that atom `i` lies at the origin of this new coordinate system.
+    The first vector in `xs` is `[0, 0, 0]` corresponding to atom `i`.
+    The choice of type is for the Voronoi decomposition in Scipy.
+-`rs::Array{Float64, 1}`: list of distances of the neighboring atoms from atom `i`.
+"""
+function neighborhood(crystal::Crystal, i::Int, r::Float64, am::Array{Float64, 2})
+    # get indices of atoms within a distance r of atom i
+    #  the greater than zero part is to not include itself
+    ids_neighbors = findall((am[:, i] .> 0.0) .& (am[:, i] .< r))
+
+    # rs is the list of distance of these neighbors from atom i
+    rs = [am[i, id_n] for id_n in ids_neighbors]
+    @assert all(rs .< r)
+
+    # xs is a list of Cartesian coords of the neighborhood
+    #  coords of atom i are subtracted off
+    #  first entry is coords of atom i, the center, the zero vector
+    #  remaining entries are neighbors
+    # this list is useful to pass to Voronoi for getting Voronoi faces
+    #  of the neighborhood.
+    xs = [[0.0, 0.0, 0.0]] # this way atom zero is itself
+    for j in ids_neighbors
+        # subtract off atom i, apply nearest image
+        xf = crystal.atoms.coords.xf[:, j] - crystal.atoms.coords.xf[:, i]
+        nearest_image!(xf)
+        x = crystal.box.f_to_c * xf
+        push!(xs, x)
+    end
+    return ids_neighbors, xs , rs
+end
+
+"""
+    ids_shared_voro_face = _shared_voronoi_faces(ids_neighbors, xs)
+
+Of the neighboring atoms, find those that share a Voronoi face.
+
+# Arguments
+-`ids_neighbors::Array{Int, 1}`: indices of atoms within the neighborhood of a specific atom.
+-`xs::Array{Array{Float64, 1}, 1}`: array of Cartesian position of the atoms within the neighborhood of a specific atom, relative to the specific atom.
+
+# Returns
+-`ids_shared_voro_face::Array{Int, 1}`: indices of atoms that share a Voronoi face with a specific atom
+"""
+function _shared_voronoi_faces(ids_neighbors::Array{Int, 1}, xs::Array{Array{Float64, 1}, 1})
+    scipy = pyimport("scipy.spatial")
+    # first element of xs is the point itself, the origin
+    @assert length(ids_neighbors) == (length(xs) - 1)
+
+    voro = scipy.Voronoi(xs)
+    rps = voro.ridge_points # connection with atom zero are connection with atom i
+    ids_shared_voro_face = Int[] # corresponds to xs, not to atoms of crystal
+    for k = 1:size(rps)[1]
+        if sort(rps[k, :])[1] == 0 # a shared face with atom i!
+            push!(ids_shared_voro_face, sort(rps[k, :])[2])
+        end
+    end
+    # zero based indexing in Scipy accounted for since xs[0] is origin, atom i.
+    return ids_neighbors[ids_shared_voro_face]
+end
+
+"""
+    ids_bonded = bonded_atoms(crystal, i, am; r=6.0, tol=0.25)
+
+Returns the ids of atoms that are bonded to atom `i` by determining bonds using a Voronoi method
+
+# Arguments
+-`crystal::Crystal`: Crystal structure in which the bonded atoms will be determined
+-`i::Int`: Index of the atom we want to determine the bonds of
+-`am::Array{Float64, 2}`: The adjacency matrix, see [`adjacency_matrix`](@ref)
+-`r::Float64`: The maximum distance used to determine the neighborhood of atom `i`
+-`tol::Float64`: A tolerance used when determining if two atoms are connected
+
+# Returns
+-`ids_bonded::Array{Int, 1}`: A list of indices of atoms bonded to atom `i`
+"""
+function bonded_atoms(crystal::Crystal, i::Int, am::Array{Float64, 2}; r::Float64=6.0,
+                      tol::Float64=0.25, covalent_radii::Union{Nothing, Dict{Symbol, Float64}}=nothing)
+    if isnothing(covalent_radii)
+        covalent_radii = cordero_covalent_atomic_radii()
+    end
+    species_i = crystal.atoms.species[i]
+
+    ids_neighbors, xs, rs = neighborhood(crystal, i, r, am)
+
+    ids_shared_voro_faces = _shared_voronoi_faces(ids_neighbors, xs)
+
+    ids_bonded = Int[]
+    for j in ids_shared_voro_faces
+        species_j = crystal.atoms.species[j]
+        # sum of covalent radii
+        radii_sum = covalent_radii[species_j] + covalent_radii[species_i]
+        if am[i, j] < radii_sum + tol
+            push!(ids_bonded, j)
+        end
+    end
+    return ids_bonded
+end
+
+"""
+    infer_geometry_based_bonds!(crystal, include_bonds_across_periodic_boundaries::Bool)
+
+Infers bonds by first finding which atoms share a Voronoi face, and then bond the atoms if the distance
+ between them is less than the sum of the covalent radius of the two atoms (plus a tolerance).
+
+# Arguments
+-`crystal::Crystal`: The crystal structure
+-`include_bonds_across_periodic_boundaries::Bool`: Whether to check across the periodic boundaries
+"""
+function infer_geometry_based_bonds!(crystal::Crystal, include_bonds_across_periodic_boundaries::Bool)
+    if ne(crystal.bonds) > 0
+        @warn crystal.name * " already has bonds!"
+    end
+    am = adjacency_matrix(crystal, include_bonds_across_periodic_boundaries)
+
+    for i = 1:crystal.atoms.n
+        for j in bonded_atoms(crystal, i, am)
+            add_edge!(crystal.bonds, i, j)
+        end
+    end
+end
+
+"""
     sane_bonds = bond_sanity_check(crystal)
 
 Run sanity checks on `crystal.bonds`.
@@ -150,26 +330,25 @@ Print warnings when sanity checks fail.
 Return `true` if sanity checks pass, `false` otherwise.
 """
 function bond_sanity_check(crystal::Crystal)
-    sane_bonds = true
     for a = 1:crystal.atoms.n
         ns = neighbors(crystal.bonds, a)
         # is the graph fully connected?
         if length(ns) == 0
             @warn "atom $a = $(crystal.atoms.species[a]) in $(crystal.name) is not bonded to any other atom."
-            sane_bonds = false
+            return false
         end
         # does hydrogen have only one bond?
         if (crystal.atoms.species[a] == :H) && (length(ns) > 1)
             @warn "hydrogen atom $a in $(crystal.name) is bonded to more than one atom!"
-            sane_bonds = false
+            return false
         end
         # does carbon have greater than four bonds?
         if (crystal.atoms.species[a] == :C) && (length(ns) > 4)
             @warn "carbon atom $a in $(crystal.name) is bonded to more than four atoms!"
-            sane_bonds = false
+            return false
         end
     end
-    return sane_bonds
+    return true
 end
 
 # TODO remove? why is this needed?

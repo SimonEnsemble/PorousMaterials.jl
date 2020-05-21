@@ -15,6 +15,7 @@ using LinearAlgebra
 using LightGraphs
  # using Distributed
 using Optim
+using PyCall
  # import Base.push!
  # 
 
@@ -126,7 +127,8 @@ export
     apply_symmetry_operations, 
 
     # bonds.jl
-    infer_bonds!, write_bond_information, BondingRule, bond_sanity_check, remove_bonds!,
+    infer_bonds!, write_bond_information, BondingRule, bond_sanity_check, remove_bonds!, 
+    infer_geometry_based_bonds!, cordero_covalent_atomic_radii,
 
  #     construct_box,
  #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
