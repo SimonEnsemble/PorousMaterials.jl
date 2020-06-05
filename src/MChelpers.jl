@@ -1,6 +1,19 @@
-# δ is half the maximal distance a particle is perturbed in a given coordinate
-#  during particle translations
-const δ = 2.0 # Å
+# δ is half the maximum distance a particle can be displaced per dimension during a MC translation
+# move. δ is adaptively adjusted, but the range that can be adjusted is bounded by maxδ and minδ.
+const maxδ = 2.0 # Å
+const minδ = 0.01 # Å
+
+# 2π*φ is the  maximum a particle can be rotated during a MC rotation move. If φ = 1, then the
+# maximum rotation is 2π hence any rotation is valid.  For φ < 1.0, the rotations are limited to
+# a range near the starting point, e.g. if φ = 0.5, the possible rotations would represent one
+# half the rotation sphere. φ is adaptively adjusted, but the range that can be adjusted is bounded
+# by maxφ and minφ.
+const maxφ = 1.0 # all rotations on sphere valid; equivalent to 2π radians
+const minφ = 0.0001 # move only 0.01% of full spherical rotation; equivalent to 2π/1000 radians
+
+# δ and φ will be adaptively adjusted until the actual acceptance rate equals the desired acceptance
+# rate, or the boundaries to δ and φ defined above are reached.
+const desired_acceptance_rate = 0.50
 
 # break collection of statistics into blocks to gauge convergence and compute standard err
 const N_BLOCKS = 5
@@ -81,6 +94,45 @@ function apply_periodic_boundary_condition!(molecule::Molecule)
     end
 end
 
+
+"""
+    new_δ = adjust_δ(δ, accepted, proposed)
+
+Compares the current acceptance rate (accepted / proposed) to the desired acceptance rate and then
+adjusts δ up or down to get closer to the desired acceptance rate. This new δ is bounded by the
+maxδ and minδ consts before being returned.
+
+# Arguments
+- `δ::Float64`: current value of the translation scale parameter δ.
+- `accepted::Int`: number of translation moves accepted.
+- `proposed::Int`: number of translation moves proposed.
+"""
+function adjust_δ(δ::Float64, accepted::Int, proposed::Int)
+    recent_acceptance_rate = accepted / proposed
+    new_δ = max(min(δ * recent_acceptance_rate / desired_acceptance_rate, maxδ), minδ)
+    @printf("adjusting: δ = %f => %f [acceptance rate: %f]\n", δ, new_δ, recent_acceptance_rate)
+    return new_δ
+end
+
+"""
+    new_φ = adjust_φ(φ, accepted, proposed)
+
+Compares the current acceptance rate (accepted / proposed) to the desired acceptance rate and then
+adjusts φ up or down to get closer to the desired acceptance rate. This new φ is bounded by the
+maxφ and minφ consts before being returned.
+
+# Arguments
+- `φ::Float64`: current value of the rotation scale parameter φ.
+- `accepted::Int`: number of rotation moves accepted.
+- `proposed::Int`: number of rotation moves proposed.
+"""
+function adjust_φ(φ::Float64, accepted, proposed)
+    recent_acceptance_rate = accepted / proposed
+    new_φ = max(min(φ * recent_acceptance_rate / desired_acceptance_rate, maxφ), minφ)
+    @printf("adjusting: φ = %f => %f [acceptance rate: %f]\n", φ, new_φ, recent_acceptance_rate)
+    return new_φ
+end
+
 """
     translate_molecule!(molecule, box)
 
@@ -92,16 +144,17 @@ if the Monte Carlo proposal is rejected.
 # Arguments
 - `molecule::Molecule`: The molecule we want to perturb
 - `box::Box`: The simulation box
+- `scale::Float64`: the translation scale factor δ.
 
 # Returns
 - `old_molecule::Molecule`: The old molecule in case the MC proposal is rejected
 """
-function translate_molecule!(molecule::Molecule, box::Box)
+function translate_molecule!(molecule::Molecule, box::Box; scale::Float64)
     # store old molecule and return at the end for possible restoration
     old_molecule = deepcopy(molecule)
 
-    # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = δ * (rand(3) .- 0.5) # move every atom of the molecule by the same vector.
+    # perturb in Cartesian coords in a random cube centered at current coords.
+    dx = scale * (rand(3) .- 0.5) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx, box)
 
     # done, unless the molecule has moved outside of the box, then apply PBC
