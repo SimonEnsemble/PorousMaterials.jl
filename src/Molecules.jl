@@ -281,29 +281,29 @@ end
     r = rotation_matrix()
 
 Generate a 3x3 random rotation matrix `r` such that when a point `x` is rotated using this rotation matrix via `r * x`, this point `x` is placed at a uniform random distributed position on the surface of a sphere of radius `norm(x)`.
-See James Arvo. Fast Random Rotation Matrices.
+See James Arvo. Fast Random Rotation Matrices: https://pdfs.semanticscholar.org/04f3/beeee1ce89b9adf17a6fabde1221a328dbad.pdf
 
-https://pdfs.semanticscholar.org/04f3/beeee1ce89b9adf17a6fabde1221a328dbad.pdf
+There are two modifications from Arvo:
+1. θ uses a scaled random number centered at zero, so that the θ rotation is equally likely to go in either direction.
+2. the r matrix is flipped across the x and y axis so that a point is rotated from its starting position.
 
 # Arguments
-- `φ::Float64`: the rotation scale factor φ in units of 1/2π.
+- `scale::Float64`: the rotation scale factor φ where φ=1 is equivalent to 2π radians or a complete rotation.
 
 # Returns
-- `r::Array{Float64, 2}`: A 3x3 random rotation matrix, limited by the scale.
+- `r::Array{Float64, 2}`: A 3x3 random rotation matrix
 """
-function rotation_matrix(;φ::Float64=1.0)
-    # random rotation about the z-axis
-    u₁ = rand() * 2.0 * π * φ
-    r = [cos(u₁) sin(u₁) 0.0; -sin(u₁) cos(u₁) 0.0; 0.0 0.0 1.0]
+function rotation_matrix(;scale::Float64=1.0)
+    θ = 2π * scale * (rand() - 0.5)
+    ϕ = 2π * rand()
+    z = rand() * scale
 
-    # househoulder matrix
-    u₂ = 2.0 * π * rand()
-    u₃ = rand() * φ
+    V = [cos(ϕ) * √z, sin(ϕ) * √z, √(1.0 - z)]
+    r = [-cos(θ) -sin(θ) 0.0; sin(θ) -cos(θ) 0.0; 0.0 0.0 1.0]
 
-    v = [cos(u₂) * sqrt(u₃), sin(u₂) * sqrt(u₃), sqrt(1.0 - u₃)]
-    h = Matrix{Float64}(I, 3, 3) - 2 * v * transpose(v)
-    return diagm([-1.0, -1.0, 1.0]) * -h * r
- end
+    M = (2 * V * transpose(V) - Matrix{Float64}(I, 3, 3)) * r
+    return M
+end
 
 """
     rotate!(molecule, box)
@@ -314,12 +314,12 @@ The box is needed because the molecule contains only its fractional coordinates.
 # Arguments
 - `molecule::Molecule`: The molecule which will be subject to a random rotation
 - `box::Box`: The molecule only contains fractional coordinates, so the box is needed for a correct rotation
-- `scale::Float64`: the rotation cale factor φ.
+- `scale::Float64`: the rotation_matrix scale factor.
 """
 function rotate!(molecule::Molecule, box::Box; scale::Float64=1.0)
     # generate a random rotation matrix
     #    but use c_to_f, f_to_c for fractional
-    r = rotation_matrix(φ=scale)
+    r = rotation_matrix(scale=scale)
     r = box.c_to_f * r * box.f_to_c
     # conduct the rotation
     # shift to origin
