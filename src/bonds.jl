@@ -306,9 +306,7 @@ Infers bonds by first finding which atoms share a Voronoi face, and then bond th
 function infer_geometry_based_bonds!(crystal::Crystal, include_bonds_across_periodic_boundaries::Bool;
                                      r::Float64=6.0, tol::Float64=0.25, 
                                      covalent_radii::Union{Nothing, Dict{Symbol, Float64}}=nothing)
-    if ne(crystal.bonds) > 0
-        @warn crystal.name * " already has bonds!"
-    end
+    @assert ne(crystal.bonds) == 0 @sprintf("The crystal %s already has bonds. Remove them with the `remove_bonds!` function before inferring new ones.", crystal.name)
     am = adjacency_matrix(crystal, include_bonds_across_periodic_boundaries)
 
     for i = 1:crystal.atoms.n
