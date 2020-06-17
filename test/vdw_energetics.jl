@@ -9,6 +9,12 @@ using Statistics
 using Random
 
 @testset "VdwEnergetics Tests" begin
+    # lennard jones function
+    σ² = 1.0
+    ϵ = 3.0
+    @test isapprox(PorousMaterials.lennard_jones(σ², σ², ϵ), 0.0)
+    @test isapprox(PorousMaterials.lennard_jones(2 ^ (2/6) * σ², σ², ϵ), -1.0 * ϵ)
+
     ###
     #  Xe in SBMOF-1 tests, comparing to RASPA
     ###
