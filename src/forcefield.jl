@@ -24,7 +24,7 @@ end
 Base.broadcastable(ljff::LJForceField) = Ref(ljff)
 
 """
-	ljforcefield = ForceField(forcefieldfile; r_c=14.0, mixing_rules="Lorentz-Berthelot")
+	ljforcefield = ForceField(forcefield; r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
 
 Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LJForceField object.
 
@@ -34,24 +34,24 @@ The following mixing rules are implemented:
 * Geometric
 
 # Arguments
-- `forcefieldfile::AbstractString`: Name of the forcefield csv file
+- `forcefield::String`: name of the forcefield.
 - `r_cutoff::Float64`: cutoff radius beyond which we define the potential energy to be zero (units: Angstrom)
-- `mixing_rules::AbstractString`: The mixing rules used to compute the cross-interaction terms of the forcefield
+- `mixing_rules::String`: The mixing rules used to compute the cross-interaction terms of the forcefield
 
 # Returns
 - `ljforcefield::LJForceField`: The data structure containing the forcefield parameters (pure σ, ϵ and cross interaction terms as well)
 """
-function LJForceField(forcefieldfile::AbstractString; r_cutoff::Float64=14.0,
-                      mixing_rules::AbstractString="Lorentz-Berthelot")
+function LJForceField(forcefield::String; r_cutoff::Float64=14.0,
+                      mixing_rules::String="Lorentz-Berthelot")
     if ! (lowercase(mixing_rules) in ["lorentz-berthelot", "kong", "geometric"])
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    forcefield_file_path = joinpath(PATH_TO_FORCEFIELDS, forcefieldfile)
+    forcefield_file_path = joinpath(PATH_TO_FORCEFIELDS, forcefield * ".csv")
 
     df = CSV.read(forcefield_file_path, comment="#") # from DataFrames
 
-    ljff = LJForceField(forcefieldfile, Dict(), Dict(), Dict(), Dict(), r_cutoff^ 2)
+    ljff = LJForceField(forcefield, Dict(), Dict(), Dict(), Dict(), r_cutoff^ 2)
 
     # pure X-X interactions (X = (pseudo)atom)
     for row in eachrow(df)

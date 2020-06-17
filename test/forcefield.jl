@@ -9,7 +9,7 @@ using Statistics
 using Random
 
 @testset "Forcefield Tests" begin
-    ljforcefield = LJForceField("Dreiding.csv", r_cutoff=12.5,
+    ljforcefield = LJForceField("Dreiding", r_cutoff=12.5,
         mixing_rules="Lorentz-Berthelot") # Dreiding
     # test reading of force field
     @test ljforcefield.pure_σ[:He] == 1.0
@@ -31,6 +31,6 @@ using Random
 
     # test check for force field coverage
     @test check_forcefield_coverage(Crystal("SBMOF-1.cif").atoms, ljforcefield)
-    @test ! check_forcefield_coverage(Crystal("SBMOF-1.cif").atoms, LJForceField("bogus.csv"))
+    @test ! check_forcefield_coverage(Crystal("SBMOF-1.cif").atoms, LJForceField("bogus"))
 end
 end

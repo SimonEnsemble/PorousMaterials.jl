@@ -1,5 +1,5 @@
 ###
-#   Coordinates: Fractional and Cartesian
+#   coordinates: Fractional and Cartesian
 ###
 abstract type Coords end
 
@@ -24,7 +24,6 @@ Cart(x::Array{Float64, 1}) = Cart(reshape(x, (3, 1)))
 Base.getindex(coords::Frac, ids) = Frac(coords.xf[:, ids])
 Base.getindex(coords::Cart, ids) = Cart(coords.x[:, ids])
 
-
 Base.length(coords::Cart) = size(coords.x, 2)
 Base.length(coords::Frac) = size(coords.xf, 2)
 Base.lastindex(coords::Coords) = length(coords)
@@ -34,6 +33,8 @@ Base.setindex!(coords::Cart, val::Array{Float64, 1}, ids) = (coords.x[:, ids] = 
 
 Base.size(coords::Cart) = size(coords.x)
 Base.size(coords::Frac) = size(coords.xf)
+
+origin(T::DataType) = T([0.0, 0.0, 0.0])
 
 """
     translate_by!(coords, dx)
@@ -101,7 +102,7 @@ Base.getindex(atoms::Atoms, ids) = Atoms(atoms.species[ids], atoms.coords[ids])
 Base.lastindex(atoms::Atoms) = atoms.n
 
 ###
-#   Charges
+#   point charges
 ###
 struct Charges{T<:Coords} # enforce that the type specified is `Coords`
     n::Int

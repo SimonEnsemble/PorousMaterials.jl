@@ -93,7 +93,7 @@ include("bonds.jl")
 include("forcefield.jl")
 include("molecule.jl")
  # include("energetics_util.jl")
-include("vdwenergetics.jl")
+include("vdw_energetics.jl")
  # include("electrostaticenergetics.jl")
  # include("mchelpers.jl")
  # include("grid.jl")
@@ -107,7 +107,7 @@ export
  #     set_default_file_paths, print_file_paths, set_tutorial_mode,
  # 
     # matter.jl
-    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!,
+    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!, origin,
     
     # box.jl
     Box, replicate, unit_cube, write_vtk, inside, fractional_coords, cartesian_coords,
@@ -141,8 +141,7 @@ export
  #     partition_framework, subtract_atoms,
  # 
     # molecule.jl
-    Molecule, translate_by!, translate_to!, rotate!, rotation_matrix,
-    rand_point_on_unit_sphere, ion,
+    Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion,
   
     # Forcefield.jl
     LJForceField, replication_factors, check_forcefield_coverage,
@@ -151,7 +150,7 @@ export
  #     PotentialEnergy, SystemPotentialEnergy,
  # 
       # VdWEnergetics.jl
-      lennard_jones, vdw_energy#, vdw_energy_no_PBC
+      lennard_jones, vdw_energy, vdw_energy_no_PBC
  # 
  #     # ElectrostaticEnergetics.jl
  #     electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
