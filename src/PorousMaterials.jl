@@ -92,7 +92,7 @@ include("crystal.jl")
 include("bonds.jl")
 include("forcefield.jl")
 include("molecule.jl")
- # include("energetics_util.jl")
+include("energy_utilities.jl")
 include("vdw_energetics.jl")
  # include("electrostaticenergetics.jl")
  # include("mchelpers.jl")
@@ -143,14 +143,14 @@ export
     # molecule.jl
     Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion,
   
-    # Forcefield.jl
+    # forcefield.jl
     LJForceField, replication_factors, check_forcefield_coverage,
- # 
- #     # Energetics_Util.jl
- #     PotentialEnergy, SystemPotentialEnergy,
- # 
-      # VdWEnergetics.jl
-      lennard_jones, vdw_energy, vdw_energy_no_PBC,
+
+    # energy_utilities.jl
+    PotentialEnergy, SystemPotentialEnergy,
+
+    # vdw_energetics.jl
+    lennard_jones, vdw_energy, vdw_energy_no_PBC,
  # 
  #     # ElectrostaticEnergetics.jl
  #     electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
