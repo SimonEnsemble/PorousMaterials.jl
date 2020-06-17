@@ -239,22 +239,24 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     end
 
     ###
-    #   random rotation should place H in upper quandrant half the time.
+    #   random rotation should place H in each half-quadrant equal amount of time...
     ###
     m = Molecule("H2S")
-    N = 1000000
-    up = 0 # H in upper sphere
-    left = 0 # H in left sphere
-    back = 0
+    translate_to!(m, origin(Cart))
+    @assert m.atoms.species[2] == :H_H2S
+    N = 10000000
+    up = 0 # H in upper half-sphere
+    left = 0 # H in left half-sphere
+    back = 0 # H in back half-sphere
     for i = 1:N
         random_rotation!(m)
-        if m.atoms.coords.x[3, 1] > 0.0
+        if m.atoms.coords.x[3, 2] > 0.0
             up += 1
         end
-        if m.atoms.coords.x[2, 1] < 0.0
+        if m.atoms.coords.x[2, 2] < 0.0
             back += 1
         end
-        if m.atoms.coords.x[1, 1] < 0.0
+        if m.atoms.coords.x[1, 2] < 0.0
             left += 1
         end
     end

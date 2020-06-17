@@ -7,7 +7,7 @@ using DataFrames
  # using SpecialFunctions # for erfc
  # using StatsBase
  # using ProgressMeter
- # using Polynomials
+using Polynomials
  # using JLD2
  # using Statistics
 using Printf
@@ -97,7 +97,7 @@ include("vdw_energetics.jl")
  # include("electrostaticenergetics.jl")
  # include("mchelpers.jl")
  # include("grid.jl")
- # include("eos.jl")
+include("eos.jl")
  # include("henry.jl")
  # include("gcmc.jl")
  # include("generic_rotations.jl")
@@ -150,7 +150,7 @@ export
  #     PotentialEnergy, SystemPotentialEnergy,
  # 
       # VdWEnergetics.jl
-      lennard_jones, vdw_energy, vdw_energy_no_PBC
+      lennard_jones, vdw_energy, vdw_energy_no_PBC,
  # 
  #     # ElectrostaticEnergetics.jl
  #     electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
@@ -164,8 +164,8 @@ export
  #     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
  #     required_n_pts, xf_to_id, id_to_xf, update_density!,
  # 
- #     # EOS.jl
- #     calculate_properties, PengRobinsonFluid, VdWFluid,
+    # EOS.jl
+    calculate_properties, PengRobinsonFluid, VdWFluid
  # 
  #     # GCMC.jl
  #     gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
