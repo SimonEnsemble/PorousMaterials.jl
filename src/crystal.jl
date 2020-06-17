@@ -881,6 +881,9 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
 
     # only print bond information if it is in the crystal
     if ne(crystal.bonds) > 0
+        if ! number_atoms
+             error("must label atoms with numbers to write bond information.\n")
+        end
         # print column names for bond information
         @printf(cif_file, "\nloop_\n_geom_bond_atom_site_label_1\n_geom_bond_atom_site_label_2\n_geom_bond_distance\n")
 
