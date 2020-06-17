@@ -75,7 +75,11 @@ end
     strip_numbers_from_atom_labels!(crystal_reloaded) # TODO Arthur remove this necessity from write_cif
     @test isapprox(crystal, crystal_reloaded, atol=0.0001)
  #     rm(rewrite_filename) # clean up.
-    
+    rewrite_filename = "rewritten.cif"
+    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, rewrite_filename), number_atoms=false)
+    crystal_reloaded = Crystal(rewrite_filename)
+    @test isapprox(crystal, crystal_reloaded, atol=0.0001)
+ 
     ### apply_symmetry_operations
     # test .cif reader for non-P1 symmetry
     #   no atoms should overlap

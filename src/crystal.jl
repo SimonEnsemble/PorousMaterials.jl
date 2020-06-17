@@ -790,13 +790,14 @@ function assert_P1_symmetry(crystal::Crystal)
 end
 
 """
-    write_cif(crystal, filename; fractional_coords=true)
+    write_cif(crystal, filename; fractional_coords=true, number_atoms=true)
 
 Write a `crystal::Crystal` to a .cif file with `filename::AbstractString`. If `filename` does
 not include the .cif extension, it will automatically be added. the `fractional_coords` flag 
 allows us to write either fractional or Cartesian coordinates.
 """
-function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords::Bool=true)
+function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords::Bool=true, 
+		   number_atoms::Bool=true)
     if has_charges(crystal)
         if crystal.atoms.n != crystal.charges.n
             error("write_cif assumes equal numbers of Charges and Atoms (or zero charges)")
@@ -859,7 +860,7 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
     for i = 1:crystal.atoms.n
         # print label and type symbol
         @printf(cif_file, "%s\t%s\t", string(crystal.atoms.species[i]) *
-                string(label_numbers[crystal.atoms.species[i]]),
+                (number_atoms ? string(label_numbers[crystal.atoms.species[i]]) : ""),
                 crystal.atoms.species[i])
         # store label for this atom idx
         idx_to_label[i] = string(crystal.atoms.species[i]) *
