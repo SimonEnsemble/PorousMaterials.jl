@@ -159,7 +159,9 @@ replication_factors(crystal::Crystal, r_cutoff::Float64) = replication_factors(c
 replication_factors(crystal::Crystal, ljforcefield::LJForceField) = replication_factors(crystal.box, sqrt(ljforcefield.r²_cutoff))
 
 """
-    check_forcefield_coverage(atoms, ljforcefield)
+    forcefield_coverage(atoms, ljforcefield)
+    forcefield_coverage(molecule, ljforcefield)
+    forcefield_coverage(crystal, ljforcefield)
 
 Check that the force field contains parameters for every `species` in `atoms::Atoms`.
 Will print out which atoms are missing.
@@ -171,7 +173,7 @@ Will print out which atoms are missing.
 # Returns
 - `all_covered::Bool`: returns true if all species in the atoms are covered by the force field.
 """
-function check_forcefield_coverage(atoms::Atoms, ljff::LJForceField)
+function forcefield_coverage(atoms::Atoms, ljff::LJForceField)
     unique_species = unique(atoms.species)
     all_covered = true
     for species in unique_species
@@ -182,6 +184,7 @@ function check_forcefield_coverage(atoms::Atoms, ljff::LJForceField)
     end
     return all_covered
 end
+forcefield_coverage(crystal::Crystal, ljff::LJForceField) = forcefield_coverage(crystal.atoms, ljff)
 
 function Base.show(io::IO, ff::LJForceField)
     println(io, "Force field: ", ff.name)

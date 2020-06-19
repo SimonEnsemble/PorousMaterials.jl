@@ -512,17 +512,18 @@ function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
 end
 
 # doc string in Misc.jl
+xyz_filename(crystal::Crystal) = replace(replace(crystal.name, ".cif" => ""), ".cssr" => "") * ".xyz"
 function write_xyz(crystal::Crystal; comment::AbstractString="", center_at_origin::Bool=false)
-    xyz_filename = replace(replace(crystal.name, ".cif" => ""), ".cssr" => "") * ".xyz"
+    filename = xyz_filename(crystal)
     atoms = Atoms(crystal.atoms.species,
                   Cart(crystal.atoms.coords, crystal.box)
                   ) # put in Cartesian
     if center_at_origin
         x_c = crystal.box.f_to_c * [0.5, 0.5, 0.5]
         atoms.coords.x .-= x_c
-        write_xyz(atoms, xyz_filename, comment=comment)
+        write_xyz(atoms, filename, comment=comment)
     else
-        write_xyz(atoms, xyz_filename, comment=comment)
+        write_xyz(atoms, filename, comment=comment)
     end
 end
 
@@ -563,7 +564,8 @@ function strip_numbers_from_atom_labels!(crystal::Crystal)
 	end
 end
 
-write_vtk(crystal::Crystal; center_at_origin::Bool=false) = write_vtk(crystal.box, split(crystal.name, ".")[1], center_at_origin=center_at_origin)
+vtk_filename(crystal::Crystal) = replace(replace(crystal.name, ".cif" => ""), ".cssr" => "") * ".vtk"
+write_vtk(crystal::Crystal; center_at_origin::Bool=false) = write_vtk(crystal.box, vtk_filename(crystal), center_at_origin=center_at_origin)
 
 """
     formula = chemical_formula(crystal, verbose=false)

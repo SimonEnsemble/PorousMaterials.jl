@@ -79,7 +79,7 @@ using the nearest image convention.
 # Returns
 - `gg_energy::Float64`: The guest-guest interaction energy of `molecules[molecule_id]` with the other molecules in `molecules`
 """
-function vdw_energy(molecule_id::Int, molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
+function vdw_energy(molecule_id::Int, molecules::Array{<:Molecule, 1}, ljff::LJForceField, box::Box)
    energy = 0.0
    # loop over all other molecule
    for other_molecule_id = 1:length(molecules)
@@ -111,7 +111,7 @@ image convention can be applied. See [`replicate`](@ref).
 # Returns
 - `total_energy::Float64`: The total guest-host or guest-guest van der Waals energy
 """
-function total_vdw_energy(crystal::Crystal, molecules::Array{Molecule, 1}, ljff::LJForceField)
+function total_vdw_energy(crystal::Crystal, molecules::Array{<:Molecule, 1}, ljff::LJForceField)
    total_energy = 0.0
    for molecule in molecules
        total_energy += vdw_energy(crystal, molecule, ljff)
@@ -119,7 +119,7 @@ function total_vdw_energy(crystal::Crystal, molecules::Array{Molecule, 1}, ljff:
    return total_energy
 end
 
-function total_vdw_energy(molecules::Array{Molecule, 1}, ljff::LJForceField, box::Box)
+function total_vdw_energy(molecules::Array{<:Molecule, 1}, ljff::LJForceField, box::Box)
    total_energy = 0.0
    for i = 1:length(molecules)
        total_energy += vdw_energy(i, molecules, ljff, box)

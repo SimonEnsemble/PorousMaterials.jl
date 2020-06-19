@@ -47,6 +47,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     #   molecule file reader
     ###
     molecule = Molecule("CO2")
+    @test needs_rotations(molecule)
     @test has_charges(molecule)
     atomic_masses = read_atomic_masses()
     @test molecule.species == :CO2
@@ -214,7 +215,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
         translate_to!(m, Cart(rand_point_on_unit_sphere()))
     end
     @test all(isapprox.([norm(m.atoms.coords.x[:, 1]) for m in ms], 1.0))
-    write_xyz(ms, unit_cube(), "random_vectors_on_sphere")
+    write_xyz(ms, "random_vectors_on_sphere")
     println("See random_vectors_on_sphere")
 
     # Test to see if random_rotation_matrix() is random and uniform on sphere surface
@@ -286,7 +287,21 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     for m in ms
         random_rotation!(m)
     end
-    write_xyz(ms, box, "co2s")
+    write_xyz(ms, "co2s")
     @info "see co2s.xyz for dist'n of rotations"
+
+    @test ! needs_rotations(Molecule("Xe"))
+    
+    # frac and cart
+    m = Molecule("H2S")
+    box = Box(2.0, 4.0, 8.0)
+    m_f = Frac(m, box)
+    @test isapprox(m_f.atoms.coords.xf[1, :], m.atoms.coords.x[1, :] / 2.0)
+    @test isapprox(m_f.atoms.coords.xf[2, :], m.atoms.coords.x[2, :] / 4.0)
+    @test isapprox(m_f.charges.coords.xf[1, :], m.charges.coords.x[1, :] / 2.0)
+    @test isapprox(m_f.charges.coords.xf[2, :], m.charges.coords.x[2, :] / 4.0)
+    m_f_c = Cart(m_f, box)
+    @test isapprox(m_f_c.charges, m.charges)
+    @test isapprox(m_f_c.atoms, m.atoms)
 end
 end

@@ -89,14 +89,6 @@ function Molecule(species::String; check_neutrality::Bool=true)
 end
 
 # documented in matter.jl
-# NO, need to wrap only based on center of mass.
-function wrap!(molecule::Molecule{Frac})
-    wrap!(molecule.atoms.coords)
-    wrap!(molecule.charges.coords)
-    wrap!(molecule.com)
-end
-
-# documented in matter.jl
 net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 # convert between fractional and cartesian coords
@@ -278,11 +270,12 @@ function random_rotation!(molecule::Molecule{Frac}, box::Box)
     return nothing
 end
 
-inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.atoms.coords, box) && inside(molecule.charges.coords, box)
-inside(molecule::Molecule{Frac}) = inside(molecule.atoms.coords) && inside(molecule.charges.coords)
+# based on center of mass
+inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.com, box)
+inside(molecule::Molecule{Frac}) = inside(molecule.com)
 
 # docstring in Misc.jl
-function write_xyz(molecules::Array{<:Molecule, 1}, box::Box, filename::AbstractString;
+function write_xyz(molecules::Array{Molecule{Cart}, 1}, filename::AbstractString;
     comment::AbstractString="")
     
     # append all atoms of the molecule together
@@ -297,11 +290,22 @@ function write_xyz(molecules::Array{<:Molecule, 1}, box::Box, filename::Abstract
     write_xyz(atoms, filename, comment=comment) # Misc.jl
 end
 
+function write_xyz(molecules::Array{Molecule{Frac}, 1}, box::Box, filename::AbstractString;
+    comment::AbstractString="")
+
+    molecules = Cart.(molecules, box)
+    
+    write_xyz(molecules, filename, comment=comment) # above
+end
+
 # documented in crystal.jl
 has_charges(molecule::Molecule) = molecule.charges.n > 0
+
+# documented in forcefield.jl
+forcefield_coverage(molecule::Molecule, ljff::LJForceField) = forcefield_coverage(molecule.atoms, ljff)
 
 # facilitate constructing a point charge
 function ion(q::Float64, coords::Frac)
     @assert size(coords.xf, 2) == 1
-    return Molecule(:ion, Charges([q], coords), Atoms{Frac}(0), coords)
+    return Molecule(:ion, Atoms{Frac}(0), Charges(q, coords), coords)
 end

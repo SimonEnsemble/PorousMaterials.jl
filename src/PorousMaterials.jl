@@ -2,11 +2,11 @@ module PorousMaterials
 
 using CSV
 using DataFrames
- # using Roots # for fzero
- # using OffsetArrays # used for Ewald sum
- # using SpecialFunctions # for erfc
+using Roots # for fzero
+using OffsetArrays # used for Ewald sum
+using SpecialFunctions # for erfc
  # using StatsBase
- # using ProgressMeter
+using ProgressMeter
 using Polynomials
  # using JLD2
  # using Statistics
@@ -94,9 +94,9 @@ include("forcefield.jl")
 include("molecule.jl")
 include("energy_utilities.jl")
 include("vdw_energetics.jl")
- # include("electrostaticenergetics.jl")
- # include("mchelpers.jl")
- # include("grid.jl")
+include("electrostatics.jl")
+include("mc_helpers.jl")
+include("grid.jl")
 include("eos.jl")
  # include("henry.jl")
  # include("gcmc.jl")
@@ -144,25 +144,25 @@ export
     Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion,
   
     # forcefield.jl
-    LJForceField, replication_factors, check_forcefield_coverage,
+    LJForceField, replication_factors, forcefield_coverage,
 
     # energy_utilities.jl
     PotentialEnergy, SystemPotentialEnergy,
 
     # vdw_energetics.jl
     lennard_jones, vdw_energy, vdw_energy_no_PBC,
- # 
- #     # ElectrostaticEnergetics.jl
- #     electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
- #     setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
- # 
- #     # MChelpers.jl
- #     insert_molecule!, delete_molecule!, translate_molecule!, reinsert_molecule!, rotatable,
- # 
- #     # Grid.jl
- #     apply_periodic_boundary_condition!,
- #     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
- #     required_n_pts, xf_to_id, id_to_xf, update_density!,
+
+    # ElectrostaticEnergetics.jl
+    electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
+    setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
+
+    # MChelpers.jl
+    random_insertion!, remove_molecule!, random_translation!, random_reinsertion!, needs_rotations,
+
+    # Grid.jl
+    apply_periodic_boundary_condition!,
+    Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
+    required_n_pts, xf_to_id, id_to_xf, update_density!,
  # 
     # EOS.jl
     calculate_properties, PengRobinsonFluid, VdWFluid

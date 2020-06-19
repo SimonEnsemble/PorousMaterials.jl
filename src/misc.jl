@@ -1,3 +1,10 @@
+function add_extension(filename::String, extension::String)
+    if ! occursin(extension, filename)
+        filename *= extension
+    end
+    return filename
+end
+
 """
     atoms = read_xyz(filename)
 
@@ -44,9 +51,7 @@ if the extension is not provided.)
 - `center_at_origin::Bool`: (for crystal only) if `true`, translate all coords such that the origin is the center of the unit cell.
 """
 function write_xyz(atoms::Atoms{Cart}, filename::AbstractString; comment::AbstractString="")
-    if ! occursin(".xyz", filename)
-        filename *= ".xyz"
-    end
+    filename = add_extension(filename, ".xyz")
 
     xyzfile = open(filename, "w")
     @printf(xyzfile, "%d\n%s\n", atoms.n, comment)

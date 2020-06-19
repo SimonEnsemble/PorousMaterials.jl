@@ -4,21 +4,21 @@ using Test
 using Random
 using Printf
 
-ljforcefield = LJForceField("Dreiding.csv", cutoffradius=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
+ljforcefield = LJForceField("Dreiding", r_cutoff=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
 
 # Xe in SBMOF-1 tests, comparing to RASPA
-sbmof1 = Framework("SBMOF-1.cif")
+sbmof1 = Crystal("SBMOF-1.cif")
 rep_factors_sbmof1 = replication_factors(sbmof1.box, ljforcefield)
 sbmof1 = replicate(sbmof1, rep_factors_sbmof1)
 xenon = Molecule("Xe")
-set_fractional_coords!(xenon, sbmof1.box)
+xenon = Frac(xenon, sbmof1.box)
 
-@test ! charged(xenon)
-xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * zeros(3)
+@test ! has_charges(xenon)
+xenon.atoms.coords.xf[:, 1] = sbmof1.box.c_to_f * zeros(3)
 energy = vdw_energy(sbmof1, xenon, ljforcefield)
 @test isapprox(energy, -5041.58, atol = 0.005)
-xenon.atoms.xf[1, 1] = 0.494265; xenon.atoms.xf[2, 1] = 2.22668; xenon.atoms.xf[3, 1] = 0.450354;
-xenon.atoms.xf[:, 1] = sbmof1.box.c_to_f * xenon.atoms.xf[:, 1]
+xenon.atoms.coords.xf[1, 1] = 0.494265; xenon.atoms.coords.xf[2, 1] = 2.22668; xenon.atoms.coords.xf[3, 1] = 0.450354;
+xenon.atoms.coords.xf[:, 1] = sbmof1.box.c_to_f * xenon.atoms.coords.xf[:, 1]
 energy = vdw_energy(sbmof1, xenon, ljforcefield)
 @test isapprox(energy, 12945.838, atol = 0.005)
 
@@ -31,10 +31,10 @@ println("Guest-Host Van der Waals energy computation:")
 Random.seed!(1234) # so that every trial will be the same
 box = Box(100.0, 100.0, 100.0, π/2, π/2, π/2)
 co2 = Molecule("CO2")
-ms = Array{Molecule, 1}()
+ms = Array{Molecule{Frac}, 1}()
 num_molecules = 100
 while length(ms) < num_molecules # give a decent number of molecules to test
-    insert_molecule!(ms, box, co2)
+    random_insertion!(ms, box, co2)
     # Ensure that no molecules have infinite lj energy, so that it calculates
     #   the interaction between all molecules
     if vdw_energy(length(ms), ms, ljforcefield, box) >= Inf
