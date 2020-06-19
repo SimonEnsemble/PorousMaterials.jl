@@ -225,7 +225,7 @@ function _conduct_Widom_insertions(crystal::Crystal, molecule::Molecule,
         # calculate potential energy of molecule at that position and orientation
         energy = PotentialEnergy(0.0, 0.0)
         # actually compute if accessibilty grid not available; or if is avail and accessible
-        if (accessibility_grid == nothing) || (accessible(accessibility_grid, xf, repfactors))
+        if isnothing(accessibility_grid) || (accessible(accessibility_grid, xf, repfactors))
             energy.vdw = vdw_energy(crystal, molecule, ljforcefield)
             if charged_system
                 energy.es = total(electrostatic_potential_energy(crystal, molecule, eparams, eikr))

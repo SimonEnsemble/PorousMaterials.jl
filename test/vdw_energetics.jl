@@ -35,6 +35,11 @@ using Random
     energy = vdw_energy(xtal, mol, ljff)
     @test isapprox(energy, 12945.838, atol = 0.005)
     
+    random_rotation!(mol, xtal.box)
+    energy = vdw_energy(xtal, mol, ljff)
+    mol = Cart(mol, xtal.box)
+    @test isapprox(energy, vdw_energy(xtal, mol, ljff))
+    
     ###
     # NIST data to test LJ potentials
     # data from here: https://www.nist.gov/mml/csd/chemical-informatics-research-group/lennard-jones-fluid-reference-calculations

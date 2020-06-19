@@ -5,15 +5,15 @@ using DataFrames
 using Roots # for fzero
 using OffsetArrays # used for Ewald sum
 using SpecialFunctions # for erfc
- # using StatsBase
+using StatsBase
 using ProgressMeter
 using Polynomials
- # using JLD2
- # using Statistics
+using JLD2
+using Statistics
 using Printf
 using LinearAlgebra
 using LightGraphs
- # using Distributed
+using Distributed
 using Optim
 using PyCall
  # import Base.push!
@@ -98,7 +98,7 @@ include("electrostatics.jl")
 include("mc_helpers.jl")
 include("grid.jl")
 include("eos.jl")
- # include("henry.jl")
+include("henry.jl")
  # include("gcmc.jl")
  # include("generic_rotations.jl")
 
@@ -165,14 +165,14 @@ export
     required_n_pts, xf_to_id, id_to_xf, update_density!,
  # 
     # EOS.jl
-    calculate_properties, PengRobinsonFluid, VdWFluid
+    calculate_properties, PengRobinsonFluid, VdWFluid,
  # 
  #     # GCMC.jl
- #     gcmc_simulation, adsorption_isotherm, stepwise_adsorption_isotherm,
+ #     μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
  #     gcmc_result_savename, GCMCstats, MarkovCounts,
  # 
- #     # Henry.jl
- #     henry_coefficient, henry_result_savename,
+    # Henry.jl
+    henry_coefficient, henry_result_savename
  # 
  #     # generic_rotations.jl
  #     rotation_matrix
