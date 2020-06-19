@@ -273,5 +273,8 @@ end
     frame2 = Crystal("ATIBOU01_clean.cif"; include_zero_charges=true)
     @test frame2.charges.n == frame2.atoms.n
     @test isapprox(frame2.charges.coords, frame2.atoms.coords)
+
+    crystal = replicate(Crystal("CAXVII_clean.cif"), (2, 2, 2))
+    @test isapprox(sum(crystal.charges.q), 0.0, atol=0.001)
 end
 end

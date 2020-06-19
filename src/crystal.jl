@@ -501,7 +501,7 @@ function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
         for i = 1:crystal.charges.n
             charge_counter += 1
             
-            charges.q[i] = crystal.charges.q[i]
+            charges.q[charge_counter] = crystal.charges.q[i]
             
             xf = crystal.charges.coords.xf[:, i] + xf_shift
             charges.coords.xf[:, charge_counter] = xf ./ repfactors
