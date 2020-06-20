@@ -318,9 +318,11 @@ function distortion(molecule::Molecule{Frac}, ref_molecule::Molecule{Frac}, box:
         for j = (i+1):molecule.atoms.n
             # molecule
             dxf = molecule.atoms.coords.xf[:, i] - molecule.atoms.coords.xf[:, j]
+            dx = box.f_to_c * dxf
             r = norm(dx)
             # ref molecule
             dxf_ref = ref_molecule.atoms.coords.xf[:, i] - ref_molecule.atoms.coords.xf[:, j]
+            dx_ref = box.f_to_c * dxf_ref
             r_ref = norm(dx_ref)
             if ! isapprox(r, r_ref, atol=atol)
                 return true 
