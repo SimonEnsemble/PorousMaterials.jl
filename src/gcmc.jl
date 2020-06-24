@@ -5,15 +5,18 @@ const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 ###
 #   Markov chain proposals
 ###
-const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 2 => "deletion",
-                                3 => "translation", 4 => "rotation",
-                                5 => "reinsertion") # helps with printing later
+const PROPOSAL_ENCODINGS = Dict(1 => "insertion", 
+                                2 => "deletion",
+                                3 => "translation",
+                                4 => "rotation",
+                                5 => "reinsertion"
+                                ) # helps with printing later
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 # each proposal type gets an Int for clearer code
 const INSERTION   = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
 const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
-const ROTATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
+const ROTATION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 
  # count proposed/accepted for each subtype
@@ -58,10 +61,10 @@ function Base.print(gcmc_stats::GCMCstats)
     println("\t# samples: ", gcmc_stats.n_samples)
     println("\t⟨N⟩ (molecules) = ", gcmc_stats.n / gcmc_stats.n_samples)
 
-    println("\t⟨U_gh, vdw⟩ (K) = ",     gcmc_stats.U.guest_host.vdw / gcmc_stats.n_samples)
-    println("\t⟨U_gh, Coulomb⟩ (K) = ", gcmc_stats.U.guest_host.coulomb / gcmc_stats.n_samples)
-    println("\t⟨U_gg, vdw⟩ (K) = ",     gcmc_stats.U.guest_guest.vdw / gcmc_stats.n_samples)
-    println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.guest_guest.coulomb / gcmc_stats.n_samples)
+    println("\t⟨U_gh, vdw⟩ (K) = ",     gcmc_stats.U.gh.vdw / gcmc_stats.n_samples)
+    println("\t⟨U_gh, Coulomb⟩ (K) = ", gcmc_stats.U.gh.es / gcmc_stats.n_samples)
+    println("\t⟨U_gg, vdw⟩ (K) = ",     gcmc_stats.U.gg.vdw / gcmc_stats.n_samples)
+    println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.gg.es / gcmc_stats.n_samples)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
 end
@@ -89,20 +92,53 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     return avg_n, err_n, avg_U, err_U
 end
 
+# TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
+# potential energy change after inserting/deleting/perturbing coordinates of molecules[molecule_id]
+@inline function potential_energy(molecule_id::Int,
+                                  molecules::Array{Molecule{Frac}, 1},
+                                  xtal::Crystal,
+                                  ljff::LJForceField,
+                                  eparams::EwaldParams,
+                                  eikr_gh::Eikr,
+                                  eikr_gg::Eikr)
+    energy = SystemPotentialEnergy()
+    # van der Waals interactions
+    energy.gg.vdw = vdw_energy(molecule_id, molecules, ljff, xtal.box) # guest-guest
+    energy.gh.vdw = vdw_energy(xtal, molecules[molecule_id], ljff)     # guest-host
+    # electrostatic interactions
+    if has_charges(molecules[molecule_id])
+        # guest-guest
+        energy.gg.es = total(electrostatic_potential_energy(molecules, molecule_id, eparams, xtal.box, eikr_gg))
+        # guest-host
+        if has_charges(xtal)
+            energy.gh.es = total(electrostatic_potential_energy(xtal, molecules[molecule_id], eparams, eikr_gh))
+        end
+    end
+    return energy
+end
+
 """
-    settings = default_gcmc_settings()
+    results, molecules = μVT_sim(xtal, molecule, temperature, pressure,
+                                 ljff; molecules=Molecule[], settings=settings)
 
-dictionary of default settings for a GCMC simulation.
-you must pass these settings to [`μVT_sim`](@ref).
-modify any settings by overwriting them. for example, to modify the number of
-burn cycles:
+Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
+xtal at a particular temperature and pressure using a
+Lennard Jones force field.
 
-```
-settings = default_gcmc_settings()
-settings[:n_burn_cycles] = 10000000
-```
+A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
+proposals. Current Markov chain moves implemented are particle insertion/deletion and
+translation.
 
-# list of settings
+# Arguments
+- `xtal::Crystal`: the porous xtal in which we seek to simulate adsorption
+- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
+- `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
+    in the porous material. units: Kelvin (K)
+- `pressure::Float64`: pressure of bulk gas phase in equilibrium with adsorbed phase in the
+    porous material. units: bar
+    the adsorption
+- `ljff::LJForceField`: the molecular model used to describe the
+- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the xtal.
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach
     equilibrium before sampling.
 - `n_sample_cycles::Int`: number of cycles used for sampling
@@ -116,78 +152,26 @@ settings[:n_burn_cycles] = 10000000
 - `calculate_density_grid::Bool`: whether the simulation will keep track of a density grid for adsorbates
 - `density_grid_dx::Float64`: The (approximate) space between voxels (in Angstroms) in the density grid. The number of voxels in the simulation box is computed automatically by [`required_n_pts`](@ref).
 - `density_grid_species::Symbol`: The atomic species within the `molecule` for which we will compute the density grid.
-- `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
-"""
-function default_gcmc_settings()
-    settings = Dict{Symbol, Any}()
-    settings[:n_burn_cycles] = 5000
-    settings[:n_sample_cycles] = 5000
-    settings[:sample_frequency] = 1
-    settings[:verbose] = true
-    settings[:ewald_precision] = 1e-6
-    settings[:eos] = :ideal
-    settings[:autosave] = true
-    settings[:show_progress_bar] = false
-    settings[:write_adsorbate_snapshots] = false
-    settings[:snapshot_frequency] = 1
-    settings[:calculate_density_grid] = false
-    settings[:density_grid_dx] = 1.0
-    settings[:density_grid_species] = nothing
-    settings[:filename_comment] = ""
-    return settings
-end
-
-# TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
-# potential energy change after inserting/deleting/perturbing coordinates of molecules[molecule_id]
-@inline function potential_energy(molecule_id::Int,
-                                  molecules::Array{Molecule, 1},
-                                  framework::Framework,
-                                  ljforcefield::LJForceField,
-                                  eparams::EwaldParams,
-                                  eikr_gh::Eikr,
-                                  eikr_gg::Eikr,
-                                  charged_molecules::Bool,
-                                  charged_framework::Bool)
-    energy = SystemPotentialEnergy()
-    energy.guest_guest.vdw = vdw_energy(molecule_id, molecules, ljforcefield, framework.box)
-    energy.guest_host.vdw = vdw_energy(framework, molecules[molecule_id], ljforcefield)
-    if charged_molecules
-        energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules, molecule_id, eparams, framework.box, eikr_gg))
-        if charged_framework
-            energy.guest_host.coulomb = total(electrostatic_potential_energy(framework, molecules[molecule_id], eparams, eikr_gh))
-        end
-    end
-    return energy
-end
-
-"""
-    results, molecules = μVT_sim(framework, molecule, temperature, pressure,
-                                         ljforcefield; molecules=Molecule[], settings=settings)
-
-Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
-framework at a particular temperature and pressure using a
-Lennard Jones force field.
-
-A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
-proposals. Current Markov chain moves implemented are particle insertion/deletion and
-translation.
-
-# Arguments
-- `framework::Framework`: the porous crystal in which we seek to simulate adsorption
-- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
-- `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
-    in the porous material. units: Kelvin (K)
-- `pressure::Float64`: pressure of bulk gas phase in equilibrium with adsorbed phase in the
-    porous material. units: bar
-    the adsorption
-- `ljforcefield::LJForceField`: the molecular model used to describe the
-- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the framework.
-Note that we assume these coordinates are Cartesian, i.e. corresponding to a unit box.
-    energetics of the adsorbate-adsorbate and adsorbate-host van der Waals interactions.
+- `results_filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                  pressure::Float64, ljff::LJForceField; 
-                 molecules::Array{Molecule, 1}=Molecule[], settings...)
+                 molecules::Array{Molecule{Frac}, 1}=Molecule{Frac}[], 
+                 n_burn_cycles = 5000,
+                 n_sample_cycles = 5000,
+                 sample_frequency = 1,
+                 verbose = true,
+                 ewald_precision = 1e-6,
+                 eos = :ideal,
+                 autosave = true,
+                 show_progress_bar = false,
+                 write_adsorbate_snapshots = false,
+                 snapshot_frequency = 1,
+                 calculate_density_grid = false,
+                 density_grid_dx = 1.0,
+                 density_grid_species = nothing,
+                 results_filename_comment = ""
+                )
     assert_P1_symmetry(xtal)
 
     start_time = time()
@@ -196,7 +180,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     # molecule = deepcopy(molecule_)
 
     if verbose
-        pretty_print(molecule.species, xtal.name, temperature, pressure, ljff)
+        pretty_print(xtal, molecule, temperature, pressure, ljff)
     end
     
     ###
@@ -204,14 +188,14 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     ###
     num_snapshots = 0
     xyz_snapshots_filename = μVT_output_filename(xtal, molecule, temperature, pressure, ljff, 
-                                       settings=settings, extension=".xyz")
+                                                 n_burn_cycles, n_sample_cycles, extension=".xyz")
     xyz_snapshot_file = IOStream(xyz_snapshots_filename) # declare a variable outside of scope so we only open a file if we want to snapshot
     if write_adsorbate_snapshots
         xyz_snapshot_file = open(xyz_snapshot_filename, "w")
     end
 
     ###
-    #  Convert pressure to fugacity using an equation of state
+    #  Convert pressure to fugacity (units: Pascal) using an equation of state
     ###
     fugacity = NaN # Pa
     if eos == :ideal
@@ -224,20 +208,20 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         error("eos=:ideal and eos=:PengRobinson are the only valid options for an equation of state.")
     end
     if verbose
-        @printf("\t%s EOS fugacity = %f bar\n", eos, fugacity / 100000.0)
+        @printf("\t%s equation of state fugacity = %f bar\n", eos, fugacity / 100000.0)
     end
     
     ###
-    #   replicate crystal so that nearest image convention can be applied for short-range interactions
+    #   replicate xtal so that nearest image convention can be applied for short-range interactions
     ###
     repfactors = replication_factors(xtal.box, ljff)
     xtal = replicate(xtal, repfactors) # frac coords still in [0, 1]
 
-    ###
-    #   put molecule in fractional coords based on *replicated* crystal
-    #   (important this is *after* replication of xtal)
-    ###
-    molecule = Frac(molecule, xtal.box)
+ #     ###
+ #     #   put molecule in fractional coords based on *replicated* xtal
+ #     #   (important this is *after* replication of xtal)
+ #     ###
+ #     molecule = Frac(molecule, xtal.box)
 
     ###
     #   Density grid for adsorbate
@@ -256,7 +240,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 )
         end
     end
-    # Initialize a density grid based on the *simulation box* (not framework box passed in) and the passed in density_grid_dx
+    # Initialize a density grid based on the *simulation box* (not xtal box passed in) and the passed in density_grid_dx
     # Calculate `n_pts`, number of voxels in grid, based on the sim box and specified voxel spacing
     n_pts = (0, 0, 0) # don't store a huge grid if we aren't tracking a density grid
     if calculate_density_grid
@@ -265,13 +249,18 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     density_grid = Grid(xtal.box, n_pts, zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
 
     if verbose
-        @printf("\tFramework replicated (%d,%d,%d) for short-range cutoff of %f Å\n",
+        println("\tthe crystal:")
+        @printf("\t\treplicated (%d,%d,%d) for short-range cutoff of %f Å\n",
                 repfactors[1], repfactors[2], repfactors[3],
-                sqrt(ljforcefield.cutoffradius_squared))
-        println("\tFramework crystal density: ", crystal_density(framework))
-        println("\tFramework chemical formula: ", chemical_formula(framework))
-        println("\tTotal number of atoms: ", framework.atoms.n_atoms)
-        println("\tTotal number of point charges: ", framework.charges.n_charges)
+                sqrt(ljff.r²_cutoff))
+        println("\t\tdensity [kg/m³]: ", crystal_density(xtal))
+        println("\t\tchemical formula: ", chemical_formula(xtal))
+        println("\t\t# atoms: ", xtal.atoms.n)
+        println("\t\t# point charges: ", xtal.charges.n)
+        println("\tthe molecule:")
+        println("\t\tunique species: ", unique(molecule.atoms.species))
+        println("\t\t# atoms: ", molecule.atoms.n)
+        println("\t\t# point charges: ", molecule.charges.n)
         if write_adsorbate_snapshots
             @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
             @printf("\t\tWriting to file: %s\n", xyz_filename)
@@ -286,72 +275,54 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
     end
 
-    if ! (forcefield_coverage(xtal.atoms, ljff) & forcefield_coverage(molecule.atoms, ljforcefield))
+    if ! (forcefield_coverage(xtal.atoms, ljff) & forcefield_coverage(molecule.atoms, ljff))
         error("Missing atoms from forcefield.")
     end
-
-    # Bool's of whether to compute guest-host and/or guest-guest electrostatic energies
-    #   there is no point in going through the computations if all charges are zero!
-    charged_xtal = has_charges(xtal)
-    charged_molecule = has_charges(molecule)
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
-    eparams = setup_Ewald_sum(framework.box, sqrt(ljforcefield.cutoffradius_squared),
-                        verbose=verbose & (charged_framework || charged_molecules),
+    eparams = setup_Ewald_sum(xtal.box, sqrt(ljff.r²_cutoff),
+                        verbose=verbose & (has_charges(molecule) || has_charges(xtal)),
                         ϵ=ewald_precision)
-    eikr_gh = Eikr(framework, eparams)
+    eikr_gh = Eikr(xtal, eparams)
     eikr_gg = Eikr(molecule, eparams)
 
     # initiate system energy to which we increment when MC moves are accepted
     system_energy = SystemPotentialEnergy()
-    # if we don't start with an emtpy framework, compute energy of starting configuration
+    # if we don't start with an emtpy xtal, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
+        # some checks
         for m in molecules
-            # set fractional coords of these molecules consistent with framework box
-            set_fractional_coords!(m, framework.box)
             # ensure molecule template matches species of starting molecules.
             @assert m.species == molecule.species "initializing with wrong molecule species"
             # assert that the molecules are inside the simulation box
-            @assert (! outside_box(m)) "initializing with molecules outside simulation box!"
+            @assert inside(m) "initializing with molecules outside simulation box!"
             # ensure pair-wise bond distances match template
-            @assert isapprox(pairwise_atom_distances(m, framework.box),
-                             pairwise_atom_distances(molecule, framework.box),
-                             atol=1e-10) "bond lengths between atoms in molecules initilized with do not match template"
-            @assert isapprox(pairwise_charge_distances(m, framework.box),
-                             pairwise_charge_distances(molecule, framework.box),
-                             atol=1e-10) "distances between charges in molecules initilized with do not match template"
+            @assert ! distortion(m, Frac(molecule, xtal.box), xtal.box)
         end
 
-        system_energy.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
-        system_energy.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
-        system_energy.guest_host.coulomb = total(total_electrostatic_potential_energy(framework, molecules,
-                                                    eparams, eikr_gh))
-        system_energy.guest_guest.coulomb = total(electrostatic_potential_energy(molecules,
-                                            eparams, framework.box, eikr_gg))
-
-        # assert calculated system energy consistent with checkpoint
-        if checkpoint != Dict()
-            if ! isapprox(system_energy, checkpoint["system_energy"])
-                error("system_energy from checkpoint not consistent with configuration of molecules!")
-            end
-        end
+        system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
+        system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
+        system_energy.gh.es = total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
+        system_energy.gg.es = total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
     end
 
     if show_progress_bar
         progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
     end
 
-    # define probabilty of proposing each type of MC move here.
+    ####
+    #   proposal probabilities
+    ###
     mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
     # set defaults
     mc_proposal_probabilities[INSERTION] = 0.35
     mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
     mc_proposal_probabilities[REINSERTION] = 0.05
-    if rotatable(molecule)
+    if needs_rotations(molecule)
         mc_proposal_probabilities[TRANSLATION] = 0.125
         mc_proposal_probabilities[ROTATION] = 0.125
     else
@@ -362,8 +333,9 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     # StatsBase.jl functionality for sampling
     mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
     if verbose
+        println("Markov chain proposals:")
         for p = 1:N_PROPOSAL_TYPES
-            @printf("\tProbability of %s: %f\n", PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
+            @printf("\t\tprobability of %s: %f\n", PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
         end
     end
 
@@ -378,16 +350,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     N_CYCLES_PER_BLOCK = floor(Int, n_sample_cycles / N_BLOCKS)
 
     markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
-    if checkpoint != Dict()
-        gcmc_stats = checkpoint["gcmc_stats"]
-        current_block = checkpoint["current_block"]
-        markov_counts = checkpoint["markov_counts"]
-    end
 
     # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
-    markov_chain_time = (checkpoint != Dict()) ? checkpoint["markov_chain_time"] : 0
-    outer_cycle_start = (checkpoint != Dict()) ? checkpoint["outer_cycle"] + 1 : 1
+    markov_chain_time = 0
+    outer_cycle_start = 1
     for outer_cycle = outer_cycle_start:(n_burn_cycles + n_sample_cycles)
         if show_progress_bar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
@@ -400,19 +367,18 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
             markov_counts.n_proposed[which_move] += 1
 
             if which_move == INSERTION
-                random_insertion!(molecules, framework.box, molecule)
+                random_insertion!(molecules, xtal.box, molecule)
 
-                energy = potential_energy(length(molecules), molecules, framework,
-                                                ljforcefield, eparams, eikr_gh, eikr_gg,
-                                                charged_molecules, charged_framework)
+                ΔE = potential_energy(length(molecules), molecules, xtal,
+                                      ljff, eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacity * framework.box.Ω / (length(molecules) * KB *
-                        temperature) * exp(-sum(energy) / temperature)
+                if rand() < fugacity * xtal.box.Ω / (length(molecules) * KB *
+                        temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
 
-                    system_energy += energy
+                    system_energy += ΔE
                 else
                     # reject the move, remove the inserted molecule
                     pop!(molecules)
@@ -422,35 +388,32 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 molecule_id = rand(1:length(molecules))
 
                 # compute the potential energy of the molecule we propose to delete
-                energy = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, eikr_gh, eikr_gg,
-                                          charged_molecules, charged_framework)
+                ΔE = potential_energy(molecule_id, molecules, xtal, ljff,
+                                      eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for Deletion
                 if rand() < length(molecules) * KB * temperature / (fugacity *
-                        framework.box.Ω) * exp(sum(energy) / temperature)
+                        xtal.box.Ω) * exp(sum(ΔE) / temperature)
                     # accept the deletion, delete molecule, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
 
                     remove_molecule!(molecule_id, molecules)
 
-                    system_energy -= energy
+                    system_energy -= ΔE
                 end
             elseif (which_move == TRANSLATION) && (length(molecules) != 0)
                 # propose which molecule whose coordinates we should perturb
                 molecule_id = rand(1:length(molecules))
 
                 # energy of the molecule before it was translated
-                energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                          eparams, eikr_gh, eikr_gg,
-                                          charged_molecules, charged_framework)
+                energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
+                                              eparams, eikr_gh, eikr_gg)
 
-                old_molecule = random_translation!(molecules[molecule_id], framework.box)
+                old_molecule = random_translation!(molecules[molecule_id], xtal.box)
 
                 # energy of the molecule after it is translated
-                energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, eikr_gh, eikr_gg,
-                                              charged_molecules, charged_framework)
+                energy_new = potential_energy(molecule_id, molecules, xtal, ljff,
+                                              eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for translation
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -467,20 +430,18 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 molecule_id = rand(1:length(molecules))
 
                 # energy of the molecule before we rotate it
-                energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, eikr_gh, eikr_gg,
-                                              charged_molecules, charged_framework)
+                energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
+                                              eparams, eikr_gh, eikr_gg)
 
                 # store old molecule to restore old position in case move is rejected
                 old_molecule = deepcopy(molecules[molecule_id])
 
                 # conduct a random rotation
-                rotate!(molecules[molecule_id], framework.box)
+                random_rotation!(molecules[molecule_id], xtal.box)
 
                 # energy of the molecule after it is translated
-                energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, eikr_gh, eikr_gg,
-                                              charged_molecules, charged_framework)
+                energy_new = potential_energy(molecule_id, molecules, xtal, ljff,
+                                              eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for rotation
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -497,17 +458,15 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 molecule_id = rand(1:length(molecules))
 
                 # compute the potential energy of the molecule we propose to re-insert
-                energy_old = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                             eparams, eikr_gh, eikr_gg,
-                                             charged_molecules, charged_framework)
+                energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
+                                             eparams, eikr_gh, eikr_gg)
 
                 # reinsert molecule; store old configuration of the molecule in case proposal is rejected
-                old_molecule = random_reinsertion!(molecules[molecule_id], framework.box)
+                old_molecule = random_reinsertion!(molecules[molecule_id], xtal.box)
 
                 # compute the potential energy of the molecule in its new configuraiton
-                energy_new = potential_energy(molecule_id, molecules, framework, ljforcefield,
-                                              eparams, eikr_gh, eikr_gg,
-                                              charged_molecules, charged_framework)
+                energy_new = potential_energy(molecule_id, molecules, xtal, ljff,
+                                              eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for reinsertion
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -566,33 +525,13 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
-                write_xyz(framework.box, molecules, xyz_snapshot_file)
+                write_xyz(xtal.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid
                 update_density!(density_grid, molecules, density_grid_species)
             end
             num_snapshots += 1
         end
-
-        if write_checkpoints && (outer_cycle % checkpoint_frequency == 0)
-            checkpoint = Dict("outer_cycle" => outer_cycle,
-                              "molecules" => deepcopy(molecules),
-                              "system_energy" => system_energy,
-                              "current_block" => current_block,
-                              "gcmc_stats" => gcmc_stats,
-                              "markov_counts" => markov_counts,
-                              "markov_chain_time" => markov_chain_time,
-                              "time" => time() - start_time # TODO not quite
-                              )
-            # bring back fractional coords to Cartesian.
-            for m in checkpoint["molecules"]
-                set_fractional_coords_to_unit_cube!(m, framework.box)
-            end
-            if ! isdir(joinpath(PATH_TO_DATA, "gcmc_checkpoints"))
-                mkdir(joinpath(PATH_TO_DATA, "gcmc_checkpoints"))
-            end
-            @save checkpoint_filename checkpoint
-        end # write checkpoint
     end # outer cycles
     # finished MC moves at this point.
 
@@ -604,25 +543,20 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         density_grid.data ./= num_snapshots
     end
 
-    # out of paranoia, assert molecules not outside box and bond lengths preserved
+    # checks
     for m in molecules
-        @assert(! outside_box(m), "molecule outside box!")
-        @assert(isapprox(pairwise_atom_distances(m, framework.box),
-                         pairwise_atom_distances(molecule_, UnitCube()), atol=1e-12),
-                         "drift in atom bond lenghts!")
-        @assert(isapprox(pairwise_charge_distances(m, framework.box),
-                         pairwise_charge_distances(molecule_, UnitCube()), atol=1e-12),
-                         "drift in charge-charge lenghts!")
+        @assert inside(m) "molecule outside box!"
+        @assert ! distortion(m, Frac(molecule, xtal.box), xtal.box, atol=1e-10) "molecules distorted"
     end
 
     # compute total energy, compare to `current_energy*` variables where were incremented
     system_energy_end = SystemPotentialEnergy()
-    system_energy_end.guest_host.vdw = total_vdw_energy(framework, molecules, ljforcefield)
-    system_energy_end.guest_guest.vdw = total_vdw_energy(molecules, ljforcefield, framework.box)
-    system_energy_end.guest_host.coulomb = total(total_electrostatic_potential_energy(framework, molecules,
+    system_energy_end.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
+    system_energy_end.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
+    system_energy_end.gh.es = total(total_electrostatic_potential_energy(xtal, molecules,
                                                  eparams, eikr_gh))
-    system_energy_end.guest_guest.coulomb = total(total_electrostatic_potential_energy(molecules,
-                                        eparams, framework.box, eikr_gg))
+    system_energy_end.gg.es = total(total_electrostatic_potential_energy(molecules,
+                                        eparams, xtal.box, eikr_gg))
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
     if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
@@ -631,9 +565,6 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     @assert (markov_chain_time == sum(markov_counts.n_proposed))
     elapsed_time = time() - start_time
-    if checkpoint != Dict()
-        elapsed_time += checkpoint["time"]
-    end
     if verbose
         @printf("\tEstimated elapsed time: %d seconds\n", elapsed_time)
         println("\tTotal # MC steps: ", markov_chain_time)
@@ -641,9 +572,9 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()
-    results["crystal"] = framework.name
+    results["xtal"] = xtal.name
     results["adsorbate"] = molecule.species
-    results["forcefield"] = ljforcefield.name
+    results["forcefield"] = ljff.name
     results["pressure (bar)"] = pressure
     results["fugacity (bar)"] = fugacity / 100000.0
     results["temperature (K)"] = temperature
@@ -661,10 +592,10 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     # averages
     results["⟨N⟩ (molecules)"]     = avg_n
-    results["⟨U_gh, vdw⟩ (K)"]     = avg_U.guest_host.vdw
-    results["⟨U_gh, electro⟩ (K)"] = avg_U.guest_host.coulomb
-    results["⟨U_gg, vdw⟩ (K)"]     = avg_U.guest_guest.vdw
-    results["⟨U_gg, electro⟩ (K)"] = avg_U.guest_guest.coulomb
+    results["⟨U_gh, vdw⟩ (K)"]     = avg_U.gh.vdw
+    results["⟨U_gh, electro⟩ (K)"] = avg_U.gh.es
+    results["⟨U_gg, vdw⟩ (K)"]     = avg_U.gg.vdw
+    results["⟨U_gg, electro⟩ (K)"] = avg_U.gg.es
     results["⟨U⟩ (K)"] = sum(avg_U)
 
     # variances
@@ -675,10 +606,10 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     # error bars (confidence intervals)
     results["err ⟨N⟩ (molecules)"]     = err_n
-    results["err ⟨U_gh, vdw⟩ (K)"]     = err_U.guest_host.vdw
-    results["err ⟨U_gh, electro⟩ (K)"] = err_U.guest_host.coulomb
-    results["err ⟨U_gg, vdw⟩ (K)"]     = err_U.guest_guest.vdw
-    results["err ⟨U_gg, electro⟩ (K)"] = err_U.guest_guest.coulomb
+    results["err ⟨U_gh, vdw⟩ (K)"]     = err_U.gh.vdw
+    results["err ⟨U_gh, electro⟩ (K)"] = err_U.gh.es
+    results["err ⟨U_gg, vdw⟩ (K)"]     = err_U.gg.vdw
+    results["err ⟨U_gg, electro⟩ (K)"] = err_U.gg.es
     results["err ⟨U⟩ (K)"] = sum(err_U)
 
 
@@ -686,11 +617,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     results["⟨N⟩ (molecules/unit cell)"] = avg_n / (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (molecules/unit cell)"] = err_n / (repfactors[1] * repfactors[2] * repfactors[3])
     # (molecules/unit cell) * (mol/6.02 * 10^23 molecules) * (1000 mmol/mol) *
-    #    (unit cell/framework amu) * (amu/ 1.66054 * 10^-24)
+    #    (unit cell/xtal amu) * (amu/ 1.66054 * 10^-24)
     results["⟨N⟩ (mmol/g)"] = results["⟨N⟩ (molecules/unit cell)"] * 1000 /
-        (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
+        (6.022140857e23 * molecular_weight(xtal) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (mmol/g)"] = results["err ⟨N⟩ (molecules/unit cell)"] * 1000 /
-        (6.022140857e23 * molecular_weight(framework) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
+        (6.022140857e23 * molecular_weight(xtal) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
 
     # Markov stats
     for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
@@ -706,23 +637,25 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         print_results(results, print_title=false)
     end
 
-    # before returning molecules, convert coords back to Cartesian.
-    for m in molecules
-        set_fractional_coords_to_unit_cube!(m, framework.box)
-    end
+    # return molecules in Cartesian format
+    molecules = Cart.(molecules, xtal.box)
 
     if autosave
-        if ! isdir(joinpath(PATH_TO_DATA, "gcmc_sims"))
-            mkdir(joinpath(PATH_TO_DATA, "gcmc_sims"))
+        if ! isdir(joinpath(PATH_TO_DATA, "sim_results"))
+            mkdir(joinpath(PATH_TO_DATA, "sim_results"))
         end
 
-        save_results_filename = joinpath(PATH_TO_DATA, "gcmc_sims", gcmc_output_filename(framework.name,
-            molecule.species, ljforcefield.name, temperature, pressure, n_burn_cycles, n_sample_cycles,
-            comment=filename_comment, extension=".jld2"))
+        save_results_filename = joinpath(PATH_TO_DATA, 
+                                         "sim_results", 
+                                         μVT_output_filename(xtal, molecule, temperature, pressure, 
+                                                             ljff, n_burn_cycles, n_sample_cycles, 
+                                                             comment=results_filename_comment
+                                                             )
+                                        )
 
         @save save_results_filename results
         if verbose
-            println("\tResults dictionary saved in ", save_results_filename)
+            println("\tresults dictionary saved in ", save_results_filename)
         end
     end
 
@@ -730,23 +663,24 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 end # gcmc_simulation
 
 function μVT_output_filename(xtal::Crystal, molecule::Molecule, temperature::Float64,
-                             pressure::Float64, ljff::LJForceField; extension::String=".jld2", settings...)
-        return @sprintf("μVT_%s_%s_%.3f_%.7f_%s_%d_%d",
-            xtal.name,
+                             pressure::Float64, ljff::LJForceField, n_burn_cycles::Int, 
+                             n_sample_cycles::Int; comment::String="", extension::String=".jld2")
+        return @sprintf("μVT_%s_in_%s_%.3fK_%.7fbar_%s_%dburn_%dsample",
             molecule.species,
+            xtal.name,
             temperature,
             pressure,
             ljff.name,
-            settings[:n_burn_cycles],
-            settings[:n_sample_cycles]
-            ) * extension
+            n_burn_cycles,
+            n_sample_cycles
+            ) * comment * extension
 end
 
 function print_results(results::Dict; print_title::Bool=true)
     if print_title
         # already print in GCMC tests...
         @printf("GCMC simulation of %s in %s at %f K and %f bar pressure, %f bar fugacity using %s forcefield.\n\n",
-                results["adsorbate"], results["crystal"], results["temperature (K)"],
+                results["adsorbate"], results["xtal"], results["temperature (K)"],
                 results["pressure (bar)"], results["fugacity (bar)"] / 100000.0, results["forcefield"])
     end
 
@@ -783,14 +717,13 @@ function print_results(results::Dict; print_title::Bool=true)
     return
 end
 
-function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Float64,
-                      pressure::Float64, ljff::LJForceField)
+function pretty_print(xtal::Crystal, molecule::Molecule, temperature::Float64, pressure::Float64, ljff::LJForceField)
     print("Simulating ")
     printstyled("(μVT)"; color=:yellow)
     print(" adsorption of ")
-    printstyled(adsorbate; color=:green)
+    printstyled(molecule.species; color=:green)
     print(" in ")
-    printstyled(frameworkname; color=:green)
+    printstyled(xtal.name; color=:green)
     print(" at ")
     printstyled(@sprintf("%f K", temperature); color=:green)
     print(" and ")
@@ -801,16 +734,14 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
 end
 
 """
-    results = stepwise_adsorption_isotherm(framework, molecule, temperature, pressures,
-                                  ljforcefield; n_sample_cycles=5000,
+    results = stepwise_adsorption_isotherm(xtal, molecule, temperature, pressures,
+                                  ljff; n_sample_cycles=5000,
                                   n_burn_cycles=5000, sample_frequency=1,
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
-                                  load_checkpoint_file=false, checkpoint=Dict(),
-                                  write_checkpoints=false, checkpoint_frequency=50,
                                   write_adsorbate_snapshots=false,
                                   snapshot_frequency=1, calculate_density_grid=false,
                                   density_grid_dx=1.0, density_grid_species=nothing,
-                                  filename_comment="", show_progress_bar=false)
+                                  results_filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
@@ -822,45 +753,40 @@ differ significantly from the previous pressure), we can reduce the number of bu
 required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
-function stepwise_adsorption_isotherm(framework::Framework,
+function stepwise_adsorption_isotherm(xtal::Crystal,
                                       molecule::Molecule,
                                       temperature::Float64,
                                       pressures::Array{Float64, 1},
-                                      ljforcefield::LJForceField;
+                                      ljff::LJForceField;
                                       n_burn_cycles::Int=5000, n_sample_cycles::Int=5000,
                                       sample_frequency::Int=1, verbose::Bool=true,
                                       ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-                                      load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
-                                      checkpoint_frequency::Int=50, write_checkpoints::Bool=false,
                                       show_progress_bar::Bool=false,
                                       write_adsorbate_snapshots::Bool=false,
                                       snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
                                       density_grid_dx::Float64=1.0,
                                       density_grid_species::Union{Nothing, Symbol}=nothing,
-                                      filename_comment::AbstractString="")
+                                      results_filename_comment::AbstractString="")
 
-    # simulation only works if framework is in P1
-    assert_P1_symmetry(framework)
+    # simulation only works if xtal is in P1
+    assert_P1_symmetry(xtal)
 
     results = Dict{String, Any}[] # push results to this array
-    molecules = Molecule[] # initiate with empty framework
+    molecules = Molecule[] # initiate with empty xtal
     for (i, pressure) in enumerate(pressures)
-        result, molecules = gcmc_simulation(framework, molecule, temperature, pressure,
-                                            ljforcefield,
+        result, molecules = gcmc_simulation(xtal, molecule, temperature, pressure,
+                                            ljff,
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
                                             sample_frequency=sample_frequency,
                                             verbose=verbose, molecules=molecules, # essential step here
                                             ewald_precision=ewald_precision, eos=eos,
-                                            load_checkpoint_file=load_checkpoint_file,
-                                            checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
-                                            write_checkpoints=write_checkpoints, show_progress_bar=show_progress_bar,
                                             write_adsorbate_snapshots=write_adsorbate_snapshots,
                                             snapshot_frequency=snapshot_frequency,
                                             calculate_density_grid=calculate_density_grid,
                                             density_grid_dx=density_grid_dx,
                                             density_grid_species=density_grid_species,
-                                            filename_comment=filename_comment)
+                                            results_filename_comment=results_filename_comment)
         push!(results, result)
     end
 
@@ -868,16 +794,14 @@ function stepwise_adsorption_isotherm(framework::Framework,
 end
 
 """
-    results = adsorption_isotherm(framework, molecule, temperature, pressures,
-                                  ljforcefield; n_sample_cycles=5000,
+    results = adsorption_isotherm(xtal, molecule, temperature, pressures,
+                                  ljff; n_sample_cycles=5000,
                                   n_burn_cycles=5000, sample_frequency=1,
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
-                                  load_checkpoint_file=false, checkpoint=Dict(),
-                                  write_checkpoints=false, checkpoint_frequency=50,
                                   write_adsorbate_snapshots=false,
                                   snapshot_frequency=1, calculate_density_grid=false,
                                   density_grid_dx=1.0, density_grid_species=nothing,
-                                  filename_comment="", show_progress_bar=false)
+                                  results_filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
@@ -885,44 +809,40 @@ The only exception is that we pass an array of pressures. To give Julia access t
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
-function adsorption_isotherm(framework::Framework,
+function adsorption_isotherm(xtal::Crystal,
                              molecule::Molecule,
                              temperature::Float64,
                              pressures::Array{Float64, 1},
-                             ljforcefield::LJForceField;
+                             ljff::LJForceField;
                              n_burn_cycles::Int=5000, n_sample_cycles::Int=5000,
                              sample_frequency::Int=1, verbose::Bool=true,
                              ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-                             load_checkpoint_file::Bool=false, checkpoint::Dict=Dict(),
-                             checkpoint_frequency::Int=50, write_checkpoints::Bool=false,
                              show_progress_bar::Bool=false,
                              write_adsorbate_snapshots::Bool=false,
                              snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
                              density_grid_dx::Float64=1.0,
                              density_grid_species::Union{Nothing, Symbol}=nothing,
-                             filename_comment::AbstractString="")
+                             results_filename_comment::AbstractString="")
 
-    # simulation only works if framework is in P1
-    assert_P1_symmetry(framework)
+    # simulation only works if xtal is in P1
+    assert_P1_symmetry(xtal)
 
     # make a function of pressure only to facilitate uses of `pmap`
-    run_pressure(pressure::Float64) = gcmc_simulation(framework, molecule, temperature,
-                                                      pressure, ljforcefield,
+    run_pressure(pressure::Float64) = gcmc_simulation(xtal, molecule, temperature,
+                                                      pressure, ljff,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
                                                       sample_frequency=sample_frequency,
                                                       verbose=verbose,
                                                       ewald_precision=ewald_precision,
-                                                      eos=eos, load_checkpoint_file=load_checkpoint_file,
-                                                      checkpoint=checkpoint, checkpoint_frequency=checkpoint_frequency,
-                                                      write_checkpoints=write_checkpoints,
+                                                      eos=eos, 
                                                       show_progress_bar=show_progress_bar,
                                                       write_adsorbate_snapshots=write_adsorbate_snapshots,
                                                       snapshot_frequency=snapshot_frequency,
                                                       calculate_density_grid=calculate_density_grid,
                                                       density_grid_dx=density_grid_dx,
                                                       density_grid_species=density_grid_species,
-                                                      filename_comment=filename_comment)[1] # only return results
+                                                      results_filename_comment=results_filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
     ids = sortperm(pressures, rev=true)

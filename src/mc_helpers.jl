@@ -8,14 +8,18 @@ needs_rotations(molecule::Molecule) = molecule.atoms.n + molecule.charges.n > 1
 const N_BLOCKS = 5
 
 function random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart})
+    # copy template
     molecule = deepcopy(template)
-
+    # rotate
     if needs_rotations(molecule)
         random_rotation!(molecule)
     end
+    # convert to fractional
     molecule = Frac(molecule, box)
+    # translate to uniform random fractional coords in the box
     com = Frac(rand(3))
     translate_to!(molecule, com)
+    # add the molecule to the array of molecules
     push!(molecules, molecule)
 end
 
@@ -42,8 +46,6 @@ function apply_periodic_boundary_condition!(molecule::Molecule{Frac})
         end
     end
 
-    @assert inside(new_com)
-
     # translate molecule to new center of mass if it was found to be outside of the box
     translate_to!(molecule, new_com)
 end
@@ -55,7 +57,7 @@ function random_translation!(molecule::Molecule{Frac}, box::Box)
     # peturb in Cartesian coords in a random cube centered at current coords.
     dx = Cart(δ * (rand(3) .- 0.5)) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx, box)
-
+    
     # done, unless the molecule has moved outside of the box, then apply PBC
     apply_periodic_boundary_condition!(molecule)
 

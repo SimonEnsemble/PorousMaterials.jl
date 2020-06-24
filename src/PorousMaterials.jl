@@ -99,7 +99,7 @@ include("mc_helpers.jl")
 include("grid.jl")
 include("eos.jl")
 include("henry.jl")
- # include("gcmc.jl")
+include("gcmc.jl")
  # include("generic_rotations.jl")
 
 export
@@ -141,7 +141,7 @@ export
  #     partition_framework, subtract_atoms,
  # 
     # molecule.jl
-    Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion,
+    Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion, distortion,
   
     # forcefield.jl
     LJForceField, replication_factors, forcefield_coverage,
@@ -152,11 +152,11 @@ export
     # vdw_energetics.jl
     lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
-    # ElectrostaticEnergetics.jl
+    # electrostatics.jl
     electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
     setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
 
-    # MChelpers.jl
+    # mc_helpers.jl
     random_insertion!, remove_molecule!, random_translation!, random_reinsertion!, needs_rotations,
 
     # Grid.jl
@@ -166,12 +166,12 @@ export
  # 
     # EOS.jl
     calculate_properties, PengRobinsonFluid, VdWFluid,
+
+    # gcmc.jl
+    μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
+    μVT_output_filename, GCMCstats, MarkovCounts,
  # 
- #     # GCMC.jl
- #     μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
- #     gcmc_result_savename, GCMCstats, MarkovCounts,
- # 
-    # Henry.jl
+    # henry.jl
     henry_coefficient, henry_result_savename
  # 
  #     # generic_rotations.jl
