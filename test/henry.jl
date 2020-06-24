@@ -4,7 +4,7 @@ using Distributed
 
 @warn "This will take a while..."
 
-insertions_per_volume = 10
+insertions_per_volume = 500
 
 @testset "Henry coefficient tests" begin
     ###
@@ -17,8 +17,8 @@ insertions_per_volume = 10
 
     result = henry_coefficient(crystal, molecule, temperature, ljff,
                                insertions_per_volume=insertions_per_volume, verbose=true)
-    @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 0.00985348, atol=0.0002)
-    @test isapprox(result["⟨U⟩ (kJ/mol)"], -39.6811, atol=0.1)
+    @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 0.00985348, rtol=0.025)
+    @test isapprox(result["⟨U⟩ (kJ/mol)"], -39.6811, rtol=0.025)
 
     ###
     #  Henry test 2: CO2 in CAXVII_clean.cif
@@ -30,8 +30,8 @@ insertions_per_volume = 10
 
     result = henry_coefficient(crystal, molecule, temperature, ljff,
                                insertions_per_volume=insertions_per_volume, verbose=true)
-    @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 2.88317e-05, atol=1.5e-7)
-    @test isapprox(result["⟨U⟩ (kJ/mol)"], -18.69582223, atol=0.1)
+    @test isapprox(result["henry coefficient [mol/(kg-Pa)]"], 2.88317e-05, rtol=0.025)
+    @test isapprox(result["⟨U⟩ (kJ/mol)"], -18.69582223, rtol=0.025)
     # should not change molecule passed...
     @test isapprox(molecule, Molecule("CO2"))
 
