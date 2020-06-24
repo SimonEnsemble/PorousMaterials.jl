@@ -313,21 +313,29 @@ end
 function distortion(molecule::Molecule{Frac}, ref_molecule::Molecule{Frac}, box::Box;
                            atol::Float64=1e-12, throw_warning::Bool=true)
     @assert molecule.species == ref_molecule.species
-    # loop over all pairs
-    for i = 1:molecule.atoms.n
-        for j = (i+1):molecule.atoms.n
-            # molecule
-            dxf = molecule.atoms.coords.xf[:, i] - molecule.atoms.coords.xf[:, j]
-            dx = box.f_to_c * dxf
-            r = norm(dx)
-            # ref molecule
-            dxf_ref = ref_molecule.atoms.coords.xf[:, i] - ref_molecule.atoms.coords.xf[:, j]
-            dx_ref = box.f_to_c * dxf_ref
-            r_ref = norm(dx_ref)
-            if ! isapprox(r, r_ref, atol=atol)
-                return true 
-            end
-        end
+    if ! isapprox(pairwise_distances(molecule.atoms.coords,     box, false),
+                  pairwise_distances(ref_molecule.atoms.coords, box, false), atol=atol)
+        return true
     end
+    if ! isapprox(pairwise_distances(molecule.charges.coords,     box, false),
+                  pairwise_distances(ref_molecule.charges.coords, box, false), atol=atol)
+        return true
+    end
+    # loop over all pairs
+ #     for i = 1:molecule.atoms.n
+ #         for j = (i+1):molecule.atoms.n
+ #             # molecule
+ #             dxf = molecule.atoms.coords.xf[:, i] - molecule.atoms.coords.xf[:, j]
+ #             dx = box.f_to_c * dxf
+ #             r = norm(dx)
+ #             # ref molecule
+ #             dxf_ref = ref_molecule.atoms.coords.xf[:, i] - ref_molecule.atoms.coords.xf[:, j]
+ #             dx_ref = box.f_to_c * dxf_ref
+ #             r_ref = norm(dx_ref)
+ #             if ! isapprox(r, r_ref, atol=atol)
+ #                 return true 
+ #             end
+ #         end
+ #     end
     return false # if made it this far...
 end

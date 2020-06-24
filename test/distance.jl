@@ -96,5 +96,18 @@ using LinearAlgebra
     @test atoms_dm.n == atoms.n - 2
     @test isapprox(atoms[1:5], atoms_dm[1:5])
     @test isapprox(atoms[8:end], atoms_dm[6:end])
+    
+    ###
+    # pairwise distances
+    ###
+    coords = Crystal("distance_tester.cif").atoms.coords
+    box = Crystal("distance_tester.cif").box
+    pd = PorousMaterials.pairwise_distances(coords, box, true)
+    @test isapprox(pd[2, 2], 0.0) # zero on diag
+    @test isapprox(pd[1, 2], pd[2, 1]) # symmetry
+    @test isapprox(pd[1, 2], 2.835, atol=0.01) # calculated in avogadro
+    @test isapprox(pd[3, 2], 6.031, atol=0.01) # calculated in avogadro
+    pd = PorousMaterials.pairwise_distances(coords, box, false)
+    @test isapprox(pd[3, 2], 17.31, atol=0.01) # calculated in avogadro
 end
 end

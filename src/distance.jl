@@ -58,6 +58,21 @@ end
 distance(atoms::Atoms, box::Box, i::Int, j::Int, apply_pbc::Bool) = distance(atoms.coords, box, i, j, apply_pbc)
 distance(charges::Charges, box::Box, i::Int, j::Int, apply_pbc::Bool) = distance(charges.coords, box, i, j, apply_pbc)
 
+function pairwise_distances(coords::Frac, box::Box, apply_pbc::Bool)
+    n = length(coords)
+    pd = zeros(n, n)
+    for i = 1:n
+        for j = 1:n
+            pd[i, j] = distance(coords, box, i, j, apply_pbc)
+            if i > j
+                pd[i, j] =  pd[j, i]
+            end
+        end
+    end
+    return pd
+end
+pairwise_distances(coords::Cart, box::Box, apply_pbc::Bool) = pairwise_distances(Frac(coords, box), box, apply_pbc)
+
 """
     overlap_flag, overlap_pairs = overlap(frac_coords, box, apply_pbc; tol=0.1)
     overlap_flag, overlap_pairs = overlap(crystal)

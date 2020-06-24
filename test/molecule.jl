@@ -303,5 +303,17 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     m_f_c = Cart(m_f, box)
     @test isapprox(m_f_c.charges, m.charges)
     @test isapprox(m_f_c.atoms, m.atoms)
+
+    # distorted
+    box = Crystal("SBMOF-1.cif").box
+    m = Frac(Molecule("H2S"), box)
+    m_ref = Frac(Molecule("H2S"), box)
+    random_translation!(m, box)
+    random_translation!(m_ref, box)
+    random_rotation!(m, box)
+    random_rotation!(m_ref, box)
+    @test ! PorousMaterials.distortion(m, m_ref, box)
+    m.atoms.coords.xf[:, 1] += randn(3)
+    @test PorousMaterials.distortion(m, m_ref, box)
 end
 end
