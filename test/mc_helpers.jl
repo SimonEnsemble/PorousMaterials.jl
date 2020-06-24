@@ -111,6 +111,7 @@ using Random
     molecules = Molecule{Frac}[]
     box = Crystal("SBMOF-1.cif").box
     m = Molecule("H2S")
+    @test needs_rotations(m)
     for i = 1:10
         random_insertion!(molecules, box, m)
     end

@@ -28,7 +28,7 @@ using Random
     @test isapprox(M, M_opt, rtol=1e-6)
     @test isapprox(K, K_opt, rtol=1e-6)
 
-    df = CSV.read("Ni-MOF-74_isotherm_test.csv")
+    df = CSV.read(joinpath("data", "Ni-MOF-74_isotherm_test.csv"))
     x = fit_adsorption_isotherm(df, Symbol("P(bar)"), Symbol("mol_m3"), :langmuir)
     M_opt, K_opt = x["M"], x["K"]
     @test isapprox(M_opt, 8546.37534030619, atol=1e-5)

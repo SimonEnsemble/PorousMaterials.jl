@@ -1,6 +1,4 @@
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
-# Start Test Script
-
 include("box.jl")
 include("matter.jl")
 include("crystal.jl")
@@ -12,12 +10,8 @@ include("vdw_energetics.jl")
 include("energy_utilities.jl")
 include("electrostatics.jl")
 include("mc_helpers.jl")
- # include("guest_guest_energetics_test.jl")
 include("eos.jl")
- # include("simulation_rules_test.jl")
- # include("gcmc_checkpoints_test.jl")
- # include("henry_checkpoint_test.jl")
+include("assert_p1_symmetry.jl")
 include("grid.jl")
- # include("path_test.jl")
- # include("misc_test.jl")
  # include("generic_rotation_test.jl")
+include("paths.jl") # this must be last b/c it changes file paths
