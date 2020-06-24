@@ -7,8 +7,8 @@ using JLD2
 using Printf
 using Statistics
 
-ig_tests = true
-xe_in_sbmof1_tests = true
+ig_tests = false
+xe_in_sbmof1_tests = false
 co2_tests = true
 density_grid_test = false
 
@@ -19,20 +19,21 @@ density_grid_test = false
 #  basically, this tests the acceptance rules when energy is always zero.
 #
 if ig_tests
-    empty_space = Crystal("empty_box.cssr") # zero atoms!
+    empty_space = replicate(Crystal("empty_box.cssr"), (3,3,3)) # zero atoms!
     ideal_gas = Molecule("IG")
     @assert empty_space.atoms.n == 0
     forcefield = LJForceField("Dreiding")
     temperature = 298.0
-    fugacity = 10.0 .^ [0.1, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
+    fugacity = 10.0 .^ [2.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
     # according to ideal gas law, number of molecules in box should be:
-    n_ig = fugacity * empty_space.box.Ω / (PorousMaterials.KB * temperature)
+    n_ig = fugacity * empty_space.box.Ω / (PorousMaterials.KB * temperature) * 100000.0
     n_sim = similar(n_ig)
     for i = 1:length(fugacity)
         results, molecules = μVT_sim(empty_space, ideal_gas, temperature, fugacity[i], forcefield,
-                    n_burn_cycles=25, n_sample_cycles=25, verbose=true)
+                    n_burn_cycles=100000, n_sample_cycles=100000, verbose=false)
 #                    n_burn_cycles=100000, n_sample_cycles=100000)
-        @test isapprox(results["⟨N⟩ (molecules/unit cell)"], n_ig[i], atol=1.0)
+        @printf("fugacity %f, n_ig = %f, n_sim = %f\n", fugacity[i], n_ig[i], results["⟨N⟩ (molecules/unit cell)"])
+        @test isapprox(results["⟨N⟩ (molecules/unit cell)"], n_ig[i], rtol=0.05)
     end
 end
 
@@ -63,7 +64,7 @@ if xe_in_sbmof1_tests
     test_molec_unit_cell = [0.2568, 1.3806, 1.9257]
 
  #     results = adsorption_isotherm(sbmof1, 298.0, test_fugacities, molecule, dreiding_forcefield, n_burn_cycles=20, n_sample_cycles=20, verbose=true)
-    results = stepwise_adsorption_isotherm(sbmof1, molecule, 298.0, test_fugacities, dreiding_forcefield,
+    results = stepwise_adsorption_isotherm(xtal, molecule, 298.0, test_fugacities, ljff,
                         n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, show_progress_bar=true)
 
     for i = 1:length(test_fugacities)
@@ -117,20 +118,8 @@ if co2_tests
     co2 = Molecule("CO2EPM2")
 
     # make sure bond lenghts are preserved
-    bls = pairwise_atom_distances(co2, UnitCube())
     results, molecules = μVT_sim(zif71, co2, 298.0, 1.0, ff,
                         n_burn_cycles=25, n_sample_cycles=25, verbose=false)
-    @printf("Testing that bond lenghts are preserved for %d molecules.\n", length(molecules))
-    for m in molecules
-        # bond lengths preserved?
-        @assert isapprox(bls, pairwise_atom_distances(m, UnitCube()))
-        # charges hv same coords as atoms?
-        for i = 1:3
-            @assert isapprox(m.atoms.xf[:, i], m.charges.xf[:, i])
-        end
-        @assert isapprox(m.xf_com, m.atoms.xf[:, 1]) # C atom is center
-    end
-
 
     # load in test data
     df = CSV.read("greg_chung/zif_71_co2_isotherm_w_preos_fugacity.csv")

@@ -156,7 +156,7 @@ translation.
 """
 function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                  pressure::Float64, ljff::LJForceField; 
-                 molecules::Array{Molecule{Frac}, 1}=Molecule{Frac}[], 
+                 molecules::Array{Molecule{Cart}, 1}=Molecule{Cart}[], 
                  n_burn_cycles = 5000,
                  n_sample_cycles = 5000,
                  sample_frequency = 1,
@@ -216,12 +216,9 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     ###
     repfactors = replication_factors(xtal.box, ljff)
     xtal = replicate(xtal, repfactors) # frac coords still in [0, 1]
-
- #     ###
- #     #   put molecule in fractional coords based on *replicated* xtal
- #     #   (important this is *after* replication of xtal)
- #     ###
- #     molecule = Frac(molecule, xtal.box)
+    
+    # convert molecules array to fractional using this box.
+    molecules = Frac.(molecules, xtal.box)
 
     ###
     #   Density grid for adsorbate
@@ -333,7 +330,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     # StatsBase.jl functionality for sampling
     mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
     if verbose
-        println("Markov chain proposals:")
+        println("\tMarkov chain proposals:")
         for p = 1:N_PROPOSAL_TYPES
             @printf("\t\tprobability of %s: %f\n", PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
         end
@@ -660,7 +657,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     end
 
     return results, molecules # summary of statistics and ending configuration of molecules
-end # gcmc_simulation
+end # μVT_sim
 
 function μVT_output_filename(xtal::Crystal, molecule::Molecule, temperature::Float64,
                              pressure::Float64, ljff::LJForceField, n_burn_cycles::Int, 
@@ -744,7 +741,7 @@ end
                                   results_filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
-same as [`gcmc_simulation`](@ref), as this is the function run behind the scenes. An
+same as [`μVT_sim`](@ref), as this is the function run behind the scenes. An
 exception is that we pass an array of pressures. The adsorption isotherm is computed step-
 wise, where the ending configuration from the previous simulation (array of molecules) is
 passed into the next simulation as a starting point. The ordering of `pressures` is
@@ -772,9 +769,9 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
     assert_P1_symmetry(xtal)
 
     results = Dict{String, Any}[] # push results to this array
-    molecules = Molecule[] # initiate with empty xtal
+    molecules = Molecule{Cart}[] # initiate with empty xtal
     for (i, pressure) in enumerate(pressures)
-        result, molecules = gcmc_simulation(xtal, molecule, temperature, pressure,
+        result, molecules = μVT_sim(xtal, molecule, temperature, pressure,
                                             ljff,
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
@@ -804,7 +801,7 @@ end
                                   results_filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
-same as [`gcmc_simulation`](@ref), as this is the function run in parallel behind the scenes.
+same as [`μVT_sim`](@ref), as this is the function run in parallel behind the scenes.
 The only exception is that we pass an array of pressures. To give Julia access to multiple
 cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
@@ -828,7 +825,7 @@ function adsorption_isotherm(xtal::Crystal,
     assert_P1_symmetry(xtal)
 
     # make a function of pressure only to facilitate uses of `pmap`
-    run_pressure(pressure::Float64) = gcmc_simulation(xtal, molecule, temperature,
+    run_pressure(pressure::Float64) = μVT_sim(xtal, molecule, temperature,
                                                       pressure, ljff,
                                                       n_burn_cycles=n_burn_cycles,
                                                       n_sample_cycles=n_sample_cycles,
