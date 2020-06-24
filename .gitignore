@@ -1,8 +1,6 @@
 .extrastuff
 *.cube
 *.cssr
-Tester.jl
-VisualizeTester.jl
 *.swp
 *.cif
 *.xyz
