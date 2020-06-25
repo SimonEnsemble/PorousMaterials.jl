@@ -276,5 +276,17 @@ end
 
     crystal = replicate(Crystal("CAXVII_clean.cif"), (2, 2, 2))
     @test isapprox(sum(crystal.charges.q), 0.0, atol=0.001)
+
+    # high-precision charges in write_cif
+    crystal = Crystal("ADARAA_clean.cif")
+    @test all(crystal.charges.q .!= 0.0) # has charges...
+    @test neutral(crystal, PorousMaterials.NET_CHARGE_TOL) # is neutral...
+    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, "high_precision_charges_test.cif")) # should write charges with more decimals
+    crystal_reloaded = Crystal("high_precision_charges_test.cif")
+    @test isapprox(crystal.charges.q, crystal_reloaded.charges.q, atol=1e-8) # would not hv this precision if didn't write high-precision charges for this one.
+    crystal_not_neutral = crystal.charges.q .= round.(crystal.charges.q, digits=6) # this is what charges would be if stored 6 decimals in .cif and threw away the rest
+    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, "high_precision_charges_test_not_neutral.cif"))
+    @test ! neutral(Crystal("high_precision_charges_test_not_neutral.cif", check_neutrality=false), PorousMaterials.NET_CHARGE_TOL) # not gonna be neutral
+    @test_throws ErrorException Crystal("high_precision_charges_test_not_neutral.cif") # should throw error b/c not charge neutral
 end
 end

@@ -30,9 +30,11 @@ end
 Crystal(name::String, box::Box, atoms::Atoms{Frac}, charges::Charges{Frac}) = Crystal(
     name, box, atoms, charges, SimpleGraph(atoms.n), SymmetryInfo())
 
+const NET_CHARGE_TOL = 1e-4 # net charge tolerance
+
 """
     crystal = Crystal(filename;
-        check_neutrality=true, net_charge_tol=0.001, 
+        check_neutrality=true, net_charge_tol=1e-4, 
         check_overlap=true, overlap_tol=0.1,
         convert_to_p1=true, read_bonds_from_file=false, wrap_coords=true,
         include_zero_charges=false) # read from file
@@ -69,7 +71,7 @@ or construct a `Crystal` data structure directly.
 - `symmetry::SymmetryInfo`: symmetry inforomation
 """
 function Crystal(filename::String; 
-                 check_neutrality::Bool=true, net_charge_tol::Float64=0.001, 
+                 check_neutrality::Bool=true, net_charge_tol::Float64=NET_CHARGE_TOL, 
                  check_overlap::Bool=true, overlap_tol::Float64=0.1,
                  convert_to_p1::Bool=true,
                  read_bonds_from_file::Bool=false, wrap_coords::Bool=true,
@@ -646,7 +648,7 @@ crystal_density(crystal::Crystal) = molecular_weight(crystal) / crystal.box.Ω *
 """
     simulation_ready_crystal = apply_symmetry_operations(non_p1_crystal)
                                                          check_neutrality=true,
-                                                         net_charge_tol=0.001,
+                                                         net_charge_tol=1e-4,
                                                          check_overlap=true,
                                                          remove_duplicates=true,
                                                          wrap_coordstrue)
@@ -665,7 +667,7 @@ Convert a crystal to P1 symmetry based on internal symmetry rules. This will ret
     symmetry. The new symmetry rules will be the P1 symmetry rules
 """
 function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true,
-                                   net_charge_tol::Float64=0.001, check_overlap::Bool=true,
+                                   net_charge_tol::Float64=NET_CHARGE_TOL, check_overlap::Bool=true,
                                    wrap_coords::Bool=true, remove_duplicates::Bool=true)
     if crystal.symmetry.is_p1
         return crystal
@@ -854,8 +856,15 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
     else
         @printf(cif_file, "_atom_site_Cartn_x\n_atom_site_Cartn_y\n_atom_site_Cartn_z\n")
     end
+    high_precision_charges = false # if, for neutrality, need high-precision charges
     if has_charges(crystal)
         @printf(cif_file, "_atom_site_charge\n")
+        # if crystal will not be charge neutral to a 1e-5 tolerance when loading it
+        #    into PorousMaterials.jl, then write higher-precision charges
+        if abs(sum(round.(crystal.charges.q, digits=6))) > NET_CHARGE_TOL
+            @info "writing high-precision charges for " * filename * ".\n"
+            high_precision_charges = true
+        end
     end
 
     idx_to_label = Array{AbstractString, 1}(undef, crystal.atoms.n)
@@ -875,7 +884,11 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
             @printf(cif_file, "%f\t%f\t%f", (crystal.box.f_to_c * crystal.atoms.coords.xf[:, i])...)
         end
         if has_charges(crystal)
-            @printf(cif_file, "\t%f\n", crystal.charges.q[i])
+            if high_precision_charges
+                @printf(cif_file, "\t%.10f\n", crystal.charges.q[i])
+            else
+                @printf(cif_file, "\t%f\n", crystal.charges.q[i])
+            end
         else
             @printf(cif_file, "\n")
         end
