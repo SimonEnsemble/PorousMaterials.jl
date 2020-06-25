@@ -275,7 +275,7 @@ end
     @test frame2.charges.n == frame2.atoms.n
     @test isapprox(frame2.charges.coords, frame2.atoms.coords)
 
-    crystal = replicate(Crystal("CAXVII_clean.cif"), (2, 2, 2))
+    crystal = replicate(Crystal("CAXVII_clean.cif", species_column="_atom_site_type_symbol"), (2, 2, 2))
     @test isapprox(sum(crystal.charges.q), 0.0, atol=0.001)
 
     # high-precision charges in write_cif
