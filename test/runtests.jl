@@ -19,6 +19,7 @@ testfiles = ["box.jl",
              "eos.jl",
              "assert_p1_symmetry.jl",
              "grid.jl",
-             "paths.jl"]
+             #"paths.jl"
+             ]
 
 [runtest(testfile) for testfile in testfiles]
