@@ -124,7 +124,7 @@ using Random
     # SBMOF-1, CAXVILL_clean hv no pockets blocked. test accessibility grid w./o pocket blocking
     molecule = Molecule("CH4")
     forcefield = LJForceField("UFF")
-    for crystal in [Crystal("SBMOF-1.cif"), Crystal("CAXVII_clean.cif", species_column="_atom_site_type_symbol")]
+    for crystal in [Crystal("SBMOF-1.cif"), Crystal("CAXVII_clean.cif")]
         n_pts = required_n_pts(crystal.box, 1.0)
 
         # w./ blocking

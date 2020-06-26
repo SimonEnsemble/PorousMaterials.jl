@@ -275,7 +275,7 @@ end
     @test frame2.charges.n == frame2.atoms.n
     @test isapprox(frame2.charges.coords, frame2.atoms.coords)
 
-    crystal = replicate(Crystal("CAXVII_clean.cif", species_column="_atom_site_type_symbol"), (2, 2, 2))
+    crystal = replicate(Crystal("CAXVII_clean.cif"), (2, 2, 2))
     @test isapprox(sum(crystal.charges.q), 0.0, atol=0.001)
 
     # high-precision charges in write_cif
@@ -298,13 +298,13 @@ end
     xtal = Crystal("SBMOF-1_bad_labels.cif")
     @test xtal.atoms.species[1] == :C1A
 
-    xtal = Crystal("SBMOF-1_bad_labels.cif", species_column="_atom_site_type_symbol")
+    xtal = Crystal("SBMOF-1_bad_labels.cif", species_col=["_atom_site_type_symbol"])
     @test xtal.atoms.species[1] == :C
 
     xtal1 = Crystal("SBMOF-1.cif")
-    xtal2 = Crystal("SBMOF-1.cif", species_column="_atom_site_type_symbol")
+    xtal2 = Crystal("SBMOF-1.cif")
     @test xtal1.atoms.species == xtal2.atoms.species
 
-    @test_throws KeyError Crystal("SBMOF-1.cif", species_column="bogus_column")
+    @test_throws KeyError Crystal("SBMOF-1.cif", species_col=["bogus_column"])
 end
 end

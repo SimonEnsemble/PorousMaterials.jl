@@ -33,7 +33,7 @@ Crystal(name::String, box::Box, atoms::Atoms{Frac}, charges::Charges{Frac}) = Cr
 const NET_CHARGE_TOL = 1e-4 # net charge tolerance
 """
     crystal = Crystal(filename;
-        check_neutrality=true, net_charge_tol=0.001,
+        check_neutrality=true, net_charge_tol=1e-4,
         check_overlap=true, overlap_tol=0.1,
         convert_to_p1=true, read_bonds_from_file=false, wrap_coords=true,
         include_zero_charges=false) # read from file
@@ -68,7 +68,7 @@ or construct a `Crystal` data structure directly.
 - `bonds::SimpleGraph`: Unweighted, undirected graph showing all of the atoms
     that are bonded within the crystal
 - `symmetry::SymmetryInfo`: symmetry inforomation
-- `species_column::String`: which column to use for species identification
+- `species_col::Array{String}`: which column to use for species identification
     for `crystal.atoms.species`
 """
 function Crystal(filename::String;
@@ -77,12 +77,14 @@ function Crystal(filename::String;
                  convert_to_p1::Bool=true,
                  read_bonds_from_file::Bool=false, wrap_coords::Bool=true,
                  include_zero_charges::Bool=false,
-                 species_column::String="_atom_site_label")
+                 species_col::Array{String}=["_atom_site_label", "_atom_site_type_symbol"])
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
         error("I can only read .cif or .cssr crystal structure files.")
     end
+
+    species_column = species_col[1]
 
     # read all lines of crystal structure file
     _f = open(joinpath(PATH_TO_CRYSTALS, filename), "r")
@@ -157,10 +159,6 @@ function Crystal(filename::String;
                 i += 1
                 loop_starts = i
                 while length(split(lines[i])) == 1 && split(lines[i])[1][1] == '_'
-                    """if i == loop_starts
-                        atom_column_name = split(lines[i])[1]
-                    end"""
-                    #atom_column_name = species_column
                     name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
                     # iterate to next line in file
                     i += 1
@@ -220,7 +218,14 @@ function Crystal(filename::String;
                 # =====================
                 elseif fractional && ! atom_info
                     atom_info = true
-                    #atom_column_name = [name for (name, column) in name_to_column if column == 1][end]
+
+                    # Assign species_column by matching to priority list
+                    for col in species_col
+                        if col ∈ keys(name_to_column)
+                            species_column = col
+                            break
+                        end
+                    end
                     if !(species_column ∈ keys(name_to_column))
                         @error "$(species_column) not found!"
                     end
@@ -256,12 +261,13 @@ function Crystal(filename::String;
                 # =====================
                 elseif cartesian && ! atom_info
                     atom_info = true
-                    """atom_column_name = ""
-                    for (name, column) in name_to_column
-                        if column == 1
-                            atom_column_name = name
+                    # Assign species_column by matching to priority list
+                    for col in species_col
+                        if col ∈ keys(name_to_column)
+                            species_column = col
+                            break
                         end
-                    end"""
+                    end
                     if !(species_column ∈ keys(name_to_column))
                         @error "$(species_column) not found!"
                     end
@@ -806,10 +812,10 @@ end
     write_cif(crystal, filename; fractional_coords=true, number_atoms=true)
 
 Write a `crystal::Crystal` to a .cif file with `filename::AbstractString`. If `filename` does
-not include the .cif extension, it will automatically be added. the `fractional_coords` flag 
+not include the .cif extension, it will automatically be added. the `fractional_coords` flag
 allows us to write either fractional or Cartesian coordinates.
 """
-function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords::Bool=true, 
+function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords::Bool=true,
 		   number_atoms::Bool=true)
     if has_charges(crystal)
         if crystal.atoms.n != crystal.charges.n
