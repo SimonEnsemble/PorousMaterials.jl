@@ -31,12 +31,15 @@ Crystal(name::String, box::Box, atoms::Atoms{Frac}, charges::Charges{Frac}) = Cr
     name, box, atoms, charges, SimpleGraph(atoms.n), SymmetryInfo())
 
 const NET_CHARGE_TOL = 1e-4 # net charge tolerance
+
 """
     crystal = Crystal(filename;
         check_neutrality=true, net_charge_tol=1e-4,
         check_overlap=true, overlap_tol=0.1,
         convert_to_p1=true, read_bonds_from_file=false, wrap_coords=true,
-        include_zero_charges=false) # read from file
+        include_zero_charges=false,
+        species_col=["_atom_site_label", "_atom_site_type_symbol"]
+        ) # read from file
 
     crystal = Crystal(name, box, atoms, charges) # construct from matter, no bonds, P1-symmetry assumed
 
@@ -68,8 +71,8 @@ or construct a `Crystal` data structure directly.
 - `bonds::SimpleGraph`: Unweighted, undirected graph showing all of the atoms
     that are bonded within the crystal
 - `symmetry::SymmetryInfo`: symmetry inforomation
-- `species_col::Array{String}`: which column to use for species identification
-    for `crystal.atoms.species`
+- `species_col::Array{String}`: which column to use for species identification for `crystal.atoms.species`. we use a priority list:
+    we check for the first entry of `species_col` in the .cif file; if not present, we then use the second entry, and so on.
 """
 function Crystal(filename::String;
                  check_neutrality::Bool=true, net_charge_tol::Float64=NET_CHARGE_TOL,
@@ -77,15 +80,13 @@ function Crystal(filename::String;
                  convert_to_p1::Bool=true,
                  read_bonds_from_file::Bool=false, wrap_coords::Bool=true,
                  include_zero_charges::Bool=false,
-                 species_col::Array{String}=["_atom_site_label", "_atom_site_type_symbol"])
+                 species_col::Array{String, 1}=["_atom_site_label", "_atom_site_type_symbol"])
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
         error("I can only read .cif or .cssr crystal structure files.")
     end
-
-    species_column = species_col[1]
-
+    
     # read all lines of crystal structure file
     _f = open(joinpath(PATH_TO_CRYSTALS, filename), "r")
     lines = readlines(_f)
@@ -126,6 +127,9 @@ function Crystal(filename::String;
         label_num_to_idx = Dict{AbstractString, Int}()
         fractional = false
         cartesian = false
+        # find later.
+        species_column = "null"
+
         while i <= length(lines)
             line = split(lines[i])
             # Skip empty lines
@@ -174,6 +178,21 @@ function Crystal(filename::String;
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
+                                             
+                # Assign species_column by matching to priority list
+                if haskey(name_to_column, "_atom_site_Cartn_x") || haskey(name_to_column, "_atom_site_fract_x") # to have entered _atom_site loop
+                    found_species_col = false
+                    for col in species_col
+                        if col ∈ keys(name_to_column)
+                            species_column = col
+                            found_species_col = true
+                            break
+                        end
+                    end
+                    if ! found_species_col
+                        @error "could not find species_col=$(species_col) columns in the .cif file for atomic species labels for $(filename)."
+                    end
+                end
 
                 # =====================
                 # SYMMETRY READER
@@ -219,17 +238,6 @@ function Crystal(filename::String;
                 elseif fractional && ! atom_info
                     atom_info = true
 
-                    # Assign species_column by matching to priority list
-                    for col in species_col
-                        if col ∈ keys(name_to_column)
-                            species_column = col
-                            break
-                        end
-                    end
-                    if !(species_column ∈ keys(name_to_column))
-                        @error "$(species_column) not found!"
-                    end
-
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
@@ -261,16 +269,6 @@ function Crystal(filename::String;
                 # =====================
                 elseif cartesian && ! atom_info
                     atom_info = true
-                    # Assign species_column by matching to priority list
-                    for col in species_col
-                        if col ∈ keys(name_to_column)
-                            species_column = col
-                            break
-                        end
-                    end
-                    if !(species_column ∈ keys(name_to_column))
-                        @error "$(species_column) not found!"
-                    end
 
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
