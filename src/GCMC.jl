@@ -992,16 +992,17 @@ function pretty_print(adsorbate::Symbol, frameworkname::String, temperature::Flo
 end
 
 """
-dataframe = isotherm_sim_results_to_dataframe(desired_props,
-    framework_name, adsorbate, forcefield_name, temperature,
-    pressures, n_burn_cycles, n_sample_cycles;
-    where_are_jld_files=nothing)
+    dataframe = isotherm_sim_results_to_dataframe(desired_props, framework_name, 
+						  adsorbate, forcefield_name, 
+						  temperature, pressures, 
+						  n_burn_cycles, n_sample_cycles; 
+						  where_are_jld_files=nothing)`
 
 Convert the `.jld2` results output files from GCMC into a DataFrame
 for a specifies set of desired properties.
 
 # Arguments
-- `desired_props::Array{String}`:
+- `desired_props::Array{String}`: An array containing names of properties to be retrieved from the `.jld2` file
 - `framework_name::String`: The porous crystal that was tested
 - `adsorbate::Symbol`: The molecule that was tested inside the porous crystal
 - `forcefield_name::String`: The molecular model being used in the simulation to describe intermolecular Van
@@ -1019,32 +1020,41 @@ for a specifies set of desired properties.
 A range of pressures can be used to select a batch of simulation files to be included in the DataFrame.
 
 # Example
-dataframe = isotherm_sim_results_to_dataframe(["pressure (bar)", "⟨N⟩ (mmol/g)"],
-    "COF-102", :Xe, "UFF", 298.0,
-    10 .^ range(-2, stop=log10(300), length=15),
-    25000, 25000)
+    dataframe = isotherm_sim_results_to_dataframe(["pressure (bar)", "⟨N⟩ (mmol/g)"], "COF-102", 
+						  :Xe, "UFF", 298.0, 10 .^ range(-2, stop=log10(300), length=15),
+						  25000, 25000)
 """
-function isotherm_sim_results_to_dataframe(desired_props::Array{String},
-        framework_name::String, adsorbate::Symbol, forcefield_name::String, temperature::Float64,
-        pressures::Array{Float64}, n_burn_cycles::Int, n_sample_cycles::Int;
-        where_are_jld_files::Union{String, Nothing}=nothing)
+function isotherm_sim_results_to_dataframe(desired_props::Array{String}, 
+					   framework_name::AbstractString,
+					   adsorbate::Symbol, 
+					   forcefield_name::AbstractString, 
+					   temperature::Float64, 
+					   pressures::Array{Float64}, 
+					   n_burn_cycles::Int, n_sample_cycles::Int; 
+					   where_are_jld_files::Union{String, Nothing}=nothing)
     # determine the location of the data files
     if isnothing(where_are_jld_files)
         where_are_jld_files = joinpath(PorousMaterials.PATH_TO_DATA, "gcmc_sims")
     end
     # prepare dataframe to populate
+    ### results = Dict{String, Any}() ###
     df = DataFrame()
     for col in desired_props
-        insertcols!(df, length(names(df)) + 1, Symbol(col) => Float64[])
+        insertcols!(df, length(names(df)) + 1, Symbol(col) => Any[])
     end
     for (i, pressure) in enumerate(pressures)
-        sim_result = load(
-            joinpath(where_are_jld_files,
-                gcmc_result_savename(framework_name, adsorbate, forcefield_name,
+	jld2_filename = gcmc_result_savename(framework_name, adsorbate, forcefield_name,
                     temperature, pressure, n_burn_cycles, n_sample_cycles) * ".jld2"
-            ), "results"
-        )
-        push!(df, [sim_result[prop] for prop in desired_props])
+
+	@load joinpath(where_are_jld_files, jld2_filename) results
+#       sim_result = load(
+#            joinpath(where_are_jld_files,
+#                gcmc_result_savename(framework_name, adsorbate, forcefield_name,
+#                    temperature, pressure, n_burn_cycles, n_sample_cycles) * ".jld2"
+#            ), "results"
+#        )
+#       push!(df, [sim_result[prop] for prop in desired_props])
+	push!(df, [results[prop] for prop in desired_props])
     end
     return df
 end

@@ -8,10 +8,10 @@ using Printf
 using Statistics
 
 ig_tests = false
-xe_in_sbmof1_tests = true
+xe_in_sbmof1_tests =true
 co2_tests = true
 density_grid_test = false
-
+isotherm_to_dataframe_test = true
 #
 # Ideal gas tests.
 #  run GCMC in empty box; should get ideal gas law.
@@ -168,3 +168,47 @@ end
  #             n_burn_cycles=1, n_sample_cycles=1, verbose=true)
  # @time results = gcmc_simulation(f, 313.0, 1816566.334, co2, ff,
  #             n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
+
+
+### TEST ISOTHERM_SIM_TO_DATAFRAME() ###
+if isotherm_to_dataframe_test
+	# flag for running adsorption_isotherm simulation
+	run_simulation = true
+
+	frame = Framework("SBMOF-1.cif")
+	strip_numbers_from_atom_labels!(frame)
+	mol = Molecule("Xe") # adsorbate
+	temp = 298.0 # temperature: K
+	# Pressures
+	pmin = -2   # in log10, units: bar
+	pmax = 1.0  # value of max pressure (actual value), units: bar
+	nsteps = 3 # number of pressure intervals to split range
+	pressures = 10 .^ range(pmin, stop=log10(pmax), length=nsteps) # bar
+	forcefield = LJForceField("UFF.csv", mixing_rules="Lorentz-Berthelot")
+	n_sample_cycles = 25000
+	n_burn_cycles = 25000
+
+	# properties we want to test
+	desired_props = ["pressure (bar)", "⟨N⟩ (mmol/g)"]
+
+	# manually checked test data
+	test_mmol_g = [1.040656, 1.395557, 1.450123] 
+
+	if run_simulation
+		## assign sim output to a variable
+		adsorption_data = adsorption_isotherm(frame, mol, temp, pressures, forcefield, 
+					n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles)
+	end
+	## read output files into dataframe
+	df_data =  isotherm_sim_results_to_dataframe(desired_props, split(frame.name, ".")[1],
+							       :Xe, "UFF", temp, pressures, 
+							       n_burn_cycles, n_sample_cycles)
+
+	# sort the dataframe by pressure 
+	sort!(df_data, [Symbol("pressure (bar)")])
+	# check the dataframe entries against manualy checked output
+	for i in 1:length(pressures)
+		@assert df_data[i, Symbol("pressure (bar)")] == pressures[i]
+		@test isapprox(df_data[i, Symbol("⟨N⟩ (mmol/g)")], test_mmol_g[i], rtol=0.025)
+	end
+end
