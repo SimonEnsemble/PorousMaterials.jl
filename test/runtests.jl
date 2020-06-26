@@ -19,7 +19,7 @@ testfiles = ["box.jl",
              "eos.jl",
              "assert_p1_symmetry.jl",
              "grid.jl",
-             #"paths.jl" ## NOTE run(`cp ...`) incompatible with Windows
+             "paths.jl"
              ]
 
 [runtest(testfile) for testfile in testfiles]
