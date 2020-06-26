@@ -1,17 +1,25 @@
 # Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
-include("box.jl")
-include("matter.jl")
-include("crystal.jl")
-include("distance.jl")
-include("misc.jl")
-include("forcefield.jl")
-include("molecule.jl")
-include("vdw_energetics.jl")
-include("energy_utilities.jl")
-include("electrostatics.jl")
-include("mc_helpers.jl")
-include("eos.jl")
-include("assert_p1_symmetry.jl")
-include("grid.jl")
- # include("generic_rotation_test.jl")
-include("paths.jl") # this must be last b/c it changes file paths
+
+function runtest(testfile::String)
+    @info "Testing $(testfile)"
+    include(testfile)
+end
+
+testfiles = ["box.jl",
+             "matter.jl",
+             "crystal.jl",
+             "distance.jl",
+             "misc.jl",
+             "forcefield.jl",
+             "molecule.jl",
+             "vdw_energetics.jl",
+             "energy_utilities.jl",
+             "electrostatics.jl",
+             "mc_helpers.jl",
+             "eos.jl",
+             "assert_p1_symmetry.jl",
+             "grid.jl",
+             "paths.jl"
+             ]
+
+[runtest(testfile) for testfile in testfiles]

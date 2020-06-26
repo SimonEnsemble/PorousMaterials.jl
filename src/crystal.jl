@@ -8,7 +8,7 @@
 - `space_group::AbstractString`: The name of the space group. This is stored
     so that it can be written out again in the write_cif function. The space
     group is not used to verify the symmetry rules.
-- `is_p1::Bool`: Stores whether the crystal is currently in P1 symmetry. 
+- `is_p1::Bool`: Stores whether the crystal is currently in P1 symmetry.
 """
 struct SymmetryInfo
     operations::Array{String, 2}
@@ -34,10 +34,12 @@ const NET_CHARGE_TOL = 1e-4 # net charge tolerance
 
 """
     crystal = Crystal(filename;
-        check_neutrality=true, net_charge_tol=1e-4, 
+        check_neutrality=true, net_charge_tol=1e-4,
         check_overlap=true, overlap_tol=0.1,
         convert_to_p1=true, read_bonds_from_file=false, wrap_coords=true,
-        include_zero_charges=false) # read from file
+        include_zero_charges=false,
+        species_col=["_atom_site_label", "_atom_site_type_symbol"]
+        ) # read from file
 
     crystal = Crystal(name, box, atoms, charges) # construct from matter, no bonds, P1-symmetry assumed
 
@@ -50,7 +52,7 @@ or construct a `Crystal` data structure directly.
 - `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
 - `check_overlap::Bool`: throw an error if overlapping atoms are detected.
 - `convert_to_p1::Bool`: If the structure is not in P1 it will be converted to
-    P1 symmetry using the symmetry rules from the `_symmetry_equiv_pos_as_xyz` list in the .cif file. 
+    P1 symmetry using the symmetry rules from the `_symmetry_equiv_pos_as_xyz` list in the .cif file.
     (We do not use the space groups name to look up symmetry rules).
 - `read_bonds_from_file::Bool`: Whether or not to read bonding information from
     cif file. If false, the bonds can be inferred later. note that, if the crystal is not in P1 symmetry, we cannot *both* read bonds and convert to P1 symmetry.
@@ -69,19 +71,22 @@ or construct a `Crystal` data structure directly.
 - `bonds::SimpleGraph`: Unweighted, undirected graph showing all of the atoms
     that are bonded within the crystal
 - `symmetry::SymmetryInfo`: symmetry inforomation
+- `species_col::Array{String}`: which column to use for species identification for `crystal.atoms.species`. we use a priority list:
+    we check for the first entry of `species_col` in the .cif file; if not present, we then use the second entry, and so on.
 """
-function Crystal(filename::String; 
-                 check_neutrality::Bool=true, net_charge_tol::Float64=NET_CHARGE_TOL, 
+function Crystal(filename::String;
+                 check_neutrality::Bool=true, net_charge_tol::Float64=NET_CHARGE_TOL,
                  check_overlap::Bool=true, overlap_tol::Float64=0.1,
                  convert_to_p1::Bool=true,
                  read_bonds_from_file::Bool=false, wrap_coords::Bool=true,
-                 include_zero_charges::Bool=false)
+                 include_zero_charges::Bool=false,
+                 species_col::Array{String, 1}=["_atom_site_label", "_atom_site_type_symbol"])
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
     if ! (extension in ["cif", "cssr"])
         error("I can only read .cif or .cssr crystal structure files.")
     end
-
+    
     # read all lines of crystal structure file
     _f = open(joinpath(PATH_TO_CRYSTALS, filename), "r")
     lines = readlines(_f)
@@ -122,6 +127,9 @@ function Crystal(filename::String;
         label_num_to_idx = Dict{AbstractString, Int}()
         fractional = false
         cartesian = false
+        # find later.
+        species_column = "null"
+
         while i <= length(lines)
             line = split(lines[i])
             # Skip empty lines
@@ -147,7 +155,7 @@ function Crystal(filename::String;
             # checking for information about atom sites and symmetry
             if line[1] == "loop_"
                 # creating dictionary of column names to determine what should be done
-                atom_column_name = ""
+                #atom_column_name = ""
                 # name_to_column is a dictionary that e.g. returns which column contains x fractional coord
                 #   use example: name_to_column["_atom_site_fract_x"] gives 3
                 name_to_column = Dict{AbstractString, Int}()
@@ -155,9 +163,6 @@ function Crystal(filename::String;
                 i += 1
                 loop_starts = i
                 while length(split(lines[i])) == 1 && split(lines[i])[1][1] == '_'
-                    if i == loop_starts
-                        atom_column_name = split(lines[i])[1]
-                    end
                     name_to_column[split(lines[i])[1]] = i + 1 - loop_starts
                     # iterate to next line in file
                     i += 1
@@ -173,6 +178,21 @@ function Crystal(filename::String;
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
+                                             
+                # Assign species_column by matching to priority list
+                if haskey(name_to_column, "_atom_site_Cartn_x") || haskey(name_to_column, "_atom_site_fract_x") # to have entered _atom_site loop
+                    found_species_col = false
+                    for col in species_col
+                        if col ∈ keys(name_to_column)
+                            species_column = col
+                            found_species_col = true
+                            break
+                        end
+                    end
+                    if ! found_species_col
+                        @error "could not find species_col=$(species_col) columns in the .cif file for atomic species labels for $(filename)."
+                    end
+                end
 
                 # =====================
                 # SYMMETRY READER
@@ -217,12 +237,11 @@ function Crystal(filename::String;
                 # =====================
                 elseif fractional && ! atom_info
                     atom_info = true
-                    atom_column_name = [name for (name, column) in name_to_column if column == 1][end]
-                    
+
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
-                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        push!(species, Symbol(line[name_to_column[species_column]]))
                         coords = [coords [mod(parse(Float64, split(line[name_to_column["_atom_site_fract_x"]], '(')[1]), 1.0),
                                 mod(parse(Float64, split(line[name_to_column["_atom_site_fract_y"]], '(')[1]), 1.0),
                                 mod(parse(Float64, split(line[name_to_column["_atom_site_fract_z"]], '(')[1]), 1.0)]]
@@ -234,7 +253,7 @@ function Crystal(filename::String;
                         end
                         # add to label_num_to_idx so that bonds can be converted later
                         if read_bonds_from_file
-                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species)
+                            label_num_to_idx[line[name_to_column[species_column]]] = length(species)
                         end
                         # iterate to next line in file
                         i += 1
@@ -250,17 +269,11 @@ function Crystal(filename::String;
                 # =====================
                 elseif cartesian && ! atom_info
                     atom_info = true
-                    atom_column_name = ""
-                    for (name, column) in name_to_column
-                        if column == 1
-                            atom_column_name = name
-                        end
-                    end
 
                     while i <= length(lines) && length(split(lines[i])) == length(name_to_column)
                         line = split(lines[i])
 
-                        push!(species, Symbol(line[name_to_column[atom_column_name]]))
+                        push!(species, Symbol(line[name_to_column[species_column]]))
                         coords = [coords [parse(Float64, split(line[name_to_column["_atom_site_Cartn_x"]], '(')[1]),
                                 parse(Float64, split(line[name_to_column["_atom_site_Cartn_y"]], '(')[1]),
                                 parse(Float64, split(line[name_to_column["_atom_site_Cartn_z"]], '(')[1])]]
@@ -272,7 +285,7 @@ function Crystal(filename::String;
                         end
                         # add to label_num_to_idx so that bonds can be converted later
                         if read_bonds_from_file
-                            label_num_to_idx[line[name_to_column["_atom_site_label"]]] = length(species)
+                            label_num_to_idx[line[name_to_column[species_column]]] = length(species)
                         end
                         # iterate to next line in file
                         i += 1
@@ -294,7 +307,7 @@ function Crystal(filename::String;
 
                         atom_one_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_1"]]]
                         atom_two_idx = label_num_to_idx[line[name_to_column["_geom_bond_atom_site_label_2"]]]
-                        add_edge!(bonds, atom_one_idx, atom_two_idx) 
+                        add_edge!(bonds, atom_one_idx, atom_two_idx)
 
                         # iterate to next line in file
                         i += 1
@@ -328,7 +341,7 @@ function Crystal(filename::String;
 
         # Structure must either be in P1 symmetry or have replication information
         if ! is_p1 && !symmetry_info
-            error(@sprintf("%s is not in P1 symmetry and the .cif does not have a _symmetry_equiv_pos_as_xyz column 
+            error(@sprintf("%s is not in P1 symmetry and the .cif does not have a _symmetry_equiv_pos_as_xyz column
             for us to apply symmetry operations to convert into P1 symmetry.", filename))
         end
 
@@ -399,7 +412,7 @@ function Crystal(filename::String;
         # include all charges, even if some are zero.
         charges = Charges(charge_values, Frac(coords))
     end
-    
+
     symmetry = SymmetryInfo(operations, space_group, is_p1)
     crystal = Crystal(filename, box, atoms, charges, bonds, symmetry)
 
@@ -407,10 +420,10 @@ function Crystal(filename::String;
         @info @sprintf("Crystal %s has %s space group. I am converting it to P1 symmetry.
         To afrain from this, pass `convert_to_p1=false` to the `Crystal` constructor.\n",
             crystal.name, crystal.symmetry.space_group)
-        return apply_symmetry_operations(crystal, wrap_coords=wrap_coords, check_overlap=check_overlap, 
+        return apply_symmetry_operations(crystal, wrap_coords=wrap_coords, check_overlap=check_overlap,
             check_neutrality=check_neutrality, net_charge_tol=net_charge_tol)
     end
-    
+
     if check_neutrality
         if ! neutral(crystal, net_charge_tol)
             error(@sprintf("Crystal %s is not charge neutral; net charge is %f e. Ignore
@@ -418,7 +431,7 @@ function Crystal(filename::String;
             net charge tolerance `net_charge_tol`\n", crystal.name, net_charge(crystal)))
         end
     end
-    
+
     if wrap_coords
         wrap!(crystal) # do before checking overlap!
     end
@@ -457,7 +470,7 @@ net_charge(crystal::Crystal) = net_charge(crystal.charges)
 """
     replicated_crystal = replicate(crystal, repfactors)
 
-replicate the atoms and charges in a `Crystal` in positive directions to construct a new 
+replicate the atoms and charges in a `Crystal` in positive directions to construct a new
 `Crystal`. Note `replicate(crystal, (1, 1, 1))` returns the same `Crystal`. the fractional
 coordinates will be rescaled to be in [0, 1].
 
@@ -469,14 +482,14 @@ coordinates will be rescaled to be in [0, 1].
 - `replicated_frame::Crystal`: replicated crystal
 """
 function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
-    if ne(crystal.bonds) != 0 
-        error("the crystal " * crystal.name * " has assigned bonds. to replicate, remove 
-        its bonds with `remove_bonds!(crystal)`. then use `infer_bonds(crystal)` to 
+    if ne(crystal.bonds) != 0
+        error("the crystal " * crystal.name * " has assigned bonds. to replicate, remove
+        its bonds with `remove_bonds!(crystal)`. then use `infer_bonds(crystal)` to
         reassign the bonds")
     end
 
     assert_P1_symmetry(crystal)
-    
+
     n_atoms = crystal.atoms.n * prod(repfactors)
     n_charges = crystal.charges.n * prod(repfactors)
 
@@ -488,23 +501,23 @@ function replicate(crystal::Crystal, repfactors::Tuple{Int, Int, Int})
     charge_counter = 0
     for ra = 0:(repfactors[1] - 1), rb = 0:(repfactors[2] - 1), rc = 0:(repfactors[3] - 1)
         xf_shift = 1.0 * [ra, rb, rc]
-        
+
         # replicate atoms
         for i = 1:crystal.atoms.n
             atom_counter += 1
 
             atoms.species[atom_counter] = crystal.atoms.species[i]
-            
+
             xf = crystal.atoms.coords.xf[:, i] + xf_shift
             atoms.coords.xf[:, atom_counter] = xf ./ repfactors
         end
-        
+
         # replicate charges
         for i = 1:crystal.charges.n
             charge_counter += 1
-            
+
             charges.q[charge_counter] = crystal.charges.q[i]
-            
+
             xf = crystal.charges.coords.xf[:, i] + xf_shift
             charges.coords.xf[:, charge_counter] = xf ./ repfactors
         end
@@ -672,7 +685,7 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
     if crystal.symmetry.is_p1
         return crystal
     end
-    
+
     nb_symmetry_ops = size(crystal.symmetry.operations, 2)
 
     n_atoms = crystal.atoms.n * nb_symmetry_ops
@@ -702,13 +715,13 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
                         sym_rule[k], crystal.charges.coords.xf[:, c]...) for k in 1:3]
         end
     end
-    
+
     crystal = Crystal(crystal.name, crystal.box, atoms, charges)
 
     if remove_duplicates
         crystal = remove_duplicate_atoms_and_charges(crystal)
     end
-    
+
     if check_neutrality
         if ! neutral(crystal, net_charge_tol)
             error(@sprintf("Crystal %s is not charge neutral; net charge is %f e. Ignore
@@ -716,7 +729,7 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
             net charge tolerance `net_charge_tol`\n", crystal.name, net_charge(crystal)))
         end
     end
-    
+
     if wrap_coords
         wrap!(crystal) # do before checking overlap!
     end
@@ -730,17 +743,17 @@ end
 
  # """
  #     symmetry_equal = is_symmetry_equal(crystal1.symmetry, crystal2.symmetry)
- # 
+ #
  # Returns true if both symmetry rules can create the same set from the same set
  # of coordinates. Returns false if they don't contain the same number of rules or
  # if they create different sets of points.
- # 
+ #
  # # Arguments
  # - `sym1::Array{AbstractString, 2}`: Array of strings that represent
  #     symmetry operations
  # - `sym2::Array{AbstractString, 2}`: Array of strings that represent
  #     symmetry operations
- # 
+ #
  # # Returns
  # - `is_equal::Bool`: True if they are the same set of symmetry rules
  #     False if they are different
@@ -757,7 +770,7 @@ end
  #     # set up both arrays for storing replicated coords
  #     sym1_applied_to_test = Array{Float64, 2}(undef, 3, 0)
  #     sym2_applied_to_test = Array{Float64, 2}(undef, 3, 0)
- # 
+ #
  #     # loop over all positions in the test_array
  #     for i in 1:size(test_array, 2)
  #         # loop over f1 symmetry rules
@@ -771,22 +784,22 @@ end
  #                 eval(Meta.parse("(x, y, z) -> " * sym2[k, j])), test_array[:, i]...) for k in 1:3]]
  #         end
  #     end
- # 
+ #
  #     # convert to sets for using issetequal, symmetry rules might be in a a different order
  #     sym1_set = Set([sym1_applied_to_test[:, i] for i in 1:size(sym1_applied_to_test, 2)])
  #     sym2_set = Set([sym2_applied_to_test[:, i] for i in 1:size(sym2_applied_to_test, 2)])
- # 
+ #
  #     # return if the sets of coords are equal
  #     return issetequal(sym1_set, sym2_set)
  # end
- # 
+ #
 """
     assert_P1_symmetry(crystal::Crystal)
 
 Throw an error if and only if the crystal is not in P1 symmetry.
 """
 function assert_P1_symmetry(crystal::Crystal)
-    if ! crystal.symmetry.is_p1 
+    if ! crystal.symmetry.is_p1
         error("the crystal " * crystal.name * " is not in P1 symmetry.\n
                To convert to P1 symmetry, try:\n
                \tcrystal_p1 = apply_symmetry_operations(crystal)")
@@ -797,10 +810,10 @@ end
     write_cif(crystal, filename; fractional_coords=true, number_atoms=true)
 
 Write a `crystal::Crystal` to a .cif file with `filename::AbstractString`. If `filename` does
-not include the .cif extension, it will automatically be added. the `fractional_coords` flag 
+not include the .cif extension, it will automatically be added. the `fractional_coords` flag
 allows us to write either fractional or Cartesian coordinates.
 """
-function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords::Bool=true, 
+function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords::Bool=true,
 		   number_atoms::Bool=true)
     if has_charges(crystal)
         if crystal.atoms.n != crystal.charges.n
@@ -810,7 +823,7 @@ function write_cif(crystal::Crystal, filename::AbstractString; fractional_coords
             error("write_cif needs coords of atoms and charges to correspond.")
         end
     end
-    
+
     # TODO is this labeling necessary for the bonds, arthur?
     # create dictionary for tracking label numbers
     label_numbers = Dict{Symbol, Int}()
@@ -960,7 +973,7 @@ crystal_with_charges = assign_charges(crystal, species_to_charge) # tol 1e-5 def
 ```
 
 # Arguments
-- `crystal::Crystal`: the crystal 
+- `crystal::Crystal`: the crystal
 - `species_to_charge::Dict{Symbol, Float64}`: a dictionary that maps atomic species to charge
 - `net_charge_tol::Float64`: the net charge tolerated when asserting charge neutrality of
 the resulting crystal
@@ -973,7 +986,7 @@ function assign_charges(crystal::Crystal, species_to_charge::Dict{Symbol, Float6
 
     q = [species_to_charge[s] for s in crystal.atoms.species]
     charges = Charges(q, crystal.atoms.coords)
-    
+
     new_crystal = Crystal(crystal.name, crystal.box, crystal.atoms, charges, crystal.bonds, crystal.symmetry)
 
     # check for charge neutrality
@@ -1033,7 +1046,7 @@ function Base.getindex(crystal::Crystal, ids::Union{BitArray{1}, Array{Int, 1},
     if crystal.charges.n == 0
         return Crystal(crystal.name, crystal.box, crystal.atoms[ids],
             crystal.charges, bonds, crystal.symmetry)
-    elseif (crystal.charges.n == crystal.atoms.n) && isapprox(crystal.charges.coords, 
+    elseif (crystal.charges.n == crystal.atoms.n) && isapprox(crystal.charges.coords,
                                                               crystal.atoms.coords)
         return Crystal(crystal.name, crystal.box, crystal.atoms[ids],
             crystal.charges[ids], bonds, crystal.symmetry)
@@ -1041,7 +1054,7 @@ function Base.getindex(crystal::Crystal, ids::Union{BitArray{1}, Array{Int, 1},
         error("for getindex(crystal), crystal must have 0 charges or an equal number of charges and atoms
         that share coordinates")
     end
-    
+
     return crystal
 end
 

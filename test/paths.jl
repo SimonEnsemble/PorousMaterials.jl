@@ -15,7 +15,7 @@ using Test
     if ! isdir("my_grids")
         mkdir("my_grids")
     end
-    run(`cp data/grids/test_grid.cube my_grids/other_test_grid.cube`)
+    cp("data/grids/test_grid.cube", "my_grids/other_test_grid.cube", force=true)
     read_cube("other_test_grid.cube")
 
     @test true # if made it this far :)

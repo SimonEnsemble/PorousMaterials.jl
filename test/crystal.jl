@@ -7,7 +7,7 @@ using Test
 # for test only
 # if the multi sets are equal, then when you remove duplicates,
 #  you will be left with ac1.
-function equal_multisets(ac1::Union{Atoms{Frac}, Charges{Frac}}, 
+function equal_multisets(ac1::Union{Atoms{Frac}, Charges{Frac}},
                          ac2::Union{Atoms{Frac}, Charges{Frac}},
                          box::Box)
     ac = ac1 + ac2
@@ -25,7 +25,7 @@ end
     @test isapprox(xtal.atoms, Atoms([:Ca, :O], Frac([0.2 0.6; 0.5 0.3; 0.7 0.1])))
     @test isapprox(xtal.charges, Charges([1.0, -1.0], Frac([0.2 0.6; 0.5 0.3; 0.7 0.1])))
     @test xtal.symmetry.is_p1
-    
+
     # assign charges function
     xtal = Crystal("test_structure3.cif")
     @test xtal.charges.n == 0
@@ -79,7 +79,7 @@ end
     write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, rewrite_filename), number_atoms=false)
     crystal_reloaded = Crystal(rewrite_filename)
     @test isapprox(crystal, crystal_reloaded, atol=0.0001)
- 
+
     ### apply_symmetry_operations
     # test .cif reader for non-P1 symmetry
     #   no atoms should overlap
@@ -94,10 +94,10 @@ end
 
     non_P1_crystal = Crystal("symmetry_test_structure.cif") # not in P1 original
     strip_numbers_from_atom_labels!(non_P1_crystal)
-    
+
     P1_crystal = Crystal("symmetry_test_structure_P1.cif") # in P1 originally
     strip_numbers_from_atom_labels!(P1_crystal)
-    
+
     @test isapprox(non_P1_crystal.box, P1_crystal.box)
     @test equal_multisets(non_P1_crystal.atoms, P1_crystal.atoms, P1_crystal.box)
     @test equal_multisets(non_P1_crystal.charges, P1_crystal.charges, P1_crystal.box)
@@ -108,7 +108,7 @@ end
     @test isapprox(non_P1_crystal.box, non_P1_cartesian.box)
     @test equal_multisets(non_P1_crystal.atoms, non_P1_cartesian.atoms, P1_crystal.box)
     @test equal_multisets(non_P1_crystal.charges, non_P1_cartesian.charges, non_P1_cartesian.box)
-    
+
     # test that incorrect file formats throw proper errors
     @test_throws ErrorException Crystal("non_P1_no_symmetry.cif")
     # test that a file with no atoms throws error
@@ -133,6 +133,7 @@ end
     hk = Crystal("HKUST-1_low_symm.cif")
     strip_numbers_from_atom_labels!(hk)
     hk_p1 = Crystal("HKUST-1_P1.cif") # from avogadro
+    strip_numbers_from_atom_labels!(hk_p1)
     @test equal_multisets(hk.atoms, hk_p1.atoms, hk.box)
 
     # test write_cif in non_p1 symmetry
@@ -185,8 +186,8 @@ end
     @test rbox.Ω ≈ sbmof1.box.Ω * 2 * 3 * 4
     @test all(rbox.c_to_f * sbmof1.box.f_to_c * [1.0, 1.0, 1.0] .≈ [1/2, 1/3, 1/4])
 
- # 
- # 
+ #
+ #
  #     # test symmetry_rules
  #     # define default symmetry_rules
  #     symmetry_rules = [Array{AbstractString, 2}(undef, 3, 0) ["x", "y", "z"]]
@@ -199,7 +200,7 @@ end
  #     @test ! is_symmetry_equal(symmetry_rules, other_symmetry_rules)
  #     @test is_symmetry_equal(symmetry_rules, symmetry_rules)
  #     @test is_symmetry_equal(symmetry_rules_two, symmetry_rules_two_cpy)
- # 
+ #
     # test crystal addition
     c1 = Crystal("crystal 1", unit_cube(), Atoms([:a, :b],
                                                  Frac([1.0 4.0;
@@ -265,7 +266,7 @@ end
     @test sbmof1_sub.charges.n == 0
     @test sbmof1_sub.atoms.species == sbmof1.atoms.species[10:15]
     @test sbmof1_sub.atoms.coords.xf == sbmof1.atoms.coords.xf[:, 10:15]
-    
+
     # including zero charges or not, when reading in a .cif `include_zero_charges` flag to Crystal constructor
     frame1 = Crystal("ATIBOU01_clean.cif") # has four zero charges in it
     @test ! any(frame1.charges.q .== 0.0)
@@ -288,5 +289,22 @@ end
     write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, "high_precision_charges_test_not_neutral.cif"))
     @test ! neutral(Crystal("high_precision_charges_test_not_neutral.cif", check_neutrality=false), PorousMaterials.NET_CHARGE_TOL) # not gonna be neutral
     @test_throws ErrorException Crystal("high_precision_charges_test_not_neutral.cif") # should throw error b/c not charge neutral
+    # tests for species_from_col:
+      # 1.  Make sure a .cif loads a Crystal with bad labels as default;
+      #     fixed labels with species_column="_atom_site_type_symbol".
+      # 2.  Make sure a .cif w/ good labels loads to an identical Crystal with
+      #     and without species_column="_atom_site_type_symbol".
+      # 3.  Make sure a bogus species_column throws an exception.
+    xtal = Crystal("SBMOF-1_bad_labels.cif")
+    @test xtal.atoms.species[1] == :C1A
+
+    xtal = Crystal("SBMOF-1_bad_labels.cif", species_col=["_atom_site_type_symbol"])
+    @test xtal.atoms.species[1] == :C
+
+    xtal1 = Crystal("SBMOF-1.cif")
+    xtal2 = Crystal("SBMOF-1.cif")
+    @test xtal1.atoms.species == xtal2.atoms.species
+
+    @test_throws KeyError Crystal("SBMOF-1.cif", species_col=["bogus_column"])
 end
 end

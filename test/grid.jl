@@ -19,7 +19,7 @@ using Random
     write_cube(grid, "test_grid.cube")
     grid2 = read_cube("test_grid.cube")
     @test isapprox(grid, grid2, atol=1e-5) # atol b/c loose precision when reading/writing to file
-    
+
     # nearest neighbor ID checker
     n_pts = (10, 20, 30)
     @test PorousMaterials._arg_nearest_neighbor(n_pts, [0.001, 0.001, 0.001]) == [1, 1, 1]
@@ -35,7 +35,7 @@ using Random
     @test PorousMaterials._arg_nearest_neighbor(n_pts, [0.74, 0.001, 0.26]) == [2, 1, 2]
     @test PorousMaterials._arg_nearest_neighbor(n_pts, [0.76, 0.001, 0.26]) == [3, 1, 2]
     @test PorousMaterials._arg_nearest_neighbor((4, 6, 11), [0.32, 0.42, 0.61]) == [2, 3, 7]
-    
+
     # accessibility grids
     for zeolite in ["LTA", "SOD"]
         crystal = Crystal(zeolite * ".cif")
@@ -51,8 +51,8 @@ using Random
         @test isapprox(grid.data[:, 1, :], grid.data[:, end, :], atol=1e-7)
         @test isapprox(grid.data[:, :, 1], grid.data[:, :, end], atol=1e-7)
 
-        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal, 
-            molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false, 
+        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
+            molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false,
             write_b4_after_grids=true)
         @test nb_segments_blocked > 0
         if zeolite == "LTA"
@@ -86,10 +86,10 @@ using Random
             write_xyz(Atoms([:CH4 for i = 1:size(x)[2]], Cart(x)), xyzfilename)
             println("See ", xyzfilename)
         end
-        
+
         # w./o blocking (nb = no blocking)
-        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(crystal, 
-            molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false, 
+        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(crystal,
+            molecule, forcefield, n_pts=(25, 25, 25), energy_tol=0.0, verbose=false,
             write_b4_after_grids=false, block_inaccessible_pockets=false)
         @test nb_segments_blocked_nb == 0
         @test porosity_nb > porosity[:after_blocking]
@@ -100,15 +100,15 @@ using Random
     crystal = Crystal("LTA.cif")
     molecule = Molecule("CH4")
     forcefield = LJForceField("UFF")
-    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal, 
-        molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false, 
+    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
+        molecule, forcefield, n_pts=(20, 20, 20), energy_tol=0.0, verbose=false,
         write_b4_after_grids=true)
 
     # replicate crystal and build accessibility grid that includes the other accessibility grid in a corner
     repfactors = (2, 3, 1)
     crystal = replicate(crystal, repfactors)
-    rep_accessibility_grid, rep_nb_segments_blocked, porosity = compute_accessibility_grid(crystal, 
-        molecule, forcefield, n_pts=(20 * 2 - 1, 20 * 3 - 2, 20), energy_tol=0.0, verbose=false, 
+    rep_accessibility_grid, rep_nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
+        molecule, forcefield, n_pts=(20 * 2 - 1, 20 * 3 - 2, 20), energy_tol=0.0, verbose=false,
         write_b4_after_grids=true)
     @test all(accessibility_grid.data .== rep_accessibility_grid.data[1:20, 1:20, 1:20])
     @test rep_nb_segments_blocked > 0
@@ -126,15 +126,15 @@ using Random
     forcefield = LJForceField("UFF")
     for crystal in [Crystal("SBMOF-1.cif"), Crystal("CAXVII_clean.cif")]
         n_pts = required_n_pts(crystal.box, 1.0)
-        
+
         # w./ blocking
-        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal, 
-            molecule, forcefield, n_pts=n_pts, energy_tol=5.0, verbose=false, 
+        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
+            molecule, forcefield, n_pts=n_pts, energy_tol=5.0, verbose=false,
             write_b4_after_grids=true, energy_units=:kJ_mol)
         @test nb_segments_blocked == 0
 
         # w./o blocking (nb = no blocking)
-        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(crystal, 
+        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(crystal,
             molecule, forcefield, n_pts=n_pts, energy_tol=5.0, verbose=false, energy_units=:kJ_mol,
             write_b4_after_grids=true, block_inaccessible_pockets=false)
 
@@ -147,7 +147,7 @@ using Random
     n_pts = (4, 4, 4) # testing a grid with 4x4x4 voxels
     @test all(xf_to_id(n_pts, [0.0001, 0.0001, 0.0001]) .== 1)
     @test all(xf_to_id(n_pts, [0.9999, 0.9999, 0.9999]) .== n_pts[end])
-    @test all(xf_to_id(n_pts, [0.0001, 0.2400, 0.2600]) .== [1, 1, 2]) 
+    @test all(xf_to_id(n_pts, [0.0001, 0.2400, 0.2600]) .== [1, 1, 2])
     @test all(xf_to_id(n_pts, [-0.0001, 0.2400, 1.01]) .== [4, 1, 1]) # PBC check
 
     # test update_density!
