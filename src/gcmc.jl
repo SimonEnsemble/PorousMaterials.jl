@@ -859,45 +859,57 @@ end
                                                   n_burn_cycles, n_sample_cycles;
                                                   where_are_jld_files=nothing)`
 
-Convert the `.jld2` results output files from GCMC into a DataFrame
-for a specifies set of desired properties. To locate the requested files, 
-this function calles `μVT_output_filename` to construct the file names.
+convert the `.jld2` results output files auto-saved from [`μVT_sim`](@ref) into a `DataFrame`.
+each row of the `DataFrame` corresponds to a pressure in the adsorption isotherm.
+`desired_props` is an array of desired properties from the results. 
+to locate the requested output files, this function calls [`μVT_output_filename`](@ref) to retreive the file names.
 
 # Arguments
-- `desired_props::Array{String}`: An array containing names of properties to be retrieved from the `.jld2` file
-- `xtal::Crystal`: The porous crystal that was tested
-- `molecule::Molecule{Cart}`: The molecule that was tested inside the porous crystal
-- `temperature::Float64`: The temperature used in the simulation, units: Kelvin (K)
-- `pressures::Array{Float64}`: The pressure used in the simulation(s), units: bar
+- `desired_props::Array{String, 1}`: An array containing names of properties to be retrieved from the `.jld2` file
+- `xtal::Crystal`: The porous crystal
+- `molecule::Molecule{Cart}`: The adsorbate molecule
+- `temperature::Float64`: The temperature in the simulation, units: Kelvin (K)
+- `pressures::Array{Float64}`: The pressures in the adsorption isotherm simulation(s), units: bar
 - `ljff::LJForceField`: The molecular model being used in the simulation to describe intermolecular Van
         der Waals interactions
 - `n_burn_cycles::Int64`: The number of burn cycles used in this simulation
 - `n_sample_cycles::Int64`: The number of sample cycles used in the simulations
-- `where_are_jld_files::Union{String, Nothing}=nothing`: The location to the simulation files
+- `where_are_jld_files::Union{String, Nothing}=nothing`: The location to the simulation files. defaults to
+    `PorousMaterials.PATH_TO_SIMS`.
+- `comment::String=""`: comment appended to outputfilename
 
 # Returns
-- `dataframe::DataFrame`: A DataFrame containing the data for the specified properties
+- `dataframe::DataFrame`: A `DataFrame` containing the simulated data along the adsorption isotherm, whose
+    columns are for the specified properties
 
 # Note
-A range of pressures can be used to select a batch of simulation files to be included in the DataFrame.
+A range of pressures can be used to select a batch of simulation files to be included in the `DataFrame`.
 
 # Example
-    xtal = Crystal("SBMOF-1.cif")
-    molecule = Molecule("Xe")
-    ljff = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
 
-    dataframe = isotherm_sim_results_to_dataframe(["pressure (bar)", "⟨N⟩ (mmol/g)"], 
-						  xtal, molecule, ljff, 298.0, 
-						  10 .^ range(-2, stop=log10(300), length=15),
-                                                  25000, 25000)
+```julia
+xtal = Crystal("SBMOF-1.cif")
+molecule = Molecule("Xe")
+ljff = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
+temperature = 298.0 # K
+pressures = 10 .^ range(-2, stop=2, length=15)
+
+dataframe = isotherm_sim_results_to_dataframe(["pressure (bar)", "⟨N⟩ (mmol/g)"], 
+                                              xtal, molecule, temperature,
+                                              pressures, ljff, 10000, 10000)
+dataframe[Symbol("pressure (bar)")] # pressures
+dataframe[Symbol("⟨N⟩ (mmol/g)")] # adsorption at corresponding pressures
+```
 """
-function isotherm_sim_results_to_dataframe(desired_props::Array{String},
+function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
                                            xtal::Crystal, 
-					   molecule::Molecule,
-					   temperature::Float64,
-                                           pressures::Array{Float64},
+					                       molecule::Molecule,
+					                       temperature::Float64,
+                                           pressures::Array{Float64, 1},
                                            ljff::LJForceField,
-                                           n_burn_cycles::Int64, n_sample_cycles::Int64;
+                                           n_burn_cycles::Int64, 
+                                           n_sample_cycles::Int64;
+                                           comment::String="",
                                            where_are_jld_files::Union{String, Nothing}=nothing)
     # determine the location of the data files
     if isnothing(where_are_jld_files)
@@ -909,16 +921,17 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String},
     for (i, pressure) in enumerate(pressures)
         jld2_filename = μVT_output_filename(xtal, molecule, temperature, 
                                             pressure, ljff, n_burn_cycles, 
-                                            n_sample_cycles)
-	# load in the results as a dictionary
+                                            n_sample_cycles, comment=comment)
+        # load in the results as a dictionary
         @load joinpath(where_are_jld_files, jld2_filename) results
-
-	if i == 1
-	    for col in desired_props
-		insertcols!(df, length(names(df)) + 1, Symbol(col) => typeof(results[col])[])
-	    end
-	end
-	push!(df, [results[prop] for prop in desired_props])
+        
+        # population column names, taking into account types
+        if i == 1
+            for col in desired_props
+                insertcols!(df, length(names(df)) + 1, Symbol(col) => typeof(results[col])[])
+            end
+        end
+        push!(df, [results[prop] for prop in desired_props])
     end
     return df
 end
