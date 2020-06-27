@@ -169,7 +169,7 @@ export
 
     # gcmc.jl
     μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
-    μVT_output_filename, GCMCstats, MarkovCounts,
+    μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
  # 
     # henry.jl
     henry_coefficient, henry_result_savename

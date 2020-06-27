@@ -1,4 +1,4 @@
-using Distributed
+
 @everywhere using PorousMaterials
 @everywhere using Test
 using CSV
@@ -11,6 +11,7 @@ ig_tests = false
 xe_in_sbmof1_tests = false
 co2_tests = true
 density_grid_test = false
+isotherm_to_dataframe_test = true
 
 #
 # Ideal gas tests.
@@ -156,3 +157,50 @@ end
  #             n_burn_cycles=1, n_sample_cycles=1, verbose=true)
  # @time results = μVT_sim(f, 313.0, 1816566.334, co2, ff,
  #             n_burn_cycles=10000, n_sample_cycles=10000, verbose=true)
+
+
+### TEST ISOTHERM_SIM_TO_DATAFRAME() ###
+if isotherm_to_dataframe_test
+        # flag for running adsorption_isotherm simulation
+        run_simulation = true
+
+	## properties we want to test ##
+        desired_props = ["pressure (bar)", "⟨N⟩ (mmol/g)"]
+
+	## assignments for sim/filename ##
+        xtal = Crystal("SBMOF-1.cif")
+        strip_numbers_from_atom_labels!(xtal)
+        molecule = Molecule("Xe") # adsorbate
+	ljff = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
+	temp = 298.0 # temperature: K
+	n_sample_cycles = 25000
+        n_burn_cycles = 25000
+
+        # define pressure range
+        pmin = -2   # in log10, units: bar
+        pmax = 1.0  # value of max pressure (actual value), units: bar
+        nsteps = 3 # number of pressure intervals to split range
+        pressures = 10 .^ range(pmin, stop=log10(pmax), length=nsteps) # bar
+
+        ## manually checked test data ##
+        test_mmol_g = [1.034952, 1.408544, 1.447641]
+
+	if run_simulation
+                ## assign sim output to a variable
+                adsorption_data = adsorption_isotherm(xtal, molecule, temp, pressures, ljff,
+                                        n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles)
+	end
+        
+	## read output files into dataframe
+        df_data =  isotherm_sim_results_to_dataframe(desired_props, xtal, molecule, temp,
+						     pressures, ljff, n_burn_cycles, n_sample_cycles)
+
+        # sort the dataframe by pressure
+        sort!(df_data, [Symbol("pressure (bar)")])
+	df_data
+        # check the dataframe entries against manualy checked output
+        for i in 1:length(pressures)
+                @assert df_data[i, Symbol("pressure (bar)")] == pressures[i]
+        	@test isapprox(df_data[i, Symbol("⟨N⟩ (mmol/g)")], test_mmol_g[i], rtol=0.025)
+        end
+end
