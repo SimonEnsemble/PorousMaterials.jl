@@ -49,6 +49,7 @@ function set_default_file_paths(;print_paths::Bool=true)
     global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
     global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
     global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
     
     if print_paths
         print_file_paths()

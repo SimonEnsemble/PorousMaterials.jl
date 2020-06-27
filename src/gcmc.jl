@@ -638,12 +638,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     molecules = Cart.(molecules, xtal.box)
 
     if autosave
-        if ! isdir(joinpath(PATH_TO_DATA, "sim_results"))
-            mkdir(joinpath(PATH_TO_DATA, "sim_results"))
+        if ! isdir(PATH_TO_SIMS)
+            mkdir(PATH_TO_SIMS)
         end
 
-        save_results_filename = joinpath(PATH_TO_DATA, 
-                                         "sim_results", 
+        save_results_filename = joinpath(PATH_TO_SIMS,
                                          μVT_output_filename(xtal, molecule, temperature, pressure, 
                                                              ljff, n_burn_cycles, n_sample_cycles, 
                                                              comment=results_filename_comment
@@ -862,7 +861,7 @@ end
 convert the `.jld2` results output files auto-saved from [`μVT_sim`](@ref) into a `DataFrame`.
 each row of the `DataFrame` corresponds to a pressure in the adsorption isotherm.
 `desired_props` is an array of desired properties from the results. 
-to locate the requested output files, this function calls [`μVT_output_filename`](@ref) to retreive the file names.
+to locate the requested output files, this function calls [`μVT_output_filename`](@ref) to retrieve the file names.
 
 # Arguments
 - `desired_props::Array{String, 1}`: An array containing names of properties to be retrieved from the `.jld2` file
@@ -913,7 +912,7 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
                                            where_are_jld_files::Union{String, Nothing}=nothing)
     # determine the location of the data files
     if isnothing(where_are_jld_files)
-        where_are_jld_files = joinpath(PorousMaterials.PATH_TO_DATA, "sim_results")
+        where_are_jld_files = PATH_TO_SIMS
     end
     # prepare dataframe to populate
     df = DataFrame()
