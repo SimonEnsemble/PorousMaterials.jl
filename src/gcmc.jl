@@ -181,6 +181,8 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     if verbose
         pretty_print(xtal, molecule, temperature, pressure, ljff)
+        println("\t# burn cycles: ", n_burn_cycles)
+        println("\t# sample cycles: ", n_sample_cycles)
     end
     
     ###
