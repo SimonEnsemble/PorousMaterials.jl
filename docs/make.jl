@@ -2,7 +2,7 @@ using Documenter
 using PorousMaterials
 
 makedocs(
-    root = joinpath(dirname(pathof(PorousMaterials)), "..", "docs"),
+    root = pwd(),
     modules = [PorousMaterials],
     sitename = "PorousMaterials.jl",
     clean = true,
