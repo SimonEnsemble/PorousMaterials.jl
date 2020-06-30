@@ -181,6 +181,8 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     if verbose
         pretty_print(xtal, molecule, temperature, pressure, ljff)
+        println("\t# burn cycles: ", n_burn_cycles)
+        println("\t# sample cycles: ", n_sample_cycles)
     end
     
     ###
@@ -638,12 +640,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     molecules = Cart.(molecules, xtal.box)
 
     if autosave
-        if ! isdir(joinpath(PATH_TO_DATA, "sim_results"))
-            mkdir(joinpath(PATH_TO_DATA, "sim_results"))
+        if ! isdir(PATH_TO_SIMS)
+            mkdir(PATH_TO_SIMS)
         end
 
-        save_results_filename = joinpath(PATH_TO_DATA, 
-                                         "sim_results", 
+        save_results_filename = joinpath(PATH_TO_SIMS,
                                          μVT_output_filename(xtal, molecule, temperature, pressure, 
                                                              ljff, n_burn_cycles, n_sample_cycles, 
                                                              comment=results_filename_comment
@@ -850,4 +851,88 @@ function adsorption_isotherm(xtal::Crystal,
     # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
     return results[[findall(x -> x==i, ids)[1] for i = 1:length(ids)]]
+end
+
+"""
+    dataframe = isotherm_sim_results_to_dataframe(desired_props, xtal,
+                                                  molecule, temperature,
+                                                  pressures, ljff,
+                                                  n_burn_cycles, n_sample_cycles;
+                                                  where_are_jld_files=nothing)`
+
+convert the `.jld2` results output files auto-saved from [`μVT_sim`](@ref) into a `DataFrame`.
+each row of the `DataFrame` corresponds to a pressure in the adsorption isotherm.
+`desired_props` is an array of desired properties from the results. 
+to locate the requested output files, this function calls [`μVT_output_filename`](@ref) to retrieve the file names.
+
+# Arguments
+- `desired_props::Array{String, 1}`: An array containing names of properties to be retrieved from the `.jld2` file
+- `xtal::Crystal`: The porous crystal
+- `molecule::Molecule{Cart}`: The adsorbate molecule
+- `temperature::Float64`: The temperature in the simulation, units: Kelvin (K)
+- `pressures::Array{Float64}`: The pressures in the adsorption isotherm simulation(s), units: bar
+- `ljff::LJForceField`: The molecular model being used in the simulation to describe intermolecular Van
+        der Waals interactions
+- `n_burn_cycles::Int64`: The number of burn cycles used in this simulation
+- `n_sample_cycles::Int64`: The number of sample cycles used in the simulations
+- `where_are_jld_files::Union{String, Nothing}=nothing`: The location to the simulation files. defaults to
+    `PorousMaterials.PATH_TO_SIMS`.
+- `comment::String=""`: comment appended to outputfilename
+
+# Returns
+- `dataframe::DataFrame`: A `DataFrame` containing the simulated data along the adsorption isotherm, whose
+    columns are for the specified properties
+
+# Note
+A range of pressures can be used to select a batch of simulation files to be included in the `DataFrame`.
+
+# Example
+
+```julia
+xtal = Crystal("SBMOF-1.cif")
+molecule = Molecule("Xe")
+ljff = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
+temperature = 298.0 # K
+pressures = 10 .^ range(-2, stop=2, length=15)
+
+dataframe = isotherm_sim_results_to_dataframe(["pressure (bar)", "⟨N⟩ (mmol/g)"], 
+                                              xtal, molecule, temperature,
+                                              pressures, ljff, 10000, 10000)
+dataframe[Symbol("pressure (bar)")] # pressures
+dataframe[Symbol("⟨N⟩ (mmol/g)")] # adsorption at corresponding pressures
+```
+"""
+function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
+                                           xtal::Crystal, 
+                                           molecule::Molecule,
+                                           temperature::Float64,
+                                           pressures::Array{Float64, 1},
+                                           ljff::LJForceField,
+                                           n_burn_cycles::Int64, 
+                                           n_sample_cycles::Int64;
+                                           comment::String="",
+                                           where_are_jld_files::Union{String, Nothing}=nothing)
+    # determine the location of the data files
+    if isnothing(where_are_jld_files)
+        where_are_jld_files = PATH_TO_SIMS
+    end
+    # prepare dataframe to populate
+    df = DataFrame()
+    # loop over pressures and populate dataframe
+    for (i, pressure) in enumerate(pressures)
+        jld2_filename = μVT_output_filename(xtal, molecule, temperature, 
+                                            pressure, ljff, n_burn_cycles, 
+                                            n_sample_cycles, comment=comment)
+        # load in the results as a dictionary
+        @load joinpath(where_are_jld_files, jld2_filename) results
+        
+        # population column names, taking into account types
+        if i == 1
+            for col in desired_props
+                insertcols!(df, length(names(df)) + 1, Symbol(col) => typeof(results[col])[])
+            end
+        end
+        push!(df, [results[prop] for prop in desired_props])
+    end
+    return df
 end

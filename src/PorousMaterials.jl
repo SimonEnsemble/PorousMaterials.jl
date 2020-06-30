@@ -49,6 +49,7 @@ function set_default_file_paths(;print_paths::Bool=true)
     global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
     global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
     global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
     
     if print_paths
         print_file_paths()
@@ -169,7 +170,7 @@ export
 
     # gcmc.jl
     μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
-    μVT_output_filename, GCMCstats, MarkovCounts,
+    μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
  # 
     # henry.jl
     henry_coefficient, henry_result_savename

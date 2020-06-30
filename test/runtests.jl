@@ -19,7 +19,8 @@ testfiles = ["box.jl",
              "eos.jl",
              "assert_p1_symmetry.jl",
              "grid.jl",
-             "paths.jl"
+             "gcmc_quick.jl",
+             "paths.jl" # must be last so as to not interfere with reading in files
              ]
 
 [runtest(testfile) for testfile in testfiles]
