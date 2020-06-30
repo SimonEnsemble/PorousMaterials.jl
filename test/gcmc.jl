@@ -161,15 +161,12 @@ end
 
 ### TEST ISOTHERM_SIM_TO_DATAFRAME() ###
 if isotherm_to_dataframe_test
-    # flag for running adsorption_isotherm simulation
-    run_simulation = false
+    # properties we want to test
+    desired_props = ["xtal", "adsorbate", "pressure (bar)", 
+                     "repfactors", "⟨N⟩ (mmol/g)", "density grid"]
 
-    ## properties we want to test ##
-    desired_props = ["xtal", "adsorbate", "pressure (bar)", "repfactors", "⟨N⟩ (mmol/g)", "density grid"]
-
-    ## assignments for sim/filename ##
+    # assignments for sim/filename
     xtal = Crystal("SBMOF-1.cif")
-    strip_numbers_from_atom_labels!(xtal)
     molecule = Molecule("Xe") # adsorbate
     ljff = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
     temp = 298.0 # temperature: K
@@ -182,25 +179,24 @@ if isotherm_to_dataframe_test
     nsteps = 3 # number of pressure intervals to split range
     pressures = 10 .^ range(pmin, stop=log10(pmax), length=nsteps) # bar
 
-    ## manually checked test data ##
+    ### manually checked test data ###
     test_mmol_g = [1.088001225436118, 1.3978990363878692, 1.4456497503632355]
 
-    if run_simulation
-                ## assign sim output to a variable
-                adsorption_data = adsorption_isotherm(xtal, molecule, temp, pressures, ljff,
-                                        n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles)
-    end
+    # read output files into dataframe
+    df_data =  isotherm_sim_results_to_dataframe(desired_props, xtal, 
+                                                 molecule, temp, pressures, 
+                                                 ljff, n_burn_cycles, n_sample_cycles)
 
-    ## read output files into dataframe
-        df_data =  isotherm_sim_results_to_dataframe(desired_props, xtal, molecule, temp,
-                             pressures, ljff, n_burn_cycles, n_sample_cycles)
+    # sort the dataframe by pressure
+    sort!(df_data, [Symbol("pressure (bar)")])
 
-        # sort the dataframe by pressure
-        sort!(df_data, [Symbol("pressure (bar)")])
-        # check the dataframe entries against manualy checked output
-        for i in 1:length(pressures)
-            # test specific quantities
-            @test isapprox(df_data[i, Symbol("pressure (bar)")],  pressures[i])
-            @test isapprox(df_data[i, Symbol("⟨N⟩ (mmol/g)")], test_mmol_g[i])
-        end
+    # check the dataframe entries against manualy checked output
+    [@test isapprox(df_data[i, Symbol("pressure (bar)")],  pressures[i]) for i in 1:length(pressures)]
+    [@test isapprox(df_data[i, Symbol("⟨N⟩ (mmol/g)")], test_mmol_g[i]) for i in 1:length(pressures)]
+    [@test df_data[i, :xtal] == xtal.name for i in 1:length(pressures)]
+    [@test df_data[i, :adsorbate] == molecule.species  for i in 1:length(pressures)]
+
+    # check the data type of specific columns
+    [@test typeof(df_data[i, :repfactors]) == Tuple{Int64,Int64,Int64} for i in 1:length(pressures)]
+    [@test typeof(df_data[i, Symbol("density grid")]) == Grid{Float64} for i in 1:length(pressures)]
 end
