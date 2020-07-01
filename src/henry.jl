@@ -191,7 +191,7 @@ function _conduct_Widom_insertions(crystal::Crystal, molecule::Molecule,
                                    ewald_precision::Float64, verbose::Bool,
                                    accessibility_grid::Union{Nothing, Grid{Bool}},
                                    repfactors::Tuple{Int, Int, Int})
-                                   
+
     # copy the molecule in case we need to reset it when bond lengths drift
     bond_length_drift_check_frequency = 5000 # every how many insertions check for drift
     ref_molecule = deepcopy(molecule)
@@ -209,9 +209,9 @@ function _conduct_Widom_insertions(crystal::Crystal, molecule::Molecule,
     wtd_energy_sum = PotentialEnergy(0.0, 0.0)
     # to be Σᵢ e^(-βEᵢ)
     boltzmann_factor_sum = 0.0
-    
+
     insertion_start = 1 # which insertion number to start on
-    
+
     for i = insertion_start:nb_insertions
         # determine uniform random center of mass
         xf = rand(3)

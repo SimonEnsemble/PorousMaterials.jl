@@ -86,7 +86,7 @@ function Crystal(filename::String;
     if ! (extension in ["cif", "cssr"])
         error("I can only read .cif or .cssr crystal structure files.")
     end
-    
+
     # read all lines of crystal structure file
     _f = open(joinpath(PATH_TO_CRYSTALS, filename), "r")
     lines = readlines(_f)
@@ -178,7 +178,7 @@ function Crystal(filename::String;
                                              # if both are provided, will default
                                              #  to using fractional, so keep cartesian
                                              #  false
-                                             
+
                 # Assign species_column by matching to priority list
                 if haskey(name_to_column, "_atom_site_Cartn_x") || haskey(name_to_column, "_atom_site_fract_x") # to have entered _atom_site loop
                     found_species_col = false
