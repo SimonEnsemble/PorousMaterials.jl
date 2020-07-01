@@ -4,15 +4,21 @@
 # Universal fluid constant (R). units: m³-bar/(K-mol)
 const R = 8.3144598e-5
 
+"""
+    PengRobinsonFluid(fluid, Tc, Pc, ω)
+
+# Attributes
+- `fluid::Symbol`: Name of the Peng-Robinson fluid species. e.g. :CO2.
+- `Tc::Float64`: Critical temperature of fluid species (units: Kelvin).
+- `Pc::Float64`: Critical pressure of fluid species (units: bar).
+- `ω::Float64`: Acentric factor of fluid species (units: unitless).
+"""
+
 # Data structure stating characteristics of a Peng-Robinson fluid
 struct PengRobinsonFluid
-    "Peng-Robinson Fluid species. e.g. :CO2"
     fluid::Symbol
-    "Critical temperature (units: Kelvin)"
     Tc::Float64
-    "Critical pressure (units: bar)"
     Pc::Float64
-    "Acentric factor (units: unitless)"
     ω::Float64
 end
 
@@ -62,10 +68,10 @@ and returns a complete `PengRobinsonFluid` data structure.
 **NOTE: Do not delete the last three comment lines in PengRobinson_fluid_props.csv
 
 # Arguments
-- `fluid::Symbol`: The fluid molecule you wish to construct a PengRobinsonFluid struct for
+- `fluid::Symbol`: The fluid species you wish to construct a PengRobinsonFluid struct for.
 
 # Returns
-- `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters.
+- `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters for species of interest.
 """
 function PengRobinsonFluid(fluid::Symbol)
     df = CSV.read(joinpath(PATH_TO_DATA, "PengRobinson_fluid_props.csv"), copycols=true, comment="#")
@@ -87,13 +93,20 @@ function Base.show(io::IO, fluid::PengRobinsonFluid)
     println(io, "\tAcenteric factor: ", fluid.ω)
 end
 
+"""
+    VdWFluid(fluid, a, b)
+
+# Attributes
+- `fluid::Symbol`: Name of the van der Waals fluid species. e.g. :CO2.
+- `a::Float64`: van der Waals constant a of fluid species (units: bar * m⁶ / mol²).
+- `b::Float64`: van der Waals constant b of fluid species (units: m³ / mol).
+"""
+
+
 # Data structure stating characteristics of a van der Waals fluid
 struct VdWFluid
-    "van der Waals Fluid species. e.g. :CO2"
     fluid::Symbol
-    "VdW constant a (units: bar * m⁶ / mol²)"
     a::Float64
-    "VdW constant b (units: m³ / mol)"
     b::Float64
 end
 
@@ -142,10 +155,10 @@ and returns a complete `VdWFluid` data structure.
 ***NOTE: Do not delete the last three comment lines in VdW_fluid_props.csv
 
 # Arguments
-- `fluid::Symbol`: The fluid you wish to construct a VdWFluid struct for
+- `fluid::Symbol`: The fluid species you wish to construct a VdWFluid struct for.
 
 # Returns
-- `VdWFluid::struct`: Data structure containing van der Waals constants
+- `VdWFluid::struct`: Data structure containing van der Waals constants for species of interest.
 """
 function VdWFluid(fluid::Symbol)
     df = CSV.read(joinpath(PATH_TO_DATA, "VdW_fluid_props.csv"), copycols=true, comment="#")
@@ -167,19 +180,19 @@ end
 
 
 """
-    props = calculate_properties(fluid, T, P, verbose=true)
+    props = calculate_properties(fluid, T, P; verbose=true)
 
 Use equation of state to calculate density, fugacity, and molar volume of a real fluid at a
 given temperature and pressure.
 
 # Arguments
-- `fluid::Union{PengRobinsonFluid, VdWFluid}`: Peng-Robinson/ van der Waals fluid data structure
-- `T::Float64`: Temperature (units: Kelvin)
-- `P::Float64`: Pressure (units: bar)
-- `verbose::Bool`: will print results if `true`
+- `fluid::Union{PengRobinsonFluid, VdWFluid}`: Peng-Robinson/ van der Waals fluid data structure.
+- `T::Float64`: Temperature (units: Kelvin).
+- `P::Float64`: Pressure (units: bar).
+- `verbose::Bool`: will print results of calculations if `true`.
 
 # Returns
-- `prop_dict::Dict`: Dictionary of Peng-Robinson/ van der Waals fluid properties
+- `prop_dict::Dict`: Dictionary of Peng-Robinson/ van der Waals fluid properties.
 """
 function calculate_properties(fluid::Union{PengRobinsonFluid, VdWFluid}, T::Float64, P::Float64; verbose::Bool=true)
     # Compressbility factor (unitless)
