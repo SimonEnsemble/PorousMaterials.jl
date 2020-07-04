@@ -85,12 +85,11 @@ end
     #   no atoms should overlap
     #   should place atoms in the same positions as the P1 conversion using
     #       openBabel
-    #     test it wraps coords to [0, 1]
-    non_P1_crystal = Crystal("symmetry_test_structure.cif", wrap_coords=false)
-    @test any(non_P1_crystal.atoms.coords.xf .> 1.0)
-    non_P1_crystal = Crystal("symmetry_test_structure.cif", wrap_coords=true) # default
-    @test all(non_P1_crystal.atoms.coords.xf .< 1.0)
-    @test all(non_P1_crystal.atoms.coords.xf .> 0.0)
+    #  test wraps coords to [0, 1] for symmetry ops
+    xtal = Crystal("symmetry_test_structure.cif", wrap_coords=false)
+    @test any(xtal.atoms.coords.xf .> 1.0)
+    xtal = Crystal("symmetry_test_structure.cif", wrap_coords=true) # default
+    @test all(xtal.atoms.coords.xf .< 1.0) && all(xtal.atoms.coords.xf .> 0.0)
 
     non_P1_crystal = Crystal("symmetry_test_structure.cif") # not in P1 original
     strip_numbers_from_atom_labels!(non_P1_crystal)
@@ -120,43 +119,45 @@ end
 
     # test reading in non-P1 then applying symmetry later
     # read in the same files as above, then convert to P1, then compare
-    non_P1_crystal_symmetry = Crystal("symmetry_test_structure.cif", convert_to_p1=false)
-    strip_numbers_from_atom_labels!(non_P1_crystal_symmetry)
-    non_P1_cartesian_symmetry = Crystal("symmetry_test_structure_cartn.cif", convert_to_p1=false)
-    strip_numbers_from_atom_labels!(non_P1_cartesian_symmetry)
+    non_P1_xtal = Crystal("symmetry_test_structure.cif", convert_to_p1=false)
+    strip_numbers_from_atom_labels!(non_P1_xtal)
+    non_P1_xtal_cartesian = Crystal("symmetry_test_structure_cartn.cif", convert_to_p1=false)
+    strip_numbers_from_atom_labels!(non_P1_xtal_cartesian)
 
     # make sure these crystals are not in P1 symmetry when convert_to_p1 is
     #   set to false
-    @test ! non_P1_crystal_symmetry.symmetry.is_p1
-    @test ! non_P1_cartesian_symmetry.symmetry.is_p1
+    @test ! non_P1_xtal.symmetry.is_p1
+    @test ! non_P1_xtal_cartesian.symmetry.is_p1
 
-    hk = Crystal("HKUST-1_low_symm.cif")
+    hk = Crystal("HKUST-1_low_symm.cif", remove_duplicates=true)
     strip_numbers_from_atom_labels!(hk)
     hk_p1 = Crystal("HKUST-1_P1.cif") # from avogadro
     strip_numbers_from_atom_labels!(hk_p1)
     @test equal_multisets(hk.atoms, hk_p1.atoms, hk.box)
 
     # test write_cif in non_p1 symmetry
-    write_cif(non_P1_crystal_symmetry, joinpath("data", "crystals", "rewritten_symmetry_test_structure.cif"))
+    write_cif(non_P1_xtal, joinpath("data", "crystals", "rewritten_symmetry_test_structure.cif"))
     # keep this in cartesian to test both
-    write_cif(non_P1_cartesian_symmetry, joinpath("data", "crystals", "rewritten_symmetry_test_structure_cartn.cif"), fractional_coords=false)
+    write_cif(non_P1_xtal_cartesian, joinpath("data", "crystals", "rewritten_symmetry_test_structure_cartn.cif"), fractional_coords=false)
     rewritten_non_p1_fractional = Crystal("rewritten_symmetry_test_structure.cif"; convert_to_p1=false)
     strip_numbers_from_atom_labels!(rewritten_non_p1_fractional) # TODO remove
     rewritten_non_p1_cartesian = Crystal("rewritten_symmetry_test_structure_cartn.cif"; convert_to_p1=false)
     strip_numbers_from_atom_labels!(rewritten_non_p1_cartesian)
 
-    @test isapprox(rewritten_non_p1_fractional, non_P1_crystal_symmetry, atol=0.0001)
-    @test isapprox(rewritten_non_p1_cartesian, non_P1_cartesian_symmetry, atol=0.0001)
+    @test isapprox(rewritten_non_p1_fractional, non_P1_xtal, atol=0.0001)
+    @test isapprox(rewritten_non_p1_cartesian, non_P1_xtal_cartesian, atol=0.0001)
 
-    non_P1_crystal_symmetry = apply_symmetry_operations(non_P1_crystal_symmetry)
-    non_P1_cartesian_symmetry = apply_symmetry_operations(non_P1_cartesian_symmetry)
-    @test non_P1_crystal_symmetry.symmetry.is_p1
-    @test non_P1_cartesian_symmetry.symmetry.is_p1
+    non_P1_xtal = Crystal("symmetry_test_structure.cif", convert_to_p1=true)
+    strip_numbers_from_atom_labels!(non_P1_xtal)
+    non_P1_xtal_cartesian = Crystal("symmetry_test_structure_cartn.cif", convert_to_p1=true)
+    strip_numbers_from_atom_labels!(non_P1_xtal_cartesian)
+    @test non_P1_xtal.symmetry.is_p1
+    @test non_P1_xtal_cartesian.symmetry.is_p1
 
     # test that same structure is created when reading and converting to P1 and
     #   when reading then converting to P1
-    @test isapprox(non_P1_crystal, non_P1_crystal_symmetry)
-    @test isapprox(non_P1_cartesian, non_P1_cartesian_symmetry)
+    @test isapprox(non_P1_crystal, non_P1_xtal)
+    @test isapprox(non_P1_cartesian, non_P1_xtal_cartesian)
 
     # test .cssr reader too; test_structure2.{cif,cssr} designed to be the same.
     xtal_cssr = Crystal("test_structure2.cssr")
@@ -306,5 +307,11 @@ end
     @test xtal1.atoms.species == xtal2.atoms.species
 
     @test_throws KeyError Crystal("SBMOF-1.cif", species_col=["bogus_column"])
+
+    # overlap tests
+    @test_throws ErrorException Crystal("SBMOF-1_overlap.cif")
+    xtal = Crystal("SBMOF-1_overlap.cif", remove_duplicates=true)
+    @test isapprox(xtal, Crystal("SBMOF-1.cif"))
+    @test_throws ErrorException Crystal("SBMOF-1_overlap_diff_atom.cif", remove_duplicates=true) # duplicate but diff atom, so not repairable
 end
 end

@@ -38,6 +38,7 @@ const NET_CHARGE_TOL = 1e-4 # net charge tolerance
         check_overlap=true, overlap_tol=0.1,
         convert_to_p1=true, read_bonds_from_file=false, wrap_coords=true,
         include_zero_charges=false,
+        remove_duplicates=false,
         species_col=["_atom_site_label", "_atom_site_type_symbol"]
         ) # read from file
 
@@ -59,6 +60,7 @@ or construct a `Crystal` data structure directly.
 - `wrap_coords::Bool`: if `true`, enforce that fractional coords of atoms and charges are in [0,1]³ by mod(x, 1)
 - `include_zero_charges::Bool`: if `false`, do not include in `crystal.charges` atoms which have zero charges, in order to speed up the electrostatic calculations.
     If `true,` include the atoms in `crystal.charges` that have zero charge, ensuring that the number of atoms is equal to the number of charges and that `crystal.charges.coords.xf` and `crystal.atoms.coords.xf` are the same.
+- `remove_duplicates::Bool`: remove duplicate atoms and charges. an atom is duplicate only if it is the same species.
 
 # Returns
 - `crystal::Crystal`: A crystal containing the crystal structure information
@@ -75,11 +77,15 @@ or construct a `Crystal` data structure directly.
     we check for the first entry of `species_col` in the .cif file; if not present, we then use the second entry, and so on.
 """
 function Crystal(filename::String;
-                 check_neutrality::Bool=true, net_charge_tol::Float64=NET_CHARGE_TOL,
-                 check_overlap::Bool=true, overlap_tol::Float64=0.1,
+                 check_neutrality::Bool=true, 
+                 net_charge_tol::Float64=NET_CHARGE_TOL,
+                 check_overlap::Bool=true,
+                 overlap_tol::Float64=0.1,
                  convert_to_p1::Bool=true,
-                 read_bonds_from_file::Bool=false, wrap_coords::Bool=true,
+                 read_bonds_from_file::Bool=false, 
+                 wrap_coords::Bool=true,
                  include_zero_charges::Bool=false,
+                 remove_duplicates::Bool=false,
                  species_col::Array{String, 1}=["_atom_site_label", "_atom_site_type_symbol"])
     # Read file extension. Ensure we can read the file type
     extension = split(filename, ".")[end]
@@ -420,8 +426,15 @@ function Crystal(filename::String;
         @info @sprintf("Crystal %s has %s space group. I am converting it to P1 symmetry.
         To afrain from this, pass `convert_to_p1=false` to the `Crystal` constructor.\n",
             crystal.name, crystal.symmetry.space_group)
-        return apply_symmetry_operations(crystal, wrap_coords=wrap_coords, check_overlap=check_overlap,
-            check_neutrality=check_neutrality, net_charge_tol=net_charge_tol)
+        crystal = apply_symmetry_operations(crystal)
+    end
+    
+    if wrap_coords
+        wrap!(crystal) # do before checking overlap!
+    end
+    
+    if remove_duplicates
+        crystal = remove_duplicate_atoms_and_charges(crystal)
     end
 
     if check_neutrality
@@ -430,10 +443,6 @@ function Crystal(filename::String;
             this error message by passing check_charge_neutrality=false or increasing the
             net charge tolerance `net_charge_tol`\n", crystal.name, net_charge(crystal)))
         end
-    end
-
-    if wrap_coords
-        wrap!(crystal) # do before checking overlap!
     end
 
     if check_overlap
@@ -452,9 +461,11 @@ function _check_overlap(crystal::Crystal)
             @warn @sprintf("atom %d (%s) and %d (%s) are overlapping\n", i, crystal.atoms.species[i],
                 j, crystal.atoms.species[j])
         end
-        error(crystal.name * " has overlapping pairs of atoms.
-            pass `check_overlap=false` then run `overlap(crystal)`
-            to obtain pairs of overlapping atoms.`\n")
+        error(crystal.name * " has overlapping pairs of atoms! 
+            (this occurs often when applying symmetry rules, if your structure was not in P1 symmetry to begin with.)
+            pass `check_overlap=false` then run `overlap(crystal)` to find pairs of overlapping atoms for inspection. 
+            or pass `remove_duplicates=true` to the `Crystal` constructor to automatically remove the duplicate atoms and charges.
+            you should then visualize your .cif to make sure it is proper.`\n")
     end
 end
 
@@ -660,28 +671,17 @@ crystal_density(crystal::Crystal) = molecular_weight(crystal) / crystal.box.Ω *
 
 """
     simulation_ready_crystal = apply_symmetry_operations(non_p1_crystal)
-                                                         check_neutrality=true,
-                                                         net_charge_tol=1e-4,
-                                                         check_overlap=true,
-                                                         remove_duplicates=true,
-                                                         wrap_coordstrue)
 
 Convert a crystal to P1 symmetry based on internal symmetry rules. This will return a new crystal.
 
 # Arguments
 - `non_p1_crystal::Crystal`: The crystal to be converted to P1 symmetry
-- `check_neutrality::Bool`: check for charge neutrality
-- `net_charge_tol::Float64`: when checking for charge neutrality, throw an error if the absolute value of the net charge is larger than this value.
-- `check_overlap::Bool`: throw an error if overlapping atoms are detected.
-- `wrap_coords::Bool`: if true, enforce that fractional coords of atoms/charges are in [0,1]³ by mod(x, 1)
 
 # Returns
 - `P1_crystal::Crystal`: The crystal after it has been converted to P1
     symmetry. The new symmetry rules will be the P1 symmetry rules
 """
-function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true,
-                                   net_charge_tol::Float64=NET_CHARGE_TOL, check_overlap::Bool=true,
-                                   wrap_coords::Bool=true, remove_duplicates::Bool=true)
+function apply_symmetry_operations(crystal::Crystal)
     if crystal.symmetry.is_p1
         return crystal
     end
@@ -716,33 +716,7 @@ function apply_symmetry_operations(crystal::Crystal; check_neutrality::Bool=true
         end
     end
 
-    crystal = Crystal(crystal.name, crystal.box, atoms, charges)
-
-    if remove_duplicates
-        crystal = remove_duplicate_atoms_and_charges(crystal)
-    end
-
-    if check_neutrality
-        if ! neutral(crystal, net_charge_tol)
-            error(@sprintf("Crystal %s is not charge neutral; net charge is %f e. Ignore
-            this error message by passing check_charge_neutrality=false or increasing the
-            net charge tolerance `net_charge_tol`\n", crystal.name, net_charge(crystal)))
-        end
-    end
-
-    if wrap_coords
-        wrap!(crystal) # do before checking overlap!
-    end
-
-    if remove_duplicates && overlap(crystal)
-        crystal = remove_duplicate_atoms_and_charges(crystal)
-    end
-
-    if check_overlap
-        _check_overlap(crystal)
-    end
-
-    return crystal
+    return Crystal(crystal.name, crystal.box, atoms, charges)
 end
 
  # """
