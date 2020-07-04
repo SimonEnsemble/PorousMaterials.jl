@@ -2,7 +2,11 @@
 
 function runtest(testfile::String)
     @info "Testing $(testfile)"
-    include(testfile)
+    try
+        include(testfile)
+    catch exception
+        @error "Exception in $(testfile)" exception
+    end
 end
 
 testfiles = ["box.jl",

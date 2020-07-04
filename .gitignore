@@ -8,3 +8,4 @@
 *.jld2
 docs/build/
 docs/site/
+*checkpoint.ipynb

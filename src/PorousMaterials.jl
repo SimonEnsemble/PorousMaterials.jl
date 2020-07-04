@@ -32,6 +32,7 @@ function print_file_paths()
     println("\tcrystal structures (.cif, .cssr): ", PATH_TO_CRYSTALS)
     println("\tforce field files (.csv): ", PATH_TO_FORCEFIELDS)
     println("\tmolecule input files: ", PATH_TO_MOLECULES)
+    println("\tsimulation output files: ", PATH_TO_SIMS)
     println("\tgrids (.cube): ", PATH_TO_GRIDS)
 end
 
@@ -104,9 +105,9 @@ include("gcmc.jl")
  # include("generic_rotations.jl")
 
 export
- #     # porousmaterials.jl
- #     set_default_file_paths, print_file_paths, set_tutorial_mode,
- # 
+    # porousmaterials.jl
+    print_file_paths,
+    
     # matter.jl
     Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!, origin,
     
