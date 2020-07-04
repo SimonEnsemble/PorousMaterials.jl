@@ -27,4 +27,4 @@ testfiles = ["box.jl",
              "paths.jl" # must be last so as to not interfere with reading in files
              ]
 
-@info "RESULTS" Dict([testfile => runtest(testfile) for testfile in testfiles])
+[runtest(testfile) for testfile in testfiles]
