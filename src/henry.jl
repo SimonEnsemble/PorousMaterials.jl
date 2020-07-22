@@ -143,6 +143,7 @@ function henry_coefficient(crystal::Crystal, molecule::Molecule, temperature::Fl
 
     results = Dict{String, Float64}()
     results["henry coefficient [mol/(m³-bar)]"] = mean(henry_coefficients)
+    results["xtal"] = crystal.name
     results["henry coefficient [mmol/(g-bar)]"] = results["henry coefficient [mol/(m³-bar)]"] / ρ
     results["err henry coefficient [mmol/(g-bar)]"] = err_kh / ρ
     results["henry coefficient [mol/(kg-Pa)]"] = results["henry coefficient [mmol/(g-bar)]"] / 100000.0
