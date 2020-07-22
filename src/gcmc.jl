@@ -663,7 +663,7 @@ end # μVT_sim
 function μVT_output_filename(xtal::Crystal, molecule::Molecule, temperature::Float64,
                              pressure::Float64, ljff::LJForceField, n_burn_cycles::Int, 
                              n_sample_cycles::Int; comment::String="", extension::String=".jld2")
-        return @sprintf("μVT_%s_in_%s_%.3fK_%.7fbar_%s_%dburn_%dsample",
+        return @sprintf("muVT_%s_in_%s_%.3fK_%.7fbar_%s_%dburn_%dsample",
             molecule.species,
             xtal.name,
             temperature,
