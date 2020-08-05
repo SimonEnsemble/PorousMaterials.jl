@@ -141,7 +141,7 @@ function henry_coefficient(crystal::Crystal, molecule::Molecule, temperature::Fl
     err_energy.vdw = 2.0 * std([average_energies[b].vdw for b = 1:N_BLOCKS]) / sqrt(N_BLOCKS)
     err_energy.es = 2.0 * std([average_energies[b].es for b = 1:N_BLOCKS]) / sqrt(N_BLOCKS)
 
-    results = Dict{String, Float64}()
+    results = Dict{String, Any}()
     results["henry coefficient [mol/(m³-bar)]"] = mean(henry_coefficients)
     results["xtal"] = crystal.name
     results["henry coefficient [mmol/(g-bar)]"] = results["henry coefficient [mol/(m³-bar)]"] / ρ
