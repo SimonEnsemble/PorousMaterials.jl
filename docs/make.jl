@@ -8,7 +8,7 @@ makedocs(
     clean = true,
     pages = [
             "PorousMaterials" => "index.md",
-            "Crystals" => "crystal.md"
+            "Matter" => "matter.md"
             ],
     format = Documenter.HTML(assets = ["assets/flux.css"])
 )

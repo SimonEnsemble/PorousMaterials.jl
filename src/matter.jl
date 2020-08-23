@@ -1,16 +1,44 @@
 ###
 #   coordinates: Fractional and Cartesian
 ###
+"""
+abstract type for coordinates.
+"""
 abstract type Coords end
 
 #Base.IndexStyle(::Type{<:Coords}) = IndexLinear()
 
+"""
+fractional coordinates, a subtype of `Coords`.
+
+construct by passing an `Array{Float64, 2}` whose columns are the coordinates.
+
+generally, fractional coordinates should be in [0, 1] and are implicitly
+associated with a `Box` to represent a periodic coordinate system.
+
+e.g.
+```julia
+f_coords = Frac(rand(3, 2))  # 2 particles
+f_coords.xf                  # retreive fractional coords
+```
+"""
 struct Frac<:Coords
     xf::Array{Float64, 2}
 end
 Base.isapprox(c1::Frac, c2::Frac; atol::Real=0) = isapprox(c1.xf, c2.xf, atol=atol)
 Base.hcat(c1::Frac, c2::Frac) = Frac(hcat(c1.xf, c2.xf))
 
+"""
+cartesian coordinates, a subtype of `Coords`.
+
+construct by passing an `Array{Float64, 2}` whose columns are the coordinates.
+
+e.g.
+```julia
+c_coords = Cart(rand(3, 2))  # 2 particles
+c_coords.x                   # retreive cartesian coords
+```
+"""
 struct Cart<:Coords
     x::Array{Float64, 2}
 end
@@ -77,7 +105,27 @@ end
 ###
 #   Atoms
 ###
-# c is either Cart or Frac
+# T is either Cart or Frac
+"""
+used to represent a set of atoms in space (their atomic species and coordinates).
+
+```julia
+struct Atoms{T<:Coords} # enforce that the type specified is `Coords`
+    n::Int # how many atoms?
+    species::Array{Symbol, 1} # list of species
+    coords::T # coordinates
+end
+```
+
+here, `T` is `Frac` or `Cart`.
+
+helper constructor (infers `n`):
+```julia
+species = [:H, :H]
+coords = Cart(rand(3, 2))
+atoms = Atoms(species, coords)
+```
+"""
 struct Atoms{T<:Coords} # enforce that the type specified is `Coords`
     n::Int # how many atoms?
     species::Array{Symbol, 1} # list of species
@@ -103,6 +151,26 @@ Base.lastindex(atoms::Atoms) = atoms.n
 ###
 #   point charges
 ###
+"""
+used to represent a set of partial point charges in space (their charges and coordinates).
+
+```julia
+struct Charges{T<:Coords} # enforce that the type specified is `Coords`
+    n::Int
+    q::Array{Float64, 1}
+    coords::T
+end
+```
+
+here, `T` is `Frac` or `Cart`.
+
+helper constructor (infers `n`):
+```julia
+q = [0.1, -0.1]
+coords = Cart(rand(3, 2))
+charges = Charges(q, coords)
+```
+"""
 struct Charges{T<:Coords} # enforce that the type specified is `Coords`
     n::Int
     q::Array{Float64, 1}
