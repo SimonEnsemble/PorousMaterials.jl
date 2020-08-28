@@ -31,7 +31,7 @@ Point charges:
 ```julia
 molecule = Molecule("CO2") # fractional coords in terms of unit cube box
 
-# access all of the attributes that comprise the molecule
+# access the attributes that comprise the molecule object
 molecule.species   # molecule species
 molecule.com       # center-of-mass
 molecule.atoms     # Lennard-Jones spheres
@@ -76,6 +76,7 @@ random_rotation!(molecule, unit_cube())
 
 ## Molecular Movement
 ```@docs
+    apply_periodic_boundary_condition!
     random_insertion!
     remove_molecule!
     random_translation!

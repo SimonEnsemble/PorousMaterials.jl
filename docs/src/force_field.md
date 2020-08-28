@@ -9,7 +9,7 @@ The Lennard-Jones force field input files, e.g. `UFF.csv` contain a list of pure
 
 ## Building Blocks of PorousMaterials: Lennard-Jones Force Fields
 
-### Loading Force Field Files and Acessing Atributes
+### Loading Force Field Files and Accessing Attributes
 
 Reading in Lennard-Jones force field parameters is made easy with the [`LJForceField`](@ref) function. Let's load in the parameters from the Universal Force Field file (`UFF.csv`):
 
@@ -124,6 +124,7 @@ energy = electrostatic_potential_energy(xtal, molecule, eparams, eikr)
 ```
 
 # detailed docs
+
 ## Forcefields
 ```@docs
     LJForceField
