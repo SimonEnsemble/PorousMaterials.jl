@@ -24,7 +24,7 @@ end
 Base.broadcastable(ljff::LJForceField) = Ref(ljff)
 
 """
-	ljforcefield = ForceField(forcefield; r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
+	ljforcefield = LJForceField(forcefield; r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
 
 Read a .csv file containing Lennard Jones parameters (with the following columns: `atom,sigma,epsilon` and constructs a LJForceField object.
 
