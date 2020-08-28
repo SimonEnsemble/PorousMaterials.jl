@@ -29,6 +29,7 @@ and
 
 ## Van der Waals equation of state
 The van der Waals equation can be written as:
+
 ![VDWEOS](https://latex.codecogs.com/gif.latex?%28P%26space%3B%26plus%3B%26space%3B%5Cfrac%7Ba%7D%7BV%7B_%7Bm%7D%7D%5E%7B2%7D%7D%29%28V_%7Bm%7D%20%26space%3B-%26space%3Bb%29%26space%3B%3D%26space%3BRT)
 
 where $a$ and $b$ are the van der Waals constants. $a$ and $b$ can be calculated from fluid critical propertis, but `PorousMaterials.jl` reads them in as experimentally determined values.
