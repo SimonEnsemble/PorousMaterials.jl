@@ -19,7 +19,7 @@ xtal.symmetry                       # Symmetry information of the crystal. By de
                                     #  Use `convert_to_p1=false` argument in `Crystal` to keep original symmetry
 ```
 
-### fixing atom species
+## fixing atom species
 
 Often, the atoms species are appended by numbers. This messes with the internal workings of `PorousMaterials.jl`.
 To circumvent this problem, the function `strip_numbers_from_atom_labels!(xtal)` removes the appending numbers.
@@ -30,7 +30,7 @@ strip_numbers_from_atom_labels!(xtal)
 xtal.atoms.species              # [:C, :C, :O, ...]
 ```
 
-### converting the coordinates to cartesian space
+## converting the coordinates to cartesian space
 
 The coordinates of the crystals are stored in fractional coordinates. If one needs to analyze the cartesian coordinates of the crystal,
 that can be done by using the unit cell information of the crystal.
