@@ -353,7 +353,7 @@ Electrostatic potential at point x due to charges
     ###
     @inbounds k_dot_dx = (box.reciprocal_lattice * box.f_to_c) * dxf # 3 by n_charges
 
-    fill_eikr!(eikr.eikar, k_dot_dx[1, :], eparams.kreps[1], false)
+    fill_eikr!(eikr.eikar, k_dot_dx[1, :], eparams.kreps[1], true) # false
     fill_eikr!(eikr.eikbr, k_dot_dx[2, :], eparams.kreps[2], true)
     fill_eikr!(eikr.eikcr, k_dot_dx[3, :], eparams.kreps[3], true)
 

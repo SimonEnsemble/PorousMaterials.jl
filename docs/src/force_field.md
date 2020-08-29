@@ -5,7 +5,7 @@ Interaction of an adsorbate with the crystal is modeled as pair-wise additive an
 
 `V(r) = 4 * ϵ * [ x ^ 12 - x ^ 6 ]`, where `x = σ / r`
 
-The Lennard-Jones force field input files, e.g. `UFF.csv` contain a list of pure (i.e. X-X, where X is an atom) sigmas and epsilons in units Angstrom (Å) and Kelvin (K), respectively. Note that, e.g., in the [UFF paper](https://doi.org/10.1021/ja00051a040), the Lennard-Jones potential is written in a different form; thus, parameters need to be converted to correspond to the functional form used in `PorousMaterials.jl`.
+The Lennard-Jones force field input files, e.g. `UFF.csv` contain a list of pure (i.e. X-X, where X is an atom) sigmas (σ) and epsilons (ϵ) with units Angstrom (Å) and Kelvin (K), respectively. Note that, e.g., in the [UFF paper](https://doi.org/10.1021/ja00051a040), the Lennard-Jones potential is written in a different form; thus, parameters need to be converted to correspond to the functional form used in `PorousMaterials.jl`.
 
 ## Building Blocks of PorousMaterials: Lennard-Jones Force Fields
 
@@ -17,7 +17,7 @@ Reading in Lennard-Jones force field parameters is made easy with the [`LJForceF
 using PorousMaterials
 
 # read in Lennard-Jones force field parameters from the Universal Force Field
-ljforcefield = LJForceField("UFF", cutoffradius=14.0, mixing_rules="Lorentz-Berthelot")
+ljforcefield = LJForceField("UFF", r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
 ```
 
 PorousMaterials will then output information about the force field file you just loaded:
@@ -77,7 +77,7 @@ repfactors = replication_factors(xtal.box, r_cutoff)
 
 ### Potential Energies: Van der Waals
 
-What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at `[0.0, 1.0, 3.0]` Cartesian coordinates using the UFF as a molecular model?
+What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at Cartesian coordinates `[0.0, 1.0, 3.0]` using the UFF as a molecular model?
 
 ```julia
 using PorousMaterials
@@ -87,40 +87,13 @@ strip_numbers_from_atom_labels!(xtal)
 
 ljforcefield = LJForceField("UFF")
 
+# load molecule and convert it to fractional
 molecule = Molecule("Xe")
-
-# convert to fractional
 molecule = Frac(molecule, xtal.box) 
 
-translate_to!(molecule, Cart([0.0, 1.0, 0.0]), xtal.box) # need box b/c we're talking Cartesian
+translate_to!(molecule, Cart([0.0, 1.0, 3.0]), xtal.box) # need box b/c we're in Cartesian
 
 energy = vdw_energy(xtal, molecule, ljforcefield) # K
-```
-
-#### Potential Energies: Electrostatics
-
-What is the electrostatic potential energy of a CO$_2$ adsorbate inside CAXVII\_clean at `[0.0, 1.0, 0.0]` Cartesian coordinate?
-
-```julia
-using PorousMaterials
-
-xtal = Crystal("CAXVII_clean.cif") # has charges
-strip_numbers_from_atom_labels!(xtal)
-
-# load molecule and convert it to fractional
-molecule = Molecule("CO2")
-molecule = Frac(molecule, xtal.box)
-
-# let's give it a random orientation
-translate_to!(molecule, Cart([0.0, 1.0, 0.0]), xtal.box)
-random_rotation!(molecule, xtal.box) 
-
-# this is for speed. pre-compute k-vectors and allocate memory
-eparams = setup_Ewald_sum(xtal.box, 12.0)
-eikr = Eikr(molecule, eparams)
-
-# now compute the electrostatic potential energy of a molecule inside a crystal
-energy = electrostatic_potential_energy(xtal, molecule, eparams, eikr)
 ```
 
 # detailed docs

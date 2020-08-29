@@ -1,8 +1,8 @@
 # Molecules
 
-## Loading in Molecule Files
+## Loading Molecule Files
 
-Molecule input files are stored in `PorousMaterials.PATH_TO_MOLECULES`. Each molecule possesses its own directory and contains two files: `charges.csv` and `atoms.csv`, comma-separated-value files describing the point charges and Lennard Jones spheres, respectively, comprising the molecule. Only rigid molecules are currently supported. Units of length are in Angstrom; units of charges are electrons.
+Molecule input files are stored in `PorousMaterials.PATH_TO_MOLECULES`. Each molecule possesses its own directory containing two files: `charges.csv` and `atoms.csv`, comma-separated-value files, which describe the point charges and Lennard Jones spheres, respectively, that compose the molecule. Only rigid molecules are currently supported. Units of length are in Angstroms ($\AA$); units of charges are electrons.
 
 ```julia
 using PorousMaterials
