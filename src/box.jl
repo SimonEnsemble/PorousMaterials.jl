@@ -1,4 +1,4 @@
-"""
+@doc raw"""
     box = Box(a, b, c, α, β, γ, volume, f_to_c, c_to_f, reciprocal_lattice)
     box = Box(a, b, c, α, β, γ)
     box = Box(a, b, c) # α=β=γ=π/2 assumed.
@@ -166,7 +166,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
 - `framework::Framework`: A framework containing the crystal structure information
 - `center_at_origin::Bool`: center box at origin if true. if false, the origin is the corner of the box.
 """
-function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true, 
+function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true,
                    center_at_origin::Bool=false)
     if ! occursin(".vtk", filename)
         filename *= ".vtk"
@@ -175,7 +175,7 @@ function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true,
 
     @printf(vtk_file, "# vtk DataFile Version 2.0\nunit cell boundary\n
                        ASCII\nDATASET POLYDATA\nPOINTS 8 double\n")
-    
+
     x_shift = zeros(3)
     if center_at_origin
         x_shift = box.f_to_c * [0.5, 0.5, 0.5]
