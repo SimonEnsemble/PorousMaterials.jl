@@ -152,25 +152,29 @@ translation.
 - `calculate_density_grid::Bool`: whether the simulation will keep track of a density grid for adsorbates
 - `density_grid_dx::Float64`: The (approximate) space between voxels (in Angstroms) in the density grid. The number of voxels in the simulation box is computed automatically by [`required_n_pts`](@ref).
 - `density_grid_species::Symbol`: The atomic species within the `molecule` for which we will compute the density grid.
+- `density_grid_sim_box::Bool`: `true` if we wish for the density grid to be over the 
+entire simulation box as opposed to the box of the crystal passed in. `false` if we wish the
+density grid to be over the original `xtal.box`, before replication, passed in.
 - `results_filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                  pressure::Float64, ljff::LJForceField; 
                  molecules::Array{Molecule{Cart}, 1}=Molecule{Cart}[], 
-                 n_burn_cycles = 5000,
-                 n_sample_cycles = 5000,
-                 sample_frequency = 1,
-                 verbose = true,
-                 ewald_precision = 1e-6,
-                 eos = :ideal,
-                 autosave = true,
-                 show_progress_bar = false,
-                 write_adsorbate_snapshots = false,
-                 snapshot_frequency = 1,
-                 calculate_density_grid = false,
-                 density_grid_dx = 1.0,
-                 density_grid_species = nothing,
-                 results_filename_comment = ""
+                 n_burn_cycles::Int=5000,
+                 n_sample_cycles::Int=5000,
+                 sample_frequency::Int=1,
+                 verbose::Bool=true,
+                 ewald_precision::Float64=1e-6,
+                 eos::Symbol=:ideal,
+                 autosave::Bool=true,
+                 show_progress_bar::Bool=false,
+                 write_adsorbate_snapshots::Bool=false,
+                 snapshot_frequency::Int=1,
+                 calculate_density_grid::Bool=false,
+                 density_grid_dx::Float64=1.0,
+                 density_grid_species::Union{Nothing, Symbol}=nothing,
+                 density_grid_sim_box::Bool=true,
+                 results_filename_comment::String=""
                 )
     assert_P1_symmetry(xtal)
 
@@ -217,6 +221,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     #   replicate xtal so that nearest image convention can be applied for short-range interactions
     ###
     repfactors = replication_factors(xtal.box, ljff)
+    original_xtal_box = deepcopy(xtal.box)
     xtal = replicate(xtal, repfactors) # frac coords still in [0, 1]
     
     # convert molecules array to fractional using this box.
@@ -243,9 +248,14 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     # Calculate `n_pts`, number of voxels in grid, based on the sim box and specified voxel spacing
     n_pts = (0, 0, 0) # don't store a huge grid if we aren't tracking a density grid
     if calculate_density_grid
-        n_pts = required_n_pts(xtal.box, density_grid_dx)
+        if density_grid_sim_box
+            n_pts = required_n_pts(xtal.box, density_grid_dx)
+        else
+            n_pts = required_n_pts(original_xtal_box, density_grid_dx)
+        end
     end
-    density_grid = Grid(xtal.box, n_pts, zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
+    density_grid = Grid(density_grid_sim_box ? xtal.box : original_xtal_box, n_pts, 
+        zeros(n_pts...), :inverse_A3, [0.0, 0.0, 0.0])
 
     if verbose
         println("\tthe crystal:")
@@ -267,6 +277,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         if calculate_density_grid
             @printf("\tTracking adsorbate spatial probability density grid of atomic species %s, updated every %d cycles (after burn cycles)\n", density_grid_species, snapshot_frequency)
             @printf("\t\tdensity grid voxel spacing specified as %.3f Å => %d by %d by %d voxels\n", density_grid_dx, n_pts...)
+            if density_grid_sim_box
+                @printf("\t\tdensity grid is over simulation box\n")
+            else
+                @printf("\t\tdensity grid is over original crystal box\n")
+            end
         end
     end
 
@@ -527,7 +542,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 write_xyz(xtal.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid
-                update_density!(density_grid, molecules, density_grid_species)
+                if density_grid_sim_box
+                    update_density!(density_grid, molecules, density_grid_species)
+                else
+                    update_density!(density_grid, Cart.(molecules, xtal.box), density_grid_species)
+                end
             end
             num_snapshots += 1
         end

@@ -83,6 +83,24 @@ function update_density!(grid::Grid, molecules::Array{Molecule{Frac}, 1}, specie
     end
 end
 
+# don't include molecules outside the box.
+function update_density!(grid::Grid, molecules::Array{Molecule{Cart}, 1}, species::Symbol)
+    for molecule in molecules
+        # get fractional coordinate of the center of mass.
+        xf_com = grid.box.c_to_f * molecule.com.x
+        if any(xf_com .> 1.0) || any(xf_com .< 0.0)
+            continue # don't look at this molecule
+        end
+        for i = 1:molecule.atoms.n
+            if molecule.atoms.species[i] == species
+                xf_atom = grid.box.c_to_f * molecule.atoms.coords.x[:, i]
+                voxel_id = xf_to_id(grid.n_pts, xf_atom)
+                grid.data[voxel_id...] += 1
+            end
+        end
+    end
+end
+
 """
     n_pts = required_n_pts(box, dx)
 
