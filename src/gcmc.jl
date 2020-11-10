@@ -758,6 +758,7 @@ end
                                   write_adsorbate_snapshots=false,
                                   snapshot_frequency=1, calculate_density_grid=false,
                                   density_grid_dx=1.0, density_grid_species=nothing,
+                                  density_grid_sim_box::Bool=true,
                                   results_filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in series. Arguments are the
@@ -780,9 +781,11 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
                                       ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
                                       show_progress_bar::Bool=false,
                                       write_adsorbate_snapshots::Bool=false,
-                                      snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
+                                      snapshot_frequency::Int=1, 
+                                      calculate_density_grid::Bool=false,
                                       density_grid_dx::Float64=1.0,
                                       density_grid_species::Union{Nothing, Symbol}=nothing,
+                                      density_grid_sim_box::Bool=true,
                                       results_filename_comment::AbstractString="")
 
     # simulation only works if xtal is in P1
@@ -803,6 +806,7 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
                                             calculate_density_grid=calculate_density_grid,
                                             density_grid_dx=density_grid_dx,
                                             density_grid_species=density_grid_species,
+                                            density_grid_sim_box=density_grid_sim_box,
                                             results_filename_comment=results_filename_comment)
         push!(results, result)
     end
@@ -818,6 +822,7 @@ end
                                   write_adsorbate_snapshots=false,
                                   snapshot_frequency=1, calculate_density_grid=false,
                                   density_grid_dx=1.0, density_grid_species=nothing,
+                                  density_grid_sim_box=true,
                                   results_filename_comment="", show_progress_bar=false)
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
@@ -839,6 +844,7 @@ function adsorption_isotherm(xtal::Crystal,
                              snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
                              density_grid_dx::Float64=1.0,
                              density_grid_species::Union{Nothing, Symbol}=nothing,
+                             density_grid_sim_box::Bool=true,
                              results_filename_comment::AbstractString="")
 
     # simulation only works if xtal is in P1
@@ -859,6 +865,7 @@ function adsorption_isotherm(xtal::Crystal,
                                                       calculate_density_grid=calculate_density_grid,
                                                       density_grid_dx=density_grid_dx,
                                                       density_grid_species=density_grid_species,
+                                                      density_grid_sim_box=density_grid_sim_box,
                                                       results_filename_comment=results_filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
