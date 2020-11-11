@@ -18,7 +18,7 @@ Warning: this assumes the two molecules are in the box described by fractional c
     end
 end
 
-"""
+@doc raw"""
     r = distance(coords, box, i, j, apply_pbc)
     r = distance(atoms, box, i, j, apply_pbc) # atoms i and j
     r = distance(charges, box, i, j, apply_pbc) # atoms i and j
@@ -130,7 +130,7 @@ two charges are duplicate if both:
 - `r_tol::Float64`: atoms/charges are overlapping if within `r_tol` distance (PBC applied)
 - `q_tol::Float64`: charges have the same charge value if their charges are within `q_tol` of each other
 """
-function remove_duplicates(ac::Union{Atoms{Frac}, Charges{Frac}}, box::Box, apply_pbc::Bool; 
+function remove_duplicates(ac::Union{Atoms{Frac}, Charges{Frac}}, box::Box, apply_pbc::Bool;
                            r_tol::Float64=0.1, q_tol::Float64=0.0001)
     ids_keep = trues(ac.n)
     for i = 1:ac.n
