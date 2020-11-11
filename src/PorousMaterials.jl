@@ -37,6 +37,26 @@ function print_file_paths()
 end
 
 """
+    set_path_to_data("../data")
+
+set the `PATH_TO_DATA` variable.
+this adjusts the path to crystals, forcefields, molecules, grids, and simulation output files.
+"""
+function set_path_to_data(ptd::String; print_paths::Bool=true)
+    global PATH_TO_DATA = ptd
+
+    global PATH_TO_CRYSTALS = joinpath(PATH_TO_DATA, "crystals")
+    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
+    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
+    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
+    
+    if print_paths
+        print_file_paths()
+    end
+end
+
+"""
     set_default_file_paths(print_paths=true)
 
 sets the default paths for where input files and some output files are stored.
@@ -106,7 +126,7 @@ include("gcmc.jl")
 
 export
     # porousmaterials.jl
-    print_file_paths,
+    print_file_paths, set_path_to_data,
     
     # matter.jl
     Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!, origin,

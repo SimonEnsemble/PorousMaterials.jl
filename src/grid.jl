@@ -110,11 +110,14 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 - `grid::Grid`: grid with associated data at each grid point.
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`.
 - `verbose::Bool`: print name of file after writing.
+- `length_units::String`: units for length. Bohr or Angstrom.
 """
-function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
+function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, length_units::String="Angstrom")
     if ! isdir(PATH_TO_GRIDS)
         mkdir(PATH_TO_GRIDS)
     end
+
+    @assert (length_units in ["Angstrom", "Bohr"])
 
     if ! occursin(".cube", filename)
         filename = filename * ".cube"
@@ -130,6 +133,9 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true)
         # these are the vectors that form the parallelogram comprising the voxels
         # 0 and 1 fractional coords were included. so voxel vector is unit cell axis divided by # grid pts - 1
         voxel_vector = grid.box.f_to_c[:, k] / (grid.n_pts[k] - 1)
+        if length_units == "Bohr"
+            voxel_vector = 1.88973 * voxel_vector
+        end
         @printf(cubefile, "%d %f %f %f\n" , grid.n_pts[k],
             voxel_vector[1], voxel_vector[2], voxel_vector[3])
     end
