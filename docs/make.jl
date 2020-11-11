@@ -8,15 +8,21 @@ makedocs(
     clean = true,
     pages = [
             "PorousMaterials" => "index.md",
-            "Matter" => "matter.md",
-            "Box" => "box.md",
-            "Distance" => "distance.md"
+            "matter" => "matter.md",
+            "boxes" => "box.md",
+            "crystals" => "crystal.md",
+            "molecules" => "molecule.md",
+            "computing distances" => "distance.md",
+            "forcefields" => "force_field.md",
+            "equations of state" => "eos.md",
+            "Henry coefficients" => "henry.md",
+            "grand-canonical Monte Carlo simulations" => "gcmc.md"
             ],
     format = Documenter.HTML(assets = ["assets/flux.css"])
 )
 
- # deploydocs(
- #     repo = "github.com/SimonEnsemble/PorousMaterials.jl.git",
+deploydocs(
+    repo = "github.com/SimonEnsemble/PorousMaterials.jl.git",
  #     push_preview=false,
  #     deps = Deps.pip("mkdocs", "mkdocs-material", "pymdown-extensions") # These are dependencies for the site, not the package
- # )
+)
