@@ -1,0 +1,26 @@
+_symmetry_space_group_name_H-M   'P 1'
+_cell_length_a 11.619300
+_cell_length_b 5.566700
+_cell_length_c 22.931200
+_cell_angle_alpha 90.000000
+_cell_angle_beta 100.897000
+_cell_angle_gamma 90.000000
+_cell_volume 1456.472102
+_symmetry_Int_Tables_number 1
+
+loop_
+_symmetry_equiv_pos_as_xyz
+ 'x, y, z'
+
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_charge
+H H 0.731700 0.709000 0.993900 0.000000
+S S 0.603230 0.463600 0.894140 0.000000
+C C 0.727500 0.237600 0.155700 0.000000
+O O 0.740600 0.415000 0.190660 0.000000
+Ca Ca 0.137200 0.756690 0.721170 0.000000

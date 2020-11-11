@@ -1,8 +1,6 @@
 .extrastuff
 *.cube
 *.cssr
-Tester.jl
-VisualizeTester.jl
 *.swp
 *.cif
 *.xyz
@@ -10,3 +8,4 @@ VisualizeTester.jl
 *.jld2
 docs/build/
 docs/site/
+*checkpoint.ipynb
