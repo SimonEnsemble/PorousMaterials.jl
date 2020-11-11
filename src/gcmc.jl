@@ -679,6 +679,29 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     return results, molecules # summary of statistics and ending configuration of molecules
 end # μVT_sim
 
+"""
+    filename = μVT_output_filename(xtal, molecule, temperature, 
+                                   pressure, ljff, n_burn_cycles, 
+                                   n_sample_cycles; comment="", extension=".jld2")
+
+This is the function that establishes the file naming convention used by [μVT_sim](@ref).
+
+# Arguments
+- `xtal::Crystal`: porous xtal used in adsorption simulation
+- `molecule::Molecule`: a template of the adsorbate molecule used in adsorption simulation
+- `temperature::Float64`:temperature of bulk gas phase in equilibrium with adsorbed phase in
+        the porous material. units: Kelvin (K) 
+- `pressure::Float64`:pressure of bulk gas phase in equilibrium with adsorbed phase in the
+        porous material. units: bar
+- `ljff::LJForceField`: the molecular model used in adsorption simulation
+- `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before sampling.    
+- `n_sample_cycles::Int`: number of cycles used for sampling
+- `comment::String=""`: remarks to be included in the filename
+- `extension::String=".jld2"`: the file extension
+
+# Returns
+- `filename::String`: the name of the specific `.jld2` simulation file
+"""
 function μVT_output_filename(xtal::Crystal, molecule::Molecule, temperature::Float64,
                              pressure::Float64, ljff::LJForceField, n_burn_cycles::Int, 
                              n_sample_cycles::Int; comment::String="", extension::String=".jld2")
