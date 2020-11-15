@@ -55,7 +55,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
     ###
     #  Read in Lennard Jones spheres
     ###
-    df_lj = CSV.read(joinpath(PATH_TO_MOLECULES, species, "atoms.csv"))
+    df_lj = CSV.read(joinpath(PATH_TO_MOLECULES, species, "atoms.csv"), DataFrame)
     atoms = Atoms{Cart}(nrow(df_lj)) # pre-allocate atoms
 
     for (a, row) in enumerate(eachrow(df_lj))
@@ -66,7 +66,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
     ###
     #  Read in point charges
     ###
-    df_c = CSV.read(joinpath(PATH_TO_MOLECULES, species, "charges.csv"))
+    df_c = CSV.read(joinpath(PATH_TO_MOLECULES, species, "charges.csv"), DataFrame)
     charges = Charges{Cart}(nrow(df_c)) # pre-allocate charges
 
     for (c, row) in enumerate(eachrow(df_c))

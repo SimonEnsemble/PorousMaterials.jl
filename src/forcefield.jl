@@ -49,7 +49,7 @@ function LJForceField(forcefield::String; r_cutoff::Float64=14.0,
 
     forcefield_file_path = joinpath(PATH_TO_FORCEFIELDS, forcefield * ".csv")
 
-    df = CSV.read(forcefield_file_path, comment="#") # from DataFrames
+    df = CSV.read(forcefield_file_path, DataFrame, comment="#") # from DataFrames
 
     ljff = LJForceField(forcefield, Dict(), Dict(), Dict(), Dict(), r_cutoff^ 2)
 
