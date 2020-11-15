@@ -75,7 +75,7 @@ https://en.wikipedia.org/wiki/CPK_coloring
 """
 function read_cpk_colors()
     atom_colors = Dict{Symbol, Tuple{Int, Int, Int}}()
-    df_colors = CSV.read(joinpath(PATH_TO_DATA, "cpk_atom_colors.csv"))
+    df_colors = CSV.read(joinpath(PATH_TO_DATA, "cpk_atom_colors.csv"), DataFrame)
     for row in eachrow(df_colors)
         atom_colors[Symbol(row[:atom])] = (row[:R], row[:G], row[:B])
     end
@@ -96,7 +96,7 @@ function read_atomic_masses()
         error("Cannot find atomicmasses.csv file in your data folder\n")
     end
 
-    df_am = CSV.read(joinpath(PATH_TO_DATA, "atomicmasses.csv"))
+    df_am = CSV.read(joinpath(PATH_TO_DATA, "atomicmasses.csv"), DataFrame)
 
     atomic_masses = Dict{Symbol, Float64}()
 

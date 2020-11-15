@@ -145,7 +145,7 @@ Create a dictionary with the Cordero covalent radius for each element
 -`atom_to_radius::Dict{Symbol, Float64}`: A dictionary with elements as keys and their respective cordero covalent radii as the values.
 """
 function cordero_covalent_atomic_radii()
-    df = CSV.read(joinpath(PATH_TO_DATA, "covalent_radii.csv"), comment="#")
+    df = CSV.read(joinpath(PATH_TO_DATA, "covalent_radii.csv"), DataFrame, comment="#")
     atom_to_radius = Dict{Symbol, Float64}()
     for atom in eachrow(df)
         atom_to_radius[Symbol(atom[:atom])] = atom[:covalent_radius_A]
