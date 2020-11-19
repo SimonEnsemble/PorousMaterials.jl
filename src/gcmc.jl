@@ -157,8 +157,11 @@ entire simulation box as opposed to the box of the crystal passed in. `false` if
 density grid to be over the original `xtal.box`, before replication, passed in.
 - `results_filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
-function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
-                 pressure::Float64, ljff::LJForceField; 
+function μVT_sim(xtal::Crystal, 
+                 molecule_templates::Array{Molecule, 1},
+                 temperature::Float64,
+                 pressures::Array{Float64, 1}, 
+                 ljff::LJForceField; 
                  molecules::Array{Molecule{Cart}, 1}=Molecule{Cart}[], 
                  n_burn_cycles::Int=5000,
                  n_sample_cycles::Int=5000,
@@ -183,8 +186,16 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     # #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
     # molecule = deepcopy(molecule_)
 
+    nb_species = length(molecule_templates)
+
+    if nb_species != length(pressures)
+        error("# molecules in simulation: $nb_species
+        # partial pressures: $(length(pressures))
+        these should be equal!")
+    end
+
     if verbose
-        pretty_print(xtal, molecule, temperature, pressure, ljff)
+        pretty_print(xtal, molecule_templates, temperature, pressures, ljff)
         println("\t# burn cycles: ", n_burn_cycles)
         println("\t# sample cycles: ", n_sample_cycles)
     end
@@ -193,7 +204,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     #  xyz file for storing snapshots of adsorbate positions
     ###
     num_snapshots = 0
-    xyz_snapshots_filename = μVT_output_filename(xtal, molecule, temperature, pressure, ljff, 
+    xyz_snapshots_filename = μVT_output_filename(xtal, molecule_templates, temperature, pressures, ljff, 
                                                  n_burn_cycles, n_sample_cycles, extension=".xyz")
     xyz_snapshot_file = IOStream(xyz_snapshots_filename) # declare a variable outside of scope so we only open a file if we want to snapshot
     if write_adsorbate_snapshots
@@ -203,18 +214,24 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     ###
     #  Convert pressure to fugacity (units: Pascal) using an equation of state
     ###
-    fugacity = NaN # Pa
+    fugacities = [NaN for s = 1:nb_species] # Pa
     if eos == :ideal
-       fugacity = pressure * 100000.0 # bar --> Pa
+       fugacities = pressures * 100000.0 # bar --> Pa
     elseif eos == :PengRobinson
-        prfluid = PengRobinsonFluid(molecule.species)
-        gas_props = calculate_properties(prfluid, temperature, pressure, verbose=false)
-        fugacity = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
+        if nb_species != 1
+            error("Peng Robinson EOS not implemented for >1 species")
+        end
+        prfluid = PengRobinsonFluid(molecule_templates[1].species)
+        gas_props = calculate_properties(prfluid, temperature, pressures[1], verbose=false)
+        fugacities[1] = gas_props["fugacity (bar)"] * 100000.0 # bar --> Pa
     else
         error("eos=:ideal and eos=:PengRobinson are the only valid options for an equation of state.")
     end
     if verbose
-        @printf("\t%s equation of state fugacity = %f bar\n", eos, fugacity / 100000.0)
+        for s = 1:nb_species
+            @printf("\t%s equation of state, %s partial fugacity = %f bar\n", eos, 
+                    molecule_templates[s], fugacities[s] / 100000.0)
+        end
     end
     
     ###
@@ -266,10 +283,12 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         println("\t\tchemical formula: ", chemical_formula(xtal))
         println("\t\t# atoms: ", xtal.atoms.n)
         println("\t\t# point charges: ", xtal.charges.n)
-        println("\tthe molecule:")
-        println("\t\tunique species: ", unique(molecule.atoms.species))
-        println("\t\t# atoms: ", molecule.atoms.n)
-        println("\t\t# point charges: ", molecule.charges.n)
+        println("\tthe molecules:")
+        for s = 1:nb_species
+            println("\t\tunique species: ", unique(molecule_templates[s].atoms.species))
+            println("\t\t# atoms: ", molecule_templates[s].atoms.n)
+            println("\t\t# point charges: ", molecule_templates[s].charges.n)
+        end
         if write_adsorbate_snapshots
             @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
             @printf("\t\tWriting to file: %s\n", xyz_filename)
@@ -284,22 +303,27 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
             end
         end
     end
-
-    if ! neutral(molecule.charges)
-        error(@sprintf("Molecule %s is not charge neutral!\n", molecule.species))
+    if ! forcefield_coverage(xtal.atoms, ljff)
+        error("crystal $(xtal.name) not covered by the force field $(ljff.name)")
     end
-
-    if ! (forcefield_coverage(xtal.atoms, ljff) & forcefield_coverage(molecule.atoms, ljff))
-        error("Missing atoms from forcefield.")
+    
+    for s = 1:nb_species
+        if ! neutral(molecule_templates[s].charges)
+            error(@sprintf("Molecule %s is not charge neutral!\n", molecule_templates[s].species))
+        end
+        if ! forcefield_coverage(molecule_templates[s].atoms, ljff)
+            error("molecule $(molecule_templates[s].name) not covered by the force field $(ljff.name)")
+        end
     end
 
     # define Ewald summation params
     # pre-compute weights on k-vector contributions to long-rage interactions in
     #   Ewald summation for electrostatics
     #   allocate memory for exp^{i * n * k ⋅ r}
+    electrostatics_flag = has_charges(xtal) && any(has_charges.(molecule_templates))
     eparams = setup_Ewald_sum(xtal.box, sqrt(ljff.r²_cutoff),
-                        verbose=verbose & (has_charges(molecule) || has_charges(xtal)),
-                        ϵ=ewald_precision)
+                             verbose=verbose & electrostatics_flag
+                             ϵ=ewald_precision)
     eikr_gh = Eikr(xtal, eparams)
     eikr_gg = Eikr(molecule, eparams)
 
@@ -664,7 +688,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         end
 
         save_results_filename = joinpath(PATH_TO_SIMS,
-                                         μVT_output_filename(xtal, molecule, temperature, pressure, 
+                                         μVT_output_filename(xtal, molecule_templates, temperature, pressures, 
                                                              ljff, n_burn_cycles, n_sample_cycles, 
                                                              comment=results_filename_comment
                                                              )
@@ -680,18 +704,18 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 end # μVT_sim
 
 """
-    filename = μVT_output_filename(xtal, molecule, temperature, 
-                                   pressure, ljff, n_burn_cycles, 
+    filename = μVT_output_filename(xtal, molecule_templates, temperature, 
+                                   pressures, ljff, n_burn_cycles, 
                                    n_sample_cycles; comment="", extension=".jld2")
 
 This is the function that establishes the file naming convention used by [μVT_sim](@ref).
 
 # Arguments
 - `xtal::Crystal`: porous xtal used in adsorption simulation
-- `molecule::Molecule`: a template of the adsorbate molecule used in adsorption simulation
+- `molecule_templates::Array{Molecule, 1}`: template of the adsorbate molecules used in adsorption simulation
 - `temperature::Float64`:temperature of bulk gas phase in equilibrium with adsorbed phase in
         the porous material. units: Kelvin (K) 
-- `pressure::Float64`:pressure of bulk gas phase in equilibrium with adsorbed phase in the
+- `pressures::Array{Float64, 1}`: partial pressures of bulk gas phase in equilibrium with adsorbed phase in the
         porous material. units: bar
 - `ljff::LJForceField`: the molecular model used in adsorption simulation
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach equilibrium before sampling.    
@@ -702,18 +726,15 @@ This is the function that establishes the file naming convention used by [μVT_s
 # Returns
 - `filename::String`: the name of the specific `.jld2` simulation file
 """
-function μVT_output_filename(xtal::Crystal, molecule::Molecule, temperature::Float64,
-                             pressure::Float64, ljff::LJForceField, n_burn_cycles::Int, 
+function μVT_output_filename(xtal::Crystal, molecule_templates::Array{Molecule, 1}, temperature::Float64,
+                             pressures::Array{Float64, 1}, ljff::LJForceField, n_burn_cycles::Int, 
                              n_sample_cycles::Int; comment::String="", extension::String=".jld2")
-        return @sprintf("muVT_%s_in_%s_%.3fK_%.7fbar_%s_%dburn_%dsample",
-            molecule.species,
-            xtal.name,
-            temperature,
-            pressure,
-            ljff.name,
-            n_burn_cycles,
-            n_sample_cycles
-            ) * comment * extension
+    filename = @sprintf("muVT_xtal_%s_T_%.3fK", xtal.name, temperature)
+    for m = 1:length(molecule_templates)
+        filename *= @sprintf("_%s_P_%.6fbar", molecule_templates[m].species, pressures[m])
+    end
+    filename *= @sprintf("_%s_%dburn_%dsample", ljff.name, n_burn_cycles, n_sample_cycles)
+    return filename * comment * extension
 end
 
 function print_results(results::Dict; print_title::Bool=true)
@@ -757,18 +778,24 @@ function print_results(results::Dict; print_title::Bool=true)
     return
 end
 
-function pretty_print(xtal::Crystal, molecule::Molecule, temperature::Float64, pressure::Float64, ljff::LJForceField)
-    print("Simulating ")
-    printstyled("(μVT)"; color=:yellow)
-    print(" adsorption of ")
-    printstyled(molecule.species; color=:green)
-    print(" in ")
+function pretty_print(xtal::Crystal, 
+                      molecule_templates::Array{Molecule, 1}, 
+                      temperature::Float64, 
+                      pressures::Array{Float64, 1},
+                      ljff::LJForceField)
+    printstyled("μVT simulation\n"; color=:yellow)
+
+    print("crystal: ")
     printstyled(xtal.name; color=:green)
-    print(" at ")
-    printstyled(@sprintf("%f K", temperature); color=:green)
-    print(" and ")
-    printstyled(@sprintf("%f bar", pressure); color=:green)
-    print(" (bar) with ")
+
+    printstyled(@sprintf("temperature = %f K", temperature); color=:green)
+
+    println("adsorbates:")
+    for m = 1:length(molecule_templates)
+        printstyled(molecule_templates[m].species; color=:green)
+        printstyled(@sprintf("\tpartial pressure = %f bar", pressures[m]); color=:green)
+    end
+
     printstyled(split(ljff.name, ".")[1]; color=:green)
     println(" force field.")
 end
@@ -969,8 +996,8 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
     df = DataFrame()
     # loop over pressures and populate dataframe
     for (i, pressure) in enumerate(pressures)
-        jld2_filename = μVT_output_filename(xtal, molecule, temperature, 
-                                            pressure, ljff, n_burn_cycles, 
+        jld2_filename = μVT_output_filename(xtal, molecule_templates, temperature, 
+                                            pressures, ljff, n_burn_cycles, 
                                             n_sample_cycles, comment=comment)
         # load in the results as a dictionary
         @load joinpath(where_are_jld_files, jld2_filename) results
