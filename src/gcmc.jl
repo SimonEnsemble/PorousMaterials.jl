@@ -97,23 +97,12 @@ end
 @inline function potential_energy(molecule_id::Int,
                                   molecules::Array{Molecule{Frac}, 1},
                                   xtal::Crystal,
-                                  ljff::LJForceField,
-                                  eparams::EwaldParams,
-                                  eikr_gh::Eikr,
-                                  eikr_gg::Eikr)
+                                  ljff::LJForceField)
     energy = SystemPotentialEnergy()
     # van der Waals interactions
     energy.gg.vdw = vdw_energy(molecule_id, molecules, ljff, xtal.box) # guest-guest
     energy.gh.vdw = vdw_energy(xtal, molecules[molecule_id], ljff)     # guest-host
-    # electrostatic interactions
-    if has_charges(molecules[molecule_id])
-        # guest-guest
-        energy.gg.es = total(electrostatic_potential_energy(molecules, molecule_id, eparams, xtal.box, eikr_gg))
-        # guest-host
-        if has_charges(xtal)
-            energy.gh.es = total(electrostatic_potential_energy(xtal, molecules[molecule_id], eparams, eikr_gh))
-        end
-    end
+    # TODO electrostatic interactions
     return energy
 end
 
@@ -151,7 +140,7 @@ translation.
 - `snapshot_frequency::Int`: the number of cycles taken between each snapshot (after burn cycle completion)
 - `calculate_density_grid::Bool`: whether the simulation will keep track of a density grid for adsorbates
 - `density_grid_dx::Float64`: The (approximate) space between voxels (in Angstroms) in the density grid. The number of voxels in the simulation box is computed automatically by [`required_n_pts`](@ref).
-- `density_grid_species::Symbol`: The atomic species within the `molecule` for which we will compute the density grid.
+- `density_grid_molecular_species::Symbol`: the adsorbate for which we will make a density grid of its position (center).
 - `density_grid_sim_box::Bool`: `true` if we wish for the density grid to be over the 
 entire simulation box as opposed to the box of the crystal passed in. `false` if we wish the
 density grid to be over the original `xtal.box`, before replication, passed in.
@@ -175,7 +164,7 @@ function μVT_sim(xtal::Crystal,
                  snapshot_frequency::Int=1,
                  calculate_density_grid::Bool=false,
                  density_grid_dx::Float64=1.0,
-                 density_grid_species::Union{Nothing, Symbol}=nothing,
+                 density_grid_molecular_species::Union{Nothing, Symbol}=nothing,
                  density_grid_sim_box::Bool=true,
                  results_filename_comment::String=""
                 )
@@ -186,7 +175,10 @@ function μVT_sim(xtal::Crystal,
     # #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
     # molecule = deepcopy(molecule_)
 
+    # TODO make this as: molecules::Array{Array{Molecules, 1}, 1}
+
     nb_species = length(molecule_templates)
+    molecular_species = [mt.species for mt in molecule_templates]
 
     if nb_species != length(pressures)
         error("# molecules in simulation: $nb_species
@@ -246,19 +238,19 @@ function μVT_sim(xtal::Crystal,
 
     ###
     #   Density grid for adsorbate
-    #   (if molecule has more than one atom, 
-    #   need to specify which atom to keep track of in density grid)
+    #   (if more than one adsorbate, user must specify which adsorbate species to make
+    #     the grid for)
     ###
-    if calculate_density_grid && isnothing(density_grid_species)
-        if length(unique(molecule.atoms.species)) == 1
+    if calculate_density_grid && isnothing(density_grid_molecular_species)
+        if nb_species == 1
             # obviously we are keeping track of the only atom in the adsorbate.
-            density_grid_species = molecule.atoms.species[1]
+            density_grid_species = molecule_templates[1].species
         else
-            # don't proceed if we don't know which atom to keep track of!
-            error(@sprintf("Passed `calculate_density_grid=true` but adsorbate %s has
-                %d unique atoms. Must specify `density_grid_species` to keep track of during the
-                density grid updates.\n", molecule.species, length(unique(molecule.atoms.species)))
-                )
+            # don't proceed if we don't know which molecule to keep track of!
+            error(@sprintf("Passed `calculate_density_grid=true` but there is $nb_species
+                 different adsorbates in the system. pass `density_grid_species` to specify
+                 which adsorbate to make a grid for.")
+                 )
         end
     end
     # Initialize a density grid based on the *simulation box* (not xtal box passed in) and the passed in density_grid_dx
@@ -294,7 +286,7 @@ function μVT_sim(xtal::Crystal,
             @printf("\t\tWriting to file: %s\n", xyz_filename)
         end
         if calculate_density_grid
-            @printf("\tTracking adsorbate spatial probability density grid of atomic species %s, updated every %d cycles (after burn cycles)\n", density_grid_species, snapshot_frequency)
+            @printf("\tTracking adsorbate spatial probability density grid of adsorbate %s, updated every %d cycles (after burn cycles)\n", density_grid_molecular_species, snapshot_frequency)
             @printf("\t\tdensity grid voxel spacing specified as %.3f Å => %d by %d by %d voxels\n", density_grid_dx, n_pts...)
             if density_grid_sim_box
                 @printf("\t\tdensity grid is over simulation box\n")
@@ -312,20 +304,15 @@ function μVT_sim(xtal::Crystal,
             error(@sprintf("Molecule %s is not charge neutral!\n", molecule_templates[s].species))
         end
         if ! forcefield_coverage(molecule_templates[s].atoms, ljff)
-            error("molecule $(molecule_templates[s].name) not covered by the force field $(ljff.name)")
+            error("molecule $(molecule_templates[s].species) not covered by the force field $(ljff.name)")
         end
     end
 
-    # define Ewald summation params
-    # pre-compute weights on k-vector contributions to long-rage interactions in
-    #   Ewald summation for electrostatics
-    #   allocate memory for exp^{i * n * k ⋅ r}
+    # TODO electrostatics
     electrostatics_flag = has_charges(xtal) && any(has_charges.(molecule_templates))
-    eparams = setup_Ewald_sum(xtal.box, sqrt(ljff.r²_cutoff),
-                             verbose=verbose & electrostatics_flag
-                             ϵ=ewald_precision)
-    eikr_gh = Eikr(xtal, eparams)
-    eikr_gg = Eikr(molecule, eparams)
+    if electrostatics_flag
+        error("sorry, electrostatics not supported")
+    end
 
     # initiate system energy to which we increment when MC moves are accepted
     system_energy = SystemPotentialEnergy()
@@ -335,17 +322,18 @@ function μVT_sim(xtal::Crystal,
         # some checks
         for m in molecules
             # ensure molecule template matches species of starting molecules.
-            @assert m.species == molecule.species "initializing with wrong molecule species"
+            @assert m.species in [mt.species for mt in molecule_templates] "initializing with wrong molecule species"
             # assert that the molecules are inside the simulation box
             @assert inside(m) "initializing with molecules outside simulation box!"
             # ensure pair-wise bond distances match template
-            @assert ! distortion(m, Frac(molecule, xtal.box), xtal.box)
+            id_mt = findfirst([mt.species for mt in molecule_templates] .== m.species)
+            @assert ! distortion(m, Frac(molecule_template[id_mt], xtal.box), xtal.box)
         end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
         system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
-        system_energy.gh.es = total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
-        system_energy.gg.es = total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
+        system_energy.gh.es = 0.0 #total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
+        system_energy.gg.es = 0.0 #total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
     end
 
     if show_progress_bar
@@ -399,19 +387,22 @@ function μVT_sim(xtal::Crystal,
         end
         for inner_cycle = 1:max(20, length(molecules))
             markov_chain_time += 1
-
+            
+            # choose a species
+            which_species = rand(1:nb_species)
             # choose proposed move randomly; keep track of proposals
             which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities) # StatsBase.jl
             markov_counts.n_proposed[which_move] += 1
 
             if which_move == INSERTION
-                random_insertion!(molecules, xtal.box, molecule)
+                random_insertion!(molecules, xtal.box, molecule_templates[which_species])
 
-                ΔE = potential_energy(length(molecules), molecules, xtal,
-                                      ljff, eparams, eikr_gh, eikr_gg)
+                ΔE = potential_energy(length(molecules), molecules, xtal, ljff)
+
+                n_i = n_this_species(molecules, molecular_species[which_species])
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacity * xtal.box.Ω / (length(molecules) * KB *
+                if rand() < fugacities[which_species] * xtal.box.Ω / (n_i * KB *
                         temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -422,12 +413,13 @@ function μVT_sim(xtal::Crystal,
                     pop!(molecules)
                 end
             elseif (which_move == DELETION) && (length(molecules) != 0)
+                # get ids the belong to this species in the molecules array
+                ids_this_species = [i_m if molecules[i_m].species == molecular_species[which_species] for i_m = 1:length(molecules)]
                 # propose which molecule to delete
                 molecule_id = rand(1:length(molecules))
 
                 # compute the potential energy of the molecule we propose to delete
-                ΔE = potential_energy(molecule_id, molecules, xtal, ljff,
-                                      eparams, eikr_gh, eikr_gg)
+                ΔE = potential_energy(molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Deletion
                 if rand() < length(molecules) * KB * temperature / (fugacity *
