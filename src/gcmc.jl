@@ -107,8 +107,8 @@ end
 end
 
 """
-    results, molecules = μVT_sim(xtal, molecule, temperature, pressure,
-                                 ljff; molecules=Molecule[], settings=settings)
+    results, molecules = μVT_sim(xtal, molecule_templates, temperature, pressure,
+                                 ljff; molecules=Array{Molecule, 1}[], settings=settings)
 
 Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a molecule in a
 xtal at a particular temperature and pressure using a
@@ -120,14 +120,14 @@ translation.
 
 # Arguments
 - `xtal::Crystal`: the porous xtal in which we seek to simulate adsorption
-- `molecule::Molecule`: a template of the adsorbate molecule of which we seek to simulate
+- `molecule_templates::Array{Molecule, 1}`: an array of the templates of unique adsorbate molecules of which we seek to simulate
 - `temperature::Float64`: temperature of bulk gas phase in equilibrium with adsorbed phase
     in the porous material. units: Kelvin (K)
-- `pressure::Float64`: pressure of bulk gas phase in equilibrium with adsorbed phase in the
-    porous material. units: bar
+- `pressures::Array{Float64, 1}`: pressure of bulk gas phase in equilibrium with adsorbed phase in the
+    porous material for each adsorbate. units: bar
     the adsorption
 - `ljff::LJForceField`: the molecular model used to describe the
-- `molecules::Array{Molecule, 1}`: a starting configuration of molecules in the xtal.
+- `molecules::Array{Array{Molecule{Cart}, 1}, 1}`: a starting configuration of molecules in the xtal with an array per species.
 - `n_burn_cycles::Int`: number of cycles to allow the system to reach
     equilibrium before sampling.
 - `n_sample_cycles::Int`: number of cycles used for sampling
@@ -151,7 +151,7 @@ function μVT_sim(xtal::Crystal,
                  temperature::Float64,
                  pressures::Array{Float64, 1}, 
                  ljff::LJForceField; 
-                 molecules::Array{Molecule{Cart}, 1}=Molecule{Cart}[], 
+                 molecules::Array{Array{Molecule{Cart}, 1}, 1}=Array{Molecule{Cart}, 1}[], 
                  n_burn_cycles::Int=5000,
                  n_sample_cycles::Int=5000,
                  sample_frequency::Int=1,
@@ -206,6 +206,7 @@ function μVT_sim(xtal::Crystal,
     ###
     #  Convert pressure to fugacity (units: Pascal) using an equation of state
     ###
+    # TODO make PengRobinson work for multiple species (ignore for now)
     fugacities = [NaN for s = 1:nb_species] # Pa
     if eos == :ideal
        fugacities = pressures * 100000.0 # bar --> Pa
@@ -234,7 +235,7 @@ function μVT_sim(xtal::Crystal,
     xtal = replicate(xtal, repfactors) # frac coords still in [0, 1]
     
     # convert molecules array to fractional using this box.
-    molecules = Frac.(molecules, xtal.box)
+    molecules = [Frac.(mols, xtal.box) for mols in molecules]
 
     ###
     #   Density grid for adsorbate
@@ -244,7 +245,7 @@ function μVT_sim(xtal::Crystal,
     if calculate_density_grid && isnothing(density_grid_molecular_species)
         if nb_species == 1
             # obviously we are keeping track of the only atom in the adsorbate.
-            density_grid_species = molecule_templates[1].species
+            density_grid_molecular_species = molecule_templates[1].species
         else
             # don't proceed if we don't know which molecule to keep track of!
             error(@sprintf("Passed `calculate_density_grid=true` but there is $nb_species
@@ -330,7 +331,7 @@ function μVT_sim(xtal::Crystal,
             @assert ! distortion(m, Frac(molecule_template[id_mt], xtal.box), xtal.box)
         end
 
-        system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
+        system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff) # make overload to take array of arrays
         system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
         system_energy.gh.es = 0.0 #total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
         system_energy.gg.es = 0.0 #total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
@@ -793,7 +794,7 @@ function pretty_print(xtal::Crystal,
 end
 
 """
-    results = stepwise_adsorption_isotherm(xtal, molecule, temperature, pressures,
+    results = stepwise_adsorption_isotherm(xtal, molecule_templates, temperature, pressures,
                                   ljff; n_sample_cycles=5000,
                                   n_burn_cycles=5000, sample_frequency=1,
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
@@ -814,7 +815,7 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
 function stepwise_adsorption_isotherm(xtal::Crystal,
-                                      molecule::Molecule,
+                                      molecule_templates::Array{Molecule, 1},
                                       temperature::Float64,
                                       pressures::Array{Float64, 1},
                                       ljff::LJForceField;
@@ -834,9 +835,9 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
     assert_P1_symmetry(xtal)
 
     results = Dict{String, Any}[] # push results to this array
-    molecules = Molecule{Cart}[] # initiate with empty xtal
+    molecules = Array{Molecule{Cart}, 1}[] # initiate with empty xtal
     for (i, pressure) in enumerate(pressures)
-        result, molecules = μVT_sim(xtal, molecule, temperature, pressure,
+        result, molecules = μVT_sim(xtal, molecule_templates, temperature, pressure,
                                             ljff,
                                             n_burn_cycles=n_burn_cycles,
                                             n_sample_cycles=n_sample_cycles,
@@ -856,8 +857,10 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
     return results
 end
 
+
 """
-    results = adsorption_isotherm(xtal, molecule, temperature, pressures,
+    results = adsorption_isotherm(xtal, molecule_templates, temperature, 
+                                  partial_pressures, sim_pressures,
                                   ljff; n_sample_cycles=5000,
                                   n_burn_cycles=5000, sample_frequency=1,
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
@@ -869,12 +872,12 @@ end
 
 Run a set of grand-canonical (μVT) Monte Carlo simulations in parallel. Arguments are the
 same as [`μVT_sim`](@ref), as this is the function run in parallel behind the scenes.
-The only exception is that we pass an array of pressures. To give Julia access to multiple
-cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
+The only exception is that we pass an array of pressures, and we only consider a single species.
+To give Julia access to multiple cores, run your script as `julia -p 4 mysim.jl` to allocate e.g. four cores. See
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
 function adsorption_isotherm(xtal::Crystal,
-                             molecule::Molecule,
+                             molecule_templates::Array{Molecule, 1},
                              temperature::Float64,
                              pressures::Array{Float64, 1},
                              ljff::LJForceField;
@@ -892,26 +895,34 @@ function adsorption_isotherm(xtal::Crystal,
     # simulation only works if xtal is in P1
     assert_P1_symmetry(xtal)
 
+    # we only consider a pure gas isotherm
+    if length(molecules) != 1
+        error("We only calculate pure gas isotherms")
+    end
+
     # make a function of pressure only to facilitate uses of `pmap`
-    run_pressure(pressure::Float64) = μVT_sim(xtal, molecule, temperature,
-                                                      pressure, ljff,
-                                                      n_burn_cycles=n_burn_cycles,
-                                                      n_sample_cycles=n_sample_cycles,
-                                                      sample_frequency=sample_frequency,
-                                                      verbose=verbose,
-                                                      ewald_precision=ewald_precision,
-                                                      eos=eos, 
-                                                      show_progress_bar=show_progress_bar,
-                                                      write_adsorbate_snapshots=write_adsorbate_snapshots,
-                                                      snapshot_frequency=snapshot_frequency,
-                                                      calculate_density_grid=calculate_density_grid,
-                                                      density_grid_dx=density_grid_dx,
-                                                      density_grid_species=density_grid_species,
-                                                      density_grid_sim_box=density_grid_sim_box,
-                                                      results_filename_comment=results_filename_comment)[1] # only return results
+    run_pressure(partial_pressures::Array{Float64, 1}) = μVT_sim(xtal, molecule_templates, temperature,
+                                                                 partial_pressures, ljff,
+                                                                 n_burn_cycles=n_burn_cycles,
+                                                                 n_sample_cycles=n_sample_cycles,
+                                                                 sample_frequency=sample_frequency,
+                                                                 verbose=verbose,
+                                                                 ewald_precision=ewald_precision,
+                                                                 eos=eos, 
+                                                                 show_progress_bar=show_progress_bar,
+                                                                 write_adsorbate_snapshots=write_adsorbate_snapshots,
+                                                                 snapshot_frequency=snapshot_frequency,
+                                                                 calculate_density_grid=calculate_density_grid,
+                                                                 density_grid_dx=density_grid_dx,
+                                                                 density_grid_species=density_grid_species,
+                                                                 density_grid_sim_box=density_grid_sim_box,
+                                                                 results_filename_comment=results_filename_comment)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
-    ids = sortperm(pressures, rev=true)
+    ids = sortperm(sim_pressures, rev=true)
+
+    # define pressure = Array{Array{Float64, 1}, 1}
+    #
 
     # run gcmc simulations in parallel using Julia's pmap parallel computing function
     results = pmap(run_pressure, pressures[ids])

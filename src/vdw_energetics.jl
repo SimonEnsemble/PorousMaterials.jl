@@ -127,6 +127,23 @@ function total_vdw_energy(molecules::Array{<:Molecule, 1}, ljff::LJForceField, b
    return total_energy / 2.0 # avoid double-counting pairs
 end
 
+# handles array of molecule arrays fo multi-species gcmc
+function total_vdw_energy(crystal::Crystal, molecules::Array{Array{<:Molecule, 1}, 1}, ljff::LJForceField)
+    total_energy = 0.0
+    for mol in molecules
+        total_energy += total_vdw_energy(crystal::Crystal, mol::Array{<:Molecule, 1}, ljff::LJForceField)
+    end
+    return total_energy
+end
+
+function total_vdw_energy(molecules::Array{Array{<:Molecule, 1}, 1}, ljff::LJForceField, box::Box)
+    total_energy = 0.0
+    for mol in molecules
+        total_energy += total_vdw_energy(mol::Array{<:Molecule, 1}, ljff::LJForceField, box::Box) 
+    end
+    return total_energy
+end
+
 """
    pot_energy = vdw_energy_no_PBC(atoms_i, atoms_j , ljff)
 
