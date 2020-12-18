@@ -309,7 +309,7 @@ function μVT_sim(xtal::Crystal,
         end
     end
 
-    # TODO electrostatics
+    # TODO electrostatics 
     electrostatics_flag = has_charges(xtal) && any(has_charges.(molecule_templates))
     if electrostatics_flag
         error("sorry, electrostatics not supported")
@@ -321,15 +321,26 @@ function μVT_sim(xtal::Crystal,
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
         # some checks
-        for m in molecules
-            # ensure molecule template matches species of starting molecules.
-            @assert m.species in [mt.species for mt in molecule_templates] "initializing with wrong molecule species"
-            # assert that the molecules are inside the simulation box
-            @assert inside(m) "initializing with molecules outside simulation box!"
-            # ensure pair-wise bond distances match template
-            id_mt = findfirst([mt.species for mt in molecule_templates] .== m.species)
-            @assert ! distortion(m, Frac(molecule_template[id_mt], xtal.box), xtal.box)
-        end
+#        for m in molecules 
+#            # ensure molecule template matches species of starting molecules.
+#            @assert m.species in [mt.species for mt in molecule_templates] "initializing with wrong molecule species"
+#            # assert that the molecules are inside the simulation box
+#            @assert inside(m) "initializing with molecules outside simulation box!"
+#            # ensure pair-wise bond distances match template
+#            id_mt = findfirst([mt.species for mt in molecule_templates] .== m.species)
+#            @assert ! distortion(m, Frac(molecule_template[id_mt], xtal.box), xtal.box)
+#        end
+
+		for m in molecules # these are arrays of molecule structs
+			# ensuer molecule tempale matches species of starting molecules.
+			@assert all(i -> (i.species in [mt.species for mt in molecule_templates]), m) "initializing with wrong molecule species"
+			# assert that the molecules are inside the simulation box
+			@assert all(i -> inside(i), m) "initializing with molecules outside simulation box!"
+			# ensure pair-wise bond distance match template
+			ids_mt = [findfirst([mt.species for mt in molecule_templates] .== i.species) for i in m] # collection of ids
+			@assert all(id -> [! distortion(i, Frac(molecule_template[id], xtal.box)) for i in m], ids_mt) "initializing with distorted molecules"
+
+		end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff) # make overload to take array of arrays
         system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
