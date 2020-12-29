@@ -92,6 +92,23 @@ function vdw_energy(molecule_id::Int, molecules::Array{<:Molecule, 1}, ljff::LJF
    return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
+function vdw_energy(which_species::Int, molecule_id::Int, molecules::Array{Array{<:Molecule, 1}, 1}, ljff::LJForceField, box::Box)
+	energy = 0.0
+	# loop over every other molecule in molecules
+	for other_molecule_species in 1:length(molecules)
+		for other_molecule_id in 1:length(molecules[other_molecule_species])
+			# mlecule cannot interact with istelf
+			if other_molecule_species == which_species & other_molecule_id == molecule_id
+				continue
+			end
+
+			energy += vdw_energy(molecules[which_species][molecule_id].atoms, molecules[other_molecule_species][other_molecule_id].atoms, box, ljff)
+		end
+	end
+	return energy # units are the same as in ϵ for forcefield (Kelvin)
+end
+
+
 """
    total_gh_energy = total_vdw_energy(framework, molecules, ljforcefield) # guest-host
    total_gg_energy = total_vdw_energy(molecules, ljforcefield, simulation_box) # guest-guest
@@ -131,7 +148,7 @@ end
 function total_vdw_energy(crystal::Crystal, molecules::Array{Array{<:Molecule, 1}, 1}, ljff::LJForceField)
     total_energy = 0.0
     for mol in molecules
-        total_energy += total_vdw_energy(crystal::Crystal, mol::Array{<:Molecule, 1}, ljff::LJForceField)
+        total_energy += total_vdw_energy(crystal, mol, ljff)
     end
     return total_energy
 end
@@ -139,7 +156,7 @@ end
 function total_vdw_energy(molecules::Array{Array{<:Molecule, 1}, 1}, ljff::LJForceField, box::Box)
     total_energy = 0.0
     for mol in molecules
-        total_energy += total_vdw_energy(mol::Array{<:Molecule, 1}, ljff::LJForceField, box::Box) 
+        total_energy += total_vdw_energy(mol, ljff, box)
     end
     return total_energy
 end

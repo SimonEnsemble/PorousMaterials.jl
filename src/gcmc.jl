@@ -93,17 +93,26 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
 end
 
 # TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
-# potential energy change after inserting/deleting/perturbing coordinates of molecules[molecule_id]
-@inline function potential_energy(molecule_id::Int,
-                                  molecules::Array{Molecule{Frac}, 1},
+# potential energy change after inserting/deleting/perturbing coordinates of molecules[which_species][molecule_id]
+@inline function potential_energy(which_species::Int,
+								  molecule_id::Int,
+                                  molecules::Array{Array{Molecule{Frac}, 1}, 1},
                                   xtal::Crystal,
                                   ljff::LJForceField)
     energy = SystemPotentialEnergy()
     # van der Waals interactions
-    energy.gg.vdw = vdw_energy(molecule_id, molecules, ljff, xtal.box) # guest-guest
-    energy.gh.vdw = vdw_energy(xtal, molecules[molecule_id], ljff)     # guest-host
+    energy.gg.vdw = vdw_energy(which_species, molecule_id, molecules, ljff, xtal.box) # guest-guest
+    energy.gh.vdw = vdw_energy(xtal, molecules[which_species][molecule_id], ljff)     # guest-host
     # TODO electrostatic interactions
     return energy
+end
+
+function n_this_species(which_species::Int, molecules::Array{Array{Molecule, 1}, 1}, molecular_species::Symbol)
+	if length(molecules) == 0
+		return 0
+	end
+
+	n_i = length(molecules[which_species])
 end
 
 """
@@ -175,8 +184,6 @@ function μVT_sim(xtal::Crystal,
     # #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
     # molecule = deepcopy(molecule_)
 
-    # TODO make this as: molecules::Array{Array{Molecules, 1}, 1}
-
     nb_species = length(molecule_templates)
     molecular_species = [mt.species for mt in molecule_templates]
 
@@ -247,10 +254,10 @@ function μVT_sim(xtal::Crystal,
             # obviously we are keeping track of the only atom in the adsorbate.
             density_grid_molecular_species = molecule_templates[1].species
         else
-            # don't proceed if we don't know which molecule to keep track of!
-            error(@sprintf("Passed `calculate_density_grid=true` but there is $nb_species
-                 different adsorbates in the system. pass `density_grid_species` to specify
-                 which adsorbate to make a grid for.")
+            # cannot proceed if we do not know which molecule to keep track of!
+            error(@printf("Passed `calculate_density_grid=true` but there is %d
+                 different adsorbates in the system. Pass `density_grid_species` to specify
+                 which adsorbate to make a grid for.", nb_species)
                  )
         end
     end
@@ -342,7 +349,7 @@ function μVT_sim(xtal::Crystal,
 
 		end
 
-        system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff) # make overload to take array of arrays
+        system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
         system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
         system_energy.gh.es = 0.0 #total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
         system_energy.gg.es = 0.0 #total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
@@ -355,27 +362,31 @@ function μVT_sim(xtal::Crystal,
     ####
     #   proposal probabilities
     ###
-    mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
+    mc_proposal_probabilities = [[0.0 for p = 1:N_PROPOSAL_TYPES] for sp = 1:nb_species]
     # set defaults
-    mc_proposal_probabilities[INSERTION] = 0.35
-    mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
-    mc_proposal_probabilities[REINSERTION] = 0.05
-    if needs_rotations(molecule)
-        mc_proposal_probabilities[TRANSLATION] = 0.125
-        mc_proposal_probabilities[ROTATION] = 0.125
-    else
-        mc_proposal_probabilities[TRANSLATION] = 0.25
-        mc_proposal_probabilities[ROTATION] = 0.0
-    end
-    mc_proposal_probabilities /= sum(mc_proposal_probabilities) # normalize
-    # StatsBase.jl functionality for sampling
-    mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
-    if verbose
-        println("\tMarkov chain proposals:")
-        for p = 1:N_PROPOSAL_TYPES
-            @printf("\t\tprobability of %s: %f\n", PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
-        end
-    end
+    for s in 1:nb_species
+		mc_proposal_probabilities[s][INSERTION] = 0.35
+    	mc_proposal_probabilities[s][DELETION] = mc_proposal_probabilities[s][INSERTION] # must be equal
+    	mc_proposal_probabilities[s][REINSERTION] = 0.05
+    	if needs_rotations(molecule_templates[s])
+        	mc_proposal_probabilities[s][TRANSLATION] = 0.125
+        	mc_proposal_probabilities[s][ROTATION] = 0.125
+    	else
+       		mc_proposal_probabilities[s][TRANSLATION] = 0.25
+        	mc_proposal_probabilities[s][ROTATION] = 0.0
+    	end
+		# Are these normalized across all species?
+    	mc_proposal_probabilities[s] /= sum(mc_proposal_probabilities[s]) # normalize
+    	# StatsBase.jl functionality for sampling
+    	mc_proposal_probabilities[s] = ProbabilityWeights(mc_proposal_probabilities[s])
+    	if verbose
+        	println("\tMarkov chain proposals:")
+        	for p = 1:N_PROPOSAL_TYPES
+            	@printf("For species %s\n\t\tprobability of %s: %f\n", molecule_templates[s].species, 
+						PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
+        	end
+    	end
+	end
 
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
     gcmc_stats = [GCMCstats() for block_no = 1:N_BLOCKS]
@@ -402,16 +413,22 @@ function μVT_sim(xtal::Crystal,
             
             # choose a species
             which_species = rand(1:nb_species)
-            # choose proposed move randomly; keep track of proposals
-            which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities) # StatsBase.jl
+			# number of that species in molecules array
+			# TODO: write this function
+			n_i = n_this_species(molecules, molecular_species[which_species])
+
+			# choose proposed move randomly; keep track of proposals
+            which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities[which_species]) # StatsBase.jl
             markov_counts.n_proposed[which_move] += 1
 
+			# TODO: What to do about length(molecules) != 0 statements if the sub-array for which_species hasn't been created?
+			# 			i.e. if a sub-array for one
             if which_move == INSERTION
-                random_insertion!(molecules, xtal.box, molecule_templates[which_species])
+				# TODO: overload for new molecules array
+                random_insertion!(molecules[which_species], xtal.box, molecule_templates[which_species])
 
-                ΔE = potential_energy(length(molecules), molecules, xtal, ljff)
-
-                n_i = n_this_species(molecules, molecular_species[which_species])
+				# inserted molecule pushed to end of molecules[which_species] array
+                ΔE = potential_energy(which_species, length(molecules[which_species]), molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Insertion
                 if rand() < fugacities[which_species] * xtal.box.Ω / (n_i * KB *
@@ -425,13 +442,19 @@ function μVT_sim(xtal::Crystal,
                     pop!(molecules)
                 end
             elseif (which_move == DELETION) && (length(molecules) != 0)
-                # get ids the belong to this species in the molecules array
-                ids_this_species = [i_m if molecules[i_m].species == molecular_species[which_species] for i_m = 1:length(molecules)]
-                # propose which molecule to delete
-                molecule_id = rand(1:length(molecules))
+                # get ids that belong to this species in the molecules array
+
+				#	ids_this_species = [i_m if (molecules[which_species][i_m].species == molecular_species[which_species]) for i_m = 1:length(molecules[which_species])]
+
+				ids_this_species = [i_m for i_m in 1:length(molecules[which_species])]
+				@assert all(i_m -> molecules[which_species][i_m].species == moleculear_species[which_species], ids_this_species) "ids do not match chosen species in molecules"
+
+				# propose which molecule to delete
+                # molecule_id = rand(1:length(molecules))
+				molecule_id = rand(ids_this_species)
 
                 # compute the potential energy of the molecule we propose to delete
-                ΔE = potential_energy(molecule_id, molecules, xtal, ljff)
+                ΔE = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Deletion
                 if rand() < length(molecules) * KB * temperature / (fugacity *
@@ -439,7 +462,7 @@ function μVT_sim(xtal::Crystal,
                     # accept the deletion, delete molecule, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
 
-                    remove_molecule!(molecule_id, molecules)
+                    remove_molecule!(molecule_id, molecules) # overload for new molecules array
 
                     system_energy -= ΔE
                 end
