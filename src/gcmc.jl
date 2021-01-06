@@ -115,6 +115,7 @@ function n_this_species(which_species::Int, molecules::Array{Array{Molecule, 1},
 	n_i = length(molecules[which_species])
 end
 
+
 """
     results, molecules = μVT_sim(xtal, molecule_templates, temperature, pressure,
                                  ljff; molecules=Array{Molecule, 1}[], settings=settings)
@@ -160,7 +161,7 @@ function μVT_sim(xtal::Crystal,
                  temperature::Float64,
                  pressures::Array{Float64, 1}, 
                  ljff::LJForceField; 
-                 molecules_array::Array{Array{Molecule{Cart}, 1}, 1}=Array{Molecule{Cart}, 1}[], 
+                 molecules::Union{Nothing, Array{Array{Molecule{Cart}, 1}, 1}}=nothing, 
                  n_burn_cycles::Int=5000,
                  n_sample_cycles::Int=5000,
                  sample_frequency::Int=1,
@@ -192,13 +193,6 @@ function μVT_sim(xtal::Crystal,
         # partial pressures: $(length(pressures))
         these should be equal!")
     end
-
-    # TODO: write a function (or if statement?) to check/prep molecules array
-    #           This is so the sub-arrays are callable and in the correct order even if empty.
-    mols = deepcopy(molecules_array)
-    molecules = prep_molecules_array(mols, molecule_templates)
-
-    # TODO: go through and check that all of the logic still works even if molecules == [[], [], []]
 
     if verbose
         pretty_print(xtal, molecule_templates, temperature, pressures, ljff)
@@ -240,14 +234,25 @@ function μVT_sim(xtal::Crystal,
                     molecule_templates[s], fugacities[s] / 100000.0)
         end
     end
-    
+
     ###
     #   replicate xtal so that nearest image convention can be applied for short-range interactions
     ###
     repfactors = replication_factors(xtal.box, ljff)
     original_xtal_box = deepcopy(xtal.box)
     xtal = replicate(xtal, repfactors) # frac coords still in [0, 1]
-    
+
+    # TODO: write a function (or if statement?) to check/prep molecules array
+    #           This is so the sub-arrays are callable and in the correct order even if empty.
+    mols = deepcopy(molecules_array)
+    if isnothing(molecules)
+        molecules = [Molecule[] for i in 1:nb_species]
+    else
+        if length(molecules) != nb_species
+            error("Length of molecules array $(length(molecules)) is not equal to length of molecule_templates $(nb_species).\n")
+        end
+    end
+
     # convert molecules array to fractional using this box.
     molecules = [Frac.(mols, xtal.box) for mols in molecules]
 
