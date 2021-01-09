@@ -107,15 +107,6 @@ end
     return energy
 end
 
-function n_this_species(which_species::Int, molecules::Array{Array{Molecule, 1}, 1}, molecular_species::Symbol)
-	if length(molecules) == 0
-		return 0
-	end
-
-	n_i = length(molecules[which_species])
-end
-
-
 """
     results, molecules = μVT_sim(xtal, molecule_templates, temperature, pressure,
                                  ljff; molecules=Array{Molecule, 1}[], settings=settings)
@@ -242,10 +233,11 @@ function μVT_sim(xtal::Crystal,
     original_xtal_box = deepcopy(xtal.box)
     xtal = replicate(xtal, repfactors) # frac coords still in [0, 1]
 
-    # TODO: write a function (or if statement?) to check/prep molecules array
-    #           This is so the sub-arrays are callable and in the correct order even if empty.
-    mols = deepcopy(molecules_array)
+    ###
+    #   prep molecules array 
+    ###
     if isnothing(molecules)
+        # populate the molecules array with an empty array for each species being simulated
         molecules = [Molecule[] for i in 1:nb_species]
     else
         if length(molecules) != nb_species
@@ -340,16 +332,6 @@ function μVT_sim(xtal::Crystal,
     #  (n=0 corresponds to zero energy)
     if length(molecules) != 0
         # some checks
-#        for m in molecules 
-#            # ensure molecule template matches species of starting molecules.
-#            @assert m.species in [mt.species for mt in molecule_templates] "initializing with wrong molecule species"
-#            # assert that the molecules are inside the simulation box
-#            @assert inside(m) "initializing with molecules outside simulation box!"
-#            # ensure pair-wise bond distances match template
-#            id_mt = findfirst([mt.species for mt in molecule_templates] .== m.species)
-#            @assert ! distortion(m, Frac(molecule_template[id_mt], xtal.box), xtal.box)
-#        end
-
 		for m in molecules # these are arrays of molecule structs
 			# ensuer molecule tempale matches species of starting molecules.
 			@assert all(i -> (i.species in [mt.species for mt in molecule_templates]), m) "initializing with wrong molecule species"
@@ -357,8 +339,7 @@ function μVT_sim(xtal::Crystal,
 			@assert all(i -> inside(i), m) "initializing with molecules outside simulation box!"
 			# ensure pair-wise bond distance match template
 			ids_mt = [findfirst([mt.species for mt in molecule_templates] .== i.species) for i in m] # collection of ids
-			@assert all(id -> [! distortion(i, Frac(molecule_template[id], xtal.box)) for i in m], ids_mt) "initializing with distorted molecules"
-
+			@assert all(id -> [! distortion(i, Frac(molecule_templates[id], xtal.box)) for i in m], ids_mt) "initializing with distorted molecules"
 		end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
@@ -422,28 +403,31 @@ function μVT_sim(xtal::Crystal,
         end
         for inner_cycle = 1:max(20, length(molecules))
             markov_chain_time += 1
-            
-            # choose a species
+
+            ###
+            #   choose a species
+            ###
             which_species = rand(1:nb_species)
-			# number of that species in molecules array
-			# TODO: write this function
-			n_i = n_this_species(molecules, molecular_species[which_species])
+			# number of that species in molecules[which_species] array before MC move
+            if (all(molecules[which_species] .== molecular_species) || isempty(molecules[which_species])) 
+                n_i = length(molecules[which_species])
+            else
+                error("molecules[$(which_species)] is neither empty nor populated with only a single species $(molecular_species)\n\t array is improperly constructed.")
+            end
 
 			# choose proposed move randomly; keep track of proposals
             which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities[which_species]) # StatsBase.jl
             markov_counts.n_proposed[which_move] += 1
 
-			# TODO: What to do about length(molecules) != 0 statements if the sub-array for which_species hasn't been created?
-			# 			i.e. if a sub-array for one
             if which_move == INSERTION
-				# TODO: overload for new molecules array
                 random_insertion!(molecules[which_species], xtal.box, molecule_templates[which_species])
 
 				# inserted molecule pushed to end of molecules[which_species] array
+                #   note: length(molecules[which_species]) != n_i here (rather, it is n_i + 1)
                 ΔE = potential_energy(which_species, length(molecules[which_species]), molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacities[which_species] * xtal.box.Ω / (n_i * KB *
+                if rand() < fugacities[which_species] * xtal.box.Ω / ((n_i + 1) * KB *
                         temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -451,45 +435,40 @@ function μVT_sim(xtal::Crystal,
                     system_energy += ΔE
                 else
                     # reject the move, remove the inserted molecule
-                    pop!(molecules)
+                    pop!(molecules[which_species])
                 end
-            elseif (which_move == DELETION) && (length(molecules) != 0)
+            elseif (which_move == DELETION) && (n_i != 0)
                 # get ids that belong to this species in the molecules array
-
-				#	ids_this_species = [i_m if (molecules[which_species][i_m].species == molecular_species[which_species]) for i_m = 1:length(molecules[which_species])]
-
-				ids_this_species = [i_m for i_m in 1:length(molecules[which_species])]
-				@assert all(i_m -> molecules[which_species][i_m].species == moleculear_species[which_species], ids_this_species) "ids do not match chosen species in molecules"
+				ids_this_species = [i_m for i_m in 1:n_i]
 
 				# propose which molecule to delete
-                # molecule_id = rand(1:length(molecules))
 				molecule_id = rand(ids_this_species)
 
                 # compute the potential energy of the molecule we propose to delete
                 ΔE = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Deletion
-                if rand() < length(molecules) * KB * temperature / (fugacity *
+                if rand() < n_i * KB * temperature / (fugacity *
                         xtal.box.Ω) * exp(sum(ΔE) / temperature)
                     # accept the deletion, delete molecule, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
 
-                    remove_molecule!(molecule_id, molecules) # overload for new molecules array
+                    remove_molecule!(molecule_id, molecules[which_species])
 
                     system_energy -= ΔE
                 end
-            elseif (which_move == TRANSLATION) && (length(molecules) != 0)
+            elseif (which_move == TRANSLATION) && (n_i != 0)
                 # propose which molecule whose coordinates we should perturb
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(1:n_i)
 
                 # energy of the molecule before it was translated
-                energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
+                energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff,
                                               eparams, eikr_gh, eikr_gg)
 
-                old_molecule = random_translation!(molecules[molecule_id], xtal.box)
+                old_molecule = random_translation!(molecules[which_species][molecule_id], xtal.box)
 
                 # energy of the molecule after it is translated
-                energy_new = potential_energy(molecule_id, molecules, xtal, ljff,
+                energy_new = potential_energy(which_species, molecule_id, molecules, xtal, ljff,
                                               eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for translation
@@ -500,25 +479,23 @@ function μVT_sim(xtal::Crystal,
                     system_energy += energy_new - energy_old
                 else
                     # reject the move, put back the old molecule
-                    molecules[molecule_id] = deepcopy(old_molecule)
+                    molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
-            elseif (which_move == ROTATION) && (length(molecules) != 0)
+            elseif (which_move == ROTATION) && (n_i != 0)
                 # propose which molecule to rotate
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(1:n_i)
 
                 # energy of the molecule before we rotate it
-                energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
-                                              eparams, eikr_gh, eikr_gg)
+                energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # store old molecule to restore old position in case move is rejected
-                old_molecule = deepcopy(molecules[molecule_id])
+                old_molecule = deepcopy(molecules[which_species][molecule_id])
 
                 # conduct a random rotation
-                random_rotation!(molecules[molecule_id], xtal.box)
+                random_rotation!(molecules[which_species][molecule_id], xtal.box)
 
                 # energy of the molecule after it is translated
-                energy_new = potential_energy(molecule_id, molecules, xtal, ljff,
-                                              eparams, eikr_gh, eikr_gg)
+                energy_new = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for rotation
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -528,22 +505,20 @@ function μVT_sim(xtal::Crystal,
                     system_energy += energy_new - energy_old
                 else
                     # reject the move, put back the old molecule
-                    molecules[molecule_id] = deepcopy(old_molecule)
+                    molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
-            elseif (which_move == REINSERTION) && (length(molecules) != 0)
+            elseif (which_move == REINSERTION) && (n_i != 0)
                 # propose which molecule to re-insert
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(1:n_i)
 
                 # compute the potential energy of the molecule we propose to re-insert
-                energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
-                                             eparams, eikr_gh, eikr_gg)
+                energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # reinsert molecule; store old configuration of the molecule in case proposal is rejected
-                old_molecule = random_reinsertion!(molecules[molecule_id], xtal.box)
+                old_molecule = random_reinsertion!(molecules[which_species][molecule_id], xtal.box)
 
                 # compute the potential energy of the molecule in its new configuraiton
-                energy_new = potential_energy(molecule_id, molecules, xtal, ljff,
-                                              eparams, eikr_gh, eikr_gg)
+                energy_new = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for reinsertion
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -553,7 +528,7 @@ function μVT_sim(xtal::Crystal,
                     system_energy += energy_new - energy_old
                 else
                     # reject the move, put back old molecule
-                    molecules[molecule_id] = deepcopy(old_molecule)
+                    molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
             end # which move the code executes
 
@@ -562,13 +537,13 @@ function μVT_sim(xtal::Crystal,
                 if markov_chain_time % sample_frequency == 0
                     gcmc_stats[current_block].n_samples += 1
 
-                    gcmc_stats[current_block].n += length(molecules)
-                    gcmc_stats[current_block].n² += length(molecules) ^ 2
+                    gcmc_stats[current_block].n  += sum(length.(molecules))
+                    gcmc_stats[current_block].n² += sum(length.(molecules)) ^ 2
 
-                    gcmc_stats[current_block].U += system_energy
+                    gcmc_stats[current_block].U  += system_energy
                     gcmc_stats[current_block].U² += square(system_energy)
 
-                    gcmc_stats[current_block].Un += sum(system_energy) * length(molecules)
+                    gcmc_stats[current_block].Un += sum(system_energy) * sum(length.(molecules))
                 end
             end # sampling
         end # inner cycles
@@ -602,9 +577,9 @@ function μVT_sim(xtal::Crystal,
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
-                write_xyz(xtal.box, molecules, xyz_snapshot_file)
+                write_xyz(xtal.box, molecules, xyz_snapshot_file) # function commented out in molecules.jl
             end
-            if calculate_density_grid
+            if calculate_density_grid # TODO: disity grid calculation
                 if density_grid_sim_box
                     update_density!(density_grid, molecules, density_grid_species)
                 else
@@ -626,8 +601,8 @@ function μVT_sim(xtal::Crystal,
 
     # checks
     for m in molecules
-        @assert inside(m) "molecule outside box!"
-        @assert ! distortion(m, Frac(molecule, xtal.box), xtal.box, atol=1e-10) "molecules distorted"
+        @assert all(sp -> inside(sp) "molecule outside box!", m)
+        @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) "molecules distorted" for (i, sp) in enumerate(m)])
     end
 
     # compute total energy, compare to `current_energy*` variables where were incremented
@@ -654,7 +629,7 @@ function μVT_sim(xtal::Crystal,
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()
     results["xtal"] = xtal.name
-    results["adsorbate"] = molecule.species
+    results["adsorbate"] = [mt.species for mt in molecule_templates]
     results["forcefield"] = ljff.name
     results["pressure (bar)"] = pressure
     results["fugacity (bar)"] = fugacity / 100000.0
@@ -881,7 +856,8 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
     assert_P1_symmetry(xtal)
 
     results = Dict{String, Any}[] # push results to this array
-    molecules = Array{Molecule{Cart}, 1}[] # initiate with empty xtal
+    # molecules = Array{Molecule{Cart}, 1}[] # initiate with empty xtal
+    molecules = nothing
     for (i, pressure) in enumerate(pressures)
         result, molecules = μVT_sim(xtal, molecule_templates, temperature, pressure,
                                             ljff,

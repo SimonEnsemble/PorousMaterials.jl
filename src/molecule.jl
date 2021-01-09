@@ -298,6 +298,14 @@ function write_xyz(molecules::Array{Molecule{Frac}, 1}, box::Box, filename::Abst
     write_xyz(molecules, filename, comment=comment) # above
 end
 
+function write_xyz(molecules::Array{Array{Molecule, 1}, 1}, box::Box, filename::AbstractString)
+    mols = Molecule[]
+    for sp in molecules
+        [push!(mols, m) for m in sp]
+     end
+    write_xyz(mols, box, filename)
+end
+
 # documented in crystal.jl
 has_charges(molecule::Molecule) = molecule.charges.n > 0
 
