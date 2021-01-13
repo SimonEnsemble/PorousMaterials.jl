@@ -31,8 +31,8 @@ end
 mutable struct GCMCstats
     n_samples::Int
 
-    n::Int
-    n²::Int
+    n::Array{Int, 1}
+    n²::Array{Int, 1}
 
     U::SystemPotentialEnergy
     U²::SystemPotentialEnergy
@@ -40,17 +40,18 @@ mutable struct GCMCstats
     Un::Float64 # ⟨U n⟩
 end
 
-GCMCstats() = GCMCstats(0, 0, 0, SystemPotentialEnergy(), SystemPotentialEnergy(), 0.0)
+GCMCstats(nb_species::Int) = GCMCstats(0, zeros(Int, nb_species), zeros(Int, nb_species), SystemPotentialEnergy(), SystemPotentialEnergy(), 0.0)
 
 +(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples,
-                                            s1.n         + s2.n,
-                                            s1.n²        + s2.n²,
+                                            s1.n        .+ s2.n,
+                                            s1.n²       .+ s2.n²,
                                             s1.U         + s2.U,
                                             s1.U²        + s2.U²,
                                             s1.Un        + s2.Un)
 
 function Base.sum(gcmc_stats::Array{GCMCstats, 1})
-    sum_stats = GCMCstats()
+    nb_species = length(gcmc_stats[1].n)
+    sum_stats  = GCMCstats(nb_species)
     for gs in gcmc_stats
         sum_stats += gs
     end
@@ -101,7 +102,7 @@ end
                                   ljff::LJForceField)
     energy = SystemPotentialEnergy()
     # van der Waals interactions
-    energy.gg.vdw = vdw_energy(which_species, molecule_id, molecules, ljff, xtal.box) # guest-guest
+    energy.gg.vdw = vdw_energy(molecule_id, molecules[which_species], ljff, xtal.box) # guest-guest
     energy.gh.vdw = vdw_energy(xtal, molecules[which_species][molecule_id], ljff)     # guest-host
     # TODO electrostatic interactions
     return energy
@@ -148,7 +149,7 @@ density grid to be over the original `xtal.box`, before replication, passed in.
 - `results_filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function μVT_sim(xtal::Crystal, 
-                 molecule_templates::Array{Molecule, 1},
+                 molecule_templates::Array{Molecule{Cart}, 1},
                  temperature::Float64,
                  pressures::Array{Float64, 1}, 
                  ljff::LJForceField; 
@@ -537,8 +538,8 @@ function μVT_sim(xtal::Crystal,
                 if markov_chain_time % sample_frequency == 0
                     gcmc_stats[current_block].n_samples += 1
 
-                    gcmc_stats[current_block].n  += sum(length.(molecules))
-                    gcmc_stats[current_block].n² += sum(length.(molecules)) ^ 2
+                    gcmc_stats[current_block].n  += length.(molecules)
+                    gcmc_stats[current_block].n² += length.(molecules) .^ 2
 
                     gcmc_stats[current_block].U  += system_energy
                     gcmc_stats[current_block].U² += square(system_energy)
@@ -601,8 +602,8 @@ function μVT_sim(xtal::Crystal,
 
     # checks
     for m in molecules
-        @assert all(sp -> inside(sp) "molecule outside box!", m)
-        @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) "molecules distorted" for (i, sp) in enumerate(m)])
+        @assert all(sp -> inside(sp), m) "molecule outside box!"
+        @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) for (i, sp) in enumerate(m)]) "molecule distorted"
     end
 
     # compute total energy, compare to `current_energy*` variables where were incremented
@@ -740,7 +741,7 @@ This is the function that establishes the file naming convention used by [μVT_s
 # Returns
 - `filename::String`: the name of the specific `.jld2` simulation file
 """
-function μVT_output_filename(xtal::Crystal, molecule_templates::Array{Molecule, 1}, temperature::Float64,
+function μVT_output_filename(xtal::Crystal, molecule_templates::Array{Molecule{Cart}, 1}, temperature::Float64,
                              pressures::Array{Float64, 1}, ljff::LJForceField, n_burn_cycles::Int, 
                              n_sample_cycles::Int; comment::String="", extension::String=".jld2")
     filename = @sprintf("muVT_xtal_%s_T_%.3fK", xtal.name, temperature)
@@ -793,7 +794,7 @@ function print_results(results::Dict; print_title::Bool=true)
 end
 
 function pretty_print(xtal::Crystal, 
-                      molecule_templates::Array{Molecule, 1}, 
+                      molecule_templates::Array{Molecule{Cart}, 1}, 
                       temperature::Float64, 
                       pressures::Array{Float64, 1},
                       ljff::LJForceField)
@@ -836,7 +837,7 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 [`adsorption_isotherm`](@ref) which runs the μVT simulation at each pressure in parallel.
 """
 function stepwise_adsorption_isotherm(xtal::Crystal,
-                                      molecule_templates::Array{Molecule, 1},
+                                      molecule_templates::Array{Molecule{Cart}, 1},
                                       temperature::Float64,
                                       pressures::Array{Float64, 1},
                                       ljff::LJForceField;
