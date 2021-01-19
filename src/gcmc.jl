@@ -19,7 +19,7 @@ const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation
 const ROTATION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 
- # count proposed/accepted for each subtype
+# count proposed/accepted for each subtype
 mutable struct MarkovCounts
     n_proposed::Array{Int, 1}
     n_accepted::Array{Int, 1}
@@ -63,9 +63,9 @@ function Base.print(gcmc_stats::GCMCstats)
     println("\t⟨N⟩ (molecules) = ", gcmc_stats.n / gcmc_stats.n_samples)
 
     println("\t⟨U_gh, vdw⟩ (K) = ",     gcmc_stats.U.gh.vdw / gcmc_stats.n_samples)
-    println("\t⟨U_gh, Coulomb⟩ (K) = ", gcmc_stats.U.gh.es / gcmc_stats.n_samples)
+    println("\t⟨U_gh, Coulomb⟩ (K) = ", gcmc_stats.U.gh.es  / gcmc_stats.n_samples)
     println("\t⟨U_gg, vdw⟩ (K) = ",     gcmc_stats.U.gg.vdw / gcmc_stats.n_samples)
-    println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.gg.es / gcmc_stats.n_samples)
+    println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.gg.es  / gcmc_stats.n_samples)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
 end
@@ -81,7 +81,7 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     avg_U = sum(gcmc_stats).U / (1.0 * sum(gcmc_stats).n_samples)
 
     avg_n_blocks = [gs.n / gs.n_samples for gs in gcmc_stats]
-    err_n = 2.0 * std(avg_n_blocks) / sqrt(length(gcmc_stats))
+    err_n = [2.0 * std(avg_n_block) / sqrt(length(gcmc_stats)) for avg_n_block in avg_n_blocks]
 
     err_U = SystemPotentialEnergy()
     for gs in gcmc_stats
@@ -102,7 +102,7 @@ end
                                   ljff::LJForceField)
     energy = SystemPotentialEnergy()
     # van der Waals interactions
-    energy.gg.vdw = vdw_energy(molecule_id, molecules[which_species], ljff, xtal.box) # guest-guest
+    energy.gg.vdw = vdw_energy(which_species, molecule_id, molecules, ljff, xtal.box) # guest-guest
     energy.gh.vdw = vdw_energy(xtal, molecules[which_species][molecule_id], ljff)     # guest-host
     # TODO electrostatic interactions
     return energy
@@ -261,11 +261,21 @@ function μVT_sim(xtal::Crystal,
         else
             # cannot proceed if we do not know which molecule to keep track of!
             error(@printf("Passed `calculate_density_grid=true` but there is %d
-                 different adsorbates in the system. Pass `density_grid_species` to specify
+                 different adsorbates in the system. Pass `density_grid_molecular_species` to specify
                  which adsorbate to make a grid for.", nb_species)
                  )
+        end        
+    end
+
+    # keep track of the id for the density_grid_molecular_species
+    template_id_for_density_grid = NaN
+    for (i, mol) in enumerate(molecule_templates)
+        if density_grid_molecular_species == mol.species
+            template_id_for_density_grid = i
         end
     end
+    @assert template_id_for_density_grid <= length(molecule_templates) "density_grid_molecular_species not found in molecule_templates"
+
     # Initialize a density grid based on the *simulation box* (not xtal box passed in) and the passed in density_grid_dx
     # Calculate `n_pts`, number of voxels in grid, based on the sim box and specified voxel spacing
     n_pts = (0, 0, 0) # don't store a huge grid if we aren't tracking a density grid
@@ -331,12 +341,12 @@ function μVT_sim(xtal::Crystal,
     system_energy = SystemPotentialEnergy()
     # if we don't start with an emtpy xtal, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
-    if length(molecules) != 0
+    if length(molecules) != 0 && ! any(m -> m == Molecule[], molecules)
         # some checks
-		for m in molecules # these are arrays of molecule structs
+		for m in molecules
 			# ensuer molecule tempale matches species of starting molecules.
 			@assert all(i -> (i.species in [mt.species for mt in molecule_templates]), m) "initializing with wrong molecule species"
-			# assert that the molecules are inside the simulation box
+		    # assert that the molecules are inside the simulation box
 			@assert all(i -> inside(i), m) "initializing with molecules outside simulation box!"
 			# ensure pair-wise bond distance match template
 			ids_mt = [findfirst([mt.species for mt in molecule_templates] .== i.species) for i in m] # collection of ids
@@ -355,7 +365,7 @@ function μVT_sim(xtal::Crystal,
 
     ####
     #   proposal probabilities
-    ###
+    ####
     mc_proposal_probabilities = [[0.0 for p = 1:N_PROPOSAL_TYPES] for sp = 1:nb_species]
     # set defaults
     for s in 1:nb_species
@@ -383,7 +393,7 @@ function μVT_sim(xtal::Crystal,
 	end
 
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
-    gcmc_stats = [GCMCstats() for block_no = 1:N_BLOCKS]
+    gcmc_stats = [GCMCstats(nb_species) for block_no = 1:N_BLOCKS]
     current_block = 1
     # make sure the number of sample cycles is at least equal to N_BLOCKS
     if n_sample_cycles < N_BLOCKS
@@ -400,9 +410,9 @@ function μVT_sim(xtal::Crystal,
     outer_cycle_start = 1
     for outer_cycle = outer_cycle_start:(n_burn_cycles + n_sample_cycles)
         if show_progress_bar
-            next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
+            next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, sum(length.(molecules)))])
         end
-        for inner_cycle = 1:max(20, length(molecules))
+        for inner_cycle = 1:max(20, sum(length.(molecules)))
             markov_chain_time += 1
 
             ###
@@ -410,10 +420,10 @@ function μVT_sim(xtal::Crystal,
             ###
             which_species = rand(1:nb_species)
 			# number of that species in molecules[which_species] array before MC move
-            if (all(molecules[which_species] .== molecular_species) || isempty(molecules[which_species])) 
+            if (all(molecules[which_species] .== molecular_species[which_species]) || isempty(molecules[which_species])) 
                 n_i = length(molecules[which_species])
             else
-                error("molecules[$(which_species)] is neither empty nor populated with only a single species $(molecular_species)\n\t array is improperly constructed.")
+                error("molecules[$(which_species)] is neither empty nor populated with only a single species $(molecular_species[which_species])\n\t array is improperly constructed.")
             end
 
 			# choose proposed move randomly; keep track of proposals
@@ -428,7 +438,7 @@ function μVT_sim(xtal::Crystal,
                 ΔE = potential_energy(which_species, length(molecules[which_species]), molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacities[which_species] * xtal.box.Ω / ((n_i + 1) * KB *
+                if rand() < fugacities[which_species] * xtal.box.Ω / (length(molecules[which_species]) * KB *
                         temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -439,11 +449,8 @@ function μVT_sim(xtal::Crystal,
                     pop!(molecules[which_species])
                 end
             elseif (which_move == DELETION) && (n_i != 0)
-                # get ids that belong to this species in the molecules array
-				ids_this_species = [i_m for i_m in 1:n_i]
-
 				# propose which molecule to delete
-				molecule_id = rand(ids_this_species)
+				molecule_id = rand(1:n_i)
 
                 # compute the potential energy of the molecule we propose to delete
                 ΔE = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -463,14 +470,12 @@ function μVT_sim(xtal::Crystal,
                 molecule_id = rand(1:n_i)
 
                 # energy of the molecule before it was translated
-                energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff,
-                                              eparams, eikr_gh, eikr_gg)
+                energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 old_molecule = random_translation!(molecules[which_species][molecule_id], xtal.box)
 
                 # energy of the molecule after it is translated
-                energy_new = potential_energy(which_species, molecule_id, molecules, xtal, ljff,
-                                              eparams, eikr_gh, eikr_gg)
+                energy_new = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for translation
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
@@ -578,13 +583,15 @@ function μVT_sim(xtal::Crystal,
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
+                # TODO: ask about this function (I think it is depreciated, and xyz_shapshot_file can be opened and closed here)
                 write_xyz(xtal.box, molecules, xyz_snapshot_file) # function commented out in molecules.jl
+                # TODO: use write_xyz(molecules, xtal.box, xyz_snapshot_filename) instead (opens and closes file)
             end
-            if calculate_density_grid # TODO: disity grid calculation
+            if calculate_density_grid 
                 if density_grid_sim_box
-                    update_density!(density_grid, molecules, density_grid_species)
+                    update_density!(density_grid, molecules[template_id_for_density_grid], density_grid_molecular_species)
                 else
-                    update_density!(density_grid, Cart.(molecules, xtal.box), density_grid_species)
+                    update_density!(density_grid, Cart.(molecules[template_id_for_density_grid], xtal.box), density_grid_molecular_species)
                 end
             end
             num_snapshots += 1
@@ -601,19 +608,17 @@ function μVT_sim(xtal::Crystal,
     end
 
     # checks
-    for m in molecules
+    for (i, m) in emulerate(molecules)
         @assert all(sp -> inside(sp), m) "molecule outside box!"
-        @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) for (i, sp) in enumerate(m)]) "molecule distorted"
+        @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) for sp in m]) "molecule distorted"
     end
 
     # compute total energy, compare to `current_energy*` variables where were incremented
-    system_energy_end = SystemPotentialEnergy()
+    system_energy_end        = SystemPotentialEnergy()
     system_energy_end.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
     system_energy_end.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
-    system_energy_end.gh.es = total(total_electrostatic_potential_energy(xtal, molecules,
-                                                 eparams, eikr_gh))
-    system_energy_end.gg.es = total(total_electrostatic_potential_energy(molecules,
-                                        eparams, xtal.box, eikr_gg))
+    system_energy_end.gh.es  = 0.0 # total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
+    system_energy_end.gg.es  = 0.0 # total(total_electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
 
     # see Energetics_Util.jl for this function, overloaded isapprox to print mismatch
     if ! isapprox(system_energy, system_energy_end, verbose=true, atol=0.01)
@@ -629,23 +634,28 @@ function μVT_sim(xtal::Crystal,
 
     # build dictionary containing summary of simulation results for easy querying
     results = Dict{String, Any}()
-    results["xtal"] = xtal.name
-    results["adsorbate"] = [mt.species for mt in molecule_templates]
-    results["forcefield"] = ljff.name
-    results["pressure (bar)"] = pressure
-    results["fugacity (bar)"] = fugacity / 100000.0
+    results["xtal"]            = xtal.name
+    results["adsorbate"]       = molecular_species
+    results["forcefield"]      = ljff.name
+    results["pressure (bar)"]  = pressures
+    results["fugacity (bar)"]  = fugacities / 100000.0
     results["temperature (K)"] = temperature
-    results["repfactors"] = repfactors
+    results["repfactors"]      = repfactors
 
     results["# sample cycles"] = n_sample_cycles
-    results["# burn cycles"] = n_burn_cycles
-    results["# samples"] = sum(gcmc_stats).n_samples
+    results["# burn cycles"]   = n_burn_cycles
+    results["# samples"]       = sum(gcmc_stats).n_samples
 
     # statistics from samples during simulation
     # see here: https://cs.nyu.edu/courses/fall06/G22.2112-001/MonteCarlo.pdf for how
     # error bars are computed; simulation broken into N_BLOCKS and each average from the
     # block is treated as an independent sample.
     avg_n, err_n, avg_U, err_U = mean_stderr_n_U(gcmc_stats)
+
+# # # PAY ATTENTION TO:
+#       avg_n::Array{Float64, 1}
+#       err_n::Array{Float64, 1}
+# # #
 
     # averages
     results["⟨N⟩ (molecules)"]     = avg_n
@@ -656,10 +666,10 @@ function μVT_sim(xtal::Crystal,
     results["⟨U⟩ (K)"] = sum(avg_U)
 
     # variances
-    results["var(N)"] = (sum(gcmc_stats).n² / sum(gcmc_stats).n_samples) -
-        (results["⟨N⟩ (molecules)"] ^ 2)
+    results["var(N)"] = (sum(gcmc_stats).n² / sum(gcmc_stats).n_samples) - (results["⟨N⟩ (molecules)"] .^ 2)
+
     # isosteric heat of adsorption TODO stdev of this too.
-    results["Q_st (K)"] = temperature - (sum(gcmc_stats).Un / sum(gcmc_stats).n_samples - results["⟨U⟩ (K)"] * results["⟨N⟩ (molecules)"]) / results["var(N)"]
+    results["Q_st (K)"] = temperature .- (sum(gcmc_stats).Un / sum(gcmc_stats).n_samples .- results["⟨U⟩ (K)"] * results["⟨N⟩ (molecules)"]) ./ results["var(N)"]
 
     # error bars (confidence intervals)
     results["err ⟨N⟩ (molecules)"]     = err_n
@@ -669,13 +679,12 @@ function μVT_sim(xtal::Crystal,
     results["err ⟨U_gg, electro⟩ (K)"] = err_U.gg.es
     results["err ⟨U⟩ (K)"] = sum(err_U)
 
-
     # average N in more common units
-    results["⟨N⟩ (molecules/unit cell)"] = avg_n / (repfactors[1] * repfactors[2] * repfactors[3])
+    results["⟨N⟩ (molecules/unit cell)"]     = avg_n / (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (molecules/unit cell)"] = err_n / (repfactors[1] * repfactors[2] * repfactors[3])
     # (molecules/unit cell) * (mol/6.02 * 10^23 molecules) * (1000 mmol/mol) *
     #    (unit cell/xtal amu) * (amu/ 1.66054 * 10^-24)
-    results["⟨N⟩ (mmol/g)"] = results["⟨N⟩ (molecules/unit cell)"] * 1000 /
+    results["⟨N⟩ (mmol/g)"]     = results["⟨N⟩ (molecules/unit cell)"] * 1000 /
         (6.022140857e23 * molecular_weight(xtal) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (mmol/g)"] = results["err ⟨N⟩ (molecules/unit cell)"] * 1000 /
         (6.022140857e23 * molecular_weight(xtal) * 1.66054e-24) * (repfactors[1] * repfactors[2] * repfactors[3])
@@ -687,7 +696,7 @@ function μVT_sim(xtal::Crystal,
     end
 
     # Snapshot information
-    results["density grid"] = deepcopy(density_grid)
+    results["density grid"]  = deepcopy(density_grid)
     results["num snapshots"] = num_snapshots
 
     if verbose
@@ -695,7 +704,7 @@ function μVT_sim(xtal::Crystal,
     end
 
     # return molecules in Cartesian format
-    molecules = Cart.(molecules, xtal.box)
+    molecules = [Cart.(mols, xtal.box) for mols in molecules]
 
     if autosave
         if ! isdir(PATH_TO_SIMS)

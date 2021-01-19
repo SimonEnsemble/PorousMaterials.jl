@@ -98,7 +98,7 @@ function vdw_energy(which_species::Int, molecule_id::Int, molecules::Array{Array
 	for other_molecule_species in 1:length(molecules)
 		for other_molecule_id in 1:length(molecules[other_molecule_species])
 			# mlecule cannot interact with istelf
-			if other_molecule_species == which_species & other_molecule_id == molecule_id
+			if other_molecule_species == which_species && other_molecule_id == molecule_id
 				continue
 			end
 
