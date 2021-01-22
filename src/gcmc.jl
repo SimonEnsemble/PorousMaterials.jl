@@ -80,8 +80,16 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     avg_n = sum(gcmc_stats).n / sum(gcmc_stats).n_samples
     avg_U = sum(gcmc_stats).U / (1.0 * sum(gcmc_stats).n_samples)
 
+    nb_species = length(gcmc_stats[1].n) # number of species
+
     avg_n_blocks = [gs.n / gs.n_samples for gs in gcmc_stats]
-    err_n = [2.0 * std(avg_n_block) / sqrt(length(gcmc_stats)) for avg_n_block in avg_n_blocks]
+
+    # collect avg_n_blocks according to species
+    collect_species_stats = [[avg_n_blocks[block][sp] for block in 1:length(avg_n_blocks)] for sp in 1:nb_species]
+    err_n = [2.0 * std(avg_n_block) / sqrt(length(gcmc_stats)) for avg_n_block in collect_species_stats]
+    # TODO: try std.(avg_n_block)?
+    # err_n = [2.0 * std(avg_n_block) / sqrt(length(gcmc_stats)) for avg_n_block in avg_n_blocks]
+
 
     err_U = SystemPotentialEnergy()
     for gs in gcmc_stats
@@ -267,14 +275,16 @@ function μVT_sim(xtal::Crystal,
         end        
     end
 
-    # keep track of the id for the density_grid_molecular_species
-    template_id_for_density_grid = NaN
-    for (i, mol) in enumerate(molecule_templates)
-        if density_grid_molecular_species == mol.species
-            template_id_for_density_grid = i
+    if calculate_density_grid
+        # keep track of the id for the density_grid_molecular_species
+        template_id_for_density_grid = 0
+        for (i, mol) in enumerate(molecule_templates)
+            if density_grid_molecular_species == mol.species
+                template_id_for_density_grid = i
+            end
         end
+        @assert (template_id_for_density_grid != 0 && template_id_for_density_grid <= length(molecule_templates)) "density_grid_molecular_species not found in molecule_templates"
     end
-    @assert template_id_for_density_grid <= length(molecule_templates) "density_grid_molecular_species not found in molecule_templates"
 
     # Initialize a density grid based on the *simulation box* (not xtal box passed in) and the passed in density_grid_dx
     # Calculate `n_pts`, number of voxels in grid, based on the sim box and specified voxel spacing
@@ -366,31 +376,29 @@ function μVT_sim(xtal::Crystal,
     ####
     #   proposal probabilities
     ####
-    mc_proposal_probabilities = [[0.0 for p = 1:N_PROPOSAL_TYPES] for sp = 1:nb_species]
+    mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
     # set defaults
-    for s in 1:nb_species
-		mc_proposal_probabilities[s][INSERTION] = 0.35
-    	mc_proposal_probabilities[s][DELETION] = mc_proposal_probabilities[s][INSERTION] # must be equal
-    	mc_proposal_probabilities[s][REINSERTION] = 0.05
-    	if needs_rotations(molecule_templates[s])
-        	mc_proposal_probabilities[s][TRANSLATION] = 0.125
-        	mc_proposal_probabilities[s][ROTATION] = 0.125
-    	else
-       		mc_proposal_probabilities[s][TRANSLATION] = 0.25
-        	mc_proposal_probabilities[s][ROTATION] = 0.0
-    	end
-		# Are these normalized across all species?
-    	mc_proposal_probabilities[s] /= sum(mc_proposal_probabilities[s]) # normalize
-    	# StatsBase.jl functionality for sampling
-    	mc_proposal_probabilities[s] = ProbabilityWeights(mc_proposal_probabilities[s])
-    	if verbose
-        	println("\tMarkov chain proposals:")
-        	for p = 1:N_PROPOSAL_TYPES
-            	@printf("For species %s\n\t\tprobability of %s: %f\n", molecule_templates[s].species, 
-						PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
-        	end
-    	end
-	end
+    mc_proposal_probabilities[INSERTION] = 0.35
+    mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
+    mc_proposal_probabilities[REINSERTION] = 0.05
+    if any(needs_rotations.(molecule_templates))
+        mc_proposal_probabilities[TRANSLATION] = 0.125
+        mc_proposal_probabilities[ROTATION] = 0.125
+    else
+        mc_proposal_probabilities[TRANSLATION] = 0.25
+        mc_proposal_probabilities[ROTATION] = 0.0
+    end
+    # TODO: Are these normalized across all species?
+    mc_proposal_probabilities /= sum(mc_proposal_probabilities) # normalize
+    # StatsBase.jl functionality for sampling
+    mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
+    if verbose
+        println("\tMarkov chain proposals:")
+        for p = 1:N_PROPOSAL_TYPES
+            @printf("\t\tprobability of %s: %f\n",
+                    PROPOSAL_ENCODINGS[p], mc_proposal_probabilities[p])
+        end
+    end
 
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
     gcmc_stats = [GCMCstats(nb_species) for block_no = 1:N_BLOCKS]
@@ -420,14 +428,14 @@ function μVT_sim(xtal::Crystal,
             ###
             which_species = rand(1:nb_species)
 			# number of that species in molecules[which_species] array before MC move
-            if (all(molecules[which_species] .== molecular_species[which_species]) || isempty(molecules[which_species])) 
+            if (isempty(molecules[which_species]) || all(m -> m.species == molecular_species[which_species], molecules[which_species]))
                 n_i = length(molecules[which_species])
             else
                 error("molecules[$(which_species)] is neither empty nor populated with only a single species $(molecular_species[which_species])\n\t array is improperly constructed.")
             end
 
 			# choose proposed move randomly; keep track of proposals
-            which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities[which_species]) # StatsBase.jl
+            which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities) # StatsBase.jl
             markov_counts.n_proposed[which_move] += 1
 
             if which_move == INSERTION
@@ -435,10 +443,10 @@ function μVT_sim(xtal::Crystal,
 
 				# inserted molecule pushed to end of molecules[which_species] array
                 #   note: length(molecules[which_species]) != n_i here (rather, it is n_i + 1)
-                ΔE = potential_energy(which_species, length(molecules[which_species]), molecules, xtal, ljff)
+                ΔE = potential_energy(which_species, n_i + 1, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacities[which_species] * xtal.box.Ω / (length(molecules[which_species]) * KB *
+                if rand() < fugacities[which_species] * xtal.box.Ω / ((n_i + 1) * KB *
                         temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -456,7 +464,7 @@ function μVT_sim(xtal::Crystal,
                 ΔE = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
                 # Metropolis Hastings Acceptance for Deletion
-                if rand() < n_i * KB * temperature / (fugacity *
+                if rand() < n_i * KB * temperature / (fugacities[which_species] *
                         xtal.box.Ω) * exp(sum(ΔE) / temperature)
                     # accept the deletion, delete molecule, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -487,7 +495,7 @@ function μVT_sim(xtal::Crystal,
                     # reject the move, put back the old molecule
                     molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
-            elseif (which_move == ROTATION) && (n_i != 0)
+            elseif (which_move == ROTATION) && needs_rotation(molecule_template[which_species]) && (n_i != 0) 
                 # propose which molecule to rotate
                 molecule_id = rand(1:n_i)
 
@@ -583,9 +591,8 @@ function μVT_sim(xtal::Crystal,
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
-                # TODO: ask about this function (I think it is depreciated, and xyz_shapshot_file can be opened and closed here)
-                write_xyz(xtal.box, molecules, xyz_snapshot_file) # function commented out in molecules.jl
-                # TODO: use write_xyz(molecules, xtal.box, xyz_snapshot_filename) instead (opens and closes file)
+                # TODO: fix this function
+                # write_xyz(xtal.box, molecules, xyz_snapshot_file) # function commented out in molecules.jl
             end
             if calculate_density_grid 
                 if density_grid_sim_box
@@ -608,7 +615,7 @@ function μVT_sim(xtal::Crystal,
     end
 
     # checks
-    for (i, m) in emulerate(molecules)
+    for (i, m) in enumerate(molecules)
         @assert all(sp -> inside(sp), m) "molecule outside box!"
         @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) for sp in m]) "molecule distorted"
     end
@@ -652,10 +659,6 @@ function μVT_sim(xtal::Crystal,
     # block is treated as an independent sample.
     avg_n, err_n, avg_U, err_U = mean_stderr_n_U(gcmc_stats)
 
-# # # PAY ATTENTION TO:
-#       avg_n::Array{Float64, 1}
-#       err_n::Array{Float64, 1}
-# # #
 
     # averages
     results["⟨N⟩ (molecules)"]     = avg_n
@@ -789,8 +792,17 @@ function print_results(results::Dict; print_title::Bool=true)
     end
 
     println("")
-    for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)", "⟨N⟩ (mmol/g)",
-                "⟨U_gg, vdw⟩ (K)", "⟨U_gh, vdw⟩ (K)", "⟨U_gg, electro⟩ (K)",
+    for s in 1:length(results["adsorbate"])
+        println(results["adsorbate"][s])
+        for key in ["⟨N⟩ (molecules)", "⟨N⟩ (molecules/unit cell)", "⟨N⟩ (mmol/g)"]
+            @printf("%s: %f +/- %f\n", key, results[key][s], results["err " * key][s])
+            if key == "⟨N⟩ (mmol/g)"
+                println("")
+            end
+        end
+    end
+
+    for key in ["⟨U_gg, vdw⟩ (K)", "⟨U_gh, vdw⟩ (K)", "⟨U_gg, electro⟩ (K)",
                 "⟨U_gh, electro⟩ (K)", "⟨U⟩ (K)"]
         @printf("%s: %f +/- %f\n", key, results[key], results["err " * key])
         if key == "⟨N⟩ (mmol/g)"
@@ -798,7 +810,9 @@ function print_results(results::Dict; print_title::Bool=true)
         end
     end
 
-    @printf("\nQ_st (K) = %f = %f kJ/mol\n\n", results["Q_st (K)"], results["Q_st (K)"] * 8.314 / 1000.0)
+    for s in 1:length(results["adsorbate"])
+        @printf("\nQ_st (K) = %f = %f kJ/mol\n\n", results["Q_st (K)"][s], results["Q_st (K)"][s] * 8.314 / 1000.0)
+    end
     return
 end
 
@@ -812,12 +826,12 @@ function pretty_print(xtal::Crystal,
     print("crystal: ")
     printstyled(xtal.name; color=:green)
 
-    printstyled(@sprintf("temperature = %f K", temperature); color=:green)
+    printstyled(@sprintf("\ntemperature = %f K", temperature); color=:green)
 
-    println("adsorbates:")
+    println("\nadsorbates:")
     for m = 1:length(molecule_templates)
         printstyled(molecule_templates[m].species; color=:green)
-        printstyled(@sprintf("\tpartial pressure = %f bar", pressures[m]); color=:green)
+        printstyled(@sprintf("\tpartial pressure = %f bar\n", pressures[m]); color=:green)
     end
 
     printstyled(split(ljff.name, ".")[1]; color=:green)

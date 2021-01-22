@@ -193,5 +193,27 @@ using Random
         + 2 * lennard_jones(r²_co, ljff.σ²[:O_CO2][:C_CO2], ljff.ϵ[:O_CO2][:C_CO2]))
     @test vdw_energy(1, molecules_co2, ljff, box_large) ≈ energy
     @test vdw_energy(2, molecules_co2, ljff, box_large) ≈ energy
+
+
+    ###
+    #  Mixture Tests
+    ###
+    # test the vdW guest-guest interation between two species
+    # set up the system
+    molecules = [[Molecule("Xe"), Molecule("Xe")], [Molecule("Kr")]]
+    ljff      = LJForceField("UFF", r_cutoff=5.1)
+    box       = Box(10.0, 10.0, 10.0)
+    # convert molecules array to fractional using this box.
+    molecules = [Frac.(mols, box) for mols in molecules]
+    # position the molecules
+    translate_to!( molecules[1][1], Frac([1.0, 1.0, 0.1]) )
+    translate_to!( molecules[1][2], Frac([1.0, 5.0, 0.1]) )
+    translate_to!( molecules[2][1], Frac([5.0, 1.0, 0.1]) )
+    # calculate vdW_energy interaction
+    r12 = sum( (molecules[1][2].atoms.coords.xf - molecules[1][1].atoms.coords.xf) .^ 2) # 16.0
+    r13 = sum( (molecules[1][2].atoms.coords.xf - molecules[1][1].atoms.coords.xf) .^ 2) # 16.0
+    energy_12 = 4.0 * ljff.ϵ[:Xe][:Xe] * ((ljff.σ²[:Xe][:Xe] / (r12)) ^ 6 - (ljff.σ²[:Xe][:Xe] / (r12)) ^ 3)
+    energy_13 = 4.0 * ljff.ϵ[:Xe][:Kr] * ((ljff.σ²[:Xe][:Kr] / (r13)) ^ 6 - (ljff.σ²[:Xe][:Kr] / (r13)) ^ 3)
+    @test (energy_12 + energy_13) ≈ vdw_energy(1, 1, molecules, ljff, box)
 end
 end
