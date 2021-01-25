@@ -231,7 +231,7 @@ function μVT_sim(xtal::Crystal,
     if verbose
         for s = 1:nb_species
             @printf("\t%s equation of state, %s partial fugacity = %f bar\n", eos, 
-                    molecule_templates[s], fugacities[s] / 100000.0)
+                    molecule_templates[s].species, fugacities[s] / 100000.0)
         end
     end
 
@@ -310,6 +310,7 @@ function μVT_sim(xtal::Crystal,
         println("\t\t# point charges: ", xtal.charges.n)
         println("\tthe molecules:")
         for s = 1:nb_species
+            println("\t", molecule_templates[s].species)
             println("\t\tunique species: ", unique(molecule_templates[s].atoms.species))
             println("\t\t# atoms: ", molecule_templates[s].atoms.n)
             println("\t\t# point charges: ", molecule_templates[s].charges.n)
