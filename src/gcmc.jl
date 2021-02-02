@@ -81,15 +81,10 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     avg_U = sum(gcmc_stats).U / (1.0 * sum(gcmc_stats).n_samples)
 
     nb_species = length(gcmc_stats[1].n) # number of species
-
     avg_n_blocks = [gs.n / gs.n_samples for gs in gcmc_stats]
-
     # collect avg_n_blocks according to species
     collect_species_stats = [[avg_n_blocks[block][sp] for block in 1:length(avg_n_blocks)] for sp in 1:nb_species]
-    err_n = [2.0 * std(avg_n_block) / sqrt(length(gcmc_stats)) for avg_n_block in collect_species_stats]
-    # TODO: try std.(avg_n_block)?
-    # err_n = [2.0 * std(avg_n_block) / sqrt(length(gcmc_stats)) for avg_n_block in avg_n_blocks]
-
+    err_n = 2.0 * std.(collect_species_stats) / sqrt(length(gcmc_stats))
 
     err_U = SystemPotentialEnergy()
     for gs in gcmc_stats
@@ -112,7 +107,9 @@ end
     # van der Waals interactions
     energy.gg.vdw = vdw_energy(which_species, molecule_id, molecules, ljff, xtal.box) # guest-guest
     energy.gh.vdw = vdw_energy(xtal, molecules[which_species][molecule_id], ljff)     # guest-host
-    # TODO electrostatic interactions
+    # TODO electrostatic interactions (being neglected for now)
+    energy.gg.es = 0.0
+    energy.gh.es = 0.0
     return energy
 end
 
@@ -253,7 +250,6 @@ function μVT_sim(xtal::Crystal,
             error("Length of molecules array $(length(molecules)) is not equal to length of molecule_templates $(nb_species).\n")
         end
     end
-
     # convert molecules array to fractional using this box.
     molecules = [Frac.(mols, xtal.box) for mols in molecules]
 
@@ -389,7 +385,6 @@ function μVT_sim(xtal::Crystal,
         mc_proposal_probabilities[TRANSLATION] = 0.25
         mc_proposal_probabilities[ROTATION] = 0.0
     end
-    # TODO: Are these normalized across all species?
     mc_proposal_probabilities /= sum(mc_proposal_probabilities) # normalize
     # StatsBase.jl functionality for sampling
     mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
@@ -496,7 +491,7 @@ function μVT_sim(xtal::Crystal,
                     # reject the move, put back the old molecule
                     molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
-            elseif (which_move == ROTATION) && needs_rotation(molecule_template[which_species]) && (n_i != 0) 
+            elseif (which_move == ROTATION) && needs_rotations(molecule_templates[which_species]) && (n_i != 0) 
                 # propose which molecule to rotate
                 molecule_id = rand(1:n_i)
 
@@ -659,7 +654,6 @@ function μVT_sim(xtal::Crystal,
     # error bars are computed; simulation broken into N_BLOCKS and each average from the
     # block is treated as an independent sample.
     avg_n, err_n, avg_U, err_U = mean_stderr_n_U(gcmc_stats)
-
 
     # averages
     results["⟨N⟩ (molecules)"]     = avg_n
