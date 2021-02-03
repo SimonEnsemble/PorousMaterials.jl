@@ -160,12 +160,9 @@ function vdw_energy(which_species::Int, molecule_id::Int, molecules::Array{Array
 	energy = 0.0
 	# loop over every other molecule in molecules
     # loop over species arrays
-	for (species_id, sp) in enumerate(molecules)
-        if isempty(sp)
-            continue  # if the species array is empty there is no interaction to calculate
-        end
+	for species_id in 1:length(molecules)
         # loop over molecules in species array
-		for (other_molecule_id, mol) in enumerate(sp)
+		for other_molecule_id in 1:length(molecules[species_id])
 			# molecule cannot interact with istelf
 			if (species_id == which_species && other_molecule_id == molecule_id)
 				continue
