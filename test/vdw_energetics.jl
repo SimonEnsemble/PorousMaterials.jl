@@ -215,5 +215,11 @@ using Random
     energy_12 = 4.0 * ljff.ϵ[:Xe][:Xe] * ((ljff.σ²[:Xe][:Xe] / r12_sqr) ^ 6 - (ljff.σ²[:Xe][:Xe] / r12_sqr) ^ 3)
     energy_13 = 4.0 * ljff.ϵ[:Xe][:Kr] * ((ljff.σ²[:Xe][:Kr] / r13_sqr) ^ 6 - (ljff.σ²[:Xe][:Kr] / r13_sqr) ^ 3)
     @test (energy_12 + energy_13) ≈ vdw_energy(1, 1, molecules, ljff, box)
+
+    # test for edge case (use ljff and box from previous test)
+    molecules = [[Molecule("Xe")], Molecule[]]
+    molecules = [Frac.(mols, box) for mols in molecules]
+    translate_to!(molecules[1][1], Frac([0.1, 0.1, 0.1]))
+    @test 0.0 == vdw_energy(1, 1, molecules, ljff, box)
 end
 end
