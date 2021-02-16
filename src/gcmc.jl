@@ -1024,7 +1024,7 @@ dataframe[Symbol("⟨N⟩ (mmol/g)")] # adsorption at corresponding pressures
 """
 function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
                                            xtal::Crystal, 
-                                           molecule::Molecule,
+                                           molecule_templates::Array{Molecule{Cart}, 1},
                                            temperature::Float64,
                                            pressures::Array{Float64, 1},
                                            ljff::LJForceField,
