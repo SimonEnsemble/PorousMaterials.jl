@@ -101,6 +101,7 @@ end
 
 # TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
 # potential energy change after inserting/deleting/perturbing coordinates of molecules[which_species][molecule_id]
+# compute potential energy of molecules[which_species][molecule_id] with all other molecules and with the framework.
 @inline function potential_energy(which_species::Int,
 								  molecule_id::Int,
                                   molecules::Array{Array{Molecule{Frac}, 1}, 1},
@@ -351,7 +352,7 @@ function μVT_sim(xtal::Crystal,
     system_energy = SystemPotentialEnergy()
     # if we don't start with an emtpy xtal, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
-    if length(molecules) != 0 && ! any(m -> m == Molecule[], molecules)
+    if any(m -> length(m) != 0, molecules)
         # some checks
 		for m in molecules
 			# ensuer molecule tempale matches species of starting molecules.
