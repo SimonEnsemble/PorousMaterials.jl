@@ -422,18 +422,11 @@ function μVT_sim(xtal::Crystal,
         for inner_cycle = 1:max(20, sum(length.(molecules)))
             markov_chain_time += 1
 
-            ###
-            #   choose a species
-            ###
+            #   choose a species, find current # molecules of that species, n_i
             which_species = rand(1:nb_species)
-			# number of that species in molecules[which_species] array before MC move
-            if (isempty(molecules[which_species]) || all(m -> m.species == molecular_species[which_species], molecules[which_species]))
-                n_i = length(molecules[which_species])
-            else
-                error("molecules[$(which_species)] is neither empty nor populated with only a single species $(molecular_species[which_species])\n\t array is improperly constructed.")
-            end
+            n_i = length(molecules[which_species])
 
-			# choose proposed move randomly; keep track of proposals
+            # choose proposed move randomly; keep track of proposals
             which_move = sample(1:N_PROPOSAL_TYPES, mc_proposal_probabilities) # StatsBase.jl
             markov_counts.n_proposed[which_move] += 1
 
@@ -456,8 +449,8 @@ function μVT_sim(xtal::Crystal,
                     pop!(molecules[which_species])
                 end
             elseif (which_move == DELETION) && (n_i != 0)
-				# propose which molecule to delete
-				molecule_id = rand(1:n_i)
+                # propose which molecule to delete
+                molecule_id = rand(1:n_i)
 
                 # compute the potential energy of the molecule we propose to delete
                 ΔE = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -614,9 +607,10 @@ function μVT_sim(xtal::Crystal,
     end
 
     # checks
-    for (i, m) in enumerate(molecules)
-        @assert all(sp -> inside(sp), m) "molecule outside box!"
-        @assert all([! distortion(sp, Frac(molecule_templates[i], xtal.box), xtal.box, atol=1e-10) for sp in m]) "molecule distorted"
+    for (s, mol) in enumerate(molecules)
+        @assert all(m -> m.species == molecule_templates[s].species, mol) "species got mixed up"
+        @assert all(m -> inside(m), mol) "molecule outside box!"
+        @assert all([! distortion(m, Frac(molecule_templates[s], xtal.box), xtal.box, atol=1e-10) for m in mol]) "molecule distorted"
     end
 
     # compute total energy, compare to `current_energy*` variables where were incremented
@@ -823,17 +817,19 @@ function pretty_print(xtal::Crystal,
 
     print("crystal: ")
     printstyled(xtal.name; color=:green)
-
-    printstyled(@sprintf("\ntemperature = %f K", temperature); color=:green)
+    
+    print("\ntemperature: ")
+    printstyled(@sprintf("%f K\n", temperature); color=:green)
 
     println("\nadsorbates:")
     for m = 1:length(molecule_templates)
-        printstyled(molecule_templates[m].species; color=:green)
-        printstyled(@sprintf("\tpartial pressure = %f bar\n", pressures[m]); color=:green)
+        printstyled(molecule_templates[m].species; color=:yellow)
+        print("\tpartial pressure = ")
+        printstyled(@sprintf("%f bar\n", pressures[m]); color=:green)
     end
 
-    printstyled(split(ljff.name, ".")[1]; color=:green)
     println(" force field.")
+    printstyled(split(ljff.name, ".")[1]; color=:green)
 end
 
 """
