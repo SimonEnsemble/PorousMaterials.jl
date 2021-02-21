@@ -92,6 +92,27 @@ function vdw_energy(molecule_id::Int, molecules::Array{<:Molecule, 1}, ljff::LJF
    return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
+###
+#  for mixture simulations.
+#  compute potential energy of molecules[which_spcies][molecule_id] with all other molecules.
+###
+function vdw_energy(which_species::Int, molecule_id::Int, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
+	energy = 0.0
+    # loop over species
+	for s in 1:length(molecules)
+        # loop over molecules of this species, in molecules[s]
+		for m in 1:length(molecules[s])
+            # molecule cannot interact with itself (only relevant for molecules of the same species)
+            if (s == which_species) && (m == molecule_id)
+				continue
+			end
+
+			energy += vdw_energy(molecules[which_species][molecule_id].atoms, molecules[s][m].atoms, box, ljff)
+		end
+	end
+	return energy # units are the same as in ϵ for forcefield (Kelvin)
+end
+
 """
    total_gh_energy = total_vdw_energy(framework, molecules, ljforcefield) # guest-host
    total_gg_energy = total_vdw_energy(molecules, ljforcefield, simulation_box) # guest-guest
@@ -151,27 +172,6 @@ function vdw_energy_no_PBC(atoms_i::Atoms{Cart}, atoms_j::Atoms{Cart}, ljff::LJF
         end
     end
 	return energy
-end
-
-###
-#  overload for mixture GCMC
-###
-function vdw_energy(which_species::Int, molecule_id::Int, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
-	energy = 0.0
-	# loop over every other molecule in molecules
-    # loop over species arrays
-	for species_id in 1:length(molecules)
-        # loop over molecules in species array
-		for other_molecule_id in 1:length(molecules[species_id])
-			# molecule cannot interact with istelf
-			if (species_id == which_species && other_molecule_id == molecule_id)
-				continue
-			end
-
-			energy += vdw_energy(molecules[which_species][molecule_id].atoms, molecules[species_id][other_molecule_id].atoms, box, ljff)
-		end
-	end
-	return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
 function total_vdw_energy(crystal::Crystal, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField)
