@@ -354,14 +354,13 @@ function μVT_sim(xtal::Crystal,
     #  (n=0 corresponds to zero energy)
     if any(m -> length(m) != 0, molecules)
         # some checks
-		for m in molecules
-			# ensuer molecule tempale matches species of starting molecules.
-			@assert all(i -> (i.species in [mt.species for mt in molecule_templates]), m) "initializing with wrong molecule species"
+        for (s, mol) in enumerate(molecules)
+			# ensure molecule template matches species of starting molecules.
+            @assert all(m -> m.species == molecule_templates[s].species, mol) "initializing with wrong molecule species"
 		    # assert that the molecules are inside the simulation box
-			@assert all(i -> inside(i), m) "initializing with molecules outside simulation box!"
+			@assert all(m -> inside(m), mol) "initializing with molecules outside simulation box!"
 			# ensure pair-wise bond distance match template
-			ids_mt = [findfirst([mt.species for mt in molecule_templates] .== i.species) for i in m] # collection of ids
-			@assert all(id -> [! distortion(i, Frac(molecule_templates[id], xtal.box)) for i in m], ids_mt) "initializing with distorted molecules"
+			@assert all(m -> ! distortion(m, Frac(molecule_templates[s], xtal.box)), mol) "initializing with distorted molecules"
 		end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
