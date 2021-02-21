@@ -76,23 +76,26 @@ end
 # treated as an independent sample and used to estimate the error in the
 # estimate as a confidence interval.
 function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
-    # ⟨N⟩, ⟨U⟩
-    avg_n = sum(gcmc_stats).n / sum(gcmc_stats).n_samples
-    avg_U = sum(gcmc_stats).U / (1.0 * sum(gcmc_stats).n_samples)
-
+    sum_gcmc_stats = sum(gcmc_stats)     # over entire simulation
+    nb_blocks = length(gcmc_stats)       # number of blocks
     nb_species = length(gcmc_stats[1].n) # number of species
-    avg_n_blocks = [gs.n / gs.n_samples for gs in gcmc_stats]
-    # collect avg_n_blocks according to species
-    collect_species_stats = [[avg_n_blocks[block][sp] for block in 1:length(avg_n_blocks)] for sp in 1:nb_species]
-    err_n = 2.0 * std.(collect_species_stats) / sqrt(length(gcmc_stats))
 
-    err_U = SystemPotentialEnergy()
-    for gs in gcmc_stats
-        avg_U_this_block = gs.U / (1.0 * gs.n_samples)
-        err_U += square(avg_U_this_block - avg_U)
-    end
-    err_U = sqrt(err_U) / sqrt(length(gcmc_stats) - 1) # std(U) at this pt.
-    err_U = err_U * 2.0 / sqrt(length(gcmc_stats))
+    # ⟨N⟩, ⟨U⟩ over entire simulation
+    avg_n = sum_gcmc_stats.n / sum_gcmc_stats.n_samples
+    avg_U = sum_gcmc_stats.U / sum_gcmc_stats.n_samples
+
+    # ⟨N⟩, ⟨U⟩ over each block
+    avg_n_blocks = [gs.n / gs.n_samples for gs in gcmc_stats]
+    avg_U_blocks = [gs.U / gs.n_samples for gs in gcmc_stats]
+    
+    # std over the blocks
+    std_n = std(avg_n_blocks)
+    std_U = std(avg_U_blocks)
+
+    # errors, computed treating each block average as an independent sample.
+    err_n = 1.96 * std_n / sqrt(nb_blocks)
+    err_U = 1.96 * std_U / sqrt(nb_blocks)
+
     return avg_n, err_n, avg_U, err_U
 end
 

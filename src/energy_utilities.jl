@@ -1,4 +1,5 @@
 import Base: +, -, /, *
+import Statistics.std
 
 mutable struct PotentialEnergy
     vdw::Float64     # contribution from van der Waals interactions
@@ -13,8 +14,12 @@ Base.sum(energy::PotentialEnergy) = energy.vdw + energy.es
 *(a::Float64, energy::PotentialEnergy) = PotentialEnergy(a * energy.vdw, a * energy.es)
 *(energy::PotentialEnergy, a::Float64) = *(a, energy)
 /(energy::PotentialEnergy, a::Float64) = PotentialEnergy(energy.vdw / a, energy.es / a)
+/(energy::PotentialEnergy, a::Int) = PotentialEnergy(energy.vdw / a, energy.es / a)
 square(u::PotentialEnergy) = PotentialEnergy(u.vdw ^ 2, u.es ^ 2)
 Base.sqrt(u::PotentialEnergy) = PotentialEnergy(sqrt(u.vdw), sqrt(u.es))
+std(energies::Array{PotentialEnergy, 1}) = PotentialEnergy(std([en.vdw for en in energies]), 
+                                                           std([en.es for en in energies])
+                                                          )
 
 function Base.isapprox(u::PotentialEnergy, v::PotentialEnergy; verbose::Bool=true, atol::Float64=1e-6)
     if ! isapprox(u.vdw, v.vdw, atol=atol)
@@ -46,8 +51,12 @@ Base.sum(v::SystemPotentialEnergy) = v.gg.vdw + v.gg.es +
 *(u::SystemPotentialEnergy, a::Float64) = SystemPotentialEnergy(a * u.gh, a * u.gg)
 *(a::Float64, u::SystemPotentialEnergy) = *(u::SystemPotentialEnergy, a::Float64)
 /(u::SystemPotentialEnergy, a::Float64) = SystemPotentialEnergy(u.gh / a, u.gg / a)
+/(u::SystemPotentialEnergy, a::Int) = SystemPotentialEnergy(u.gh / a, u.gg / a)
 Base.sqrt(u::SystemPotentialEnergy) = SystemPotentialEnergy(sqrt(u.gh), sqrt(u.gg))
 square(u::SystemPotentialEnergy) = SystemPotentialEnergy(square(u.gh), square(u.gg))
+std(us::Array{SystemPotentialEnergy, 1}) = SystemPotentialEnergy(std([u.gh for u in us]),
+                                                                 std([u.gg for u in us])
+                                                                )
 
 function Base.isapprox(u::SystemPotentialEnergy, v::SystemPotentialEnergy;
                        verbose::Bool=true, atol::Float64=1e-6)
