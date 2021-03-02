@@ -184,7 +184,7 @@ export
     # Grid.jl
     apply_periodic_boundary_condition!,
     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
-    required_n_pts, xf_to_id, id_to_xf, update_density!,
+    required_n_pts, xf_to_id, id_to_xf, update_density!, find_energy_minimum,
  # 
     # EOS.jl
     calculate_properties, PengRobinsonFluid, VdWFluid,
