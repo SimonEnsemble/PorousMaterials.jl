@@ -544,20 +544,20 @@ function μVT_sim(xtal::Crystal,
                     molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
             elseif (which_move == IDENTITY_CHANGE) && (n_i != 0)
-###
-#  IDENTITY_CHANGE Procedure
-# 1. determine which molecule of a given species to propose identity change
-# 2. calculate the energy of that molecule 
-# 3. remove that molecule from the system, but keep a copy in case of rejection
-# 4. select which molecule of a different species is going to replace original molecule
-# 5. insert new (trial) molecule at location (with random orientation) of the original molecule
-# 6. calculate the energy of the new molecule
-# 7. evaluate acceptance rule: accept or reject proposed identity change
-# 8. accept: keep new molecule at current location
-#    reject: remove trial molecule and reinsert the copy of original molecule
-#
-# NOTE: make sure that the encodings for proposals are updated and that the statistics are updated
-###
+            ###
+            #  IDENTITY_CHANGE Procedure
+            # 1. determine which molecule of a given species to propose identity change
+            # 2. calculate the energy of that molecule 
+            # 3. remove that molecule from the system, but keep a copy in case of rejection
+            # 4. select which molecule of a different species is going to replace original molecule
+            # 5. insert new (trial) molecule at location (with random orientation) of the original molecule
+            # 6. calculate the energy of the new molecule
+            # 7. evaluate acceptance rule: accept or reject proposed identity change
+            # 8. accept: keep new molecule at current location
+            #    reject: remove trial molecule and reinsert the copy of original molecule
+            #
+            # NOTE: make sure that the encodings for proposals are updated and that the statistics are updated
+            ###
                 # determine which molecule of which_species to propose identity change
                 molecule_id = rand(1:n_i)
 
