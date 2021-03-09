@@ -9,15 +9,17 @@ const PROPOSAL_ENCODINGS = Dict(1 => "insertion",
                                 2 => "deletion",
                                 3 => "translation",
                                 4 => "rotation",
-                                5 => "reinsertion"
+                                5 => "reinsertion",
+                                6 => "identity change"
                                 ) # helps with printing later
 const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 # each proposal type gets an Int for clearer code
-const INSERTION   = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
-const DELETION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
-const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
-const ROTATION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
-const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
+const INSERTION       = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["insertion"]
+const DELETION        = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["deletion"]
+const TRANSLATION     = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
+const ROTATION        = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
+const REINSERTION     = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
+const IDENTITY_CHANGE = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["identity change"]
 
 # count proposed/accepted for each subtype
 mutable struct MarkovCounts
@@ -388,6 +390,11 @@ function μVT_sim(xtal::Crystal,
         mc_proposal_probabilities[TRANSLATION] = 0.25
         mc_proposal_probabilities[ROTATION] = 0.0
     end
+    if nb_species > 1
+        mc_proposal_probabilities[IDENTITY_CHANGE] = 0.0
+    else
+        mc_proposal_probabilities[IDENTITY_CHANGE] = 0.0
+    end
     mc_proposal_probabilities /= sum(mc_proposal_probabilities) # normalize
     # StatsBase.jl functionality for sampling
     mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
@@ -536,6 +543,55 @@ function μVT_sim(xtal::Crystal,
                     # reject the move, put back old molecule
                     molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
+            elseif (which_move == IDENTITY_CHANGE) && (n_i != 0)
+###
+#  IDENTITY_CHANGE Procedure
+# 1. determine which molecule of a given species to propose identity change
+# 2. calculate the energy of that molecule 
+# 3. remove that molecule from the system, but keep a copy in case of rejection
+# 4. select which molecule of a different species is going to replace original molecule
+# 5. insert new (trial) molecule at location (with random orientation) of the original molecule
+# 6. calculate the energy of the new molecule
+# 7. evaluate acceptance rule: accept or reject proposed identity change
+# 8. accept: keep new molecule at current location
+#    reject: remove trial molecule and reinsert the copy of original molecule
+#
+# NOTE: make sure that the encodings for proposals are updated and that the statistics are updated
+###
+                # determine which molecule of which_species to propose identity change
+                molecule_id = rand(1:n_i)
+
+                # calculate the energy of that molecule 
+                energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
+
+                # remove that molecule from the system, but keep a copy in case of rejection
+                old_molecule = deepcopy(molecules[which_species][molecule_id])
+                remove_molecule!(molecule_id, molecules[which_species])
+
+                # select which molecule of a different species is going to replace original molecule
+                candidate_species = rand([sp for sp in 1:nb_species if sp != which_species])
+                m_i = length(molecules[candidate_species])
+
+                # insert trial molecule, with random orientation, at location of the original molecule
+                random_insertion!(molecules[candidate_species], xtal.box, molecule_templates[candidate_species])
+                translate_to!(molecules[candidate_species][m_i + 1], old_molecule.com)
+
+                # calculate the energy of the new molecule
+                energy_new = potential_energy(candidate_species, candidate_id, molecules, xtal, ljff)
+                
+                # Acceptance rule for identity change
+                if rand() < (n_i * fugacities[candidate_species] / ((m_i + 1) * fugacities[which_species])) *  
+                                    exp(-(sum(energy_new) - sum(energy_old)) / temperature)
+                    # accept the move, adjust current energy
+                    markov_counts.n_accepted[which_move] += 1
+
+                    system_energy += energy_new - energy_old
+                else
+                    # reject the move: remove trial molecule and reinsert original
+                    remove_molecule!(m_i + 1, molecules[candidate_species])
+
+                    push!(molecules[which_species], deepcopy(old_molecule))
+                end                    
             end # which move the code executes
 
             # if we've done all burn cycles, take samples for statistics
