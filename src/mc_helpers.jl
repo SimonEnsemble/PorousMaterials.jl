@@ -18,6 +18,7 @@ const N_BLOCKS = 5
     random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart})
 
 Insert a molecule into the simulation box and perform a random rotation if needed.
+this function calls (`insert_w_random_orientation!`)[@ref], supplying it with a random position vector.
 
 # Arguments
 - `molecules::Array{Molecule{Frac}, 1}`: array containing the molecules in the simulation
@@ -25,6 +26,22 @@ Insert a molecule into the simulation box and perform a random rotation if neede
 - `template::Molecule{Cart}`: reference molecule of the type inserted
 """
 function random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart})
+    xf_com = Frac(rand(3))
+    insert_w_random_orientation!(molecules, box, template, xf_com)
+end
+
+"""
+    insert_w_random_orientation!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart}, xf_com::Frac)
+
+Insert a molecule into the simulation box at a specified location and with a random orientation.
+
+# Arguments
+- `molecules::Array{Molecule{Frac}, 1}`: array containing the molecules in the simulation
+- `box::Box`: the box  used for fractional coordinats
+- `template::Molecule{Cart}`: reference molecule of the type inserted
+- `xf_com`::Frac`: location where molecule will be inserted
+"""
+function insert_w_random_orientation!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart}, xf_com::Frac)
     # copy template
     molecule = deepcopy(template)
     # rotate
@@ -33,9 +50,7 @@ function random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, templa
     end
     # convert to fractional
     molecule = Frac(molecule, box)
-    # translate to uniform random fractional coords in the box
-    com = Frac(rand(3))
-    translate_to!(molecule, com)
+    translate_to!(molecule, xf_com)
     # add the molecule to the array of molecules
     push!(molecules, molecule)
 end
