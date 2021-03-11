@@ -119,33 +119,37 @@ end
 net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 
- # """
- #     write_xyz(molecules, xyz_file)
- # 
- # Writes the coordinates of all atoms in molecules to the given xyz_file file object
- # passing a file object around is faster for simulation because it can be opened
- # once at the beginning of the simulation and closed at the end.
- # 
- # This writes the coordinates of the molecules in cartesian coordinates, so the
- # box is needed for the conversion.
- # 
- # # Arguments
- #  - `box::Box`: The box the molecules are in, to convert molecule positions
- #         to cartesian coordinates
- #  - `molecules::Array{Molecule, 1}`: The array of molecules to be written to the file
- #  - `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
- # """
- # function write_xyz(box::Box, molecules::Array{Molecule, 1}, xyz_file::IOStream)
- #     num_atoms = n_atoms(molecules)
- #     @printf(xyz_file, "%s\n", num_atoms)
- #     for molecule in molecules
- #         for i = 1:molecule.atoms.n_atoms
- #             cartesian_coords = box.f_to_c * molecule.atoms.xf[:, i]
- #             @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i],
- #                     cartesian_coords...)
- #         end
- #     end
- # end
+"""
+    write_xyz(molecules, xyz_file)
+
+Writes the coordinates of all atoms in molecules to the given xyz_file file object
+passing a file object around is faster for simulation because it can be opened
+once at the beginning of the simulation and closed at the end.
+
+This is used in μVT_sim to store the adsorbate positions when using the
+snapshots. By taking in an IOStream object it doesn't need to continually close
+and reopoen the *.xyz file storing the snapshot positions.
+
+This writes the coordinates of the molecules in cartesian coordinates, so the
+box is needed for the conversion.
+
+# Arguments
+ - `box::Box`: The box the molecules are in, to convert molecule positions
+        to cartesian coordinates
+ - `molecules::Array{Molecule, 1}`: The array of molecules to be written to the file
+ - `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
+"""
+function write_xyz(box::Box, molecules::Array{Molecule, 1}, xyz_file::IOStream)
+    num_atoms = n_atoms(molecules)
+    @printf(xyz_file, "%s\n", num_atoms)
+    for molecule in molecules
+        for i = 1:molecule.atoms.n_atoms
+            cartesian_coords = box.f_to_c * molecule.atoms.xf[:, i]
+            @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i],
+                    cartesian_coords...)
+        end
+    end
+end
 
 # documented in matter.jl
 function Xtals.translate_by!(molecule::Molecule{Cart}, dx::Cart)
