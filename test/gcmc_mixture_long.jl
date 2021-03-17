@@ -22,8 +22,8 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
     ljff            = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
     temperature     = 298.0
     # n_sample_cycles and n_burn_cycles are on the lower end of minimum requirment to get agreement with RASPA
-    n_sample_cycles = 500000
-    n_burn_cycles   = 500000 
+    n_sample_cycles = 250000 # 500000
+    n_burn_cycles   = 250000 # 500000 
     mol_fraction    = [0.9, 0.1]
     # load RASPA (benchmark) data
     raspa_data_filename = joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr_Xe.csv")
