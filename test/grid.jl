@@ -174,32 +174,5 @@ using Random
     @test isapprox(id_to_xf((10, 12, 14), (10, 12, 14)), ones(3))
     @test isapprox(id_to_xf((2, 2, 2), (3, 3, 3)), [0.5, 0.5, 0.5])
 
-    ###
-    #  test find_energy_minimum
-    ###
-    # grid params
-    xtal = replicate(Crystal("SBMOF-1.cif"), (1, 1, 1)) 
-    strip_numbers_from_atom_labels!(xtal)
-    mol  = Molecule("Xe")
-    ljff = LJForceField("UFF")
-    mesh = (50, 50, 50) 
-    temp = 298.0
-    rot  = 750 
-    # run energy grid calculation
-    grid = energy_grid(xtal, mol, ljff; n_pts=mesh, temperature=temp, n_rotations=rot)
-    # find location of the minumum energy on the grid
-    grid_min  = findmin(grid.data)
-    xyz_1     = Tuple([grid_min[2][i] for i in 1:3])
-    xf_minE_1 = id_to_xf(xyz_1, grid.n_pts) # fractional coords of min
-    # find the minimum energy using grid search optimization
-    res_1 = find_energy_minimum(xtal, Frac(mol, xtal.box), ljff, Frac(xf_minE_1))
-    # perturb molecule and re-apply grid search 
-    xyz_2 = (xyz_1[1], xyz_1[2] + 2, xyz_1[3]) # move two voxels along y-axis
-    xf_minE_2 = id_to_xf(xyz_2, grid.n_pts)
-    # find the minimum energy using grid search optimization
-    res_2 = find_energy_minimum(xtal, Frac(mol, xtal.box), ljff, Frac(xf_minE_2))
-    # test the the value and location of minimum is the same
-    @test isapprox(res_1.minimum, res_2.minimum)
-    @test isapprox(res_1.minimizer, res_2.minimizer)
 end
 end

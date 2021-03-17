@@ -797,18 +797,23 @@ function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1}, repfa
 end
 
 """
-    res = find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, xf₀::Frac)
-    res = find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, x₀::Cart)
+    res = find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField; xf₀::Union{Frac, Nothing}=nothing, temperature::Float64=NaN)
+    res = find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, x₀::Cart; temperature::Float64=NaN)
 
 Find the minimum energy of a given `molecule` inside the `xtal` using a grid search optimization routine. 
 The optimizer needs an initial estimate xf₀. 
-One way to obtain this estimate is by running an [`energy_grid`](@ref) calculation (see example).
+One way to obtain this estimate is by running an [`energy_grid`](@ref) calculation (see example). 
+If xf₀==nothing (default), the `energy_grid` calculation is automatically performed with the default function values.  
 
 # Arguments
 - `xtal::Crystal`: The crystal being investigated
 - `molecule::Molecule`: The Molecule used to probe energy surface
 - `ljff::LJForceField`: The force field used to calculate interaction energies
-- `xf₀::Frac`: Initial estimate used by the optimizer
+- `xf₀::Union{Frac, Nothing}=nothing`: Initial estimate used by the optimizer. 
+                                       If xf₀==nothing, an estimate will be automatically generated.
+- `temperature::Float64`: The temperature at which to compute the free energy for molecules where rotations are required. 
+                          Only used if xf₀==nothing.
+
 
 # Returns
 - `res::MultivariateOptimizationResults`: contains results of optimization
@@ -847,14 +852,19 @@ xf_minimum = res.minimizer
 xf_minimum_rescale = xf_minimum .* replication_factors(xtal, sqrt(ffield.r²_cutoff))
 ```
 """
-function find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, xf₀::Frac)
+function find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField; xf₀::Union{Frac, Nothing}=nothing, temperature::Float64=NaN)
     @assert ! needs_rotations(molecule) "can't handle molecules that need rotations"
+
+    if isnothing(xf₀)
+        xf₀ = energy_minimum_estimate(xtal, Cart(molecule, xtal.box), ljff, temperature)
+    end
 
     # get replication factors
     rep_factors = replication_factors(xtal, sqrt(ljff.r²_cutoff))
     # replicate xtal to meet requirements for VDW interactions
     strip_numbers_from_atom_labels!(xtal)
     xtal = replicate(xtal, rep_factors)
+
     # scale fractional coords to new box size
     xf = xf₀.xf ./ rep_factors
 
@@ -871,4 +881,21 @@ function find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceFie
     return optimize(energy, xf)
 end
 
-find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, x₀::Cart) = find_energy_minimum(xtal, molecule, ljff, Frac(x₀, xtal.box))
+find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, x₀::Cart; temperature::Float64=NaN) = find_energy_minimum(xtal, molecule, ljff; xf₀=Frac(x₀, xtal.box), temperature=temperature)
+
+# automate find_energy_minimum  calculation if xf₀==nothing
+function energy_minimum_estimate(xtal::Crystal, molecule::Molecule, ljff::LJForceField, temperature::Float64)
+    # Perform an energy grid calculation on a course grid to get initial estimate.
+    grid = energy_grid(xtal, molecule, ljff; temperature=temperature)
+
+    # Store the minimum value of the grid data to be unpacked.
+    E_min_estimate = findmin(grid.data)
+
+    # Get the Cartesian index of the voxel with the minimum energy estimate.
+    vox_id = Tuple([E_min_estimate[2][i] for i in 1:3])
+
+    # Get the fractional coordinates of the voxel with the minimum energy estimate.
+    #     These are in fractional coordinates scaled to the size of xtal.box, but still need to be cast as Frac.
+    xf_minE = id_to_xf(vox_id, grid.n_pts) # fractional coords of min
+    return Frac(xf_minE)
+end
