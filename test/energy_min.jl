@@ -17,7 +17,6 @@ if run_tests["energy_min"]
     @info "running grid test"
 
     xtal = Crystal("SBMOF-1.cif")
-    strip_numbers_from_atom_labels!(xtal)
     mol  = Molecule("Xe")
     ljff = LJForceField("UFF")
     mesh = (50, 50, 50)
@@ -29,14 +28,12 @@ if run_tests["energy_min"]
 
         # results of energy_grid calc 
         test_energy = grid_min[1] # kJ/mol
-        @info test_energy
         text_vox_id = Tuple([grid_min[2][i] for i in 1:3]) # Cartesian Index of voxel
-        @info text_vox_id
         test_xyz    = id_to_xf(text_vox_id, mesh) # fractional coords of voxel
-        @info test_xyz
     else
+        # results from energy_grid calc with n_pts=(50, 50, 50)
         test_energy = -37.65575654162971 # kJ/mol
-        text_vox_id = Tuple(26, 28, 26)
+        text_vox_id = Tuple([26, 28, 26])
         test_xyz = [0.5102040816326531, 0.5510204081632653, 0.5102040816326531]
     end
 

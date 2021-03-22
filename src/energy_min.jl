@@ -1,6 +1,6 @@
 """
-    res = find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField; xf₀::Union{Frac, Nothing}=nothing, n_pts::Tuple{Int, Int, Int}=(50,50,50))
-    res = find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, x₀::Cart; n_pts::Tuple{Int, Int, Int}=(50,50,50))
+    res = find_energy_minimum(xtal::Crystal, molecule::Molecule{Frac}, ljff::LJForceField; xf₀::Union{Frac, Nothing}=nothing, n_pts::Tuple{Int, Int, Int}=(50,50,50))
+    res = find_energy_minimum(xtal::Crystal, molecule::Molecule{Frac}, ljff::LJForceField, x₀::Cart; n_pts::Tuple{Int, Int, Int}=(50,50,50))
 
 Find the minimum energy of a given `molecule` inside the `xtal` using a grid search optimization routine. 
 The optimizer needs an initial estimate xf₀. 
@@ -9,7 +9,7 @@ otherwise, if xf₀==nothing (default), the `energy_grid` calculation is automat
 
 # Arguments
 - `xtal::Crystal`: The crystal being investigated
-- `molecule::Molecule`: The Molecule used to probe energy surface
+- `molecule::Molecule{Frac}`: The Molecule used to probe energy surface
 - `ljff::LJForceField`: The force field used to calculate interaction energies
 - `xf₀::Union{Frac, Nothing}=nothing`: Initial estimate used by the optimizer. 
                                        If xf₀==nothing, an estimate will be automatically generated.
@@ -25,7 +25,7 @@ To view the candidate solution, look at the arrtibutes:
 # Example
 ```
 # Perform an energy grid calculation on a course grid to get initial estimate.
-grid = energy_grid(xtal, molecule, ljff; n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
+grid = energy_grid(xtal, molecule, ljff; n_pts=(50, 50, 50))
 
 # Store the minimum value of the grid data to be unpacked.
 E_min_estimate = findmin(grid.data)
@@ -52,8 +52,10 @@ xf_minimum = res.minimizer
 xf_minimum_rescale = xf_minimum .* replication_factors(xtal, sqrt(ffield.r²_cutoff))
 ```
 """
-function find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField; 
-                             xf₀::Union{Frac, Nothing}=nothing, 
+function find_energy_minimum(xtal::Crystal,
+                             molecule::Molecule{Frac},
+                             ljff::LJForceField;
+                             xf₀::Union{Frac, Nothing}=nothing,
                              n_pts::Tuple{Int, Int, Int}=(50,50,50)
                              )
     @assert ! needs_rotations(molecule) "can't handle molecules that need rotations"
@@ -91,10 +93,14 @@ function find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceFie
     return res
 end
 
-find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField, x₀::Cart; n_pts::Tuple{Int, Int, Int}=(50,50,50)) = find_energy_minimum(xtal, molecule, ljff; xf₀=Frac(x₀, xtal.box), n_pts=n_pts)
+find_energy_minimum(xtal::Crystal, molecule::Molecule{Frac}, ljff::LJForceField, x₀::Cart; n_pts::Tuple{Int, Int, Int}=(50,50,50)) = find_energy_minimum(xtal, molecule, ljff; xf₀=Frac(x₀, xtal.box), n_pts=n_pts)
 
 # automate find_energy_minimum  calculation if xf₀==nothing
-function find_energy_minimum_gridsearch(xtal::Crystal, molecule::Molecule, ljff::LJForceField; n_pts::Tuple{Int, Int, Int}=(50,50,50))
+function find_energy_minimum_gridsearch(xtal::Crystal,
+                                        molecule::Molecule{Cart},
+                                        ljff::LJForceField;
+                                        n_pts::Tuple{Int, Int, Int}=(50,50,50)
+                                        )
     # Perform an energy grid calculation on a course grid to get initial estimate.
     grid = energy_grid(xtal, molecule, ljff; n_pts=n_pts)
 
