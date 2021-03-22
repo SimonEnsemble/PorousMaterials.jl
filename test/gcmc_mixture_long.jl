@@ -9,6 +9,7 @@ tests_to_run = Dict("Kr/Xe in SBMOF-1"  => true,
                     "ideal gas mixture" => false,
                     "run simulations"   => false
                     )
+
 ###
 #  Simulate Kr/Xe mixture in SBMOF-1
 ###
@@ -21,9 +22,9 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
     ljff            = LJForceField("UFF", mixing_rules="Lorentz-Berthelot")
     temperature     = 298.0
     # n_sample_cycles and n_burn_cycles are on the lower end of minimum requirment to get agreement with RASPA
-    n_sample_cycles = 500000
-    n_burn_cycles   = 500000 
-    pressures       = [0.9, 0.1]
+    n_sample_cycles = 250000 # 500000
+    n_burn_cycles   = 250000 # 500000 
+    mol_fraction    = [0.9, 0.1]
     # load RASPA (benchmark) data
     raspa_data_filename = joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr_Xe.csv")
     raspa_results = CSV.read(raspa_data_filename, DataFrame)
@@ -34,14 +35,14 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
             results, molecules = μVT_sim(xtal,
                                          mol_templates,
                                          temperature,
-                                         p *  pressures,
+                                         p *  mol_fraction,
                                          ljff,
                                          n_burn_cycles=n_burn_cycles,
                                          n_sample_cycles=n_sample_cycles)
         else
             # use the simulation files that are provided
             filename = μVT_output_filename(xtal, mol_templates, temperature, 
-                                       p * pressures, ljff, n_burn_cycles, 
+                                       p * mol_fraction, ljff, n_burn_cycles, 
                                        n_sample_cycles; comment="", extension=".jld2")
             where_are_jld_files = PorousMaterials.PATH_TO_SIMS
             @load joinpath(where_are_jld_files, filename) results
