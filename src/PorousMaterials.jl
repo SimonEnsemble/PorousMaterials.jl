@@ -123,6 +123,8 @@ include("eos.jl")
 include("henry.jl")
 include("gcmc.jl")
  # include("generic_rotations.jl")
+include("energy_min.jl")
+
 
 export
     # porousmaterials.jl
@@ -194,8 +196,11 @@ export
     μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
  # 
     # henry.jl
-    henry_coefficient, henry_result_savename
+    henry_coefficient, henry_result_savename,
  # 
  #     # generic_rotations.jl
  #     rotation_matrix
+
+    # energy_min.jl
+    find_energy_minimum
 end
