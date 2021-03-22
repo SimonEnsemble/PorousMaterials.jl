@@ -70,7 +70,6 @@ function Base.print(gcmc_stats::GCMCstats)
     println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.gg.es  / gcmc_stats.n_samples)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
-end
 
 # Compute average and standard error of the number of molecules and potential
 # energy from an array of `GCMCstats`, each corresponding to statitics from an
@@ -127,11 +126,14 @@ Runs a grand-canonical (μVT) Monte Carlo simulation of the adsorption of a mole
 xtal at a particular temperature and pressure using a
 Lennard Jones force field.
 
-If multiple molecular species are passed, we allow for `identity change` probability in accordance with [semigrand-canonical ensemble](http://dx.doi.org/10.1080/00268978800100743).
+Markov chain Monte Carlo moves include:
+* deletion/insertion
+* translation
+* reinsertion
+* identity change (if multiple components) [see here](http://dx.doi.org/10.1080/00268978800100743)
 
 A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
-proposals. Current Markov chain moves implemented are particle insertion/deletion and
-translation.
+proposals.
 
 # Arguments
 - `xtal::Crystal`: the porous xtal in which we seek to simulate adsorption
@@ -378,29 +380,21 @@ function μVT_sim(xtal::Crystal,
     end
 
     ####
-    #   proposal probabilities
+    #    MC proposal probabilities
     ####
     mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
-    # set defaults
-    if nb_species > 1
-        mc_proposal_probabilities[INSERTION] = 0.3
-        mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
-        mc_proposal_probabilities[IDENTITY_CHANGE] = 0.1
-    else
-        mc_proposal_probabilities[INSERTION] = 0.35
-        mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
-        mc_proposal_probabilities[REINSERTION] = 0.05
-        mc_proposal_probabilities[IDENTITY_CHANGE] = 0.0
-    end
+    mc_proposal_probabilities[INSERTION] = 0.35
+    mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
     mc_proposal_probabilities[REINSERTION] = 0.05
-    if any(needs_rotations.(molecule_templates))
-        mc_proposal_probabilities[TRANSLATION] = 0.125
-        mc_proposal_probabilities[ROTATION] = 0.125
-    else
-        mc_proposal_probabilities[TRANSLATION] = 0.25
-        mc_proposal_probabilities[ROTATION] = 0.0
+    mc_proposal_probabilities[TRANSLATION] = 0.25
+    if nb_species > 1 # multi-species
+        mc_proposal_probabilities[IDENTITY_CHANGE] = 0.1
     end
-    mc_proposal_probabilities /= sum(mc_proposal_probabilities) # normalize
+    if any(needs_rotations.(molecule_templates)) # rotatable molecules
+        mc_proposal_probabilities[ROTATION] = 0.25
+    end
+    # normalize
+    mc_proposal_probabilities /= sum(mc_proposal_probabilities)
     # StatsBase.jl functionality for sampling
     mc_proposal_probabilities = ProbabilityWeights(mc_proposal_probabilities)
     if verbose
@@ -577,16 +571,16 @@ function μVT_sim(xtal::Crystal,
                 candidate_species = rand([sp for sp in 1:nb_species if sp != which_species])
 
                 # get the current number of molecules of type candidate_species
-                m_i = length(molecules[candidate_species])
+                n_j = length(molecules[candidate_species])
 
                 # insert trial molecule, with random orientation, at location of the original molecule
                 insert_w_random_orientation!(molecules[candidate_species], xtal.box, molecule_templates[candidate_species], old_molecule.com)
 
                 # calculate the energy of the new molecule
-                energy_new = potential_energy(candidate_species, m_i + 1, molecules, xtal, ljff)
+                energy_new = potential_energy(candidate_species, n_j + 1, molecules, xtal, ljff)
 
                 # Acceptance rule for identity change
-                if rand() < (n_i * fugacities[candidate_species] / ((m_i + 1) * fugacities[which_species])) *  
+                if rand() < (n_i * fugacities[candidate_species] / ((n_j + 1) * fugacities[which_species])) *  
                                     exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                     # accept the move, adjust current energy
                     markov_counts.n_accepted[which_move] += 1
@@ -594,7 +588,7 @@ function μVT_sim(xtal::Crystal,
                     system_energy += energy_new - energy_old
                 else
                     # reject the move: remove trial molecule and reinsert original
-                    remove_molecule!(m_i + 1, molecules[candidate_species])
+                    remove_molecule!(n_j + 1, molecules[candidate_species])
 
                     push!(molecules[which_species], deepcopy(old_molecule))
                 end                    
