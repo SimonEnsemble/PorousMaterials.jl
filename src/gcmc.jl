@@ -70,6 +70,7 @@ function Base.print(gcmc_stats::GCMCstats)
     println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.gg.es  / gcmc_stats.n_samples)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
+end
 
 # Compute average and standard error of the number of molecules and potential
 # energy from an array of `GCMCstats`, each corresponding to statitics from an
@@ -405,6 +406,10 @@ function μVT_sim(xtal::Crystal,
         end
     end
 
+    # adaptive translation step
+    adaptive_δ = AdaptiveTranslationStepSize(2.0) # default is 2 Å
+    println("\t\ttranslation step size: ", adaptive_δ.δ, " Å")
+
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
     gcmc_stats = [GCMCstats(nb_species) for block_no = 1:N_BLOCKS]
     current_block = 1
@@ -472,13 +477,14 @@ function μVT_sim(xtal::Crystal,
                     system_energy -= ΔE
                 end
             elseif (which_move == TRANSLATION) && (n_i != 0)
+                adaptive_δ.nb_translations_proposed += 1
                 # propose which molecule whose coordinates we should perturb
                 molecule_id = rand(1:n_i)
 
                 # energy of the molecule before it was translated
                 energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
 
-                old_molecule = random_translation!(molecules[which_species][molecule_id], xtal.box)
+                old_molecule = random_translation!(molecules[which_species][molecule_id], xtal.box, adaptive_δ)
 
                 # energy of the molecule after it is translated
                 energy_new = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -487,6 +493,7 @@ function μVT_sim(xtal::Crystal,
                 if rand() < exp(-(sum(energy_new) - sum(energy_old)) / temperature)
                     # accept the move, adjust current energy
                     markov_counts.n_accepted[which_move] += 1
+                    adaptive_δ.nb_translations_accepted += 1
 
                     system_energy += energy_new - energy_old
                 else
@@ -543,20 +550,20 @@ function μVT_sim(xtal::Crystal,
                     molecules[which_species][molecule_id] = deepcopy(old_molecule)
                 end
             elseif (which_move == IDENTITY_CHANGE) && (n_i != 0)
-            ###
-            #  IDENTITY_CHANGE Procedure
-            # 1. determine which molecule of a given species to propose identity change
-            # 2. calculate the energy of that molecule 
-            # 3. remove that molecule from the system, but keep a copy in case of rejection
-            # 4. select which molecule of a different species is going to replace original molecule
-            # 5. insert new (trial) molecule at location (with random orientation) of the original molecule
-            # 6. calculate the energy of the new molecule
-            # 7. evaluate acceptance rule: accept or reject proposed identity change
-            # 8. accept: keep new molecule at current location
-            #    reject: remove trial molecule and reinsert the copy of original molecule
-            #
-            # NOTE: make sure that the encodings for proposals are updated and that the statistics are updated
-            ###
+                ###
+                #  IDENTITY_CHANGE Procedure
+                # 1. determine which molecule of a given species to propose identity change
+                # 2. calculate the energy of that molecule 
+                # 3. remove that molecule from the system, but keep a copy in case of rejection
+                # 4. select which molecule of a different species is going to replace original molecule
+                # 5. insert new (trial) molecule at location (with random orientation) of the original molecule
+                # 6. calculate the energy of the new molecule
+                # 7. evaluate acceptance rule: accept or reject proposed identity change
+                # 8. accept: keep new molecule at current location
+                #    reject: remove trial molecule and reinsert the copy of original molecule
+                #
+                # NOTE: make sure that the encodings for proposals are updated and that the statistics are updated
+                ###
                 # determine which molecule of which_species to propose identity change
                 molecule_id = rand(1:n_i)
 
@@ -595,7 +602,7 @@ function μVT_sim(xtal::Crystal,
             end # which move the code executes
 
             # if we've done all burn cycles, take samples for statistics
-            if outer_cycle > n_burn_cycles
+            if outer_cycle > n_burn_cycles # then we're in "production" cycles.
                 if markov_chain_time % sample_frequency == 0
                     gcmc_stats[current_block].n_samples += 1
 
@@ -607,7 +614,12 @@ function μVT_sim(xtal::Crystal,
 
                     gcmc_stats[current_block].Un += sum(system_energy) * sum(length.(molecules))
                 end
-            end # sampling
+            else # we're still in the "burn" cycles
+                # update adaptive step 12 times during burn cycles
+                if (outer_cycle % floor(Int, n_burn_cycles / 12)) == 0
+                    adjust!(adaptive_δ)
+                end
+            end
         end # inner cycles
 
         # print block statistics / increment block
