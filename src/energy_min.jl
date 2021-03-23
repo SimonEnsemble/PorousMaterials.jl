@@ -2,17 +2,16 @@
     res = find_energy_minimum(xtal::Crystal, molecule::Molecule{Frac}, ljff::LJForceField; xf₀::Union{Frac, Nothing}=nothing, n_pts::Tuple{Int, Int, Int}=(50,50,50))
     res = find_energy_minimum(xtal::Crystal, molecule::Molecule{Frac}, ljff::LJForceField, x₀::Cart; n_pts::Tuple{Int, Int, Int}=(50,50,50))
 
-Find the minimum energy of a given `molecule` inside the `xtal` using a grid search optimization routine. 
+Find the minimum energy of a given `molecule` inside the `xtal`. 
 The optimizer needs an initial estimate xf₀. 
-One way to obtain this estimate is by running an [`energy_grid`](@ref) calculation (see example); 
-otherwise, if xf₀==nothing (default), the `energy_grid` calculation is automatically performed with default function values. 
+If xf₀==nothing (default), automatically generate initial estimate via [`find_energy_minimum_gridsearch`](@ref).
+Otherwise, the initial estimate will have to be provided.
 
 # Arguments
 - `xtal::Crystal`: The crystal being investigated
-- `molecule::Molecule{Frac}`: The Molecule used to probe energy surface
+- `molecule::Molecule{Frac}`: The molecule used to probe energy surface
 - `ljff::LJForceField`: The force field used to calculate interaction energies
-- `xf₀::Union{Frac, Nothing}=nothing`: Initial estimate used by the optimizer. 
-                                       If xf₀==nothing, an estimate will be automatically generated.
+- `xf₀::Union{Frac, Nothing}=nothing`: Initial estimate used by the optimizer. If xf₀==nothing, an estimate will be automatically generated.
 - `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: Number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
 
 # Returns
@@ -21,43 +20,13 @@ otherwise, if xf₀==nothing (default), the `energy_grid` calculation is automat
 To view the candidate solution, look at the arrtibutes:
 - `res.minimum`: The estimated minimum energy, units: kJ/mol
 - `res.minimizer`: The location of `res.minimum` in fractional coordinates
-
-# Example
-```
-# Perform an energy grid calculation on a course grid to get initial estimate.
-grid = energy_grid(xtal, molecule, ljff; n_pts=(50, 50, 50))
-
-# Store the minimum value of the grid data to be unpacked.
-E_min_estimate = findmin(grid.data)
-
-# Get the Cartesian index of the voxel with the minimum energy estimate.
-vox_id = Tuple([E_min_estimate[2][i] for i in 1:3])
-
-# Get the fractional coordinates of the voxel with the minimum energy estimate.
-#     These are in fractional coordinates scaled to the size of xtal.box, but still need to be cast as Frac.
-xf_minE = id_to_xf(vox_id, grid.n_pts) # fractional coords of min
-
-# Apply grid search optimization to find the minimum energy starting from input location.
-res = find_energy_minimum(xtal, Frac(molecule, xtal.box), ffield, Frac(xf_minE))
-
-# The minimum value found by the opimizer
-#     units: kJ/mol
-energy_minimum = res.minimum
-
-# The location of the minimum value.
-#     These are scaled to the size required by the forcefield cutoff radius
-xf_minimum = res.minimizer
-
-# Rescale to input xtal.box (if desired)
-xf_minimum_rescale = xf_minimum .* replication_factors(xtal, sqrt(ffield.r²_cutoff))
-```
 """
 function find_energy_minimum(xtal::Crystal,
                              molecule::Molecule{Frac},
                              ljff::LJForceField;
                              xf₀::Union{Frac, Nothing}=nothing,
                              n_pts::Tuple{Int, Int, Int}=(50,50,50)
-                             )
+                            )
     @assert ! needs_rotations(molecule) "can't handle molecules that need rotations"
 
     if isnothing(xf₀)
@@ -95,7 +64,25 @@ end
 
 find_energy_minimum(xtal::Crystal, molecule::Molecule{Frac}, ljff::LJForceField, x₀::Cart; n_pts::Tuple{Int, Int, Int}=(50,50,50)) = find_energy_minimum(xtal, molecule, ljff; xf₀=Frac(x₀, xtal.box), n_pts=n_pts)
 
-# automate find_energy_minimum  calculation if xf₀==nothing
+
+"""
+    xf₀ = find_energy_minimum_gridsearch(xtal::Crystal,
+                                         molecule::Molecule{Cart},
+                                         ljff::LJForceField;
+                                         n_pts::Tuple{Int, Int, Int}=(50,50,50)
+                                        )
+
+Perform an [`energy_grid`](@ref) calculation and return the location of the minimum energy in fractional coordinates.
+
+# Arguments
+- `xtal::Crystal`: The crystal being investigated
+- `molecule::Molecule{Cart}`: The molecule used to probe energy surface
+- `ljff::LJForceField`: The force field used to calculate interaction energies
+- `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: Number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
+
+# Returns
+- `xf₀::Frac`: location of minimum energy
+"""
 function find_energy_minimum_gridsearch(xtal::Crystal,
                                         molecule::Molecule{Cart},
                                         ljff::LJForceField;
@@ -115,4 +102,3 @@ function find_energy_minimum_gridsearch(xtal::Crystal,
     xf_minE = id_to_xf(vox_id, grid.n_pts) # fractional coords of min
     return Frac(xf_minE)
 end
-
