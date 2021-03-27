@@ -70,6 +70,7 @@ function Base.print(gcmc_stats::GCMCstats)
     println("\t⟨U_gg, Coulomb⟩ (K) = ", gcmc_stats.U.gg.es  / gcmc_stats.n_samples)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
+end
 
 # Compute average and standard error of the number of molecules and potential
 # energy from an array of `GCMCstats`, each corresponding to statitics from an
