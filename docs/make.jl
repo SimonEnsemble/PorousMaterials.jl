@@ -16,7 +16,8 @@ makedocs(
             "forcefields" => "force_field.md",
             "equations of state" => "eos.md",
             "Henry coefficients" => "henry.md",
-            "grand-canonical Monte Carlo simulations" => "gcmc.md"
+            "grand-canonical Monte Carlo simulations" => "gcmc.md",
+            "grids" => "grid.md"
             ],
     format = Documenter.HTML(assets = ["assets/flux.css"])
 )
