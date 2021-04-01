@@ -540,7 +540,8 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                     @printf(xyz_snapshot_file, "\n")
                 end
 #                write_xyz(molecules, xtal.box, xyz_snapshot_file)
-                write_xyz(molecules, xtal.box, xyz_snapshots_filename)
+#                write_xyz(molecules, xtal.box, xyz_snapshots_filename)
+                write_xyz(xtal.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid
                 if density_grid_sim_box
