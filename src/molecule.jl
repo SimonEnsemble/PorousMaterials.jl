@@ -119,12 +119,12 @@ box is needed for the conversion.
 - `molecules::Array{Molecule{Frac}, 1}`: The array of molecules to be written to the file
 - `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
 """
-function write_xyz(box::Box, molecules::Array{Molecule, 1}, xyz_file::IOStream)
+function write_xyz(box::Box, molecules::Array{Molecule{Frac}, 1}, xyz_file::IOStream)
     num_atoms = sum([mol.atoms.n for mol in molecules])
     @printf(xyz_file, "%s\n", num_atoms)
     for molecule in molecules
         for i = 1:molecule.atoms.n
-            x = Cart(molecule.coords.xf, box) 
+            x = Cart(molecule.atoms[i].coords, box)
             @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i], x.x...)
         end
     end
