@@ -216,7 +216,7 @@ function μVT_sim(xtal::Crystal,
                                                  n_burn_cycles, n_sample_cycles, extension=".xyz")
     xyz_snapshot_file = IOStream(xyz_snapshots_filename) # declare a variable outside of scope so we only open a file if we want to snapshot
     if write_adsorbate_snapshots
-        xyz_snapshot_file = open(xyz_snapshot_filename, "w")
+        xyz_snapshot_file = open(xyz_snapshots_filename, "w")
     end
 
     ###
@@ -324,7 +324,7 @@ function μVT_sim(xtal::Crystal,
         end
         if write_adsorbate_snapshots
             @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
-            @printf("\t\tWriting to file: %s\n", xyz_filename)
+            @printf("\t\tWriting to file: %s\n", xyz_snapshots_filename)
         end
         if calculate_density_grid
             @printf("\tTracking adsorbate spatial probability density grid of adsorbate %s, updated every %d cycles (after burn cycles)\n", density_grid_molecular_species, snapshot_frequency)
@@ -640,8 +640,7 @@ function μVT_sim(xtal::Crystal,
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
-                # TODO: fix this function
-                # write_xyz(xtal.box, molecules, xyz_snapshot_file) # function commented out in molecules.jl
+                write_xyz(xtal.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid 
                 if density_grid_sim_box
