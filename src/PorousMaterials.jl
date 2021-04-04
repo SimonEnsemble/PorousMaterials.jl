@@ -202,5 +202,5 @@ export
  #     rotation_matrix
 
     # energy_min.jl
-    find_energy_minimum
+    find_energy_minimum, find_energy_minimum_gridsearch
 end
