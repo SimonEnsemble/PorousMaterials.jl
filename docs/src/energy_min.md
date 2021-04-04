@@ -1,38 +1,23 @@
 # Find Potential Energy Minimum
 
-`PorousMaterials.jl` allows us to find the potential energy minimum of a probe molecule inside a crystal structure for a given force field. 
+`PorousMaterials.jl` allows us to find the minimum energy (acc. to a force field) position of a molecule in a crystal.
 
 ### Example
+for example, we wish to find the minimum energy (acc. to the UFF) position of a xenon adsorbate in SBMOF-1.
 ```julia
-# Perform an energy grid calculation on a course grid to get initial estimate.
-grid = energy_grid(xtal, molecule, ljff; n_pts=(50,50,50))
+xtal = Crystal("SBMOF-1.cif")
+molecule  = Molecule("Xe")
+ljff = LJForceField("UFF")
 
-# Store the minimum value of the grid data.
-E_min_estimate = findmin(grid.data)
+# grid search to find min energy position.
+#  gives good starting guess for optimization algorithm to fine tune.
+n_pts = (15, 15, 15)
+minimized_molecule, min_E = find_energy_minimum_gridsearch(xtal, molecule, ljff, n_pts=n_pts)
+# minimized_molecule: xenon at its min energy position
+# min_E: associated minimum energy of xenon (kJ/mol)
 
-# Get the Cartesian index of the voxel with the minimum energy estimate.
-vox_id = Tuple([E_min_estimate[2][i] for i in 1:3])
-
-# Get the fractional coordinates of the voxel with the minimum energy estimate.
-#     These are in fractional coordinates scaled to the size of xtal.box, but still need to be cast as Frac.
-xf_minE = id_to_xf(vox_id, grid.n_pts) 
-
-##
-# Apply grid search optimization to find the minimum energy starting from input location.
-#     If xf₀ is not specified, the previous steps are done automatically.
-##
-res = find_energy_minimum(xtal, Frac(molecule, xtal.box), ljff; xf₀=Frac(xf_minE))
-
-# The minimum value found by the opimizer
-#     units: kJ/mol
-energy_minimum = res.minimum
-
-# The location of the minimum value.
-#     These are scaled to the size required by the force field cutoff radius
-xf_minimum = res.minimizer
-
-# Rescale to input xtal.box (if desired)
-xf_minimum_rescale = xf_minimum .* replication_factors(xtal, sqrt(ffield.r²_cutoff))
+# fine tune the minimum energy position according to the grid search.
+minimized_molecule, min_E = find_energy_minimum(xtal, minimized_molecule, ljff)
 ```
 
 # detailed docs
