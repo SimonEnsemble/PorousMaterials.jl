@@ -2,7 +2,7 @@
     minimized_molecule, min_energy  = find_energy_minimum(xtal, molecule, ljff) # molecule set at initial guess
 
 find the minimum energy position, and associated minimum energy, of a molecule in a crystal.
-n.b. currently works only for molecules with one atom.
+n.b. if molecule has more than one atom, it will *not* minimize over the orientation (rotations).
 the optimizer needs an initial estimate of the minimum energy position. 
 pass molecule with good initial position.
 if you don't have a good initial position, use [`find_energy_minimum_gridsearch`](@ref).
@@ -22,6 +22,9 @@ function find_energy_minimum(xtal::Crystal,
                              )
     if needs_rotations(molecule)
         @warn "needs rotations. does not optimize over configurations, only over center of mass"
+    end
+    if has_charges(molecule) && has_charges(xtal)
+        error("cannot handle electrostatics")
     end
     
     # make sure replication factors sufficient

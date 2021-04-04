@@ -29,6 +29,16 @@ using Random
     xtal = replicate(xtal, rep_factors)
     @test isapprox(vdw_energy(xtal, min_mol, ljff) * 8.314 / 1000, min_E, atol=0.1)
     
+    # make sure it works with cart coords too.
+    xtal = Crystal("FIQCEN_clean.cif")
+    strip_numbers_from_atom_labels!(xtal)
+    molecule = Molecule("Xe")
+    translate_to!(molecule, Cart(Frac([0.785, 0.785, 0.785]), xtal.box))
+    min_mol, min_E = find_energy_minimum(xtal, molecule, ljff)
+    @test isapprox(min_E, -27.0269, atol=0.01)
+    @test isapprox(min_mol.com.xf, [0.75, 0.75, 0.75], atol=0.001)
+    
+    # one more, know the min is in the mid b/c this is a centered cage.
     xtal = Crystal("cage_in_space.cif")
     min_mol, min_E = find_energy_minimum_gridsearch(xtal, molecule, ljff, n_pts=n_pts)
     @test isapprox(min_mol.com.xf, [0.5, 0.5, 0.5], atol=0.1)
@@ -36,4 +46,5 @@ using Random
     @test isapprox(min_E, -38.55, atol=0.1)
     @test isapprox(min_mol.com.xf, [0.5, 0.5, 0.5], atol=0.1)
     @test isapprox(vdw_energy(xtal, min_mol, ljff) * 8.314 / 1000, min_E, atol=0.1)
+
 end
