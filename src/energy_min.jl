@@ -20,7 +20,9 @@ function find_energy_minimum(xtal::Crystal,
                              molecule::Molecule,
                              ljff::LJForceField,
                              )
-    @assert ! needs_rotations(molecule) "can't handle molecules that need rotations"
+    if needs_rotations(molecule)
+        @warn "needs rotations. does not optimize over configurations, only over center of mass"
+    end
     
     # make sure replication factors sufficient
     rep_factors = replication_factors(xtal, sqrt(ljff.r²_cutoff))
@@ -30,7 +32,7 @@ function find_energy_minimum(xtal::Crystal,
     if isa(molecule, Molecule{Cart})
         molecule = Frac(molecule, xtal.box)
     else
-        translate_to!(molecule, Frac(molecule.atoms.coords.xf ./ rep_factors))
+        translate_to!(molecule, Frac(molecule.com.xf ./ rep_factors))
     end
     
     # xf::Array{Float64, 1}
@@ -44,9 +46,10 @@ function find_energy_minimum(xtal::Crystal,
     end
 
     # find minimum energy position
-    res = optimize(energy, molecule.atoms.coords.xf)
+    res = optimize(energy, molecule.com.xf)
+    xf_min = mod.(mod.(res.minimizer, 1.0) .* rep_factors, 1.0)
     # translate molecule to min energy position to return it.
-    translate_to!(molecule, Frac(mod.(res.minimizer, 1.0)))
+    translate_to!(molecule, Frac(xf_min))
     
     return molecule, res.minimum
 end
