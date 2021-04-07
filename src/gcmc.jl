@@ -133,6 +133,8 @@ Markov chain Monte Carlo moves include:
 * reinsertion
 * identity change (if multiple components) [see here](http://dx.doi.org/10.1080/00268978800100743)
 
+Translation stepsize is dynamically updated during burn cycles so that acceptance rate of translations is ~0.4.
+
 A cycle is defined as max(20, number of adsorbates currently in the system) Markov chain
 proposals.
 
@@ -614,13 +616,13 @@ function μVT_sim(xtal::Crystal,
 
                     gcmc_stats[current_block].Un += sum(system_energy) * sum(length.(molecules))
                 end
-            else # we're still in the "burn" cycles
-                # update adaptive step 12 times during burn cycles
-                if (outer_cycle % floor(Int, n_burn_cycles / 12)) == 0
-                    adjust!(adaptive_δ)
-                end
             end
         end # inner cycles
+
+        # update adaptive step 12 times during burn cycles
+        if (outer_cycle <= n_burn_cycles) && (outer_cycle % floor(Int, n_burn_cycles / 12) == 0)
+            adjust!(adaptive_δ)
+        end
 
         # print block statistics / increment block
         if (outer_cycle > n_burn_cycles) && (current_block != N_BLOCKS) && (

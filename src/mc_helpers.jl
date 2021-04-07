@@ -109,7 +109,9 @@ mutable struct AdaptiveTranslationStepSize
 end
 AdaptiveTranslationStepSize(δ::Float64) = AdaptiveTranslationStepSize(δ, 0, 0)
 
-"adapt δx so that acceptance rate of translations is ~0.4"
+"""
+    adapt δx so that acceptance rate of translations is ~0.4
+"""
 function adjust!(adaptive_δ::AdaptiveTranslationStepSize)
     r = 1.2 # factor by which to scale the step.
     
