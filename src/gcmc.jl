@@ -218,7 +218,7 @@ function μVT_sim(xtal::Crystal,
                                                  n_burn_cycles, n_sample_cycles, extension=".xyz")
     xyz_snapshot_file = IOStream(xyz_snapshots_filename) # declare a variable outside of scope so we only open a file if we want to snapshot
     if write_adsorbate_snapshots
-        xyz_snapshot_file = open(xyz_snapshot_filename, "w")
+        xyz_snapshot_file = open(xyz_snapshots_filename, "w")
     end
 
     ###
@@ -326,7 +326,7 @@ function μVT_sim(xtal::Crystal,
         end
         if write_adsorbate_snapshots
             @printf("\tWriting snapshots of adsorption positions every %d cycles (after burn cycles)\n", snapshot_frequency)
-            @printf("\t\tWriting to file: %s\n", xyz_filename)
+            @printf("\t\tWriting to file: %s\n", xyz_snapshots_filename)
         end
         if calculate_density_grid
             @printf("\tTracking adsorbate spatial probability density grid of adsorbate %s, updated every %d cycles (after burn cycles)\n", density_grid_molecular_species, snapshot_frequency)
@@ -369,7 +369,7 @@ function μVT_sim(xtal::Crystal,
 		    # assert that the molecules are inside the simulation box
 			@assert all(m -> inside(m), mol) "initializing with molecules outside simulation box!"
 			# ensure pair-wise bond distance match template
-			@assert all(m -> ! distortion(m, Frac(molecule_templates[s], xtal.box)), mol) "initializing with distorted molecules"
+			@assert all(m -> ! distortion(m, Frac(molecule_templates[s], xtal.box), xtal.box), mol) "initializing with distorted molecules"
 		end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
@@ -653,8 +653,7 @@ function μVT_sim(xtal::Crystal,
                 if num_snapshots > 0
                     @printf(xyz_snapshot_file, "\n")
                 end
-                # TODO: fix this function
-                # write_xyz(xtal.box, molecules, xyz_snapshot_file) # function commented out in molecules.jl
+                write_xyz(xtal.box, molecules, xyz_snapshot_file)
             end
             if calculate_density_grid 
                 if density_grid_sim_box
@@ -792,6 +791,9 @@ function μVT_sim(xtal::Crystal,
     return results, molecules # summary of statistics and ending configuration of molecules
 end # μVT_sim
 
+# overload function for backward compatibility
+μVT_sim(xtal::Crystal, molecule_template::Molecule{Cart}, temperature::Float64, pressure::Float64, ljff::LJForceField; kwargs...) = μVT_sim(xtal, [molecule_template], temperature, [pressure], ljff; kwargs...)
+
 """
     filename = μVT_output_filename(xtal, molecule_templates, temperature, 
                                    pressures, ljff, n_burn_cycles, 
@@ -926,45 +928,38 @@ required to reach equilibrium in the Monte Carlo simulation. Also see
 function stepwise_adsorption_isotherm(xtal::Crystal,
                                       molecule_templates::Array{Molecule{Cart}, 1},
                                       temperature::Float64,
-                                      pressures::Array{Float64, 1},
+                                      pressures::Array{Array{Float64, 1}, 1},
                                       ljff::LJForceField;
-                                      n_burn_cycles::Int=5000, n_sample_cycles::Int=5000,
-                                      sample_frequency::Int=1, verbose::Bool=true,
-                                      ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-                                      show_progress_bar::Bool=false,
-                                      write_adsorbate_snapshots::Bool=false,
-                                      snapshot_frequency::Int=1, 
-                                      calculate_density_grid::Bool=false,
-                                      density_grid_dx::Float64=1.0,
-                                      density_grid_species::Union{Nothing, Symbol}=nothing,
-                                      density_grid_sim_box::Bool=true,
-                                      results_filename_comment::AbstractString="")
+                                      kwargs...)
 
     # simulation only works if xtal is in P1
     assert_P1_symmetry(xtal)
 
+    # we only consider a pure gas isotherm
+    if length(molecule_templates) != 1
+        error("We only calculate pure gas isotherms")
+    end
+
     results = Dict{String, Any}[] # push results to this array
-    # molecules = Array{Molecule{Cart}, 1}[] # initiate with empty xtal
-    molecules = nothing
+    molecules = nothing # initialize with empty xtal
     for (i, pressure) in enumerate(pressures)
-        result, molecules = μVT_sim(xtal, molecule_templates, temperature, pressure,
-                                            ljff,
-                                            n_burn_cycles=n_burn_cycles,
-                                            n_sample_cycles=n_sample_cycles,
-                                            sample_frequency=sample_frequency,
-                                            verbose=verbose, molecules=molecules, # essential step here
-                                            ewald_precision=ewald_precision, eos=eos,
-                                            write_adsorbate_snapshots=write_adsorbate_snapshots,
-                                            snapshot_frequency=snapshot_frequency,
-                                            calculate_density_grid=calculate_density_grid,
-                                            density_grid_dx=density_grid_dx,
-                                            density_grid_species=density_grid_species,
-                                            density_grid_sim_box=density_grid_sim_box,
-                                            results_filename_comment=results_filename_comment)
+        result, molecules = μVT_sim(xtal, 
+                                    molecule_templates, 
+                                    temperature, 
+                                    pressure,
+                                    ljff;
+                                    molecules=molecules, # essential step here
+                                    kwargs...
+                                   )
         push!(results, result)
     end
 
     return results
+end
+
+# overload function for backward compatibility
+function stepwise_adsorption_isotherm(xtal::Crystal, molecule_templates::Molecule{Cart}, temperature::Float64, pressures::Array{Float64, 1}, ljff::LJForceField; kwargs...) 
+    return stepwise_adsorption_isotherm(xtal, [molecule_templates], temperature, [[p] for p in pressures], ljff; kwargs...)
 end
 
 
@@ -987,52 +982,27 @@ To give Julia access to multiple cores, run your script as `julia -p 4 mysim.jl`
 [Parallel Computing](https://docs.julialang.org/en/stable/manual/parallel-computing/#Parallel-Computing-1).
 """
 function adsorption_isotherm(xtal::Crystal,
-                             molecule_templates::Array{Molecule, 1},
+                             molecule_templates::Array{Molecule{Cart}, 1},
                              temperature::Float64,
-                             pressures::Array{Float64, 1},
+                             pressures::Array{Array{Float64, 1}, 1},
                              ljff::LJForceField;
-                             n_burn_cycles::Int=5000, n_sample_cycles::Int=5000,
-                             sample_frequency::Int=1, verbose::Bool=true,
-                             ewald_precision::Float64=1e-6, eos::Symbol=:ideal,
-                             show_progress_bar::Bool=false,
-                             write_adsorbate_snapshots::Bool=false,
-                             snapshot_frequency::Int=1, calculate_density_grid::Bool=false,
-                             density_grid_dx::Float64=1.0,
-                             density_grid_species::Union{Nothing, Symbol}=nothing,
-                             density_grid_sim_box::Bool=true,
-                             results_filename_comment::AbstractString="")
+                             kwargs...)
 
     # simulation only works if xtal is in P1
     assert_P1_symmetry(xtal)
 
     # we only consider a pure gas isotherm
-    if length(molecules) != 1
+    if length(molecule_templates) != 1
         error("We only calculate pure gas isotherms")
     end
 
     # make a function of pressure only to facilitate uses of `pmap`
     run_pressure(partial_pressures::Array{Float64, 1}) = μVT_sim(xtal, molecule_templates, temperature,
-                                                                 partial_pressures, ljff,
-                                                                 n_burn_cycles=n_burn_cycles,
-                                                                 n_sample_cycles=n_sample_cycles,
-                                                                 sample_frequency=sample_frequency,
-                                                                 verbose=verbose,
-                                                                 ewald_precision=ewald_precision,
-                                                                 eos=eos, 
-                                                                 show_progress_bar=show_progress_bar,
-                                                                 write_adsorbate_snapshots=write_adsorbate_snapshots,
-                                                                 snapshot_frequency=snapshot_frequency,
-                                                                 calculate_density_grid=calculate_density_grid,
-                                                                 density_grid_dx=density_grid_dx,
-                                                                 density_grid_species=density_grid_species,
-                                                                 density_grid_sim_box=density_grid_sim_box,
-                                                                 results_filename_comment=results_filename_comment)[1] # only return results
+                                                                 partial_pressures, ljff;
+                                                                 kwargs...)[1] # only return results
 
     # for load balancing, larger pressures with longer computation time goes first
-    ids = sortperm(sim_pressures, rev=true)
-
-    # define pressure = Array{Array{Float64, 1}, 1}
-    #
+    ids = sortperm(pressures, rev=true)
 
     # run gcmc simulations in parallel using Julia's pmap parallel computing function
     results = pmap(run_pressure, pressures[ids])
@@ -1040,6 +1010,11 @@ function adsorption_isotherm(xtal::Crystal,
     # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
     return results[[findall(x -> x==i, ids)[1] for i = 1:length(ids)]]
+end
+
+# overload function for backward compatibility
+function adsorption_isotherm(xtal::Crystal, molecule_templates::Molecule{Cart}, temperature::Float64, pressures::Array{Float64, 1}, ljff::LJForceField; kwargs...)
+    return adsorption_isotherm(xtal, [molecule_templates], temperature, [[p] for p in pressures], ljff; kwargs...)
 end
 
 """
@@ -1057,9 +1032,9 @@ to locate the requested output files, this function calls [`μVT_output_filename
 # Arguments
 - `desired_props::Array{String, 1}`: An array containing names of properties to be retrieved from the `.jld2` file
 - `xtal::Crystal`: The porous crystal
-- `molecule::Molecule{Cart}`: The adsorbate molecule
+- `molecule::Array{Molecule{Cart}, 1}`: The adsorbate molecule
 - `temperature::Float64`: The temperature in the simulation, units: Kelvin (K)
-- `pressures::Array{Float64}`: The pressures in the adsorption isotherm simulation(s), units: bar
+- `pressures::Array{Array{Float64, 1}, 1}`: The pressures in the adsorption isotherm simulation(s), units: bar
 - `ljff::LJForceField`: The molecular model being used in the simulation to describe intermolecular Van
         der Waals interactions
 - `n_burn_cycles::Int64`: The number of burn cycles used in this simulation
@@ -1095,7 +1070,7 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
                                            xtal::Crystal, 
                                            molecule_templates::Array{Molecule{Cart}, 1},
                                            temperature::Float64,
-                                           pressures::Array{Float64, 1},
+                                           pressures::Array{Array{Float64, 1}, 1},
                                            ljff::LJForceField,
                                            n_burn_cycles::Int64, 
                                            n_sample_cycles::Int64;
@@ -1110,7 +1085,7 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
     # loop over pressures and populate dataframe
     for (i, pressure) in enumerate(pressures)
         jld2_filename = μVT_output_filename(xtal, molecule_templates, temperature, 
-                                            pressures, ljff, n_burn_cycles, 
+                                            pressure, ljff, n_burn_cycles, 
                                             n_sample_cycles, comment=comment)
         # load in the results as a dictionary
         @load joinpath(where_are_jld_files, jld2_filename) results
@@ -1124,4 +1099,18 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
         push!(df, [results[prop] for prop in desired_props])
     end
     return df
+end
+
+# overload function for backward compatibility
+function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1}, 
+                                           xtal::Crystal, 
+                                           molecule_templates::Molecule{Cart}, 
+                                           temperature::Float64, 
+                                           pressures::Array{Float64, 1}, 
+                                           ljff::LJForceField, 
+                                           n_burn_cycles::Int64, 
+                                           n_sample_cycles::Int64; 
+                                           kwargs...)
+
+    return isotherm_sim_results_to_dataframe(desired_props, xtal, [molecule_templates], temperature, [[p] for p in pressures], ljff, n_burn_cycles, n_sample_cycles; kwargs...)
 end
