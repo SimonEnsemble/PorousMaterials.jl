@@ -305,11 +305,12 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test isapprox(m_f_c.atoms, m.atoms)
 
     # distorted
+    adaptive_δ = AdaptiveTranslationStepSize(2.0) # default is 2 Å
     box = Crystal("SBMOF-1.cif").box
     m = Frac(Molecule("H2S"), box)
     m_ref = Frac(Molecule("H2S"), box)
-    random_translation!(m, box)
-    random_translation!(m_ref, box)
+    random_translation!(m, box, adaptive_δ)
+    random_translation!(m_ref, box, adaptive_δ)
     random_rotation!(m, box)
     random_rotation!(m_ref, box)
     @test ! PorousMaterials.distortion(m, m_ref, box)
