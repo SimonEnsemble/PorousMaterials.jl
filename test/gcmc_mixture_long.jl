@@ -26,8 +26,10 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
     n_burn_cycles   = 250000
     mol_fraction    = [0.9, 0.1]
     # load RASPA (benchmark) data
-    raspa_data_filename = joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr_Xe.csv")
-    raspa_results = CSV.read(raspa_data_filename, DataFrame)
+    raspa_data = Dict(:Kr  => CSV.read(joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr.csv"), DataFrame),
+                      :Xe  => CSV.read(joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Xe.csv"), DataFrame),
+                      :mix => CSV.read(joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr_Xe.csv"), DataFrame))
+
     # run sim over range of total pressures
     for (i, p) in enumerate([0.01, 0.1, 0.5])
         if tests_to_run["run simulations"]
@@ -41,20 +43,29 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
                                          n_sample_cycles=n_sample_cycles)
         else
             # use the simulation files that are provided
-            filename = μVT_output_filename(xtal, mol_templates, temperature, 
-                                       p * mol_fraction, ljff, n_burn_cycles, 
-                                       n_sample_cycles; comment="", extension=".jld2")
-            where_are_jld_files = PorousMaterials.PATH_TO_SIMS
-            @load joinpath(where_are_jld_files, filename) results
+            filename = μVT_output_filename(xtal, mol_templates, temperature, p * mol_fraction, ljff,
+                                           n_burn_cycles, n_sample_cycles)
+            @load joinpath(PorousMaterials.PATH_TO_SIMS, filename) results
         end
 
-        # evaluate results
+        # evaluate mixture results
         for (j, sp) in enumerate(adsorbates)
             # make sure the pressures are correct
-            @test results["pressure (bar)"][j] ≈ raspa_results[i, Symbol(sp * " pressure (bar)")]
+            @test results["pressure (bar)"][j] ≈ raspa_data[:mix][i, Symbol(sp * " pressure (bar)")]
             # evaluate adsorption uptake
-            std_err = raspa_results[i, Symbol("err $sp loading (mmol/g)")] + results["err ⟨N⟩ (mmol/g)"][j]
-            @test isapprox(raspa_results[i, Symbol(sp * " loading (mmol/g)")], results["⟨N⟩ (mmol/g)"][j], atol=std_err)
+            std_err = raspa_data[:mix][i, Symbol("err $sp loading (mmol/g)")] + results["err ⟨N⟩ (mmol/g)"][j]
+            @test isapprox(raspa_data[:mix][i, Symbol(sp * " loading (mmol/g)")], results["⟨N⟩ (mmol/g)"][j], atol=std_err)
+        end
+        # evaluate pure gas results, keep separate sinse we re-assign results dictionary
+        for mol in mol_templates
+            # load pure gas dictionary
+            pure_gas_filename = μVT_output_filename(xtal, [mol], temperature, [p], ljff, 50000, 50000)
+            @load joinpath(PorousMaterials.PATH_TO_SIMS,  pure_gas_filename) results
+            # make sure the pressures are correct
+            @test results["pressure (bar)"][1] ≈ raspa_data[mol.species][i, Symbol(String(mol.species) * " pressure (bar)")]
+            # evaluate adsorption uptake
+            std_err = raspa_data[mol.species][i, Symbol("err $(String(mol.species)) loading (mmol/g)")] + results["err ⟨N⟩ (mmol/g)"][1]
+            @test isapprox(raspa_data[mol.species][i, Symbol(String(mol.species) * " loading (mmol/g)")], results["⟨N⟩ (mmol/g)"][1], atol=std_err)
         end
     end
 end
@@ -74,7 +85,7 @@ if tests_to_run["ideal gas mixture"]
     forcefield   = LJForceField("Dreiding")
     temperature  = 298.0
     mol_fraction = [0.70, 0.30] 
-    fugacities    = 10.0 .^ [2.0, 4.0, 5.0, 6.0, 7.0] / 100000.0 # bar
+    fugacities   = 10.0 .^ [2.0, 4.0, 5.0, 6.0, 7.0] / 100000.0 # bar
     partial_fugacities = [mol_fraction * f for f in fugacities]
 
     # according to ideal gas law (P_i*V=n_i*k_b*T), number of molecules per species in box should be
