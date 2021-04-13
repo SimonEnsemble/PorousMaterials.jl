@@ -47,11 +47,14 @@ end
 end
 
 function NVT_sim(xtal::Crystal,
+                 molecule_template::Molecule{Cart},
                  molecules::Array{Molecule{Cart}, 1},
                  temperature::Float64,
                  ljff::LJForceField;
                  n_burn_cycles::Int=5000,
-                 n_sample_cycles::Int=5000
+                 n_sample_cycles::Int=5000,
+                 verbose=true,
+                 ewald_precision::Float64=1e-6
                 )
     assert_P1_symmetry(xtal)
 
@@ -60,6 +63,10 @@ function NVT_sim(xtal::Crystal,
     # #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
     # molecule = deepcopy(molecule_)
 
+    ###
+    #  NON-RIGOROUS PLACEHOLDER -- DELETE
+    ###
+    molecule = deepcopy(molecule_template)
     
     ###
     #   replicate xtal so that nearest image convention can be applied for short-range interactions
@@ -105,12 +112,8 @@ function NVT_sim(xtal::Crystal,
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
         system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
-        system_energy.gh.es = total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
-        system_energy.gg.es = total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
-    end
-
-    if show_progress_bar
-        progress_bar = Progress(n_burn_cycles + n_sample_cycles, 1)
+        system_energy.gh.es  = total(total_electrostatic_potential_energy(xtal, molecules, eparams, eikr_gh))
+        system_energy.gg.es  = total(electrostatic_potential_energy(molecules, eparams, xtal.box, eikr_gg))
     end
 
     ####
@@ -252,12 +255,6 @@ function NVT_sim(xtal::Crystal,
     end
 
     @assert (markov_chain_time == sum(markov_counts.n_proposed))
-
-    # Markov stats
-    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
-        results[@sprintf("Total # %s proposals", proposal_description)] = markov_counts.n_proposed[proposal_id]
-        results[@sprintf("Fraction of %s proposals accepted", proposal_description)] = markov_counts.n_accepted[proposal_id] / markov_counts.n_proposed[proposal_id]
-    end
 
     # return molecules in Cartesian format
     molecules = Cart.(molecules, xtal.box)
