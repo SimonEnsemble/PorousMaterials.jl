@@ -124,7 +124,7 @@ include("henry.jl")
 include("gcmc.jl")
  # include("generic_rotations.jl")
 include("energy_min.jl")
-
+include("nvt.jl")
 
 export
     # porousmaterials.jl
@@ -202,5 +202,8 @@ export
  #     rotation_matrix
 
     # energy_min.jl
-    find_energy_minimum, find_energy_minimum_gridsearch
+    find_energy_minimum, find_energy_minimum_gridsearch,
+
+    # nvt.jl
+    NVT_sim
 end

@@ -46,9 +46,10 @@ end
     return energy
 end
 
-function NVT_sim(xtal::Crystal, molecules::Array{Molecule, 1}, 
+function NVT_sim(xtal::Crystal,
+                 molecules::Array{Molecule{Cart}, 1},
                  temperature::Float64,
-                 ljff::LJForceField; 
+                 ljff::LJForceField;
                  n_burn_cycles::Int=5000,
                  n_sample_cycles::Int=5000
                 )
