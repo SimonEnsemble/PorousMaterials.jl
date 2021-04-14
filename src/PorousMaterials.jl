@@ -123,6 +123,8 @@ include("eos.jl")
 include("henry.jl")
 include("gcmc.jl")
  # include("generic_rotations.jl")
+include("energy_min.jl")
+
 
 export
     # porousmaterials.jl
@@ -185,7 +187,7 @@ export
     # Grid.jl
     apply_periodic_boundary_condition!,
     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
-    required_n_pts, xf_to_id, id_to_xf, update_density!,
+    required_n_pts, xf_to_id, id_to_xf, update_density!, find_energy_minimum,
  # 
     # EOS.jl
     calculate_properties, PengRobinsonFluid, VdWFluid,
@@ -195,8 +197,11 @@ export
     μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
  # 
     # henry.jl
-    henry_coefficient, henry_result_savename
+    henry_coefficient, henry_result_savename,
  # 
  #     # generic_rotations.jl
  #     rotation_matrix
+
+    # energy_min.jl
+    find_energy_minimum, find_energy_minimum_gridsearch
 end
