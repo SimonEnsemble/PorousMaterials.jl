@@ -657,7 +657,7 @@ function molecular_weight(crystal::Crystal)
 end
 
 """
-    ρ = crystal_density(crystal) # kg/m²
+    ρ = crystal_density(crystal) # kg/m³
 
 Compute the crystal density of a crystal. Pulls atomic masses from [`read_atomic_masses`](@ref).
 
