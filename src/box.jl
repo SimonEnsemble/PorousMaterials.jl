@@ -165,6 +165,7 @@ Appends ".vtk" extension to `filename` automatically if not passed.
 - `filename::AbstractString`: filename of the .vtk file output (absolute path)
 - `framework::Framework`: A framework containing the crystal structure information
 - `center_at_origin::Bool`: center box at origin if true. if false, the origin is the corner of the box.
+- `verbose::Bool`: Optional argument. If true (default), the output filename is printed to the console.
 """
 function write_vtk(box::Box, filename::AbstractString; verbose::Bool=true,
                    center_at_origin::Bool=false)
