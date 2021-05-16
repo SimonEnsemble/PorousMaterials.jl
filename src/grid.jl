@@ -243,7 +243,7 @@ function read_cube(filename::AbstractString)
 end
 
 """
-	grid = energy_grid(crystal, molecule, ljforcefield; n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
+	grid = energy_grid(crystal, molecule, ljforcefield; resolution=1.0, temperature=298.0, n_rotations=750)
 
 Superimposes a regular grid of points (regularly spaced in fractional coordinates of the `crystal.box`) over the unit cell of a crystal, with `n_gridpts` dictating the number of grid points in the a, b, c directions (including 0 and 1 fractional coords).
 The fractional coordinates 0 and 1 are included in the grid, although they are redundant.
@@ -255,7 +255,7 @@ The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻�
 - `crystal::Crystal`: crystal in which we seek to compute an energy grid for a molecule. `grid.box` will be `framework.box`.
 - `molecule::Molecule`: molecule for which we seek an energy grid
 - `ljforcefield::LJForceField`: molecular model for computing molecule-crystal interactions
-- `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
+- `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
 - `n_rotations::Int`: number of random rotations to conduct in a Monte Carlo simulation for finding the free energy of a molecule centered at a given grid point.
 This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
 - `temperature::Float64`: the temperature at which to compute the free energy for molecules where rotations are required. Lower temperatures overemphasize the minimum potential energy rotational conformation at that point.
@@ -267,13 +267,15 @@ This is only relevant for molecules that are comprised of more than one Lennard 
 - `grid::Grid`: A grid data structure containing the potential energy of the system
 """
 function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::LJForceField;
-                     n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000,
+                     resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0, n_rotations::Int=1000,
                      temperature::Float64=NaN, units::Symbol=:kJ_mol, center::Bool=false,
                      verbose::Bool=true)
     assert_P1_symmetry(crystal)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
+
+    n_pts = isa(resolution, Tuple{Int,Int,Int}) ? resolution : required_n_pts(crystal.box, resolution)
 
     rotations_required = needs_rotations(molecule)
     charged_system = has_charges(crystal) && has_charges(molecule)
@@ -612,8 +614,8 @@ end
 
 """
     accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
-    probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=10.0, energy_unit=:kJ_mol,
-    verbose=true, write_b4_after_grids=true, block_inaccessible_pockets=true)
+    probe_molecule, ljforcefield; resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0, energy_tol=10.0, energy_unit=:kJ_mol,
+    verbose=true, write_b4_after_grids=false, block_inaccessible_pockets=true)
 
 Overlay a grid of points about the unit cell. Compute the potential energy of a probe
 molecule at each point. If the potential energy is less than `energy_tol`, the grid point
@@ -640,7 +642,7 @@ of segments that were blocked because they were determined to be inaccessible.
 point can be occupied and accessed.
 * `LJForceField::LJForceField`: the force field used to compute the potential energy of
 the probe molecule
-* `n_pts::Tuple{Int, Int, Int}`: number of grid points in a, b, c directions
+* - `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
 * `energy_tol::Float64`: if the computed potential energy is less than this, we declare the
 grid point to be occupiable. Also this is the energy barrier beyond which we assume the
 probe adsorbate cannot pass. Units given by `energy_units` argument
@@ -651,7 +653,7 @@ threshold for occupiability and whether molecule can percolate over barrier in c
 before and after flood fill/blocking inaccessible pockets
 """
 function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefield::LJForceField;
-                                    n_pts::Tuple{Int, Int, Int}=(20, 20, 20),
+                                    resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0,
                                     energy_tol::Float64=10.0,  energy_units::Symbol=:kJ_mol,
                                     verbose::Bool=true, write_b4_after_grids::Bool=true,
                                     block_inaccessible_pockets::Bool=true)
@@ -662,7 +664,7 @@ function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefiel
     end
 
     # write potential energy grid
-    grid = energy_grid(crystal, probe, forcefield, n_pts=n_pts, verbose=verbose,
+    grid = energy_grid(crystal, probe, forcefield, resolution=resolution, verbose=verbose,
                        units=energy_units)
 
     if ! block_inaccessible_pockets
