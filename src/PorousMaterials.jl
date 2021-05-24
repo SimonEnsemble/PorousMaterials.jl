@@ -16,11 +16,18 @@ using LightGraphs
 using Distributed
 using Optim
 using PyCall
- # import Base.push!
- #
+using Reexport
+@reexport using Xtals: 
+    # Xtals.jl
+    set_path_to_crystals, PATH_TO_CRYSTALS,
+    # matter.jl
+    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!, origin,
+    # box.jl
+    Box, replicate, unit_cube, write_vtk, inside,
+    # crystal.jl
+    Crystal, strip_numbers_from_atom_labels!, assign_charges, chemical_formula, molecular_weight, crystal_density, write_cif,
+    has_charges, apply_symmetry_operations, write_cssr
 
-# atoms are considered to overlap if this close.
-const R²_OVERLAP = 0.1 # Units: Angstrom²
 
 """
     print_file_paths()
@@ -36,6 +43,7 @@ function print_file_paths()
     println("\tgrids (.cube): ", PATH_TO_GRIDS)
 end
 
+
 """
     set_path_to_data(path; print_paths=true)
 
@@ -48,7 +56,7 @@ Set the path variables: `PATH_TO_DATA`, `PATH_TO_CRYSTALS`, `PATH_TO_FORCEFIELDS
 """
 function set_path_to_data(path::String; print_paths::Bool=true)
     global PATH_TO_DATA = path
-    global PATH_TO_CRYSTALS = joinpath(PATH_TO_DATA, "crystals")
+    set_path_to_crystals(joinpath(PATH_TO_DATA, "crystals"))
     global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
     global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
     global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
@@ -59,61 +67,25 @@ function set_path_to_data(path::String; print_paths::Bool=true)
     end
 end
 
-"""
-    set_default_file_paths(print_paths=true)
-
-sets the default paths for where input files and some output files are stored.
-to see current set up, call [`print_file_paths`](@ref)
-"""
-function set_default_file_paths(;print_paths::Bool=true)
-    # this is the main directory where crystal structures, forcefields, and molecules data is stored
-    global PATH_TO_DATA = joinpath(pwd(), "data")
-
-    global PATH_TO_CRYSTALS = joinpath(PATH_TO_DATA, "crystals")
-    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
-    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
-    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
-    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
-
-    if print_paths
-        print_file_paths()
-    end
-end
 
 # this runs everytime porousmaterials is loaded, so if the user changes directory
 #   then the path_to_data will change as well
 function __init__()
-    set_default_file_paths(print_paths=false)
+    global PATH_TO_DATA = joinpath(pwd(), "data")
+    set_path_to_crystals(joinpath(PATH_TO_DATA, "crystals"))
+    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
+    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
+    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
+    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
 end
 
- # """
- #     set_tutorial_mode()
- #
- # places porousmaterials in "tutorial mode". it changes the `path_to_data` variable to
- # the directory where the porousmaterials test data is stored. it can be used to
- # follow examples shown in the readme. it displays a warning so that the user knows
- # they are no longer using their own data.
- # """
- # function set_tutorial_mode()
- #     new_path = joinpath(dirname(pathof(porousmaterials)), "..", "test", "data")
- #     if ! isdir(new_path)
- #         @error @sprintf("directory for testing data %s does not exist.\nnot entering tutorial mode.\n", new_path)
- #     else
- #         global path_to_data = new_path
- #         global path_to_crystals = joinpath(path_to_data, "crystals")
- #         global path_to_forcefields = joinpath(path_to_data, "forcefields")
- #         global path_to_molecules = joinpath(path_to_data, "molecules")
- #         global path_to_grids = joinpath(path_to_data, "grids")
- #         @warn "porousmaterials is now in tutorial mode. you have access to the testing data to experiment with porousmaterials.\nto reset to default file paths, call `set_default_file_paths()`\n"
- #     end
- # end
- #
-include("matter.jl")
-include("box.jl")
+
+#include("matter.jl")
+#include("box.jl")
 include("distance.jl")
 include("misc.jl")
 include("isotherm_fitting.jl")
-include("crystal.jl")
+#include("crystal.jl")
 include("bonds.jl")
 include("forcefield.jl")
 include("molecule.jl")

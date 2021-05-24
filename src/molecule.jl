@@ -89,6 +89,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
 end
 
 # documented in matter.jl
+import Xtals.net_charge
 net_charge(molecule::Molecule) = net_charge(molecule.charges)
 
 # convert between fractional and cartesian coords
@@ -131,6 +132,7 @@ function write_xyz(box::Box, molecules::Array{Molecule{Frac}, 1}, xyz_file::IOSt
 end
 
 # documented in matter.jl
+import Xtals.translate_by!
 function translate_by!(molecule::Molecule{Cart}, dx::Cart)
     translate_by!(molecule.atoms.coords,   dx)
     translate_by!(molecule.charges.coords, dx)
@@ -270,6 +272,7 @@ function random_rotation!(molecule::Molecule{Frac}, box::Box)
 end
 
 # based on center of mass
+import Xtals.inside
 inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.com, box)
 inside(molecule::Molecule{Frac}) = inside(molecule.com)
 
@@ -298,6 +301,7 @@ function write_xyz(molecules::Array{Molecule{Frac}, 1}, box::Box, filename::Abst
 end
 
 # documented in crystal.jl
+import Xtals.has_charges
 has_charges(molecule::Molecule) = molecule.charges.n > 0
 
 # documented in forcefield.jl

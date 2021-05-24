@@ -1,3 +1,6 @@
+const NET_CHARGE_TOL = 1e-4 # net charge tolerance
+
+
 function add_extension(filename::String, extension::String)
     if ! occursin(extension, filename)
         filename *= extension
@@ -62,6 +65,36 @@ function write_xyz(atoms::Atoms{Cart}, filename::AbstractString; comment::Abstra
     close(xyzfile)
     return nothing
 end
+
+xyz_filename(crystal::Crystal) = replace(replace(crystal.name, ".cif" => ""), ".cssr" => "") * ".xyz"
+function write_xyz(crystal::Crystal; comment::AbstractString="", center_at_origin::Bool=false)
+    filename = xyz_filename(crystal)
+    atoms = Atoms(crystal.atoms.species,
+                  Cart(crystal.atoms.coords, crystal.box)
+                  ) # put in Cartesian
+    if center_at_origin
+        x_c = crystal.box.f_to_c * [0.5, 0.5, 0.5]
+        atoms.coords.x .-= x_c
+        write_xyz(atoms, filename, comment=comment)
+    else
+        write_xyz(atoms, filename, comment=comment)
+    end
+end
+
+
+"""
+    assert_P1_symmetry(crystal::Crystal)
+
+Throw an error if and only if the crystal is not in P1 symmetry.
+"""
+function assert_P1_symmetry(crystal::Crystal)
+    if ! crystal.symmetry.is_p1
+        error("the crystal " * crystal.name * " is not in P1 symmetry.\n
+               To convert to P1 symmetry, try:\n
+               \tcrystal_p1 = apply_symmetry_operations(crystal)")
+    end
+end
+
 
 """
     atom_colors = read_cpk_colors()

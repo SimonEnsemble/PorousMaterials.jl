@@ -291,16 +291,16 @@ end
     @test ! neutral(Crystal("high_precision_charges_test_not_neutral.cif", check_neutrality=false), PorousMaterials.NET_CHARGE_TOL) # not gonna be neutral
     @test_throws ErrorException Crystal("high_precision_charges_test_not_neutral.cif") # should throw error b/c not charge neutral
     # tests for species_from_col:
-      # 1.  Make sure a .cif loads a Crystal with bad labels as default;
+      # 1.  Make sure a .cif loads a Crystal with good labels as default;
       #     fixed labels with species_column="_atom_site_type_symbol".
       # 2.  Make sure a .cif w/ good labels loads to an identical Crystal with
       #     and without species_column="_atom_site_type_symbol".
       # 3.  Make sure a bogus species_column throws an exception.
     xtal = Crystal("SBMOF-1_bad_labels.cif")
-    @test xtal.atoms.species[1] == :C1A
-
-    xtal = Crystal("SBMOF-1_bad_labels.cif", species_col=["_atom_site_type_symbol"])
     @test xtal.atoms.species[1] == :C
+
+    xtal = Crystal("SBMOF-1_bad_labels.cif", species_col=["_atom_site_label"])
+    @test xtal.atoms.species[1] == :C1A
 
     xtal1 = Crystal("SBMOF-1.cif")
     xtal2 = Crystal("SBMOF-1.cif")
