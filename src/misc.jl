@@ -1,6 +1,22 @@
 const NET_CHARGE_TOL = 1e-4 # net charge tolerance
 
 
+function pairwise_distances(coords::Frac, box::Box, apply_pbc::Bool)
+    n = length(coords)
+    pd = zeros(n, n)
+    for i = 1:n
+        for j = 1:n
+            pd[i, j] = distance(coords, box, i, j, apply_pbc)
+            if i > j
+                pd[i, j] =  pd[j, i]
+            end
+        end
+    end
+    return pd
+end
+pairwise_distances(coords::Cart, box::Box, apply_pbc::Bool) = pairwise_distances(Frac(coords, box), box, apply_pbc)
+
+
 function add_extension(filename::String, extension::String)
     if ! occursin(extension, filename)
         filename *= extension

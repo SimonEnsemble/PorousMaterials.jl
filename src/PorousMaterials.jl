@@ -17,18 +17,10 @@ using Distributed
 using Optim
 using PyCall
 using Reexport
-@reexport using Xtals: 
-    # Xtals.jl
-    set_path_to_crystals, PATH_TO_CRYSTALS,
-    # matter.jl
-    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!, origin,
-    # box.jl
-    Box, replicate, unit_cube, write_vtk, inside,
-    # crystal.jl
-    Crystal, strip_numbers_from_atom_labels!, assign_charges, chemical_formula, molecular_weight, crystal_density, write_cif,
-    has_charges, apply_symmetry_operations, write_cssr
+@reexport using Xtals
 
 
+import Xtals.print_file_paths
 """
     print_file_paths()
 
@@ -36,7 +28,7 @@ print off paths where PorousMaterials.jl looks for input files and writes output
 """
 function print_file_paths()
     println("general data folder: ", PATH_TO_DATA)
-    println("\tcrystal structures (.cif, .cssr): ", PATH_TO_CRYSTALS)
+    println("\tcrystal structures (.cif, .cssr): ", Xtals.PATH_TO_CRYSTALS)
     println("\tforce field files (.csv): ", PATH_TO_FORCEFIELDS)
     println("\tmolecule input files: ", PATH_TO_MOLECULES)
     println("\tsimulation output files: ", PATH_TO_SIMS)
@@ -44,6 +36,7 @@ function print_file_paths()
 end
 
 
+import Xtals.set_path_to_data
 """
     set_path_to_data(path; print_paths=true)
 
@@ -80,13 +73,8 @@ function __init__()
 end
 
 
-#include("matter.jl")
-#include("box.jl")
-include("distance.jl")
 include("misc.jl")
 include("isotherm_fitting.jl")
-#include("crystal.jl")
-include("bonds.jl")
 include("forcefield.jl")
 include("molecule.jl")
 include("energy_utilities.jl")
@@ -97,7 +85,6 @@ include("grid.jl")
 include("eos.jl")
 include("henry.jl")
 include("gcmc.jl")
- # include("generic_rotations.jl")
 include("energy_min.jl")
 
 
@@ -105,40 +92,9 @@ export
     # porousmaterials.jl
     print_file_paths, set_path_to_data,
 
-    # matter.jl
-    Coords, Frac, Cart, Atoms, Charges, wrap!, neutral, net_charge, translate_by!, origin,
-
-    # box.jl
-    Box, replicate, unit_cube, write_vtk, inside, fractional_coords, cartesian_coords,
-
-    # distance.jl
-    nearest_image!, distance, overlap, remove_duplicates,
-
-    # misc.jl
-    read_xyz, read_cpk_colors, write_xyz, read_atomic_masses,
-
     # isotherm_fitting.jl
     fit_adsorption_isotherm,
 
-    # crystal.jl
-    Crystal, strip_numbers_from_atom_labels!, assign_charges,
-    chemical_formula, molecular_weight, crystal_density, write_cif, has_charges,
-    apply_symmetry_operations,
-
-    # bonds.jl
-    infer_bonds!, write_bond_information, BondingRule, bond_sanity_check, remove_bonds!,
-    infer_geometry_based_bonds!, cordero_covalent_atomic_radii,
-
- #     construct_box,
- #     replicate, read_atomic_masses, charged, write_cif, assign_charges,
- #     is_symmetry_equal, apply_symmetry_rules, assert_p1_symmetry, infer_bonds!,
- #     remove_bonds!, compare_bonds_in_framework, wrap_atoms_to_unit_cell!,
- #     write_bond_information, is_bonded, default_bondingrules, has_same_sets_of_atoms_and_charges,
- #     distance, bond_sanity_check,
- #
- #     # FrameworkOperations.jl
- #     partition_framework, subtract_atoms,
- #
     # molecule.jl
     Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion, distortion,
 
@@ -162,19 +118,16 @@ export
     apply_periodic_boundary_condition!,
     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
     required_n_pts, xf_to_id, id_to_xf, update_density!, find_energy_minimum,
- #
+ 
     # EOS.jl
     calculate_properties, PengRobinsonFluid, VdWFluid,
 
     # gcmc.jl
     μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
     μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
- #
+ 
     # henry.jl
     henry_coefficient, henry_result_savename,
- #
- #     # generic_rotations.jl
- #     rotation_matrix
 
     # energy_min.jl
     find_energy_minimum, find_energy_minimum_gridsearch

@@ -66,17 +66,17 @@ end
     # test .cif writer; write, read in, assert equal
     crystal = Crystal("SBMOF-1.cif")
     rewrite_filename = "rewritten.cif"
-    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, rewrite_filename))
+    write_cif(crystal, joinpath(Xtals.PATH_TO_CRYSTALS, rewrite_filename))
     crystal_reloaded = Crystal(rewrite_filename)
     strip_numbers_from_atom_labels!(crystal_reloaded) # TODO Arthur remove this necessity from write_cif
     @test isapprox(crystal, crystal_reloaded, atol=0.0001)
-    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, rewrite_filename), fractional_coords=false) # cartesian
+    write_cif(crystal, joinpath(Xtals.PATH_TO_CRYSTALS, rewrite_filename), fractional_coords=false) # cartesian
     crystal_reloaded = Crystal(rewrite_filename)
     strip_numbers_from_atom_labels!(crystal_reloaded) # TODO Arthur remove this necessity from write_cif
     @test isapprox(crystal, crystal_reloaded, atol=0.0001)
  #     rm(rewrite_filename) # clean up.
     rewrite_filename = "rewritten.cif"
-    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, rewrite_filename), number_atoms=false)
+    write_cif(crystal, joinpath(Xtals.PATH_TO_CRYSTALS, rewrite_filename), number_atoms=false)
     crystal_reloaded = Crystal(rewrite_filename)
     @test isapprox(crystal, crystal_reloaded, atol=0.0001)
 
@@ -283,11 +283,11 @@ end
     crystal = Crystal("ADARAA_clean.cif")
     @test all(crystal.charges.q .!= 0.0) # has charges...
     @test neutral(crystal, PorousMaterials.NET_CHARGE_TOL) # is neutral...
-    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, "high_precision_charges_test.cif")) # should write charges with more decimals
+    write_cif(crystal, joinpath(Xtals.PATH_TO_CRYSTALS, "high_precision_charges_test.cif")) # should write charges with more decimals
     crystal_reloaded = Crystal("high_precision_charges_test.cif")
     @test isapprox(crystal.charges.q, crystal_reloaded.charges.q, atol=1e-8) # would not hv this precision if didn't write high-precision charges for this one.
     crystal_not_neutral = crystal.charges.q .= round.(crystal.charges.q, digits=6) # this is what charges would be if stored 6 decimals in .cif and threw away the rest
-    write_cif(crystal, joinpath(PorousMaterials.PATH_TO_CRYSTALS, "high_precision_charges_test_not_neutral.cif"))
+    write_cif(crystal, joinpath(Xtals.PATH_TO_CRYSTALS, "high_precision_charges_test_not_neutral.cif"))
     @test ! neutral(Crystal("high_precision_charges_test_not_neutral.cif", check_neutrality=false), PorousMaterials.NET_CHARGE_TOL) # not gonna be neutral
     @test_throws ErrorException Crystal("high_precision_charges_test_not_neutral.cif") # should throw error b/c not charge neutral
     # tests for species_from_col:
