@@ -17,6 +17,7 @@ struct Grid{T}
     origin::Array{Float64, 1}
 end
 
+
 """
     voxel_id = xf_to_id(n_pts, xf)
 
@@ -42,6 +43,7 @@ function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
     return voxel_id
 end
 
+
 """
     xf = id_to_xf(voxel_id, n_pts)
 
@@ -57,6 +59,7 @@ corresponds.
 function id_to_xf(id::Tuple{Int, Int, Int}, n_pts::Tuple{Int, Int, Int})
     return [(id[k] - 1.0) / (n_pts[k] - 1.0) for k = 1:3]
 end
+
 
 """
     update_density!(grid, molecule, species)
@@ -83,6 +86,7 @@ function update_density!(grid::Grid, molecules::Array{Molecule{Frac}, 1}, specie
     end
 end
 
+
 # don't include molecules outside the box.
 function update_density!(grid::Grid, molecules::Array{Molecule{Cart}, 1}, species::Symbol)
     for molecule in molecules
@@ -101,6 +105,7 @@ function update_density!(grid::Grid, molecules::Array{Molecule{Cart}, 1}, specie
     end
 end
 
+
 """
     n_pts = required_n_pts(box, dx)
 
@@ -117,6 +122,7 @@ function required_n_pts(box::Box, dx::Float64)
     return Tuple(n_pts)
 end
 
+
 """
     write_cube(grid, filename, verbose=true)
 
@@ -126,13 +132,13 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 
 # Arguments
 - `grid::Grid`: grid with associated data at each grid point.
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`.
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `rc[:paths][:grids]`.
 - `verbose::Bool`: print name of file after writing.
 - `length_units::String`: units for length. Bohr or Angstrom.
 """
 function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, length_units::String="Angstrom")
-    if ! isdir(PATH_TO_GRIDS)
-        mkdir(PATH_TO_GRIDS)
+    if ! isdir(rc[:paths][:grids])
+        mkdir(rc[:paths][:grids])
     end
 
     @assert (length_units in ["Angstrom", "Bohr"])
@@ -140,7 +146,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, le
     if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
-    cubefile = open(joinpath(PATH_TO_GRIDS, filename), "w")
+    cubefile = open(joinpath(rc[:paths][:grids], filename), "w")
 
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
@@ -171,10 +177,11 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, le
     end # loop over x points
     close(cubefile)
     if verbose
-        println("\tSee ", joinpath(PATH_TO_GRIDS, filename))
+        println("\tSee ", joinpath(rc[:paths][:grids], filename))
     end
     return
 end
+
 
 """
     grid = read_cube(filename)
@@ -182,7 +189,7 @@ end
 Read a .cube file and return a populated `Grid` data structure.
 
 # Arguments
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `rc[:paths][:grids]`
 
 # Returns
 - `grid::Grid`: A grid data structure
@@ -192,7 +199,7 @@ function read_cube(filename::AbstractString)
         filename *= ".cube"
     end
 
-    cubefile = open(joinpath(PATH_TO_GRIDS, filename))
+    cubefile = open(joinpath(rc[:paths][:grids], filename))
 
     # waste two lines
     line = readline(cubefile)
@@ -204,7 +211,7 @@ function read_cube(filename::AbstractString)
     origin = [parse(Float64, split(line)[1 + i]) for i = 1:3]
 
     # read box info
-    box_lines = [readline(cubefile) for i = 1:3]
+    box_lines = [readline(cubefile) for _ ∈ 1:3]
 
     # number of grid pts
     n_pts = Tuple([parse(Int, split(box_lines[i])[1]) for i = 1:3])
@@ -241,6 +248,7 @@ function read_cube(filename::AbstractString)
 
     return Grid(box, n_pts, data, units, origin)
 end
+
 
 """
 	grid = energy_grid(crystal, molecule, ljforcefield; resolution=1.0, temperature=298.0, n_rotations=750)
@@ -316,7 +324,7 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
             ensemble_average_energy = vdw_energy(crystal, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
-            for r = 1:n_rotations
+            for _ ∈ 1:n_rotations
                 rotate!(molecule)
 
                 energy = PotentialEnergy(0.0, 0.0)
@@ -339,11 +347,13 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
 	return grid
 end
 
+
 function Base.show(io::IO, grid::Grid)
     @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts[1], grid.n_pts[2], grid.n_pts[3])
     @printf(io, "\tunits of data attribute: %s\n", grid.units)
     @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin[1], grid.origin[2], grid.origin[3])
 end
+
 
 # comparing very large numbers in grid.data, so increase rtol to account
 #  for loss of precision when writing grid.data to a cube file.
@@ -354,6 +364,7 @@ function Base.isapprox(g1::Grid, g2::Grid; atol::Real=0.0, rtol::Real=atol > 0.0
             (g1.units == g2.units) &&
             isapprox(g1.origin, g2.origin, atol=atol, rtol=rtol))
 end
+
 
 function _flood_fill!(grid::Grid, segmented_grid::Grid,
             queue_of_grid_pts::Array{Tuple{Int, Int, Int}, 1},
@@ -392,6 +403,7 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
     return nothing
 end
 
+
 function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
@@ -429,6 +441,7 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     return segmented_grid
 end
 
+
 # this returns number of segments in a segmented grid.
 #  it excludes the inaccessible portions -1.
 function _count_segments(segmented_grid::Grid)
@@ -444,6 +457,7 @@ function _count_segments(segmented_grid::Grid)
     return nb_segments
 end
 
+
 # struct describing directed edge describing connection between two segments of a flood-
 #  filled grid. the direction (which unit cell face is traversed in the connection) is
 #  also included.
@@ -452,6 +466,7 @@ struct SegmentConnection
     dst::Int # destination segment
     direction::Tuple{Int, Int, Int} # unit cell face traversed
 end
+
 
 function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{SegmentConnection, 1},
                            direction::Tuple{Int, Int, Int}, verbose::Bool=true)
@@ -474,6 +489,7 @@ function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{Se
 
     return nothing
 end
+
 
 # obtain set of Segment Connections
 function _build_list_of_connections(segmented_grid::Grid; verbose::Bool=true)
@@ -498,6 +514,7 @@ function _build_list_of_connections(segmented_grid::Grid; verbose::Bool=true)
 
     return connections
 end
+
 
 function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentConnection, 1})
     nb_segments = _count_segments(segmented_grid)
@@ -534,6 +551,7 @@ function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentC
     return graph, vertex_to_direction
 end
 
+
 function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
                             vertex_to_direction::Dict{Int, Union{Nothing, Tuple{Int, Int, Int}}},
                             verbose::Bool=true)
@@ -550,8 +568,8 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
 
     # all edges involved in a cycle are connected together and are accessible channels
     for cyc in all_cycles
-        @assert vertex_to_direction[cyc[1]] == nothing "shld start with segment."
-        @assert vertex_to_direction[cyc[end]] != nothing "shld end with direction vertex."
+        @assert isnothing(vertex_to_direction[cyc[1]]) "should start with segment."
+        @assert !isnothing(vertex_to_direction[cyc[end]]) "should end with direction vertex."
         # travel through cycle, keep track of which unit cell we're in
         #  start in home unit cell
         unit_cell = (0, 0, 0)
@@ -559,7 +577,7 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
         for s in cyc
             # if an intermediate unit cell boundary vertex, then keep track of unit cell
             #  we're in by looking at boundary we traversed.
-            if vertex_to_direction[s] != nothing
+            if !isnothing(vertex_to_direction[s])
                 unit_cell = unit_cell .+ vertex_to_direction[s]
             end
         end
@@ -571,7 +589,7 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
                 println("\t...found a cycle of accessible segments!")
             end
             for s in cyc
-                if vertex_to_direction[s] == nothing # i.e. if this is not a direciton vertex
+                if isnothing(vertex_to_direction[s]) # i.e. if this is not a direciton vertex
                     segment_classifiction[s] = 1
                 end
             end
@@ -596,6 +614,7 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
     return segment_classifiction
 end
 
+
 function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid,
             segment_classifiction::Array{Int, 1}; verbose::Bool=true)
     for s = 1:length(segment_classifiction)
@@ -611,6 +630,7 @@ function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid,
         end
     end
 end
+
 
 """
     accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
@@ -739,10 +759,12 @@ function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefiel
     return accessibility_grid, nb_segments_blocked, porosity
 end
 
+
 # return ID that is the nearest neighbor.
 function _arg_nearest_neighbor(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
     return 1 .+ round.(Int, xf .* (n_pts .- 1))
 end
+
 
 function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
     for k = 1:3
@@ -755,6 +777,7 @@ function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
     end
     return nothing
 end
+
 
 """
     accessible(accessibility_grid, xf)

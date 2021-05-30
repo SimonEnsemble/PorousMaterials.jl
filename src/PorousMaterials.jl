@@ -1,79 +1,14 @@
 module PorousMaterials
 
-using CSV
-using DataFrames
-using Roots # for fzero
-using OffsetArrays # used for Ewald sum
-using SpecialFunctions # for erfc
-using StatsBase
-using ProgressMeter
-using Polynomials
-using JLD2
-using Statistics
-using Printf
-using LinearAlgebra
-using LightGraphs
-using Distributed
-using Optim
-using PyCall
+using Roots, OffsetArrays, SpecialFunctions, StatsBase, ProgressMeter, Polynomials,
+JLD2, Statistics, Distributed, Optim, Printf, DataFrames, LightGraphs, CSV, LinearAlgebra
+
 using Reexport
 @reexport using Xtals
 
-
-import Xtals.print_file_paths
-"""
-    print_file_paths()
-
-print off paths where PorousMaterials.jl looks for input files and writes output files.
-"""
-function print_file_paths()
-    println("general data folder: ", PATH_TO_DATA)
-    println("\tcrystal structures (.cif, .cssr): ", Xtals.PATH_TO_CRYSTALS)
-    println("\tforce field files (.csv): ", PATH_TO_FORCEFIELDS)
-    println("\tmolecule input files: ", PATH_TO_MOLECULES)
-    println("\tsimulation output files: ", PATH_TO_SIMS)
-    println("\tgrids (.cube): ", PATH_TO_GRIDS)
-end
+import Xtals.Cart, Xtals.Frac, Xtals.write_xyz
 
 
-import Xtals.set_path_to_data
-"""
-    set_path_to_data(path; print_paths=true)
-
-Set the path variables: `PATH_TO_DATA`, `PATH_TO_CRYSTALS`, `PATH_TO_FORCEFIELDS`, `PATH_TO_MOLECULES`,
-`PATH_TO_GRIDS`, and `PATH_TO_SIMS`.  The latter five paths are set relative to the root data path.
-
-# Arguments
-- `path::String`: the absolute path to the root of the data directory.
-- `print_paths::Bool`: set false to suppress printing of path values.
-"""
-function set_path_to_data(path::String; print_paths::Bool=true)
-    global PATH_TO_DATA = path
-    set_path_to_crystals(joinpath(PATH_TO_DATA, "crystals"))
-    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
-    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
-    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
-    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
-
-    if print_paths
-        print_file_paths()
-    end
-end
-
-
-# this runs everytime porousmaterials is loaded, so if the user changes directory
-#   then the path_to_data will change as well
-function __init__()
-    global PATH_TO_DATA = joinpath(pwd(), "data")
-    set_path_to_crystals(joinpath(PATH_TO_DATA, "crystals"))
-    global PATH_TO_FORCEFIELDS = joinpath(PATH_TO_DATA, "forcefields")
-    global PATH_TO_MOLECULES = joinpath(PATH_TO_DATA, "molecules")
-    global PATH_TO_GRIDS = joinpath(PATH_TO_DATA, "grids")
-    global PATH_TO_SIMS = joinpath(PATH_TO_DATA, "simulations")
-end
-
-
-include("misc.jl")
 include("isotherm_fitting.jl")
 include("forcefield.jl")
 include("molecule.jl")
@@ -88,10 +23,19 @@ include("gcmc.jl")
 include("energy_min.jl")
 
 
-export
-    # porousmaterials.jl
-    print_file_paths, set_path_to_data,
+function __init__()
+    rc[:paths][:forcefields] = joinpath(rc[:paths][:data], "forcefields")
+    rc[:paths][:molecules] = joinpath(rc[:paths][:data], "molecules")
+    rc[:paths][:grids] = joinpath(rc[:paths][:data], "grids")
+    rc[:paths][:sims] = joinpath(rc[:paths][:data], "simulations")
+    rc[:univ_gas_const] = 8.3144598e-5 # m³-bar/(K-mol)
+    rc[:K_to_kJ_per_mol] = 8.3144598e-3 # kJ/(mol-K)
+    rc[:boltzmann] = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
+    @debug "Environment variables" rc
+end
 
+
+export
     # isotherm_fitting.jl
     fit_adsorption_isotherm,
 

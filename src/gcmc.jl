@@ -1,7 +1,5 @@
 import Base: +, /
 
-const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
-
 ###
 #   Markov chain proposals
 ###
@@ -19,11 +17,13 @@ const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation
 const ROTATION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
 
+
  # count proposed/accepted for each subtype
 mutable struct MarkovCounts
     n_proposed::Array{Int, 1}
     n_accepted::Array{Int, 1}
 end
+
 
 ###
 #   collecting statistics
@@ -42,12 +42,14 @@ end
 
 GCMCstats() = GCMCstats(0, 0, 0, SystemPotentialEnergy(), SystemPotentialEnergy(), 0.0)
 
+
 +(s1::GCMCstats, s2::GCMCstats) = GCMCstats(s1.n_samples + s2.n_samples,
                                             s1.n         + s2.n,
                                             s1.n²        + s2.n²,
                                             s1.U         + s2.U,
                                             s1.U²        + s2.U²,
                                             s1.Un        + s2.Un)
+
 
 function Base.sum(gcmc_stats::Array{GCMCstats, 1})
     sum_stats = GCMCstats()
@@ -56,6 +58,7 @@ function Base.sum(gcmc_stats::Array{GCMCstats, 1})
     end
     return sum_stats
 end
+
 
 function Base.print(gcmc_stats::GCMCstats)
     println("\t# samples: ", gcmc_stats.n_samples)
@@ -68,6 +71,7 @@ function Base.print(gcmc_stats::GCMCstats)
 
     println("\t⟨U⟩ (K) = ", sum(gcmc_stats.U) / gcmc_stats.n_samples)
 end
+
 
 # Compute average and standard error of the number of molecules and potential
 # energy from an array of `GCMCstats`, each corresponding to statitics from an
@@ -91,6 +95,7 @@ function mean_stderr_n_U(gcmc_stats::Array{GCMCstats, 1})
     err_U = err_U * 2.0 / sqrt(length(gcmc_stats))
     return avg_n, err_n, avg_U, err_U
 end
+
 
 # TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
 # potential energy change after inserting/deleting/perturbing coordinates of molecules[molecule_id]
@@ -116,6 +121,7 @@ end
     end
     return energy
 end
+
 
 """
     results, molecules = μVT_sim(xtal, molecule, temperature, pressure,
@@ -331,7 +337,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     ####
     #   proposal probabilities
     ###
-    mc_proposal_probabilities = [0.0 for p = 1:N_PROPOSAL_TYPES]
+    mc_proposal_probabilities = [0.0 for _ ∈ 1:N_PROPOSAL_TYPES]
     # set defaults
     mc_proposal_probabilities[INSERTION] = 0.35
     mc_proposal_probabilities[DELETION] = mc_proposal_probabilities[INSERTION] # must be equal
@@ -354,7 +360,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     end
 
     # initiate GCMC statistics for each block # break simulation into `N_BLOCKS` blocks to gauge convergence
-    gcmc_stats = [GCMCstats() for block_no = 1:N_BLOCKS]
+    gcmc_stats = [GCMCstats() for _ ∈ 1:N_BLOCKS]
     current_block = 1
     # make sure the number of sample cycles is at least equal to N_BLOCKS
     if n_sample_cycles < N_BLOCKS
@@ -373,7 +379,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
         if show_progress_bar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, length(molecules))])
         end
-        for inner_cycle = 1:max(20, length(molecules))
+        for _ ∈ 1:max(20, length(molecules))
             markov_chain_time += 1
 
             # choose proposed move randomly; keep track of proposals
@@ -387,7 +393,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                                       ljff, eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacity * xtal.box.Ω / (length(molecules) * KB *
+                if rand() < fugacity * xtal.box.Ω / (length(molecules) * rc[:boltzmann] *
                         temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -406,7 +412,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                                       eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for Deletion
-                if rand() < length(molecules) * KB * temperature / (fugacity *
+                if rand() < length(molecules) * rc[:boltzmann] * temperature / (fugacity *
                         xtal.box.Ω) * exp(sum(ΔE) / temperature)
                     # accept the deletion, delete molecule, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -630,7 +636,6 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     results["err ⟨U_gg, electro⟩ (K)"] = err_U.gg.es
     results["err ⟨U⟩ (K)"] = sum(err_U)
 
-
     # average N in more common units
     results["⟨N⟩ (molecules/unit cell)"] = avg_n / (repfactors[1] * repfactors[2] * repfactors[3])
     results["err ⟨N⟩ (molecules/unit cell)"] = err_n / (repfactors[1] * repfactors[2] * repfactors[3])
@@ -659,11 +664,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     molecules = Cart.(molecules, xtal.box)
 
     if autosave
-        if ! isdir(PATH_TO_SIMS)
-            mkdir(PATH_TO_SIMS)
+        if ! isdir(rc[:paths][:sims])
+            mkdir(rc[:paths][:sims])
         end
 
-        save_results_filename = joinpath(PATH_TO_SIMS,
+        save_results_filename = joinpath(rc[:paths][:sims],
                                          μVT_output_filename(xtal, molecule, temperature, pressure, 
                                                              ljff, n_burn_cycles, n_sample_cycles, 
                                                              comment=results_filename_comment
@@ -678,6 +683,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
 
     return results, molecules # summary of statistics and ending configuration of molecules
 end # μVT_sim
+
 
 """
     filename = μVT_output_filename(xtal, molecule, temperature, 
@@ -716,6 +722,7 @@ function μVT_output_filename(xtal::Crystal, molecule::Molecule, temperature::Fl
             ) * comment * extension
 end
 
+
 function print_results(results::Dict; print_title::Bool=true)
     if print_title
         # already print in GCMC tests...
@@ -733,7 +740,7 @@ function print_results(results::Dict; print_title::Bool=true)
         println(key * ": ", results[key])
     end
 
-    for (proposal_id, proposal_description) in PROPOSAL_ENCODINGS
+    for (_, proposal_description) in PROPOSAL_ENCODINGS
         total_proposals = results[@sprintf("Total # %s proposals", proposal_description)]
         fraction_accepted = results[@sprintf("Fraction of %s proposals accepted", proposal_description)]
         if total_proposals > 0
@@ -757,6 +764,7 @@ function print_results(results::Dict; print_title::Bool=true)
     return
 end
 
+
 function pretty_print(xtal::Crystal, molecule::Molecule, temperature::Float64, pressure::Float64, ljff::LJForceField)
     print("Simulating ")
     printstyled("(μVT)"; color=:yellow)
@@ -772,6 +780,7 @@ function pretty_print(xtal::Crystal, molecule::Molecule, temperature::Float64, p
     printstyled(split(ljff.name, ".")[1]; color=:green)
     println(" force field.")
 end
+
 
 """
     results = stepwise_adsorption_isotherm(xtal, molecule, temperature, pressures,
@@ -816,7 +825,7 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
 
     results = Dict{String, Any}[] # push results to this array
     molecules = Molecule{Cart}[] # initiate with empty xtal
-    for (i, pressure) in enumerate(pressures)
+    for pressure ∈ pressures
         result, molecules = μVT_sim(xtal, molecule, temperature, pressure,
                                             ljff,
                                             n_burn_cycles=n_burn_cycles,
@@ -836,6 +845,7 @@ function stepwise_adsorption_isotherm(xtal::Crystal,
 
     return results
 end
+
 
 """
     results = adsorption_isotherm(xtal, molecule, temperature, pressures,
@@ -902,6 +912,7 @@ function adsorption_isotherm(xtal::Crystal,
     return results[[findall(x -> x==i, ids)[1] for i = 1:length(ids)]]
 end
 
+
 """
     dataframe = isotherm_sim_results_to_dataframe(desired_props, xtal,
                                                   molecule, temperature,
@@ -925,7 +936,7 @@ to locate the requested output files, this function calls [`μVT_output_filename
 - `n_burn_cycles::Int64`: The number of burn cycles used in this simulation
 - `n_sample_cycles::Int64`: The number of sample cycles used in the simulations
 - `where_are_jld_files::Union{String, Nothing}=nothing`: The location to the simulation files. defaults to
-    `PorousMaterials.PATH_TO_SIMS`.
+    `PorousMaterials.rc[:paths][:sims]`.
 - `comment::String=""`: comment appended to outputfilename
 
 # Returns
@@ -963,7 +974,7 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
                                            where_are_jld_files::Union{String, Nothing}=nothing)
     # determine the location of the data files
     if isnothing(where_are_jld_files)
-        where_are_jld_files = PATH_TO_SIMS
+        where_are_jld_files = rc[:paths][:sims]
     end
     # prepare dataframe to populate
     df = DataFrame()

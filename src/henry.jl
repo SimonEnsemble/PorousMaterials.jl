@@ -1,8 +1,4 @@
-const UNIVERSAL_GAS_CONSTANT = 8.3144598e-5 # m³-bar/(K-mol)
-const K_to_KJ_PER_MOL = 8.3144598 / 1000.0 # kJ/(mol-K)
-
 """
-
 ```
 result = henry_coefficient(crystal, molecule, temperature, ljforcefield,
                             nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
@@ -29,7 +25,7 @@ average, per unit cell volume (Å³)
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
 the replication factors in reciprocal space.
-- `autosave::Bool`: save results file as a .jld in PATH_TO_DATA * `sims`
+- `autosave::Bool`: save results file as a .jld in rc[:paths][:data] * `sims`
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
 
 # Returns
@@ -58,7 +54,7 @@ function henry_coefficient(crystal::Crystal, molecule::Molecule, temperature::Fl
         printstyled(insertions_per_volume; color=:green)
         println(" insertions per Å³.")
 
-        if accessibility_grid != nothing
+        if !isnothing(accessibility_grid)
             println("Using provided accessibility grid to block inaccessible pockets")
             if ! isapprox(accessibility_grid.box, crystal.box)
                 error(@sprintf("accessibility grid box does not match box of %s.\n",
@@ -121,7 +117,7 @@ function henry_coefficient(crystal::Crystal, molecule::Molecule, temperature::Fl
     #   Kₕ = β Σ e ^(βUᵢ) / nb_insertions_per_block
     #    (these N_BLOCKS-long arrays)
     average_energies = wtd_energy_sums ./ boltzmann_factor_sums # K
-    henry_coefficients = boltzmann_factor_sums / (UNIVERSAL_GAS_CONSTANT * temperature * nb_insertions_per_block) # mol/(m³-bar)
+    henry_coefficients = boltzmann_factor_sums / (rc[:univ_gas_const] * temperature * nb_insertions_per_block) # mol/(m³-bar)
 
     if verbose
         for b = 1:N_BLOCKS
@@ -152,13 +148,13 @@ function henry_coefficient(crystal::Crystal, molecule::Molecule, temperature::Fl
     results["⟨U, es⟩ (K)"] = mean([average_energies[b].es for b = 1:N_BLOCKS])
     results["⟨U⟩ (K)"] = results["⟨U, vdw⟩ (K)"] + results["⟨U, es⟩ (K)"]
 
-    results["⟨U⟩ (kJ/mol)"] = results["⟨U⟩ (K)"] * K_to_KJ_PER_MOL
-    results["⟨U, vdw⟩ (kJ/mol)"] = results["⟨U, vdw⟩ (K)"] * K_to_KJ_PER_MOL
-    results["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * K_to_KJ_PER_MOL
-    results["⟨U, es⟩ (kJ/mol)"] = results["⟨U, es⟩ (K)"] * K_to_KJ_PER_MOL
-    results["err ⟨U, es⟩ (kJ/mol)"] = err_energy.es * K_to_KJ_PER_MOL
-    results["Qst (kJ/mol)"] = -results["⟨U⟩ (kJ/mol)"] + temperature * K_to_KJ_PER_MOL
-    results["err Qst (kJ/mol)"] = sum(err_energy) * K_to_KJ_PER_MOL
+    results["⟨U⟩ (kJ/mol)"] = results["⟨U⟩ (K)"] * rc[:K_to_kJ_per_mol]
+    results["⟨U, vdw⟩ (kJ/mol)"] = results["⟨U, vdw⟩ (K)"] * rc[:K_to_kJ_per_mol]
+    results["err ⟨U, vdw⟩ (kJ/mol)"] = err_energy.vdw * rc[:K_to_kJ_per_mol]
+    results["⟨U, es⟩ (kJ/mol)"] = results["⟨U, es⟩ (K)"] * rc[:K_to_kJ_per_mol]
+    results["err ⟨U, es⟩ (kJ/mol)"] = err_energy.es * rc[:K_to_kJ_per_mol]
+    results["Qst (kJ/mol)"] = -results["⟨U⟩ (kJ/mol)"] + temperature * rc[:K_to_kJ_per_mol]
+    results["err Qst (kJ/mol)"] = sum(err_energy) * rc[:K_to_kJ_per_mol]
 
     results["elapsed time (min)"] = elapsed_time / 60
 
