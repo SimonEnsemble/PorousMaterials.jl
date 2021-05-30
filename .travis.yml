@@ -13,7 +13,7 @@ addons:
 sudo: enabled
 
 script:
-    - julia --project --check-bounds=yes -e 'import Pkg; Pkg.add("https://github.com/SimonEnsemble/Xtals.jl#global_dict"); Pkg.build(); Pkg.test("PorousMaterials")'
+    - julia --project --check-bounds=yes -e 'import Pkg; Pkg.build(); Pkg.test("PorousMaterials")'
 
 after_success:
     - julia --project -e 'import Pkg; Pkg.add("Documenter")'
