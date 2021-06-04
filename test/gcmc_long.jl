@@ -8,10 +8,10 @@ using Printf
 using Statistics
 
 tests_to_run = Dict(
-    "ideal_gas"     =>  false,
+    "ideal_gas"     =>  true,
     "Xe in SBMOF-1" =>  true,
-    "CO2 in ZIF-71" =>  false,
-    "density grid"  =>  false
+    "CO2 in ZIF-71" =>  true,
+    "density grid"  =>  true
                    )
 
 @testset "GCMC (long) tests" begin
@@ -35,7 +35,6 @@ tests_to_run = Dict(
         for i = 1:length(fugacity)
             results, molecules = μVT_sim(empty_space, ideal_gas, temperature, fugacity[i], forcefield,
                         n_burn_cycles=100000, n_sample_cycles=100000, verbose=false)
-    #                    n_burn_cycles=100000, n_sample_cycles=100000)
             @printf("fugacity %f, n_ig = %f, n_sim = %f\n", fugacity[i], n_ig[i], results["⟨N⟩ (molecules/unit cell)"])
             @test isapprox(results["⟨N⟩ (molecules/unit cell)"], n_ig[i], rtol=0.05)
         end

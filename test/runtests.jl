@@ -11,11 +11,13 @@ testfiles = [
     "eos.jl"
     ]
 
-@info "\n\n\tPorousMaterials\n\n\n"
+using Test, FIGlet
+
+FIGlet.render("PorousMaterials.jl", FIGlet.availablefonts()[6])
 
 for testfile ∈ testfiles
     @info "Running test/$testfile"
     include(testfile)
 end
 
-@info "Done!"
+@info "Tests complete!"
