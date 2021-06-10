@@ -13,6 +13,7 @@ addons:
 sudo: enabled
 
 script:
+    - julia --project -e 'ENV["JULIA_PKG_SERVER"] = ""; import Pkg; Pkg.update()'
     - julia --project --check-bounds=yes -e 'import Pkg; Pkg.build(); Pkg.test("PorousMaterials")'
 
 after_success:
