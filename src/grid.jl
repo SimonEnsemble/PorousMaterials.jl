@@ -820,3 +820,5 @@ end
 function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
     return accessible(accessibility_grid, mod.(xf .* repfactors, 1.0))
 end
+
+origin(T::DataType) = T([0.0, 0.0, 0.0])

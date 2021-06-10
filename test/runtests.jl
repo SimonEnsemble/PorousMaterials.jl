@@ -13,7 +13,9 @@ testfiles = [
 
 using Test, FIGlet
 
-FIGlet.render("PorousMaterials.jl", FIGlet.availablefonts()[6])
+font_num = 57
+FIGlet.render("Porous", FIGlet.availablefonts()[font_num])
+FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
 
 for testfile ∈ testfiles
     @info "Running test/$testfile"

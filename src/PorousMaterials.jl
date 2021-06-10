@@ -21,7 +21,7 @@ include("eos.jl")
 include("henry.jl")
 include("gcmc.jl")
 include("energy_min.jl")
-
+include("atomic_masses.jl")
 
 function __init__()
     rc[:paths][:forcefields] = joinpath(rc[:paths][:data], "forcefields")
@@ -31,6 +31,7 @@ function __init__()
     rc[:univ_gas_const] = 8.3144598e-5 # m³-bar/(K-mol)
     rc[:K_to_kJ_per_mol] = 8.3144598e-3 # kJ/(mol-K)
     rc[:boltzmann] = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
+    append_atomic_masses()
     @debug "Environment variables" rc
 end
 
@@ -61,7 +62,7 @@ export
     # Grid.jl
     apply_periodic_boundary_condition!,
     Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
-    required_n_pts, xf_to_id, id_to_xf, update_density!, find_energy_minimum,
+    required_n_pts, xf_to_id, id_to_xf, update_density!, find_energy_minimum, origin,
  
     # EOS.jl
     calculate_properties, PengRobinsonFluid, VdWFluid,
