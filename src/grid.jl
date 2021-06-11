@@ -325,7 +325,7 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
         else
             boltzmann_factor_sum = 0.0
             for _ ∈ 1:n_rotations
-                rotate!(molecule)
+                random_rotation!(molecule)
 
                 energy = PotentialEnergy(0.0, 0.0)
                 energy.vdw = vdw_energy(crystal, molecule, ljforcefield)

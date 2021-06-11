@@ -9,9 +9,9 @@ using Reexport
 import Xtals.Cart, Xtals.Frac, Xtals.write_xyz
 
 # physical constants
-const univ_gas_const = 8.3144598e-5 # m³-bar/(K-mol)
-const K_to_kJ_per_mol = 8.3144598e-3 # kJ/(mol-K)
-const boltzmann = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
+const UNIV_GAS_CONST = 8.3144598e-5 # m³-bar/(K-mol)
+const K_TO_KJ_PER_MOL = 8.3144598e-3 # kJ/(mol-K)
+const BOLTZMANN = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 include("isotherm_fitting.jl")
 include("forcefield.jl")
