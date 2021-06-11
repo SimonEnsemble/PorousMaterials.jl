@@ -66,19 +66,16 @@ perform an [`energy_grid`](@ref) calculation and, via a grid search, find the mi
 - `xtal::Crystal`: The crystal being investigated
 - `molecule::Molecule{Cart}`: The molecule used to probe energy surface
 - `ljff::LJForceField`: The force field used to calculate interaction energies
-- `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: Number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
+- `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
 
 # Returns
 - `minimized_molecule::Molecule{Frac}`: the molecule at its minimum energy position
 - `min_energy::Float64`: the associated minimum molecule-crystal interaciton energy (kJ/mol)
 """
-function find_energy_minimum_gridsearch(xtal::Crystal,
-                                        molecule::Molecule{Cart},
-                                        ljff::LJForceField;
-                                        n_pts::Tuple{Int, Int, Int}=(50, 50, 50)
-                                        )
+function find_energy_minimum_gridsearch(xtal::Crystal, molecule::Molecule{Cart}, ljff::LJForceField; 
+    resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0)::Tuple{Molecule{Frac}, Float64}
     # Perform an energy grid calculation on a course grid to get initial estimate.
-    grid = energy_grid(xtal, molecule, ljff; n_pts=n_pts)
+    grid = energy_grid(xtal, molecule, ljff; resolution=resolution)
     E_min, idx_min = findmin(grid.data)
 
     xf_minE = id_to_xf(Tuple(idx_min), grid.n_pts) # fractional coords of min

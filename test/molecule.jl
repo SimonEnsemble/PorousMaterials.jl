@@ -49,7 +49,6 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     molecule = Molecule("CO2")
     @test needs_rotations(molecule)
     @test has_charges(molecule)
-    atomic_masses = read_atomic_masses()
     @test molecule.species == :CO2
     @test molecule.atoms.n == 3
     @test molecule.atoms.species[1] == :C_CO2
