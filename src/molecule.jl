@@ -22,13 +22,16 @@ end
 
 
 function center_of_mass(molecule::Molecule{Cart})
-    total_mass = 0.0 # total mass
+    total_mass = sum([rc[:atomic_masses][x] for x ∈ molecule.atoms.species])
     x_com = [0.0, 0.0, 0.0] # center of mass
-    for a = 1:molecule.atoms.n
-        total_mass += rc[:atomic_masses][molecule.atoms.species[a]]
-        x_com += rc[:atomic_masses][molecule.atoms.species[a]] * molecule.atoms.coords.x[:, a]
+    if total_mass == 0.0
+        return Cart(x_com)
+    else
+        for a = 1:molecule.atoms.n
+            x_com += rc[:atomic_masses][molecule.atoms.species[a]] * molecule.atoms.coords.x[:, a]
+        end
+        return Cart(x_com / total_mass)
     end
-    return Cart(x_com / total_mass)
 end
 
 
