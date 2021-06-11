@@ -3,11 +3,15 @@ module PorousMaterials
 using Roots, OffsetArrays, SpecialFunctions, StatsBase, ProgressMeter, Polynomials,
 JLD2, Statistics, Distributed, Optim, Printf, DataFrames, LightGraphs, CSV, LinearAlgebra
 
+# extend Xtals
 using Reexport
 @reexport using Xtals
-
 import Xtals.Cart, Xtals.Frac, Xtals.write_xyz
 
+# physical constants
+const univ_gas_const = 8.3144598e-5 # m³-bar/(K-mol)
+const K_to_kJ_per_mol = 8.3144598e-3 # kJ/(mol-K)
+const boltzmann = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
 include("isotherm_fitting.jl")
 include("forcefield.jl")
@@ -28,9 +32,6 @@ function __init__()
     rc[:paths][:molecules] = joinpath(rc[:paths][:data], "molecules")
     rc[:paths][:grids] = joinpath(rc[:paths][:data], "grids")
     rc[:paths][:sims] = joinpath(rc[:paths][:data], "simulations")
-    rc[:univ_gas_const] = 8.3144598e-5 # m³-bar/(K-mol)
-    rc[:K_to_kJ_per_mol] = 8.3144598e-3 # kJ/(mol-K)
-    rc[:boltzmann] = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
     append_atomic_masses()
     @debug "Environment variables" rc
 end

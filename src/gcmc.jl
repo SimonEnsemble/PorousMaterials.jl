@@ -393,7 +393,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                                       ljff, eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for Insertion
-                if rand() < fugacity * xtal.box.Ω / (length(molecules) * rc[:boltzmann] *
+                if rand() < fugacity * xtal.box.Ω / (length(molecules) * boltzmann *
                         temperature) * exp(-sum(ΔE) / temperature)
                     # accept the move, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1
@@ -412,7 +412,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                                       eparams, eikr_gh, eikr_gg)
 
                 # Metropolis Hastings Acceptance for Deletion
-                if rand() < length(molecules) * rc[:boltzmann] * temperature / (fugacity *
+                if rand() < length(molecules) * boltzmann * temperature / (fugacity *
                         xtal.box.Ω) * exp(sum(ΔE) / temperature)
                     # accept the deletion, delete molecule, adjust current_energy
                     markov_counts.n_accepted[which_move] += 1

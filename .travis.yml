@@ -1,9 +1,9 @@
 language: julia
 
-coveralls: true
+codecov: true
 
 julia:
-    - 1.6
+  - 1.6
 
 addons:
   apt:
@@ -13,21 +13,13 @@ addons:
 sudo: enabled
 
 script:
-    - julia --project -e 'ENV["JULIA_PKG_SERVER"] = ""; import Pkg; Pkg.update()'
-    - julia --project --check-bounds=yes -e 'import Pkg; Pkg.build(); Pkg.test("PorousMaterials")'
+  - julia --project -e 'ENV["JULIA_PKG_SERVER"] = ""; import Pkg; Pkg.update()'
+  - julia --project --check-bounds=yes -e 'import Pkg; Pkg.build(); Pkg.test("PorousMaterials")'
 
 after_success:
-    - julia --project -e 'import Pkg; Pkg.add("Documenter")'
-    - julia --project ./docs/make.jl
+  - julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("Coverage")'
+  - julia --project -e 'using Coverage; Codecov.submit(process_folder())'
+  - julia --project ./docs/make.jl
 
 notifications:
   email: true
-  slack: # remove?
-    rooms:
-      - secure: YydV4a8we+y26g/dlKsPFhXTOqJ7Q755YGOtGB19vo3JnG6QJ22DOQxF2+cMN3YMKRlwE1BhW6sB8Vd6BbfU4mPw8VXaSjnckLp4C48K6vxpX21gpeajFawaxAeyUPOp8KJZyKjNWGpz2UxNXv/f0V1iIGKs4ZJ0J3kg4/kMZvpOD+DiYoR6JN1xtu1yPbY67DogUB2LPfK1k/uiyaN166dzelVZtj1+bO3lKveBfB0KcI0HaUtRnnIzvZ65ZiuGJeTIFXoWl0MaKxlp4Nw5W3lz5pTbjmbBxtfpZBBz/70dNnUzbcpBzRiRRrkDu7bPT25ZgqS3ynHNaGH2LmLiv2T9/9A6Rqc6u/H8vfcBxNIbq+NHwUFQiNttLXtnsz20GOpVizfLvdM2s0/iZfP90ONtn/4o0/XGo5+dzYLMJvhh3osjKEx/O+fdNUVQJYHdg+aXnvEpcmwH7HGuDFJEIztwbjZNOoVgiDA3vf+H1bnFlKQV8mqmLygQ7k13iceQ2emEqxgaaaM52w4V3WiDDtdllILn6k3LVixERJv54OBzDjN0nvCXTYAFDnkTX8rvrZ+ieMb9CORd5ONBXl6MHWfbjFijdpQ973t2u7kxeOeggsk0S2vjSrw5IuuB+CfeyuLnKLurZ1H0fXywpUuhD22bhoSR0JZCJU3dCrjtmFc=
-    on_success: always
-    on_failure: always
-    template:
-      - "Repo `%{repository_slug}` *%{result}* build (<%{build_url}|#%{build_number}>) for commit (<%{compare_url}|%{commit}>) on branch `%{branch}`."
-      - "Execution time: *%{duration}*"
-      - "Message: %{message}"

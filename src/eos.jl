@@ -16,12 +16,12 @@ end
 
 # Parameters in the Peng-Robinson Equation of State
 # T in Kelvin, P in bar
-a(fluid::PengRobinsonFluid) = (0.457235 * rc[:univ_gas_const] ^ 2 * fluid.Tc ^ 2) / fluid.Pc
-b(fluid::PengRobinsonFluid) = (0.0777961 * rc[:univ_gas_const] * fluid.Tc) / fluid.Pc
+a(fluid::PengRobinsonFluid) = (0.457235 * univ_gas_const ^ 2 * fluid.Tc ^ 2) / fluid.Pc
+b(fluid::PengRobinsonFluid) = (0.0777961 * univ_gas_const * fluid.Tc) / fluid.Pc
 κ(fluid::PengRobinsonFluid) = 0.37464 + (1.54226 * fluid.ω) - (0.26992 * fluid.ω ^ 2)
 α(κ::Float64, Tr::Float64) = (1 + κ * (1 - √Tr)) ^ 2
-A(T::Float64, P::Float64, fluid::PengRobinsonFluid) = α(κ(fluid), T / fluid.Tc) * a(fluid) * P / (rc[:univ_gas_const] ^ 2 * T ^ 2)
-B(T::Float64, P::Float64, fluid::PengRobinsonFluid) = b(fluid) * P / (rc[:univ_gas_const] * T)
+A(T::Float64, P::Float64, fluid::PengRobinsonFluid) = α(κ(fluid), T / fluid.Tc) * a(fluid) * P / (univ_gas_const ^ 2 * T ^ 2)
+B(T::Float64, P::Float64, fluid::PengRobinsonFluid) = b(fluid) * P / (univ_gas_const * T)
 
 
 # Calculates three outputs for compressibility factor using the polynomial form of
@@ -110,7 +110,7 @@ function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
 
     D = - fluid.a * fluid.b
     C = fluid.a
-    B = - (P * fluid.b + rc[:univ_gas_const] * T)
+    B = - (P * fluid.b + univ_gas_const * T)
     A = P
 
     # Creates polynomial in ρ the VdW cubic function
@@ -123,14 +123,14 @@ function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
     #   is the density corresponding to the fluid phase
     ρ = minimum(real_rho)
     # Compressibility factor
-    z = P / (ρ * rc[:univ_gas_const] * T)
+    z = P / (ρ * univ_gas_const * T)
     return z
 end
 
 
 # Calculates for fugacity using derivation of van der Waals EOS
 function calculate_ϕ(fluid::VdWFluid, T::Float64, P::Float64)
-    log_f = log(P) + (fluid.b - fluid.a / (rc[:univ_gas_const] * T)) * (P / (rc[:univ_gas_const] * T))
+    log_f = log(P) + (fluid.b - fluid.a / (univ_gas_const * T)) * (P / (univ_gas_const * T))
     # Defines the fugacity coefficient as fugacity over pressure
     ϕ = exp(log_f) / P
     return ϕ
@@ -190,7 +190,7 @@ function calculate_properties(fluid::Union{PengRobinsonFluid, VdWFluid}, T::Floa
     # Compressbility factor (unitless)
     z = compressibility_factor(fluid, T, P)
     # Density (mol/m^3)
-    ρ = P / (z * rc[:univ_gas_const] * T)
+    ρ = P / (z * univ_gas_const * T)
     # Molar volume (L/mol)
     Vm = 1000.0 / ρ
     # Fugacity (bar)
