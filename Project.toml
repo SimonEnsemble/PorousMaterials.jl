@@ -41,7 +41,7 @@ ProgressMeter = "1.2.0"
 Roots = "0.8.4"
 SpecialFunctions = "0.10.0"
 StatsBase = "0.32.0,0.33.8"
-Xtals = "0.3.0"
+Xtals = "0.3.1"
 julia = "1.6"
 
 [extras]

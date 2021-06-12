@@ -8,6 +8,7 @@ makedocs(
     clean = true,
     pages = [
             "PorousMaterials" => "index.md",
+            "paths" => "paths.md",
             "matter" => "matter.md",
             "boxes" => "box.md",
             "crystals" => "crystal.md",
@@ -23,4 +24,4 @@ makedocs(
     format = Documenter.HTML(assets = ["assets/flux.css"])
 )
 
-deploydocs(repo = "github.com/SimonEnsemble/PorousMaterials.jl.git")
+deploydocs(repo="github.com/SimonEnsemble/PorousMaterials.jl.git")

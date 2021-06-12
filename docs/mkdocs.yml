@@ -1,4 +1,3 @@
-#site_name:        PorousMaterials.jl
 site_name:        ""
 repo_url:         https://github.com/SimonEnsemble/PorousMaterials.jl
 site_description: Documentation for the julia package PorousMaterials.jl
