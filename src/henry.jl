@@ -159,10 +159,10 @@ function henry_coefficient(crystal::Crystal, molecule::Molecule, temperature::Fl
     results["elapsed time (min)"] = elapsed_time / 60
 
     if autosave
-        if ! isdir(PATH_TO_SIMS)
-            mkdir(PATH_TO_SIMS)
+        if ! isdir(rc[:paths][:sims])
+            mkdir(rc[:paths][:sims])
         end
-        savename = joinpath(PATH_TO_SIMS, henry_result_savename(crystal, molecule, temperature,
+        savename = joinpath(rc[:paths][:sims], henry_result_savename(crystal, molecule, temperature,
                                ljforcefield, insertions_per_volume, comment=filename_comment))
         @save savename results
         if verbose
