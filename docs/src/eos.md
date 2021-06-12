@@ -1,8 +1,15 @@
+```@meta
+DocTestSetup = quote
+  using PorousMaterials
+end
+```
+
 # Equation of State
 
 `PorousMaterials.jl` provides Peng-Robinson and van der Waals equation of state calculations to find the properties of a real fluid.
 
 ## Peng-Robinson equation of state
+
 The Peng-Robinson equation of state can be written as:
 
 ![PREOS](https://latex.codecogs.com/gif.latex?P%20%3D%5Cfrac%7BRT%7D%7BV%7Bm%7D-b%7D-%5Cfrac%7Ba%5Calpha%7D%7BV%7B%7Bm%7D%7D%5E%7B2%7D&plus;2bV%7Bm%7D-b%5E%7B2%7D%7D)
@@ -28,6 +35,7 @@ and
 ![PREOS_Tr](https://latex.codecogs.com/gif.latex?T_%7Br%7D%26space%3B%3D%26space%3B%5Cfrac%7BT%7D%7BT_%7Bc%7D%7D)
 
 ## Van der Waals equation of state
+
 The van der Waals equation can be written as:
 
 ![VDWEOS](https://latex.codecogs.com/gif.latex?%28P%26space%3B%26plus%3B%26space%3B%5Cfrac%7Ba%7D%7BV%7B_%7Bm%7D%7D%5E%7B2%7D%7D%29%28V_%7Bm%7D%20%26space%3B-%26space%3Bb%29%26space%3B%3D%26space%3BRT)
@@ -38,9 +46,9 @@ where $a$ and $b$ are the van der Waals constants. $a$ and $b$ can be calculated
 
 `PengRobinsonFluid` and `VdWFluid` are structs defining the characteristics of a fluid of interest, depending on which equation of state is used.
 
-For Peng-Robinson fluids, `PorousMaterials.jl` reads in the critical temperature, critical pressure, and acentric factor of `fluid::Symbol` from the properties .csv file `PorousMaterials.PATH_TO_DATA, "PengRobinson_fluid_props.csv")`.
+For Peng-Robinson fluids, `PorousMaterials.jl` reads in the critical temperature, critical pressure, and acentric factor of `fluid::Symbol` from the properties .csv file `rc[:paths][:data], "PengRobinson_fluid_props.csv")`.
 
-For van der Waals fluids, van der Waals constants of `fluid::Symbol` are read in from the properties .csv file `joinpath(PorousMaterials.PATH_TO_DATA, "VdW_fluid_props.csv")`.
+For van der Waals fluids, van der Waals constants of `fluid::Symbol` are read in from the properties .csv file `joinpath(rc[:paths][:data], "VdW_fluid_props.csv")`.
 
 *** NOTE: DO NOT DELETE LAST THREE COMMENT LINES IN `PengRobinson_fluid_props.csv` AND `VdW_fluid_props.csv`
 
@@ -48,41 +56,61 @@ The characteristics can be read as:
 
 For Peng-Robinson fluids
 
-```julia
+```jldoctest; output=false
 fluid = PengRobinsonFluid(:Xe)       # Input fluid as a symbol. The fluids reader stores the information in fluid as a struct
 fluid.fluid                          # The name of the fluid
 fluid.Pc                             # The critical pressure of the fluid
 fluid.Tc                             # The critical temperature of the fluid
 fluid.ω                              # The acentric factor of the fluid
+# output
+0.00363
 ```
 
 For van der Waals fluids
 
-```julia
+```jldoctest eos; output=false
 fluid = VdWFluid(:Xe)                # Input fluid as a symbol. The fluids reader stores the information in fluid as a struct
 fluid.fluid                          # The name of the fluid
 fluid.a                              # The van der Waals constant a of the fluid
 fluid.b                              # The van der Waals constant b of the fluid
+# output
+5.105e-5
 ```
 
 ## calculating density, fugacity, and molar volume
 Using a given temperature and pressure, `PorousMaterials.jl` the equation of state can be used to calculate the dnesity, fugacity, and molar volume of a real fluid, stored as a dictionary.
-```julia
+```jldoctest eos
 T = 298.0 # K                        # The temperature in Kelvin of interest type Float64.
 P = 1.0 # bar                        # The pressure in bar of interest type Float64.
 props = calculate_properties(fluid, T, P, verbose=true) # verbose::Bool will print results if `true`
+# output
+Xe properties at T = 298.000000 K, P = 1.000000 bar:
+	compressibility factor: 0.995117906779058
+	fugacity coefficient: 0.9951492697826048
+	molar volume (L/mol): 24.65612613988038
+	fugacity (bar): 0.9951492697826048
+	density (mol/m³): 40.55787167565373
+Dict{String, Float64} with 5 entries:
+  "compressibility factor" => 0.995118
+  "fugacity coefficient"   => 0.995149
+  "molar volume (L/mol)"   => 24.6561
+  "fugacity (bar)"         => 0.995149
+  "density (mol/m³)"       => 40.5579
 ```
 
 The output is a dictionary containing the following keys:
-```julia
-props["compressibility factor"]      # the compressibility factor
-props["density [mol/$m^{3}$]"]       # fluid density in mol/$m^{3}$
-props["fugacity [bar]"]              # the fugacity in bar
-props["fugacity coefficient"]        # the fugacity coefficient
-props["molar volume [L/mol]"]        # the molar volume in L/mol
+```jldoctest eos; output=false
+props["compressibility factor"]    # the compressibility factor
+props["density (mol/m³)"]          # fluid density in mol/m³
+props["fugacity (bar)"]            # the fugacity in bar
+props["fugacity coefficient"]      # the fugacity coefficient
+props["molar volume (L/mol)"]      # the molar volume in L/mol
+# output
+24.65612613988038
 ```
 
-# details
+# detailed docs
+
 ```@docs
     PengRobinsonFluid
     VdWFluid

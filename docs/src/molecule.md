@@ -1,18 +1,18 @@
+```@meta
+DocTestSetup = quote
+  using PorousMaterials
+end
+```
+
 # Molecules
 
 ## Loading Molecule Files
 
 Molecule input files are stored in `PorousMaterials.PATH_TO_MOLECULES`. Each molecule possesses its own directory containing two files: `charges.csv` and `atoms.csv`, comma-separated-value files, which describe the point charges and Lennard Jones spheres, respectively, that compose the molecule. Only rigid molecules are currently supported. Units of length are in Angstroms ($\AA$); units of charges are electrons.
 
-```julia
-using PorousMaterials
-
+```jldoctest molecule
 molecule = Molecule("CO2")
-```
-
-PorousMaterials will then output information about the molecule you just loaded:
-
-```julia
+# output
 Molecule species: CO2
 Center of mass (fractional coords): Cart([0.0; 0.0; 0.0])
 Atoms:
@@ -20,7 +20,7 @@ Atoms:
 	atom = C_CO2, x = [0.000, 0.000, 0.000]
 	atom = O_CO2, x = [-1.160, 0.000, 0.000]
 	atom = O_CO2, x = [1.160, 0.000, 0.000]
-Point charges: 
+Point charges:
 	charge = 0.700000, x = [0.000, 0.000, 0.000]
 	charge = -0.350000, x = [-1.160, 0.000, 0.000]
 	charge = -0.350000, x = [1.160, 0.000, 0.000]
@@ -28,14 +28,14 @@ Point charges:
 
 ## Building Blocks of PorousMaterials: Molecules
 
-```julia
-molecule = Molecule("CO2") # fractional coords in terms of unit cube box
-
+```jldoctest molecule; output=false
 # access the attributes that comprise the molecule object
 molecule.species   # molecule species
 molecule.com       # center-of-mass
 molecule.atoms     # Lennard-Jones spheres
 molecule.charges   # point charges 
+# output
+Charges{Cart}(3, [0.7, -0.35, -0.35], Cart([0.0 -1.16 1.16; 0.0 0.0 0.0; 0.0 0.0 0.0]))
 ```
 
 To see specific information about the atoms and charges attributes of the molecule see [`Atoms`](@ref) and [`Charges`](@ref).
@@ -44,10 +44,7 @@ To see specific information about the atoms and charges attributes of the molecu
 We can translate and roatate a molecule:
 
 ```julia
-using PorousMaterials
-
-# load a molecule and convert it to Molecule{Frac}
-molecule = Molecule("CO2")
+# convert to Molecule{Frac}
 molecule = Frac(molecule, unit_cube())
 
 # translate center-of-mass to [1.0, 2.0, 3.0] in fractional coordinates

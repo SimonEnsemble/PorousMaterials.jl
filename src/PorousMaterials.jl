@@ -32,6 +32,7 @@ function __init__()
     rc[:paths][:molecules] = joinpath(rc[:paths][:data], "molecules")
     rc[:paths][:grids] = joinpath(rc[:paths][:data], "grids")
     rc[:paths][:sims] = joinpath(rc[:paths][:data], "simulations")
+    mkpath.([dir[2] for dir ∈ rc[:paths] if !isdirpath(dir[2])])
     append_atomic_masses()
     @debug "Environment variables" rc
 end

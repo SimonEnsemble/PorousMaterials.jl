@@ -21,9 +21,7 @@ markdown_extensions:
   - fenced_code
   - toc:
       permalink: '#'
-  #- toc:
-  #    baselevel: 1
-  #- mdx_math
+
 extra:
   logo: assets/PMlogo.png
 
