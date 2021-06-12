@@ -28,12 +28,12 @@ include("energy_min.jl")
 include("atomic_masses.jl")
 
 function __init__()
-    rc[:paths][:forcefields] = joinpath(rc[:paths][:data], "forcefields")
-    rc[:paths][:molecules] = joinpath(rc[:paths][:data], "molecules")
-    rc[:paths][:grids] = joinpath(rc[:paths][:data], "grids")
-    rc[:paths][:sims] = joinpath(rc[:paths][:data], "simulations")
+    rc[:paths][:forcefields] = ""
+    rc[:paths][:molecules] = ""
+    rc[:paths][:grids] = ""
+    rc[:paths][:simulations] = ""
+    set_paths(joinpath(pwd(), "data"))
     append_atomic_masses()
-    @debug "Environment variables" rc
 end
 
 

@@ -1,4 +1,3 @@
-#site_name:        PorousMaterials.jl
 site_name:        ""
 repo_url:         https://github.com/SimonEnsemble/PorousMaterials.jl
 site_description: Documentation for the julia package PorousMaterials.jl
@@ -21,9 +20,6 @@ markdown_extensions:
   - fenced_code
   - toc:
       permalink: '#'
-  #- toc:
-  #    baselevel: 1
-  #- mdx_math
 extra:
   logo: assets/PMlogo.png
 
