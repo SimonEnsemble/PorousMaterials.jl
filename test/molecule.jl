@@ -314,5 +314,10 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test ! PorousMaterials.distortion(m, m_ref, box)
     m.atoms.coords.xf[:, 1] += randn(3)
     @test PorousMaterials.distortion(m, m_ref, box)
+
+    # "center of mass" for massless molecules
+    rc[:atomic_masses][:null] = 0.0
+    molecule = Molecule("com_test")
+    @test isapprox(molecule.com, Cart([0.;0.;0.]))
 end
 end

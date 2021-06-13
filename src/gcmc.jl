@@ -664,11 +664,11 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
     molecules = Cart.(molecules, xtal.box)
 
     if autosave
-        if ! isdir(rc[:paths][:sims])
-            mkdir(rc[:paths][:sims])
+        if ! isdir(rc[:paths][:simulations])
+            mkdir(rc[:paths][:simulations])
         end
 
-        save_results_filename = joinpath(rc[:paths][:sims],
+        save_results_filename = joinpath(rc[:paths][:simulations],
                                          μVT_output_filename(xtal, molecule, temperature, pressure, 
                                                              ljff, n_burn_cycles, n_sample_cycles, 
                                                              comment=results_filename_comment
@@ -936,7 +936,7 @@ to locate the requested output files, this function calls [`μVT_output_filename
 - `n_burn_cycles::Int64`: The number of burn cycles used in this simulation
 - `n_sample_cycles::Int64`: The number of sample cycles used in the simulations
 - `where_are_jld_files::Union{String, Nothing}=nothing`: The location to the simulation files. defaults to
-    `PorousMaterials.rc[:paths][:sims]`.
+    `PorousMaterials.rc[:paths][:simulations]`.
 - `comment::String=""`: comment appended to outputfilename
 
 # Returns
@@ -974,7 +974,7 @@ function isotherm_sim_results_to_dataframe(desired_props::Array{String, 1},
                                            where_are_jld_files::Union{String, Nothing}=nothing)
     # determine the location of the data files
     if isnothing(where_are_jld_files)
-        where_are_jld_files = rc[:paths][:sims]
+        where_are_jld_files = rc[:paths][:simulations]
     end
     # prepare dataframe to populate
     df = DataFrame()
