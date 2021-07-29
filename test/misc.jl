@@ -8,9 +8,8 @@ using Optim
 using Random
 
 @testset "Misc Tests" begin
-    am = read_atomic_masses()
-    @test isapprox(am[:H], 1.00794, atol=0.001)
-    @test isapprox(am[:Co], 58.9332, atol=0.001)
+    @test isapprox(rc[:atomic_masses][:H], 1.00794, atol=0.001)
+    @test isapprox(rc[:atomic_masses][:Co], 58.9332, atol=0.001)
     
     test_xyz_filename = "atoms_test"
     c = Cart([1.0 4.0;
@@ -24,6 +23,6 @@ using Random
     @test isapprox(atoms, atoms_read)
     rm(test_xyz_filename * ".xyz")
 
-    @test read_cpk_colors()[:Li] == (204,128,255)
+    @test rc[:cpk_colors][:Li] == (204,128,255)
 end
 end

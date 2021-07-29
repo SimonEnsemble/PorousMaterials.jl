@@ -49,7 +49,6 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     molecule = Molecule("CO2")
     @test needs_rotations(molecule)
     @test has_charges(molecule)
-    atomic_masses = read_atomic_masses()
     @test molecule.species == :CO2
     @test molecule.atoms.n == 3
     @test molecule.atoms.species[1] == :C_CO2
@@ -316,5 +315,10 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test ! PorousMaterials.distortion(m, m_ref, box)
     m.atoms.coords.xf[:, 1] += randn(3)
     @test PorousMaterials.distortion(m, m_ref, box)
+
+    # "center of mass" for massless molecules
+    rc[:atomic_masses][:null] = 0.0
+    molecule = Molecule("com_test")
+    @test isapprox(molecule.com, Cart([0.;0.;0.]))
 end
 end

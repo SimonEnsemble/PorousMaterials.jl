@@ -8,10 +8,10 @@ using Printf
 using Statistics
 
 tests_to_run = Dict(
-    "ideal_gas"     =>  false,
+    "ideal_gas"     =>  true,
     "Xe in SBMOF-1" =>  true,
-    "CO2 in ZIF-71" =>  false,
-    "density grid"  =>  false
+    "CO2 in ZIF-71" =>  false, # will not work in current version
+    "density grid"  =>  true
                    )
 
 @testset "GCMC (long) tests" begin
@@ -30,12 +30,11 @@ tests_to_run = Dict(
         temperature = 298.0
         fugacity = 10.0 .^ [2.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
         # according to ideal gas law, number of molecules in box should be:
-        n_ig = fugacity * empty_space.box.Ω / (PorousMaterials.KB * temperature) * 100000.0
+        n_ig = fugacity * empty_space.box.Ω / (BOLTZMANN * temperature) * 100000.0
         n_sim = similar(n_ig)
         for i = 1:length(fugacity)
             results, molecules = μVT_sim(empty_space, ideal_gas, temperature, fugacity[i], forcefield,
                         n_burn_cycles=100000, n_sample_cycles=100000, verbose=false)
-    #                    n_burn_cycles=100000, n_sample_cycles=100000)
             @printf("fugacity %f, n_ig = %f, n_sim = %f\n", fugacity[i], n_ig[i], results["⟨N⟩ (molecules/unit cell)"])
             @test isapprox(results["⟨N⟩ (molecules/unit cell)"], n_ig[i], rtol=0.05)
         end

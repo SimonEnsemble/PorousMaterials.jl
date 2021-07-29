@@ -1,7 +1,3 @@
-function _define_atomic_mass()
-    global ATOMIC_MASS = read_atomic_masses() # for center-of-mass calcs
-end
-
 """
 Data structure for a molecule/adsorbate.
 
@@ -18,31 +14,37 @@ struct Molecule{T} # T = Frac or Cart
     com::T # center of mass
 end
 
+
 function Base.isapprox(m1::Molecule, m2::Molecule)
     return (m1.species == m2.species) && isapprox(m1.com, m2.com) &&
          isapprox(m1.atoms, m2.atoms) && isapprox(m1.charges, m2.charges)
 end
 
+
 function center_of_mass(molecule::Molecule{Cart})
-    if ! @isdefined ATOMIC_MASS
-        _define_atomic_mass()
-    end
-    total_mass = 0.0 # total mass
+    masses = [rc[:atomic_masses][x] for x ∈ molecule.atoms.species]
+    total_mass = sum(masses)
     x_com = [0.0, 0.0, 0.0] # center of mass
-    for a = 1:molecule.atoms.n
-        total_mass += ATOMIC_MASS[molecule.atoms.species[a]]
-        x_com += ATOMIC_MASS[molecule.atoms.species[a]] * molecule.atoms.coords.x[:, a]
+    if total_mass == 0.0
+        for a ∈ 1:molecule.atoms.n
+            x_com += molecule.atoms.coords.x[:, a]
+        end
+        total_mass = length(masses)
+    else
+        for a = 1:molecule.atoms.n
+            x_com += rc[:atomic_masses][molecule.atoms.species[a]] * molecule.atoms.coords.x[:, a]
+        end
     end
     return Cart(x_com / total_mass)
 end
-    
+
+
 """
     molecule = Molecule(species, check_neutrality=true)
 
-construt a `Molecule` from input files read from:
-`joinpath(PATH_TO_MOLECULES, species)`.
+construt a `Molecule` from input files read from `joinpath(rc[:paths][:molecules], species)`
 
-center of mass assigned using atomic masses from `read_atomic_masses()`. 
+center of mass assigned using atomic masses from `rc[:atomic_masses]`. 
 
 # Arguments
 - `species::String`: name of the molecule
@@ -55,7 +57,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
     ###
     #  Read in Lennard Jones spheres
     ###
-    df_lj = CSV.read(joinpath(PATH_TO_MOLECULES, species, "atoms.csv"), DataFrame)
+    df_lj = CSV.read(joinpath(rc[:paths][:molecules], species, "atoms.csv"), DataFrame)
     atoms = Atoms{Cart}(nrow(df_lj)) # pre-allocate atoms
 
     for (a, row) in enumerate(eachrow(df_lj))
@@ -66,7 +68,7 @@ function Molecule(species::String; check_neutrality::Bool=true)
     ###
     #  Read in point charges
     ###
-    df_c = CSV.read(joinpath(PATH_TO_MOLECULES, species, "charges.csv"), DataFrame)
+    df_c = CSV.read(joinpath(rc[:paths][:molecules], species, "charges.csv"), DataFrame)
     charges = Charges{Cart}(nrow(df_c)) # pre-allocate charges
 
     for (c, row) in enumerate(eachrow(df_c))
@@ -88,8 +90,11 @@ function Molecule(species::String; check_neutrality::Bool=true)
     return molecule
 end
 
+
 # documented in matter.jl
+import Xtals.net_charge
 net_charge(molecule::Molecule) = net_charge(molecule.charges)
+
 
 # convert between fractional and cartesian coords
 Frac(molecule::Molecule{Cart}, box::Box) = Molecule(molecule.species,
@@ -109,8 +114,7 @@ Writes the coordinates of all atoms in molecules to the given xyz_file file obje
 passing a file object around is faster for simulation because it can be opened
 once at the beginning of the simulation and closed at the end.
 
-This writes the coordinates of the molecules in cartesian coordinates, so the
-box is needed for the conversion.
+This writes the coordinates of the molecules in cartesian coordinates, so the box is needed for the conversion.
 
 # Arguments
  - `box::Box`: The box the molecules are in, to convert molecule positions
@@ -131,7 +135,9 @@ function write_xyz(box::Box, molecules::Array{Array{Molecule{Frac}, 1}, 1}, xyz_
     end
 end
 
+
 # documented in matter.jl
+import Xtals.translate_by!
 function translate_by!(molecule::Molecule{Cart}, dx::Cart)
     translate_by!(molecule.atoms.coords,   dx)
     translate_by!(molecule.charges.coords, dx)
@@ -151,6 +157,7 @@ end
 function translate_by!(molecule::Molecule{Frac}, dx::Cart, box::Box)
     translate_by!(molecule, Frac(dx, box))
 end
+
 
 """
     translate_to!(molecule, xf)
@@ -174,6 +181,7 @@ end
 translate_to!(molecule::Molecule{Frac}, x::Cart, box::Box) = translate_to!(molecule, Frac(x, box))
 
 translate_to!(molecule::Molecule{Cart}, xf::Frac, box::Box) = translate_to!(molecule, Cart(xf, box))
+
 
 function Base.show(io::IO, molecule::Molecule)
     println(io, "Molecule species: ", molecule.species)
@@ -208,6 +216,7 @@ function Base.show(io::IO, molecule::Molecule)
     end
 end
 
+
 """
     r = random_rotation_matrix() # rotation matrix in cartesian coords
 
@@ -235,6 +244,7 @@ function random_rotation_matrix()
 end
 
 random_rotation_matrix(box::Box) = box.c_to_f * random_rotation_matrix() * box.f_to_c
+
 
 """
     random_rotation!(molecule{Frac}, box)
@@ -270,9 +280,12 @@ function random_rotation!(molecule::Molecule{Frac}, box::Box)
     return nothing
 end
 
+
 # based on center of mass
+import Xtals.inside
 inside(molecule::Molecule{Cart}, box::Box) = inside(molecule.com, box)
 inside(molecule::Molecule{Frac}) = inside(molecule.com)
+
 
 # docstring in Misc.jl
 function write_xyz(molecules::Array{Molecule{Cart}, 1}, filename::AbstractString;
@@ -307,10 +320,13 @@ function write_xyz(molecules::Array{Array{Molecule, 1}, 1}, box::Box, filename::
 end
 
 # documented in crystal.jl
+import Xtals.has_charges
 has_charges(molecule::Molecule) = molecule.charges.n > 0
+
 
 # documented in forcefield.jl
 forcefield_coverage(molecule::Molecule, ljff::LJForceField) = forcefield_coverage(molecule.atoms, ljff)
+
 
 """
     molecule = ion(q, coords)
@@ -327,6 +343,7 @@ function ion(q::Float64, coords::Frac)
     @assert size(coords.xf, 2) == 1
     return Molecule(:ion, Atoms{Frac}(0), Charges(q, coords), coords)
 end
+
 
 """
     is_distorted = distortion(molecule, ref_molecule, box; 
@@ -354,21 +371,5 @@ function distortion(molecule::Molecule{Frac}, ref_molecule::Molecule{Frac}, box:
                   pairwise_distances(ref_molecule.charges.coords, box, false), atol=atol)
         return true
     end
-    # loop over all pairs
- #     for i = 1:molecule.atoms.n
- #         for j = (i+1):molecule.atoms.n
- #             # molecule
- #             dxf = molecule.atoms.coords.xf[:, i] - molecule.atoms.coords.xf[:, j]
- #             dx = box.f_to_c * dxf
- #             r = norm(dx)
- #             # ref molecule
- #             dxf_ref = ref_molecule.atoms.coords.xf[:, i] - ref_molecule.atoms.coords.xf[:, j]
- #             dx_ref = box.f_to_c * dxf_ref
- #             r_ref = norm(dx_ref)
- #             if ! isapprox(r, r_ref, atol=atol)
- #                 return true 
- #             end
- #         end
- #     end
     return false # if made it this far...
 end

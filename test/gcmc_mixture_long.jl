@@ -26,9 +26,9 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
     n_burn_cycles   = 250000
     mol_fraction    = [0.9, 0.1]
     # load RASPA (benchmark) data
-    raspa_data = Dict(:Kr  => CSV.read(joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr.csv"), DataFrame),
-                      :Xe  => CSV.read(joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Xe.csv"), DataFrame),
-                      :mix => CSV.read(joinpath(PorousMaterials.PATH_TO_DATA, "raspa_data/Kr_Xe.csv"), DataFrame))
+    raspa_data = Dict(:Kr  => CSV.read(joinpath(pwd(), "data", "raspa_data/Kr.csv"), DataFrame),
+                      :Xe  => CSV.read(joinpath(pwd(), "data", "raspa_data/Xe.csv"), DataFrame),
+                      :mix => CSV.read(joinpath(pwd(), "data", "raspa_data/Kr_Xe.csv"), DataFrame))
 
     # run sim over range of total pressures
     for (i, p) in enumerate([0.01, 0.1, 0.5])
@@ -45,7 +45,7 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
             # use the simulation files that are provided
             filename = μVT_output_filename(xtal, mol_templates, temperature, p * mol_fraction, ljff,
                                            n_burn_cycles, n_sample_cycles)
-            @load joinpath(PorousMaterials.PATH_TO_SIMS, filename) results
+            @load joinpath(rc[:paths][:simulations], filename) results
         end
 
         # evaluate mixture results
@@ -60,7 +60,7 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
         for mol in mol_templates
             # load pure gas dictionary
             pure_gas_filename = μVT_output_filename(xtal, [mol], temperature, [p], ljff, 50000, 50000)
-            @load joinpath(PorousMaterials.PATH_TO_SIMS,  pure_gas_filename) results
+            @load joinpath(rc[:paths][:simulations],  pure_gas_filename) results
             # make sure the pressures are correct
             @test results["pressure (bar)"][1] ≈ raspa_data[mol.species][i, Symbol(String(mol.species) * " pressure (bar)")]
             # evaluate adsorption uptake
@@ -89,7 +89,7 @@ if tests_to_run["ideal gas mixture"]
     partial_fugacities = [mol_fraction * f for f in fugacities]
 
     # according to ideal gas law (P_i*V=n_i*k_b*T), number of molecules per species in box should be
-    n_ig  = partial_fugacities * empty_space.box.Ω / (PorousMaterials.KB * temperature) * 100000.0
+    n_ig  = partial_fugacities * empty_space.box.Ω / (BOLTZMANN * temperature) * 100000.0
     n_sim = similar(n_ig)
     for i in 1:length(partial_fugacities)
         results, molecules = μVT_sim(empty_space, 

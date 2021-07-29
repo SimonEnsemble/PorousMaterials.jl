@@ -21,7 +21,9 @@ struct LJForceField
 	r²_cutoff::Float64
 end
 
+
 Base.broadcastable(ljff::LJForceField) = Ref(ljff)
+
 
 """
 	ljforcefield = LJForceField(forcefield; r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
@@ -47,7 +49,7 @@ function LJForceField(forcefield::String; r_cutoff::Float64=14.0,
         error(@sprintf("%s mixing rules not implemented...\n", mixing_rules))
     end
 
-    forcefield_file_path = joinpath(PATH_TO_FORCEFIELDS, forcefield * ".csv")
+    forcefield_file_path = joinpath(rc[:paths][:forcefields], forcefield * ".csv")
 
     df = CSV.read(forcefield_file_path, DataFrame, comment="#") # from DataFrames
 
@@ -96,6 +98,7 @@ function LJForceField(forcefield::String; r_cutoff::Float64=14.0,
 
 	return ljff
 end
+
 
 """
 	repfactors = replication_factors(unitcell, r_cutoff)
@@ -158,6 +161,7 @@ replication_factors(unitcell::Box, ljforcefield::LJForceField) = replication_fac
 replication_factors(crystal::Crystal, r_cutoff::Float64) = replication_factors(crystal.box, r_cutoff)
 replication_factors(crystal::Crystal, ljforcefield::LJForceField) = replication_factors(crystal.box, sqrt(ljforcefield.r²_cutoff))
 
+
 """
     forcefield_coverage(atoms, ljforcefield)
     forcefield_coverage(molecule, ljforcefield)
@@ -185,6 +189,7 @@ function forcefield_coverage(atoms::Atoms, ljff::LJForceField)
     return all_covered
 end
 forcefield_coverage(crystal::Crystal, ljff::LJForceField) = forcefield_coverage(crystal.atoms, ljff)
+
 
 function Base.show(io::IO, ff::LJForceField)
     println(io, "Force field: ", ff.name)

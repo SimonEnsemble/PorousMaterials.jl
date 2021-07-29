@@ -17,6 +17,7 @@ struct Grid{T}
     origin::Array{Float64, 1}
 end
 
+
 """
     voxel_id = xf_to_id(n_pts, xf)
 
@@ -42,6 +43,7 @@ function xf_to_id(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
     return voxel_id
 end
 
+
 """
     xf = id_to_xf(voxel_id, n_pts)
 
@@ -56,7 +58,8 @@ corresponds.
 """
 function id_to_xf(id::Tuple{Int, Int, Int}, n_pts::Tuple{Int, Int, Int})
     return [(id[k] - 1.0) / (n_pts[k] - 1.0) for k = 1:3]
-end 
+end
+
 
 """
     update_density!(grid, molecule, species)
@@ -83,6 +86,7 @@ function update_density!(grid::Grid, molecules::Array{Molecule{Frac}, 1}, specie
     end
 end
 
+
 # don't include molecules outside the box.
 function update_density!(grid::Grid, molecules::Array{Molecule{Cart}, 1}, species::Symbol)
     for molecule in molecules
@@ -101,6 +105,7 @@ function update_density!(grid::Grid, molecules::Array{Molecule{Cart}, 1}, specie
     end
 end
 
+
 """
     n_pts = required_n_pts(box, dx)
 
@@ -117,6 +122,7 @@ function required_n_pts(box::Box, dx::Float64)
     return Tuple(n_pts)
 end
 
+
 """
     write_cube(grid, filename, verbose=true)
 
@@ -126,13 +132,13 @@ The atoms of the unit cell are not printed in the .cube. Instead, use .xyz files
 
 # Arguments
 - `grid::Grid`: grid with associated data at each grid point.
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`.
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `rc[:paths][:grids]`.
 - `verbose::Bool`: print name of file after writing.
 - `length_units::String`: units for length. Bohr or Angstrom.
 """
 function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, length_units::String="Angstrom")
-    if ! isdir(PATH_TO_GRIDS)
-        mkdir(PATH_TO_GRIDS)
+    if ! isdir(rc[:paths][:grids])
+        mkdir(rc[:paths][:grids])
     end
 
     @assert (length_units in ["Angstrom", "Bohr"])
@@ -140,7 +146,7 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, le
     if ! occursin(".cube", filename)
         filename = filename * ".cube"
     end
-    cubefile = open(joinpath(PATH_TO_GRIDS, filename), "w")
+    cubefile = open(joinpath(rc[:paths][:grids], filename), "w")
 
     @printf(cubefile, "Units of data: %s\nLoop order: x, y, z\n", grid.units)
 
@@ -171,10 +177,11 @@ function write_cube(grid::Grid, filename::AbstractString; verbose::Bool=true, le
     end # loop over x points
     close(cubefile)
     if verbose
-        println("\tSee ", joinpath(PATH_TO_GRIDS, filename))
+        println("\tSee ", joinpath(rc[:paths][:grids], filename))
     end
     return
 end
+
 
 """
     grid = read_cube(filename)
@@ -182,7 +189,7 @@ end
 Read a .cube file and return a populated `Grid` data structure.
 
 # Arguments
-- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `PATH_TO_GRIDS`
+- `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `rc[:paths][:grids]`
 
 # Returns
 - `grid::Grid`: A grid data structure
@@ -192,7 +199,7 @@ function read_cube(filename::AbstractString)
         filename *= ".cube"
     end
 
-    cubefile = open(joinpath(PATH_TO_GRIDS, filename))
+    cubefile = open(joinpath(rc[:paths][:grids], filename))
 
     # waste two lines
     line = readline(cubefile)
@@ -204,7 +211,7 @@ function read_cube(filename::AbstractString)
     origin = [parse(Float64, split(line)[1 + i]) for i = 1:3]
 
     # read box info
-    box_lines = [readline(cubefile) for i = 1:3]
+    box_lines = [readline(cubefile) for _ ∈ 1:3]
 
     # number of grid pts
     n_pts = Tuple([parse(Int, split(box_lines[i])[1]) for i = 1:3])
@@ -242,8 +249,9 @@ function read_cube(filename::AbstractString)
     return Grid(box, n_pts, data, units, origin)
 end
 
+
 """
-	grid = energy_grid(crystal, molecule, ljforcefield; n_pts=(50, 50, 50), temperature=298.0, n_rotations=750)
+	grid = energy_grid(crystal, molecule, ljforcefield; resolution=1.0, temperature=298.0, n_rotations=750)
 
 Superimposes a regular grid of points (regularly spaced in fractional coordinates of the `crystal.box`) over the unit cell of a crystal, with `n_gridpts` dictating the number of grid points in the a, b, c directions (including 0 and 1 fractional coords).
 The fractional coordinates 0 and 1 are included in the grid, although they are redundant.
@@ -255,7 +263,7 @@ The ensemble average is a Boltzmann average over rotations:  - R T log ⟨e⁻�
 - `crystal::Crystal`: crystal in which we seek to compute an energy grid for a molecule. `grid.box` will be `framework.box`.
 - `molecule::Molecule`: molecule for which we seek an energy grid
 - `ljforcefield::LJForceField`: molecular model for computing molecule-crystal interactions
-- `n_pts::Tuple{Int, Int, Int}=(50,50,50)`: number of grid points in each fractional coordinate dimension, including endpoints (0, 1)
+- `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
 - `n_rotations::Int`: number of random rotations to conduct in a Monte Carlo simulation for finding the free energy of a molecule centered at a given grid point.
 This is only relevant for molecules that are comprised of more than one Lennard Jones sphere.
 - `temperature::Float64`: the temperature at which to compute the free energy for molecules where rotations are required. Lower temperatures overemphasize the minimum potential energy rotational conformation at that point.
@@ -267,13 +275,15 @@ This is only relevant for molecules that are comprised of more than one Lennard 
 - `grid::Grid`: A grid data structure containing the potential energy of the system
 """
 function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::LJForceField;
-                     n_pts::Tuple{Int, Int, Int}=(50,50,50), n_rotations::Int=1000, 
+                     resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0, n_rotations::Int=1000,
                      temperature::Float64=NaN, units::Symbol=:kJ_mol, center::Bool=false,
                      verbose::Bool=true)
     assert_P1_symmetry(crystal)
     if ! (units in [:kJ_mol, :K])
         error("Pass :kJ_mol or :K for units of kJ/mol or K, respectively.")
     end
+
+    n_pts = isa(resolution, Tuple{Int,Int,Int}) ? resolution : required_n_pts(crystal.box, resolution)
 
     rotations_required = needs_rotations(molecule)
     charged_system = has_charges(crystal) && has_charges(molecule)
@@ -288,7 +298,7 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
 
-    grid = Grid(crystal.box, n_pts, zeros(Float64, n_pts...), units, 
+    grid = Grid(crystal.box, n_pts, zeros(Float64, n_pts...), units,
         center ? crystal.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0])
 
     if verbose
@@ -302,7 +312,7 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
     # convert molecule to frac coords *before* replicating.
     # (don't need grid to be size of replicated xtal)
     molecule = Frac(molecule, crystal.box)
-    
+
     # compute replication factors required for short-range interactions & cutoff
     repfactors = replication_factors(crystal.box, ljforcefield)
     crystal = replicate(crystal, repfactors)
@@ -314,13 +324,13 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
             ensemble_average_energy = vdw_energy(crystal, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
-            for r = 1:n_rotations
-                rotate!(molecule)
+            for _ ∈ 1:n_rotations
+                random_rotation!(molecule)
 
                 energy = PotentialEnergy(0.0, 0.0)
                 energy.vdw = vdw_energy(crystal, molecule, ljforcefield)
                 if charged_system
-                    energy.coulomb = total(electrostatic_potential_energy(crystal, molecule, 
+                    energy.coulomb = total(electrostatic_potential_energy(crystal, molecule,
                                                                          eparams, eikr))
                 end
                 boltzmann_factor_sum += exp(-sum(energy) / temperature)
@@ -337,11 +347,13 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
 	return grid
 end
 
+
 function Base.show(io::IO, grid::Grid)
     @printf(io, "Regular grid of %d by %d by %d points superimposed over a unit cell and associated data.\n", grid.n_pts[1], grid.n_pts[2], grid.n_pts[3])
     @printf(io, "\tunits of data attribute: %s\n", grid.units)
     @printf(io, "\torigin: [%f, %f, %f]\n", grid.origin[1], grid.origin[2], grid.origin[3])
 end
+
 
 # comparing very large numbers in grid.data, so increase rtol to account
 #  for loss of precision when writing grid.data to a cube file.
@@ -353,7 +365,8 @@ function Base.isapprox(g1::Grid, g2::Grid; atol::Real=0.0, rtol::Real=atol > 0.0
             isapprox(g1.origin, g2.origin, atol=atol, rtol=rtol))
 end
 
-function _flood_fill!(grid::Grid, segmented_grid::Grid, 
+
+function _flood_fill!(grid::Grid, segmented_grid::Grid,
             queue_of_grid_pts::Array{Tuple{Int, Int, Int}, 1},
             i::Int, j::Int, k::Int, energy_tol::Float64)
     # look left, right, up, down "_s" for shift
@@ -362,10 +375,10 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
         if (i_s, j_s, k_s) == (0, 0, 0)
             continue
         end
-        
+
         # index of a neighboring point
         ind = (i + i_s, j + j_s, k + k_s)
-        
+
         # avoid out of bounds
         if any(ind .<= (0, 0, 0)) || any(ind .> grid.n_pts)
             continue
@@ -390,6 +403,7 @@ function _flood_fill!(grid::Grid, segmented_grid::Grid,
     return nothing
 end
 
+
 function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     # grid of Int's corresponding to each original grid point.
     # let "0" be "unsegmented"
@@ -398,7 +412,7 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
         :Segment_No, grid.origin)
     segment_no = 0
     for i = 1:grid.n_pts[1], j = 1:grid.n_pts[2], k = 1:grid.n_pts[3]
-        if segmented_grid.data[i, j, k] == 0 # not yet assigned segment 
+        if segmented_grid.data[i, j, k] == 0 # not yet assigned segment
             if grid.data[i, j, k] > energy_tol # not accessible
                 segmented_grid.data[i, j, k] = -1
             else # accessible
@@ -427,6 +441,7 @@ function _segment_grid(grid::Grid, energy_tol::Float64, verbose::Bool)
     return segmented_grid
 end
 
+
 # this returns number of segments in a segmented grid.
 #  it excludes the inaccessible portions -1.
 function _count_segments(segmented_grid::Grid)
@@ -442,6 +457,7 @@ function _count_segments(segmented_grid::Grid)
     return nb_segments
 end
 
+
 # struct describing directed edge describing connection between two segments of a flood-
 #  filled grid. the direction (which unit cell face is traversed in the connection) is
 #  also included.
@@ -451,19 +467,20 @@ struct SegmentConnection
     direction::Tuple{Int, Int, Int} # unit cell face traversed
 end
 
+
 function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{SegmentConnection, 1},
                            direction::Tuple{Int, Int, Int}, verbose::Bool=true)
     # ignore connections between un-occupiable regions
     if (segment_1 == -1) || (segment_2 == -1)
         return nothing
     end
-    
+
     # construct edge; if not in list of edges, push it and note connection
     segment_connection = SegmentConnection(segment_1, segment_2, direction)
     if ! (segment_connection in connections)
         push!(connections, segment_connection)
         if verbose
-            @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n", 
+            @printf("Noted seg. %d --> %d connection in (%d, %d, %d) direction.\n",
                     segment_1, segment_2, direction[1], direction[2], direction[3])
         end
         # also add opposite direction to take into account symmetry
@@ -473,6 +490,7 @@ function _note_connection!(segment_1::Int, segment_2::Int, connections::Array{Se
     return nothing
 end
 
+
 # obtain set of Segment Connections
 function _build_list_of_connections(segmented_grid::Grid; verbose::Bool=true)
     # initialize empty list of edges
@@ -480,7 +498,7 @@ function _build_list_of_connections(segmented_grid::Grid; verbose::Bool=true)
 
     # loop over faces of unit cell
     for i = 1:segmented_grid.n_pts[1], j = 1:segmented_grid.n_pts[2]
-        _note_connection!(segmented_grid.data[i, j, end], segmented_grid.data[i, j, 1], 
+        _note_connection!(segmented_grid.data[i, j, end], segmented_grid.data[i, j, 1],
             connections, (0, 0, 1), verbose)
     end
 
@@ -488,32 +506,33 @@ function _build_list_of_connections(segmented_grid::Grid; verbose::Bool=true)
         _note_connection!(segmented_grid.data[end, j, k], segmented_grid.data[1, j, k],
             connections, (1, 0, 0), verbose)
     end
-    
+
     for i = 1:segmented_grid.n_pts[1], k = 1:segmented_grid.n_pts[3]
         _note_connection!(segmented_grid.data[i, end, k], segmented_grid.data[i, 1, k],
             connections, (0, 1, 0), verbose)
     end
-    
+
     return connections
 end
 
+
 function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentConnection, 1})
     nb_segments = _count_segments(segmented_grid)
-        
+
     # directed graph
     graph = DiGraph(nb_segments)
 
     # so each edge REALLY has some data associated with it: which unit cell face is traversed
     #  when traveling from the source segment to the destination segment.
-    #  goal: include this info about an edge indirectly by having an artificial vertex 
+    #  goal: include this info about an edge indirectly by having an artificial vertex
     #  indicating the direction. so all vertices have a direction. if the vertex is actually
-    #  for representing a segment, it doens't have a direction, so we assign it a 
+    #  for representing a segment, it doens't have a direction, so we assign it a
     #  direction `nothing`.
     vertex_to_direction = Dict{Int, Union{Nothing, Tuple{Int, Int, Int}}}()
     for v in vertices(graph)
         vertex_to_direction[v] = nothing
     end
-    
+
     # loop over edges, add edges to graph but with intermediate dummy vertex corresponding
     #  to direction
     for segment_connection in connections
@@ -532,24 +551,25 @@ function _translate_into_graph(segmented_grid::Grid, connections::Array{SegmentC
     return graph, vertex_to_direction
 end
 
-function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64}, 
+
+function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
                             vertex_to_direction::Dict{Int, Union{Nothing, Tuple{Int, Int, Int}}},
                             verbose::Bool=true)
     nb_segments = _count_segments(segmented_grid)
 
     # 0 = inaccessible, 1 = accessible. start out with assuming inaccessible.
     segment_classifiction = zeros(Int, nb_segments)
-    
+
     # look for simple cycles in the graph
     all_cycles = simplecycles(graph)
     if verbose
         @printf("\tFound %d simple cycles in segment connectivity graph.\n", length(all_cycles))
     end
-    
+
     # all edges involved in a cycle are connected together and are accessible channels
     for cyc in all_cycles
-        @assert vertex_to_direction[cyc[1]] == nothing "shld start with segment."
-        @assert vertex_to_direction[cyc[end]] != nothing "shld end with direction vertex."
+        @assert isnothing(vertex_to_direction[cyc[1]]) "should start with segment."
+        @assert !isnothing(vertex_to_direction[cyc[end]]) "should end with direction vertex."
         # travel through cycle, keep track of which unit cell we're in
         #  start in home unit cell
         unit_cell = (0, 0, 0)
@@ -557,7 +577,7 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
         for s in cyc
             # if an intermediate unit cell boundary vertex, then keep track of unit cell
             #  we're in by looking at boundary we traversed.
-            if vertex_to_direction[s] != nothing
+            if !isnothing(vertex_to_direction[s])
                 unit_cell = unit_cell .+ vertex_to_direction[s]
             end
         end
@@ -569,7 +589,7 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
                 println("\t...found a cycle of accessible segments!")
             end
             for s in cyc
-                if vertex_to_direction[s] == nothing # i.e. if this is not a direciton vertex
+                if isnothing(vertex_to_direction[s]) # i.e. if this is not a direciton vertex
                     segment_classifiction[s] = 1
                 end
             end
@@ -594,7 +614,8 @@ function _classify_segments(segmented_grid::Grid, graph::SimpleDiGraph{Int64},
     return segment_classifiction
 end
 
-function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid, 
+
+function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid,
             segment_classifiction::Array{Int, 1}; verbose::Bool=true)
     for s = 1:length(segment_classifiction)
         if segment_classifiction[s] == 1
@@ -610,9 +631,10 @@ function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid,
     end
 end
 
+
 """
-    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal, 
-    probe_molecule, ljforcefield; n_pts=(20, 20, 20), energy_tol=10.0, energy_unit=:kJ_mol,
+    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
+    probe_molecule, ljforcefield; resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0, energy_tol=10.0, energy_unit=:kJ_mol,
     verbose=true, write_b4_after_grids=false, block_inaccessible_pockets=true)
 
 Overlay a grid of points about the unit cell. Compute the potential energy of a probe
@@ -636,11 +658,11 @@ of segments that were blocked because they were determined to be inaccessible.
 
 # Arguments
 * `crystal::Crystal`: the crystal for which we seek to compute an accessibility grid.
-* `probe_molecule::Molecule` a molecule serving as a probe to determine whether a given 
+* `probe_molecule::Molecule` a molecule serving as a probe to determine whether a given
 point can be occupied and accessed.
-* `LJForceField::LJForceField`: the force field used to compute the potential energy of 
+* `LJForceField::LJForceField`: the force field used to compute the potential energy of
 the probe molecule
-* `n_pts::Tuple{Int, Int, Int}`: number of grid points in a, b, c directions
+* - `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
 * `energy_tol::Float64`: if the computed potential energy is less than this, we declare the
 grid point to be occupiable. Also this is the energy barrier beyond which we assume the
 probe adsorbate cannot pass. Units given by `energy_units` argument
@@ -651,29 +673,29 @@ threshold for occupiability and whether molecule can percolate over barrier in c
 before and after flood fill/blocking inaccessible pockets
 """
 function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefield::LJForceField;
-                                    n_pts::Tuple{Int, Int, Int}=(20, 20, 20), 
+                                    resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0,
                                     energy_tol::Float64=10.0,  energy_units::Symbol=:kJ_mol,
-                                    verbose::Bool=true, write_b4_after_grids::Bool=true, 
+                                    verbose::Bool=true, write_b4_after_grids::Bool=true,
                                     block_inaccessible_pockets::Bool=true)
     assert_P1_symmetry(crystal)
     if verbose
         printstyled(@sprintf("Computing accessibility grid of %s using %f %s potential energy tol and %s probe...\n",
             crystal.name, energy_tol, energy_units, probe.species), color=:green)
     end
-    
+
     # write potential energy grid
-    grid = energy_grid(crystal, probe, forcefield, n_pts=n_pts, verbose=verbose, 
+    grid = energy_grid(crystal, probe, forcefield, resolution=resolution, verbose=verbose,
                        units=energy_units)
 
     if ! block_inaccessible_pockets
-        accessibility_grid = Grid{Bool}(grid.box, grid.n_pts, grid.data .< energy_tol, 
+        accessibility_grid = Grid{Bool}(grid.box, grid.n_pts, grid.data .< energy_tol,
                                         :accessibility, grid.origin)
 
         porosity = sum(accessibility_grid.data) / length(accessibility_grid.data)
 
         return accessibility_grid, 0, porosity
     end
-    
+
     # flood fill and label segments
     segmented_grid = _segment_grid(grid, energy_tol, verbose)
 
@@ -685,7 +707,7 @@ function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefiel
             replace(forcefield.name, ".csv" => ""))
         write_cube(_segmented_grid, gridfilename)
     end
-    
+
     # get list of edges describing connectivity of segments across unit cell boundaries
     connections = _build_list_of_connections(segmented_grid, verbose=verbose)
 
@@ -698,23 +720,23 @@ function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefiel
 
     # assign inaccessible pockets minus one if cycle not found in graph
     _assign_inaccessible_pockets_minus_one!(segmented_grid, segment_classifications, verbose=verbose)
-    
+
     # -1 for not accessible, 1 for accessible
     segmented_grid.data[segmented_grid.data .!= -1] .= 1
-    
+
     if write_b4_after_grids
         gridfilename = @sprintf("%s_in_%s_%s_after_pocket_blocking.cube", probe.species,
             replace(replace(crystal.name, ".cif" => ""), ".cssr" => ""),
             replace(forcefield.name, ".csv" => ""))
         write_cube(segmented_grid, gridfilename)
     end
-    
+
     # print warning if there is no use in running a simulation since all pockets are inaccessible
     if all(segmented_grid.data .== -1)
         @warn @sprintf("%s cannot enter the pores of %s with %f K energy tolerance.",
             probe.species, crystal.name, energy_tol)
     end
-    
+
     nb_segments_blocked = sum(segment_classifications .== 0)
 
     # instead of returning grid of int's return a boolean grid for storage efficiency
@@ -737,10 +759,12 @@ function compute_accessibility_grid(crystal::Crystal, probe::Molecule, forcefiel
     return accessibility_grid, nb_segments_blocked, porosity
 end
 
+
 # return ID that is the nearest neighbor.
 function _arg_nearest_neighbor(n_pts::Tuple{Int, Int, Int}, xf::Array{Float64, 1})
     return 1 .+ round.(Int, xf .* (n_pts .- 1))
 end
+
 
 function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
     for k = 1:3
@@ -754,20 +778,21 @@ function _apply_pbc_to_index!(id::Array{Int, 1}, n_pts::Tuple{Int, Int, Int})
     return nothing
 end
 
+
 """
     accessible(accessibility_grid, xf)
     accessible(accessibility_grid, xf, repfactors)
 
-Using `accessibility_grid`, determine if fractional coordinate `xf` (relative to 
+Using `accessibility_grid`, determine if fractional coordinate `xf` (relative to
 `accessibility_grid.box` is accessible or not. Here, we search for the nearest grid point.
-We then look at the accessibility of this nearest grid point and all surroudning 9 other 
+We then look at the accessibility of this nearest grid point and all surroudning 9 other
 grid points. The point `xf` is declared inaccessible if and only if all 10 of these grid
 points are inaccessible. We take this approach because, if the grid is coarse, we can allow
-energy computations to automatically determine accessibility at the boundary of 
+energy computations to automatically determine accessibility at the boundary of
 accessibility e.g. during a molecular simulation where inaccessible pockets are blocked.
 
-If a tuple of replication factors are also passed, it is assumed that the passed `xf` is 
-relative to a replicated `accessibility_grid.box` so that `xf` is scaled by these rep. 
+If a tuple of replication factors are also passed, it is assumed that the passed `xf` is
+relative to a replicated `accessibility_grid.box` so that `xf` is scaled by these rep.
 factors. So `xf = [0.5, 0.25, 0.1]` with `repfactors=(1, 2, 4)` actually is, relative to
 `accessibility_grid.box`, fractional coordinate `[0.5, 0.5, 0.4]`.
 """
@@ -795,3 +820,5 @@ end
 function accessible(accessibility_grid::Grid{Bool}, xf::Array{Float64, 1}, repfactors::Tuple{Int, Int, Int})
     return accessible(accessibility_grid, mod.(xf .* repfactors, 1.0))
 end
+
+origin(T::DataType) = T([0.0, 0.0, 0.0])
