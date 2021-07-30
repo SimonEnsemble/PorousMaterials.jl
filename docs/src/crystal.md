@@ -24,7 +24,7 @@ xtal.bonds                          # Bonding information in the structure. By d
 xtal.symmetry                       # Symmetry information of the crystal. By default converts the symmetry to P1 symmetry.
                                     #  Use `convert_to_p1=false` argument in `Crystal` to keep original symmetry
 # output
-
+Xtals.SymmetryInfo(["x"; "y"; "z"], "P1", true)
 ```
 
 ## fixing atom species
@@ -35,8 +35,8 @@ It is important to use this function prior to GCMC or Henry coefficient calculat
 
 ```jldoctest crystal; output=false
 strip_numbers_from_atom_labels!(xtal)
-# output
 
+# output
 ```
 
 ## converting the coordinates to cartesian space
@@ -45,6 +45,7 @@ The coordinates of the crystals are stored in fractional coordinates. If one nee
 that can be done by using the unit cell information of the crystal.
 
 ```jldoctest crystal
+xtal = Crystal("SBMOF-1.cif")
 xtal.atoms.coords.xf                                    # array of fractional coordinates
 cart_coords = xtal.box.f_to_c * xtal.atoms.coords.xf    # array of cartesian coordinates
 # output
@@ -59,6 +60,7 @@ cart_coords = xtal.box.f_to_c * xtal.atoms.coords.xf    # array of cartesian coo
 For many simulations, one needs to replicate the unit cell multiple times to create a bigger super cell.
 
 ```jldoctest crystal
+xtal = Crystal("SBMOF-1.cif")
 super_xtal = replicate(xtal, (2,2,2))       # Replicates the original unit cell once in each dimension
 # output
 Name: SBMOF-1.cif
