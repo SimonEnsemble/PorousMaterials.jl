@@ -720,6 +720,7 @@ function μVT_sim(xtal::Crystal,
     results["# sample cycles"] = n_sample_cycles
     results["# burn cycles"]   = n_burn_cycles
     results["# samples"]       = sum(gcmc_stats).n_samples
+    results["elapsed time (min)"] = elapsed_time / 60
 
     # statistics from samples during simulation
     # see here: https://cs.nyu.edu/courses/fall06/G22.2112-001/MonteCarlo.pdf for how

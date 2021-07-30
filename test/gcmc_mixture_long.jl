@@ -7,7 +7,7 @@ using JLD2
 
 tests_to_run = Dict("Kr/Xe in SBMOF-1"  => true,
                     "ideal gas mixture" => false,
-                    "run simulations"   => false
+                    "run simulations"   => true
                     )
 
 ###
@@ -79,8 +79,8 @@ end
 if tests_to_run["ideal gas mixture"]
     @info "running ideal gas mixture test"
     empty_space  = replicate(Crystal("empty_box.cssr"), (3,3,3)) # zero atoms!
-    ideal_gas1   = Molecule("IG")
-    ideal_gas2   = Molecule("IG")
+    ideal_gas1   = Molecule("ig")
+    ideal_gas2   = Molecule("ig")
     @assert empty_space.atoms.n == 0
     forcefield   = LJForceField("Dreiding")
     temperature  = 298.0
@@ -89,16 +89,17 @@ if tests_to_run["ideal gas mixture"]
     partial_fugacities = [mol_fraction * f for f in fugacities]
 
     # according to ideal gas law (P_i*V=n_i*k_b*T), number of molecules per species in box should be
-    n_ig  = partial_fugacities * empty_space.box.Ω / (BOLTZMANN * temperature) * 100000.0
+    n_ig  = partial_fugacities * empty_space.box.Ω / (PorousMaterials.BOLTZMANN * temperature) * 100000.0
     n_sim = similar(n_ig)
     for i in 1:length(partial_fugacities)
+        @info partial_fugacities[i]
         results, molecules = μVT_sim(empty_space, 
                                      [ideal_gas1, ideal_gas2], 
                                      temperature, 
                                      partial_fugacities[i], 
                                      forcefield,
-                                     n_burn_cycles=500000, 
-                                     n_sample_cycles=500000, 
+                                     n_burn_cycles=1000000, 
+                                     n_sample_cycles=1000000, 
                                      verbose=false)
         # print fugacities 
         for s in 1:2
