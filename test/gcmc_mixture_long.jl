@@ -7,7 +7,7 @@ using JLD2
 
 tests_to_run = Dict("Kr/Xe in SBMOF-1"  => true,
                     "ideal gas mixture" => false,
-                    "run simulations"   => true
+                    "run simulations"   => false
                     )
 
 ###
