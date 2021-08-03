@@ -6,7 +6,7 @@ using DataFrames
 using JLD2
 
 tests_to_run = Dict("Kr/Xe in SBMOF-1"  => true,
-                    "ideal gas mixture" => false,
+                    "ideal gas mixture" => true,
                     "run simulations"   => false
                     )
 
