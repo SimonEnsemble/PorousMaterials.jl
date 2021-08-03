@@ -6,8 +6,9 @@ using DataFrames
 using JLD2
 
 tests_to_run = Dict("Kr/Xe in SBMOF-1"  => true,
-                    "ideal gas mixture" => true,
-                    "run simulations"   => false
+                    "run mixture sims"  => false,
+                    "run pure gas sims" => false,
+                    "ideal gas mixture" => false
                     )
 
 ###
@@ -32,8 +33,8 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
 
     # run sim over range of total pressures
     for (i, p) in enumerate([0.01, 0.1, 0.5])
-        if tests_to_run["run simulations"]
-            @warn "simulation set will take about a day to run on a serial machine."
+        if tests_to_run["run mixture sims"]
+            @warn "Mixture simulation set will take about a day to run on a serial machine."
             results, molecules = μVT_sim(xtal,
                                          mol_templates,
                                          temperature,
@@ -56,11 +57,23 @@ if tests_to_run["Kr/Xe in SBMOF-1"]
             std_err = raspa_data[:mix][i, Symbol("err $sp loading (mmol/g)")] + results["err ⟨N⟩ (mmol/g)"][j]
             @test isapprox(raspa_data[:mix][i, Symbol(sp * " loading (mmol/g)")], results["⟨N⟩ (mmol/g)"][j], atol=std_err)
         end
+
         # evaluate pure gas results, keep separate sinse we re-assign results dictionary
         for mol in mol_templates
-            # load pure gas dictionary
-            pure_gas_filename = μVT_output_filename(xtal, [mol], temperature, [p], ljff, 50000, 50000)
-            @load joinpath(rc[:paths][:simulations],  pure_gas_filename) results
+            if  tests_to_run["run pure gas sims"]
+                @warn "Running pure component simulation set will take about a day to run on a serial machine."
+                results, molecules = μVT_sim(xtal,
+                                             [mol],
+                                             temperature,
+                                             [p],
+                                             ljff,
+                                             n_burn_cycles=50000,
+                                             n_sample_cycles=50000)
+            else
+                # load pure gas dictionary
+                pure_gas_filename = μVT_output_filename(xtal, [mol], temperature, [p], ljff, 50000, 50000)
+                @load joinpath(rc[:paths][:simulations],  pure_gas_filename) results
+            end
             # make sure the pressures are correct
             @test results["pressure (bar)"][1] ≈ raspa_data[mol.species][i, Symbol(String(mol.species) * " pressure (bar)")]
             # evaluate adsorption uptake
