@@ -109,7 +109,7 @@ end
 # potential energy change after inserting/deleting/perturbing coordinates of molecules[which_species][molecule_id]
 # compute potential energy of molecules[which_species][molecule_id] with all other molecules and with the framework.
 @inline function potential_energy(which_species::Int,
-								  molecule_id::Int,
+                                  molecule_id::Int,
                                   molecules::Array{Array{Molecule{Frac}, 1}, 1},
                                   xtal::Crystal,
                                   ljff::LJForceField)
@@ -369,13 +369,13 @@ function μVT_sim(xtal::Crystal,
     if any(m -> length(m) != 0, molecules)
         # some checks
         for (s, mol) in enumerate(molecules)
-			# ensure molecule template matches species of starting molecules.
+            # ensure molecule template matches species of starting molecules.
             @assert all(m -> m.species == molecule_templates[s].species, mol) "initializing with wrong molecule species"
-		    # assert that the molecules are inside the simulation box
-			@assert all(m -> inside(m), mol) "initializing with molecules outside simulation box!"
-			# ensure pair-wise bond distance match template
-			@assert all(m -> ! distortion(m, Frac(molecule_templates[s], xtal.box), xtal.box), mol) "initializing with distorted molecules"
-		end
+            # assert that the molecules are inside the simulation box
+            @assert all(m -> inside(m), mol) "initializing with molecules outside simulation box!"
+            # ensure pair-wise bond distance match template
+            @assert all(m -> ! distortion(m, Frac(molecule_templates[s], xtal.box), xtal.box), mol) "initializing with distorted molecules"
+        end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
         system_energy.gg.vdw = total_vdw_energy(molecules, ljff, xtal.box)
@@ -452,7 +452,7 @@ function μVT_sim(xtal::Crystal,
             if which_move == INSERTION
                 random_insertion!(molecules[which_species], xtal.box, molecule_templates[which_species])
 
-				# inserted molecule pushed to end of molecules[which_species] array
+                # inserted molecule pushed to end of molecules[which_species] array
                 #   note: length(molecules[which_species]) != n_i here (rather, it is n_i + 1)
                 ΔE = potential_energy(which_species, n_i + 1, molecules, xtal, ljff)
 
