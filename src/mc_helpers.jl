@@ -124,7 +124,7 @@ function adjust!(adaptive_δ::AdaptiveTranslationStepSize)
         adaptive_δ.δ = r * adaptive_δ.δ
         println("\t\ttranslation step size adjusted to: ", adaptive_δ.δ, " Å")
     elseif acceptance_rate < 0.4
-        # acceptance rate is too low. make step more aggressive.
+        # acceptance rate is too low. make step less aggressive.
         adaptive_δ.δ = adaptive_δ.δ / r
         println("\t\ttranslation step size adjusted to: ", adaptive_δ.δ, " Å")
     end
