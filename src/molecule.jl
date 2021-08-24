@@ -119,14 +119,14 @@ This writes the coordinates of the molecules in cartesian coordinates, so the bo
 # Arguments
  - `box::Box`: The box the molecules are in, to convert molecule positions
         to cartesian coordinates
- - `molecules::Array{Array{Molecule{Frac}, 1}, 1}`: The array of molecules to be written to the file
+ - `molecules::Array{Array{Molecule{Frac}, 1}, 1}`: The array containing arrays of molecules, separated by species, to be written to the file
  - `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
 """
 function write_xyz(box::Box, molecules::Array{Array{Molecule{Frac}, 1}, 1}, xyz_file::IOStream)
     num_atoms = sum([sum([mol.atoms.n for mol in sp]) for sp in molecules])
     @printf(xyz_file, "%s\n", num_atoms)
-    for species in molecules
-        for molecule in species
+    for molecules_species in molecules
+        for molecule in molecules_species
             for i = 1:molecule.atoms.n
                 x = Cart(molecule.atoms[i].coords, box)
                 @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i], x.x...)
@@ -311,12 +311,10 @@ function write_xyz(molecules::Array{Molecule{Frac}, 1}, box::Box, filename::Abst
     write_xyz(molecules, filename, comment=comment) # above
 end
 
-function write_xyz(molecules::Array{Array{Molecule, 1}, 1}, box::Box, filename::AbstractString)
-    mols = Molecule[]
-    for sp in molecules
-        [push!(mols, m) for m in sp]
-     end
-    write_xyz(mols, box, filename)
+function write_xyz(molecules::Array{Array{Molecule{Frac}, 1}, 1}, box::Box, filename::AbstractString)
+    all_molecules = [molecule for molecules_species in molecules for molecule in molecules_species]
+
+    write_xyz(all_molecules, box, filename) # above
 end
 
 # documented in crystal.jl

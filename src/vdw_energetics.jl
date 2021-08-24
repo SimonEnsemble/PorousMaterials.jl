@@ -96,18 +96,18 @@ end
 #  for mixture simulations.
 #  compute potential energy of molecules[which_spcies][molecule_id] with all other molecules.
 ###
-function vdw_energy(which_species::Int, molecule_id::Int, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
+function vdw_energy(species_id::Int, molecule_id::Int, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
     energy = 0.0
     # loop over species
     for s in 1:length(molecules)
         # loop over molecules of this species, in molecules[s]
         for m in 1:length(molecules[s])
             # molecule cannot interact with itself (only relevant for molecules of the same species)
-            if (s == which_species) && (m == molecule_id)
+            if (s == species_id) && (m == molecule_id)
                 continue
             end
 
-            energy += vdw_energy(molecules[which_species][molecule_id].atoms, molecules[s][m].atoms, box, ljff)
+            energy += vdw_energy(molecules[species_id][molecule_id].atoms, molecules[s][m].atoms, box, ljff)
         end
     end
     return energy # units are the same as in ϵ for forcefield (Kelvin)
@@ -176,17 +176,17 @@ end
 
 function total_vdw_energy(crystal::Crystal, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField)
     total_energy = 0.0
-    for mol in molecules
-        total_energy += total_vdw_energy(crystal, mol, ljff)
+    for molecules_species in molecules
+        total_energy += total_vdw_energy(crystal, molecules_species, ljff)
     end
     return total_energy
 end
 
 function total_vdw_energy(molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
     total_energy = 0.0 
-    for (which_species, sp) in enumerate(molecules)
-        for molecule_id in 1:length(sp)
-            total_energy += vdw_energy(which_species, molecule_id, molecules, ljff, box)
+    for (species_id, molecules_species) in enumerate(molecules)
+        for molecule_id in 1:length(molecules_species)
+            total_energy += vdw_energy(species_id, molecule_id, molecules, ljff, box)
         end
     end
     return total_energy / 2.0 # avoid double-counting pairs 

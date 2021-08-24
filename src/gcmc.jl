@@ -269,7 +269,7 @@ function μVT_sim(xtal::Crystal,
         end
     end
     # convert molecules array to fractional using this box.
-    molecules = [Frac.(mols, xtal.box) for mols in molecules]
+    molecules = [Frac.(molecules_species, xtal.box) for molecules_species in molecules]
 
     ###
     #   Density grid for adsorbate
@@ -291,13 +291,8 @@ function μVT_sim(xtal::Crystal,
 
     if calculate_density_grid
         # keep track of the id for the density_grid_molecular_species
-        template_id_for_density_grid = 0
-        for (i, mol) in enumerate(molecule_templates)
-            if density_grid_molecular_species == mol.species
-                template_id_for_density_grid = i
-            end
-        end
-        @assert (template_id_for_density_grid != 0 && template_id_for_density_grid <= length(molecule_templates)) "density_grid_molecular_species not found in molecule_templates"
+        molecule_species_id_for_density_grid = findfirst(molecule_templates .== density_grid_molecular_species)
+        @assert (molecule_species_id_for_density_grid != 0 && molecule_species_id_for_density_grid <= length(molecule_templates)) "density_grid_molecular_species not found in molecule_templates"
     end
 
     # Initialize a density grid based on the *simulation box* (not xtal box passed in) and the passed in density_grid_dx
@@ -366,15 +361,15 @@ function μVT_sim(xtal::Crystal,
     system_energy = SystemPotentialEnergy()
     # if we don't start with an emtpy xtal, compute energy of starting configuration
     #  (n=0 corresponds to zero energy)
-    if any(m -> length(m) != 0, molecules)
+    if any(molecules_species -> length(molecules_species) != 0, molecules)
         # some checks
-        for (s, mol) in enumerate(molecules)
+        for (s, molecules_species) in enumerate(molecules)
             # ensure molecule template matches species of starting molecules.
-            @assert all(m -> m.species == molecule_templates[s].species, mol) "initializing with wrong molecule species"
+            @assert all(molecule -> molecule.species == molecule_templates[s].species, molecules_species) "initializing with wrong molecule species"
             # assert that the molecules are inside the simulation box
-            @assert all(m -> inside(m), mol) "initializing with molecules outside simulation box!"
+            @assert all(molecule -> inside(molecule), molecules_species) "initializing with molecules outside simulation box!"
             # ensure pair-wise bond distance match template
-            @assert all(m -> ! distortion(m, Frac(molecule_templates[s], xtal.box), xtal.box), mol) "initializing with distorted molecules"
+            @assert all(molecule -> ! distortion(molecule, Frac(molecule_templates[s], xtal.box), xtal.box), molecules_species) "initializing with distorted molecules"
         end
 
         system_energy.gh.vdw = total_vdw_energy(xtal, molecules, ljff)
@@ -663,9 +658,9 @@ function μVT_sim(xtal::Crystal,
             end
             if calculate_density_grid 
                 if density_grid_sim_box
-                    update_density!(density_grid, molecules[template_id_for_density_grid], density_grid_molecular_species)
+                    update_density!(density_grid, molecules[molecule_species_id_for_density_grid], density_grid_molecular_species)
                 else
-                    update_density!(density_grid, Cart.(molecules[template_id_for_density_grid], xtal.box), density_grid_molecular_species)
+                    update_density!(density_grid, Cart.(molecules[molecule_species_id_for_density_grid], xtal.box), density_grid_molecular_species)
                 end
             end
             num_snapshots += 1
@@ -682,10 +677,10 @@ function μVT_sim(xtal::Crystal,
     end
 
     # checks
-    for (s, mol) in enumerate(molecules)
-        @assert all(m -> m.species == molecule_templates[s].species, mol) "species got mixed up"
-        @assert all(m -> inside(m), mol) "molecule outside box!"
-        @assert all([! distortion(m, Frac(molecule_templates[s], xtal.box), xtal.box, atol=1e-10) for m in mol]) "molecule distorted"
+    for (s, molecules_species) in enumerate(molecules)
+        @assert all(molecule -> molecule.species == molecule_templates[s].species, molecules_species) "species got mixed up"
+        @assert all(molecule -> inside(molecule), molecules_species) "molecule outside box!"
+        @assert all([! distortion(molecule, Frac(molecule_templates[s], xtal.box), xtal.box, atol=1e-10) for molecule in molecules_species]) "molecule distorted"
     end
 
     # compute total energy, compare to `current_energy*` variables where were incremented
