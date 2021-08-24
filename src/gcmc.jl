@@ -974,7 +974,7 @@ end
 
 """
     results = adsorption_isotherm(xtal, molecule_templates, temperature, 
-                                  partial_pressures, sim_pressures,
+                                  partial_pressures,
                                   ljff; n_sample_cycles=5000,
                                   n_burn_cycles=5000, sample_frequency=1,
                                   verbose=true, ewald_precision=1e-6, eos=:ideal,
