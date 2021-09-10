@@ -153,11 +153,11 @@ proposals.
     the adsorption
 - `ljff::LJForceField`: the molecular model used to describe the
 - `molecules::Array{Array{Molecule{Cart}, 1}, 1}`: a starting configuration of molecules in the xtal with an array per species.
-- `n_burn_cycles::Int`: number of cycles to allow the system to reach
-    equilibrium before sampling.
-- `n_sample_cycles::Int`: number of cycles used for sampling
-- `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of
- adsorbed gas molecules every this number of Markov proposals
+- `n_cycles_per_volume::Int`: the number of MC cycles per volume, split evenly between `n_burn_cycles` and `'n_sample_cycles`, where
+    `n_burn_cycles` is the number of cycles to allow the system to reach equilibrium before sampling; and,
+    `n_sample_cycles` is the number of cycles used for sampling
+- `sample_frequency::Int`: during the sampling cycles, sample e.g. the number of 
+    adsorbed gas molecules every this number of Markov proposals
 - `verbose::Bool`: whether or not to print off information during the simulation
 - `ewald_precision::Float64`: desired precision for the long range Ewald summation
 - `eos::Symbol`: equation of state to use for calculation of fugacity from pressure
@@ -177,8 +177,7 @@ function μVT_sim(xtal::Crystal,
                  pressures::Array{Float64, 1}, 
                  ljff::LJForceField; 
                  molecules::Union{Nothing, Array{Array{Molecule{Cart}, 1}, 1}}=nothing, 
-                 n_burn_cycles::Int=5000,
-                 n_sample_cycles::Int=5000,
+                 n_cycles_per_volume::Int=200,
                  sample_frequency::Int=1,
                  verbose::Bool=true,
                  ewald_precision::Float64=1e-6,
@@ -199,6 +198,12 @@ function μVT_sim(xtal::Crystal,
     # # to avoid changing the outside object `molecule_` inside this function, we make
     # #  a deep copy of it here. this serves as a template to copy when we insert a new molecule.
     # molecule = deepcopy(molecule_)
+
+    # calculate the number of MC cycles
+    # separate total number of cycles evenly into burn_cycles and sample_cycles
+    nb_cycles = max(N_BLOCKS, ceil(Int, n_cycles_per_volume * xtal.box.Ω))
+    n_burn_cycles   = ceil(Int, nb_cycles / 2)
+    n_sample_cycles = ceil(Int, nb_cycles / 2)
 
     nb_species = length(molecule_templates)
     molecular_species = [mt.species for mt in molecule_templates]
@@ -425,15 +430,15 @@ function μVT_sim(xtal::Crystal,
 
     markov_counts = MarkovCounts(zeros(Int, length(PROPOSAL_ENCODINGS)), zeros(Int, length(PROPOSAL_ENCODINGS)))
 
-    # (n_burn_cycles + n_sample_cycles) is number of outer cycles.
+    # (n_burn_cycles + n_sample_cycles) is number of outer cycles (MC cycles).
     #   for each outer cycle, peform max(20, # molecules in the system) MC proposals.
     markov_chain_time = 0
     outer_cycle_start = 1
-    for outer_cycle = outer_cycle_start:(n_burn_cycles + n_sample_cycles)
+    for outer_cycle = outer_cycle_start:(n_burn_cycles + n_sample_cycles) 
         if show_progress_bar
             next!(progress_bar; showvalues=[(:cycle, outer_cycle), (:number_of_molecules, sum(length.(molecules)))])
         end
-        for inner_cycle ∈ 1:max(20, sum(length.(molecules)))
+        for inner_cycle ∈ 1:(sum(length.(molecules)) + 1)
             markov_chain_time += 1
 
             #   choose a species, find current # molecules of that species, n_i
