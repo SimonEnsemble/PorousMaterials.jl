@@ -1,0 +1,27 @@
+image: julia:1.6  # Docker img of a system w/ Julia 1.6
+
+
+# # # STAGES
+
+# build stages execute sequentially; jobs within a stage execute parallel to one another
+# every job is run on a new VM
+stages:
+  - test
+  - deploy
+
+
+# # # TEST STAGE
+
+unit-testing:
+  stage: test
+  script:
+    - julia --project -e 'import Pkg; Pkg.test("PorousMaterials")'
+
+# # # DEPLOY STAGE
+
+deploy-docs: # build and deploy the docs
+  stage: deploy
+  before_script:
+    - julia --project -e 'import Pkg; Pkg.add("Documenter")'
+  script:
+    - julia --project ./docs/make.jl
