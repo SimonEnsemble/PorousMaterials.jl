@@ -178,6 +178,7 @@ function μVT_sim(xtal::Crystal,
                  ljff::LJForceField; 
                  molecules::Union{Nothing, Array{Array{Molecule{Cart}, 1}, 1}}=nothing, 
                  n_cycles_per_volume::Int=200,
+                 fraction_burn_cycles::Float64=0.5,
                  sample_frequency::Int=1,
                  verbose::Bool=true,
                  ewald_precision::Float64=1e-6,
@@ -202,8 +203,9 @@ function μVT_sim(xtal::Crystal,
     # calculate the number of MC cycles
     # separate total number of cycles evenly into burn_cycles and sample_cycles
     nb_cycles = max(N_BLOCKS, ceil(Int, n_cycles_per_volume * xtal.box.Ω))
-    n_burn_cycles   = ceil(Int, nb_cycles / 2)
-    n_sample_cycles = ceil(Int, nb_cycles / 2)
+    @assert (0.0 < fraction_burn_cycles) && (fraction_burn_cycles < 1.0)
+    n_burn_cycles   = ceil(Int, nb_cycles * fraction_burn_cycles)
+    n_sample_cycles = ceil(Int, nb_cycles * (1 - fraction_burn_cycles))
 
     nb_species = length(molecule_templates)
     molecular_species = [mt.species for mt in molecule_templates]
