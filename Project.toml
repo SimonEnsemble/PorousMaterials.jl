@@ -1,7 +1,7 @@
 name = "PorousMaterials"
 uuid = "68953c7c-a3c7-538e-83d3-73516288599e"
 authors = ["SimonEnsemble <cory.simon@oregonstate.edu>"]
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -9,8 +9,8 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 FIGlet = "3064a664-84fe-4d92-92c7-ed492f3d8fae"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
@@ -32,8 +32,8 @@ CSV = "^0.8.0"
 DataFrames = "^0.22.1"
 FIGlet = "^0.2.1"
 FileIO = "1.2.0"
+Graphs = "^1.4.1"
 JLD2 = "^0.4.9"
-LightGraphs = "1.3.0"
 OffsetArrays = "0.11.4"
 Optim = "0.19.7,1.3.0"
 Polynomials = "0.6.0"
@@ -43,7 +43,7 @@ Reexport = "^1.1.0"
 Roots = "0.8.4"
 SpecialFunctions = "0.10.0"
 StatsBase = "0.32.0,0.33.8"
-Xtals = "0.3.1"
+Xtals = "^0.3.8"
 julia = "1.6"
 
 [extras]
@@ -51,8 +51,8 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Graphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
@@ -62,4 +62,4 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "Documenter", "CSV", "DataFrames", "FileIO", "JLD2", "LightGraphs", "LinearAlgebra", "OffsetArrays", "Optim", "Printf", "Random", "Statistics"]
+test = ["Test", "Documenter", "CSV", "DataFrames", "FileIO", "JLD2", "Graphs", "LinearAlgebra", "OffsetArrays", "Optim", "Printf", "Random", "Statistics"]

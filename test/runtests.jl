@@ -13,7 +13,7 @@ testfiles = [
 
 using Test, FIGlet, Documenter
 
-font_num = 57
+font_num = 579
 FIGlet.render("Porous", FIGlet.availablefonts()[font_num])
 FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
 
