@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: 'PorousMaterials'
+  cancel-in-progress: true
+
+env:
+  julia_version: '1.6.3'
+
+jobs:
+
+
+  unit-and-doc-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{env.julia_version}}
+      - uses: julia-actions/julia-buildpkg@latest
+      - name: install dependencies
+        run: julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("FIGlet")'
+      - name: run tests
+        run: julia --project -e 'import Pkg; Pkg.test()'
+
+
+  deploy-docs:
+    needs: unit-and-doc-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{env.julia_version}}
+      - uses: julia-actions/julia-buildpkg@latest
+      - name: install dependencies
+        run: julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("FIGlet")'
+      - name: build and deploy docs
+        run: julia --project ./docs/make.jl
