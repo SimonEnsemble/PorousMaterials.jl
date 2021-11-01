@@ -298,8 +298,8 @@ function μVT_sim(xtal::Crystal,
 
     if calculate_density_grid
         # keep track of the id for the density_grid_molecular_species
-        molecule_species_id_for_density_grid = findfirst(molecule_templates .== density_grid_molecular_species)
-        @assert (molecule_species_id_for_density_grid != 0 && molecule_species_id_for_density_grid <= length(molecule_templates)) "density_grid_molecular_species not found in molecule_templates"
+        molecule_species_id_for_density_grid = findfirst(density_grid_molecular_species .== molecular_species)
+        @assert ((molecule_species_id_for_density_grid != 0) && (molecule_species_id_for_density_grid <= length(molecule_templates))) "density_grid_molecular_species not found in molecule_templates"
     end
 
     # Initialize a density grid based on the *simulation box* (not xtal box passed in) and the passed in density_grid_dx
