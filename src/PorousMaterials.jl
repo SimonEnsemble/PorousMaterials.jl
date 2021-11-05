@@ -1,7 +1,7 @@
 module PorousMaterials
 
 using Roots, OffsetArrays, SpecialFunctions, StatsBase, ProgressMeter, Polynomials,
-JLD2, Statistics, Distributed, Optim, Printf, DataFrames, LightGraphs, CSV, LinearAlgebra
+JLD2, Statistics, Distributed, Optim, Printf, DataFrames, Graphs, CSV, LinearAlgebra
 
 # extend Xtals
 using Reexport
