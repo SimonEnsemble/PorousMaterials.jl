@@ -12,14 +12,12 @@ variable dictionary `rc` is part of the `PorousMaterials` namespace.  This is wh
 ```jldoctest
 keys(rc)
 # output
-KeySet for a Dict{Symbol, Any} with 7 entries. Keys:
+KeySet for a Dict{Symbol, Any} with 5 entries. Keys:
   :covalent_radii
   :bonding_rules
-  :scipy
   :atomic_masses
   :cpk_colors
   :paths
-  :pymatgen
 ```
 
 `rc[:paths]` gives a listing of the read/write paths for various kinds of information.  By default, `rc[:paths][:data]` will be set to `./data` based on
