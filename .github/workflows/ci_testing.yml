@@ -14,21 +14,42 @@ concurrency:
 env:
   julia_version: '1.6.3'
 
+
+
 jobs:
 
 
   unit-and-doc-tests:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@latest
+      - name: checkout commit
+        uses: actions/checkout@master
+
+      - name: set up Julia
+        uses: julia-actions/setup-julia@latest
         with:
           version: ${{env.julia_version}}
-      - uses: julia-actions/julia-buildpkg@latest
+      
+      - name: build package
+        uses: julia-actions/julia-buildpkg@latest
+      
       - name: install dependencies
-        run: julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("FIGlet")'
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Documenter", "FIGlet", "Coverage"])'
+      
       - name: run tests
-        run: julia --project -e 'import Pkg; Pkg.test()'
+        run: julia --project --color=yes --code-coverage -e 'import Pkg; Pkg.test(coverage=true)'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+      
+      - name: process test coverage
+        uses: julia-actions/julia-processcoverage@v1
+      
+      - name: upload coverage report
+        uses: codecov/codecov-action@v2
+        with:
+          verbose: true
 
 
   cross-platform:
@@ -59,15 +80,26 @@ jobs:
 
 
   deploy-docs:
-    needs: unit-and-doc-tests
     runs-on: ubuntu-latest
+
+    env:
+      GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      DOCUMENTER_KEY: ${{secrets.DOCUMENTER_KEY}}
+    
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@latest
+      - name: checkout commit
+        uses: actions/checkout@master
+
+      - name: set up Julia
+        uses: julia-actions/setup-julia@latest
         with:
           version: ${{env.julia_version}}
-      - uses: julia-actions/julia-buildpkg@latest
+      
+      - name: build package
+        uses: julia-actions/julia-buildpkg@latest
+      
       - name: install dependencies
-        run: julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("FIGlet")'
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Documenter", "FIGlet"])'
+      
       - name: build and deploy docs
-        run: julia --project ./docs/make.jl
+        run: julia --project --color=yes ./docs/make.jl
