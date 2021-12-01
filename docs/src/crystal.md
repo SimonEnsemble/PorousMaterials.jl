@@ -24,7 +24,7 @@ xtal.bonds                          # Bonding information in the structure. By d
 xtal.symmetry                       # Symmetry information of the crystal. By default converts the symmetry to P1 symmetry.
                                     #  Use `convert_to_p1=false` argument in `Crystal` to keep original symmetry
 # output
-Xtals.SymmetryInfo(["x"; "y"; "z"], "P1", true)
+Xtals.SymmetryInfo(["x"; "y"; "z";;], "P1", true)
 ```
 
 ## fixing atom species
