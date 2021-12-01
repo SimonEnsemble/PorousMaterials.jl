@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  julia_version: '1.6.3'
+  julia_version: '1.7.0'
 
 
 
