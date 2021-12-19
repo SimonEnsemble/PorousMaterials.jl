@@ -73,6 +73,9 @@ Bravais unit cell of a crystal.
 	space Group: P1
 	symmetry Operations:
 		'x, y, z'
+	bonding graph:
+		# vertices = 960
+		# edges = 0
 ```
 
 ## finding other properties

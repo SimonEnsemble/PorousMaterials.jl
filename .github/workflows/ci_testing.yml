@@ -35,7 +35,7 @@ jobs:
         uses: julia-actions/julia-buildpkg@latest
       
       - name: install dependencies
-        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Documenter", "FIGlet", "Coverage"])'
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["FIGlet", "Coverage"])'
       
       - name: run tests
         run: julia --project --color=yes --code-coverage -e 'import Pkg; Pkg.test(coverage=true)'
@@ -72,7 +72,7 @@ jobs:
         uses: julia-actions/julia-buildpkg@latest
       
       - name: install dependencies
-        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Documenter", "FIGlet"])'
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["FIGlet"])'
       
       - name: build and deploy docs
         run: julia --project --color=yes ./docs/make.jl
