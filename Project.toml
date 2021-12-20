@@ -31,6 +31,7 @@ Xtals = "ede5f01d-793e-4c47-9885-c447d1f18d6d"
 [compat]
 CSV = "^0.8"
 DataFrames = "^0.22, 1"
+Documenter = "^0.27"
 FIGlet = "^0.2"
 FileIO = "^1.2"
 Graphs = "^1.4"
