@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  julia_version: '1.6.3'
+  julia_version: '1.7.2'
 
 
 
@@ -54,6 +54,7 @@ jobs:
 
 
   cross-platform:
+    if: github.ref_name == 'master'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -82,6 +83,7 @@ jobs:
 
 
   deploy-docs:
+    if: github.ref_name == 'master'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
