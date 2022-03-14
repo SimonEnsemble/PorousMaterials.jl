@@ -139,3 +139,26 @@ jobs:
       
       - name: build and deploy docs
         run: julia --project --color=yes ./docs/make.jl
+
+
+  aqua-jl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: checkout commit
+        uses: actions/checkout@v2
+
+      - name: set up Julia
+        uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ env.julia_version }}
+
+      - name: build package
+        uses: julia-actions/julia-buildpkg@latest
+
+      - name: install dependencies
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Aqua"])'
+
+      - name: Aqua.jl
+        run: julia --project --color=yes ./test/aqua.jl

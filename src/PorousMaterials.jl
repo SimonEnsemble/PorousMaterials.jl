@@ -60,7 +60,7 @@ export
     lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
     # electrostatics.jl
-    electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
+    electrostatic_potential_energy, precompute_kvec_wts,
     setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
 
     # mc_helpers.jl
