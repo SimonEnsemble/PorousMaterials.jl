@@ -59,7 +59,7 @@ length(coords)                 # number of particles, (5)
 ```jldoctest matter
 coords.x = rand(3, 5)
 # output
-ERROR: setfield! immutable struct of type Cart cannot be changed
+ERROR: setfield!: immutable struct of type Cart cannot be changed
 ```
 but we can manipulate the values of `Array{Float64, 2}` where coordinates (through `coords.x` or `coords.xf`) are stored:
 
