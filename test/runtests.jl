@@ -11,17 +11,13 @@ testfiles = [
     "eos.jl"
     ]
 
-using Test, FIGlet, Documenter
+using Test, Documenter, PorousMaterials
 
-font_num = 579
-FIGlet.render("Porous", FIGlet.availablefonts()[font_num])
-FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
-
-using PorousMaterials
+PorousMaterials.banner()
 
 for testfile ∈ testfiles
     @info "Running test/$testfile"
-    include(testfile)
+    @time include(testfile)
 end
 
 doctest(PorousMaterials)

@@ -30,8 +30,9 @@ using Random
     @test rep_factors == (25, 25, 25)
 
     # test check for force field coverage
-    @test forcefield_coverage(Crystal("SBMOF-1.cif").atoms, ljforcefield)
-    @test forcefield_coverage(Crystal("SBMOF-1.cif"), ljforcefield)
-    @test ! forcefield_coverage(Crystal("SBMOF-1.cif").atoms, LJForceField("bogus"))
+    SBMOF1 = Crystal("SBMOF-1.cif")
+    @test forcefield_coverage(SBMOF1.atoms, ljforcefield)
+    @test forcefield_coverage(SBMOF1, ljforcefield)
+    @test ! forcefield_coverage(SBMOF1.atoms, LJForceField("bogus"))
 end
 end

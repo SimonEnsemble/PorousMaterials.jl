@@ -1,7 +1,7 @@
 module PorousMaterials
 
-using Roots, OffsetArrays, SpecialFunctions, StatsBase, ProgressMeter, Polynomials,
-JLD2, Statistics, Distributed, Optim, Printf, DataFrames, Graphs, CSV, LinearAlgebra
+using CSV, DataFrames, Distributed, FIGlet, Graphs, JLD2, LinearAlgebra, OffsetArrays, Optim, 
+    Polynomials, Printf, ProgressMeter, Roots, SpecialFunctions, Statistics, StatsBase
 
 # extend Xtals
 using Reexport
@@ -36,6 +36,12 @@ function __init__()
     append_atomic_masses()
 end
 
+function banner()
+    font_num = 579
+    FIGlet.render("Porous", FIGlet.availablefonts()[font_num])
+    FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
+end
+
 
 export
     # isotherm_fitting.jl
@@ -54,7 +60,7 @@ export
     lennard_jones, vdw_energy, vdw_energy_no_PBC,
 
     # electrostatics.jl
-    electrostatic_potential, electrostatic_potential_energy, precompute_kvec_wts,
+    electrostatic_potential_energy, precompute_kvec_wts,
     setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
 
     # mc_helpers.jl

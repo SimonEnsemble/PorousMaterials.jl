@@ -8,6 +8,11 @@ using JLD2
 using Statistics
 using Random
 
+Xe = Molecule("Xe")
+X = Molecule("X")
+CO2 = Molecule("CO2")
+He = Molecule("He")
+
 @testset "VdwEnergetics Tests" begin
     # lennard jones function
     σ² = 1.0
@@ -22,7 +27,7 @@ using Random
     xtal = Crystal("SBMOF-1.cif")
     rep_factors = replication_factors(xtal.box, ljff)
     xtal = replicate(xtal, rep_factors)
-    mol = Molecule("Xe")
+    mol = Xe
     mol = Frac(mol, xtal.box)
     @test ! has_charges(mol)
     # point #1
@@ -62,7 +67,7 @@ using Random
         for i = 1:n
             xyz = split(lines[2+i])[2:end]
             x = parse.(Float64, xyz)
-            m = Molecule("X")
+            m = deepcopy(X)
             m = Frac(m, box)
             translate_to!(m, Frac(box.c_to_f * x))
             push!(ms, m)
@@ -77,15 +82,14 @@ using Random
     #  The following "framework" is a cage floating in space so no atoms are near the boundary
     #   of the unit cell box. So with cutoff should get same with or without PBCs.
     box = Box(100.0, 100.0, 100.0, π/2, π/2, π/2)
-    co2 = Molecule("CO2")
+    co2 = deepcopy(CO2)
     translate_to!(co2, Cart([50.0, 50.0, 50.0]))
     f = Crystal("cage_in_space.cif") # same cage, but shifted to [50, 50, 50] in unit cell box 100 by 100 by 100.
     ljff = LJForceField("UFF")
     # energy with PBC but padded so effetive periodic interactions are zero, bc beyond cutoff
     energy = vdw_energy(f, co2, ljff)
     atoms = read_xyz("data/crystals/CB5.xyz") # raw .xyz of cage
-    co2 = Molecule("CO2")
-    @test isapprox(energy, vdw_energy_no_PBC(atoms, co2.atoms, ljff))
+    @test isapprox(energy, vdw_energy_no_PBC(atoms, CO2.atoms, ljff))
 
     ###
     #   guest-guest energetics
@@ -93,8 +97,8 @@ using Random
     ljff = LJForceField("Dreiding", r_cutoff=12.5)
     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     # a He and Xe a distance of 6.0 away
-    xe = Frac(Molecule("Xe"), box)
-    he = Frac(Molecule("He"), box)
+    xe = Frac(Xe, box)
+    he = Frac(He, box)
     translate_to!(xe, Cart([5.0, 12.0, 12.0]), box)
     translate_to!(he, Cart([11.0, 12.0, 12.0]), box)
     molecules = [xe, he]
@@ -118,16 +122,16 @@ using Random
     @test vdw_energy(3, molecules, ljff, box) == Inf
 
     # interaction energy between first and second should be same via PBC
-    molecules_a = Frac.([Molecule("Xe"), Molecule("He")], box)
+    molecules_a = Frac.([Xe, He], box)
     translate_to!(molecules_a[1], Cart([11.0, 1.0, 12.0]), box)
     translate_to!(molecules_a[2], Cart([11.0, 4.0, 12.0]), box)
-    molecules_b = Frac.([Molecule("Xe"), Molecule("He")], box)
+    molecules_b = Frac.([Xe, He], box)
     translate_to!(molecules_b[1], Cart([11.0, 1.0, 12.0]), box)
     translate_to!(molecules_b[2], Cart([11.0, 23.0, 12.0]), box)
     @test vdw_energy(1, molecules_a, ljff, box) ≈ vdw_energy(1, molecules_b, ljff, box)
 
     # another PBC one where three coords are different.
-    molecules = Frac.([Molecule("Xe"), Molecule("He")], box)
+    molecules = Frac.([Xe, He], box)
     translate_to!(molecules[1], Cart([24.0, 23.0, 11.0]), box)
     translate_to!(molecules[2], Cart([22.0, 2.0, 12.0]), box)
     r² = 4.0^2 + 2.0^2 + 1.0^2
@@ -148,7 +152,7 @@ using Random
     # Molecules with more than one ljsphere
 
     # two CO2 molecules 6.0 units apart
-    molecules_co2 = Frac.([Molecule("CO2"), Molecule("CO2")], box)
+    molecules_co2 = Frac.([deepcopy(CO2), deepcopy(CO2)], box)
     translate_to!(molecules_co2[1], Cart([12.0, 9.0, 12.0]), box)
     translate_to!(molecules_co2[2], Cart([12.0, 15.0, 12.0]), box)
     # because the molecules have not been rotated, all corresponding beads are same
@@ -181,7 +185,7 @@ using Random
     # testing cutoff radius, so only one oxygen from each will be able to interact
     # making a larger box so that only a few.atoms from each CO2 will be able to interact
     box_large = Box(50.0, 50.0, 50.0, π/2, π/2, π/2)
-    molecules_co2 = Frac.([Molecule("CO2"), Molecule("CO2")], box_large)
+    molecules_co2 = Frac.([deepcopy(CO2), deepcopy(CO2)], box_large)
     # placed 12.6 units apart so the C atoms will be outside the cutoff radius,
     #   but one O atom from each will be inside, so these will interact
     translate_to!(molecules_co2[1], Cart([0.0, 0.0, 0.0]), box_large)
