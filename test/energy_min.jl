@@ -6,10 +6,13 @@ using JLD2
 using Statistics
 using Random
 
+FIQCEN_clean = Crystal("FIQCEN_clean.cif")
+Xe = Molecule("Xe")
+
 @testset "Energy Minimizaiton Tests" begin
-    xtal = Crystal("FIQCEN_clean.cif")
+    xtal = deepcopy(FIQCEN_clean)
     strip_numbers_from_atom_labels!(xtal)
-    molecule  = Molecule("Xe")
+    molecule  = deepcopy(Xe)
     ljff = LJForceField("UFF")
     n_pts = (15, 15, 15)
     
@@ -30,9 +33,9 @@ using Random
     @test isapprox(vdw_energy(xtal, min_mol, ljff) * 8.314 / 1000, min_E, atol=0.1)
     
     # make sure it works with cart coords too.
-    xtal = Crystal("FIQCEN_clean.cif")
+    xtal = deepcopy(FIQCEN_clean)
     strip_numbers_from_atom_labels!(xtal)
-    molecule = Molecule("Xe")
+    molecule = deepcopy(Xe)
     translate_to!(molecule, Cart(Frac([0.785, 0.785, 0.785]), xtal.box))
     min_mol, min_E = find_energy_minimum(xtal, molecule, ljff)
     @test isapprox(min_E, -27.0269, atol=0.01)
