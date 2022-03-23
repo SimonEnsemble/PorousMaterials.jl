@@ -1,0 +1,74 @@
+name: Nightly
+
+on:
+  schedule: # run at midnight pacific time Monday-Friday
+    - cron: '0 8 * * 1,2,3,4,5'
+  workflow_dispatch: # run on button-press in Actions tab
+
+concurrency: # only allow the most recent workflow to execute
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env: # environment variables
+  julia_version: '1.7.2' # julia version to use on all runners (except cross-platform)
+
+jobs:
+
+  cross-platform-os:
+    if: github.ref_name == 'master'
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    
+    steps:
+      - name: checkout commit
+        uses: actions/checkout@master
+
+      - name: set up Julia
+        uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ env.julia_version }}
+      
+      - name: build package
+        uses: julia-actions/julia-buildpkg@latest
+      
+      - name: install dependencies
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add("Documenter")'
+        shell: bash
+      
+      - name: run tests
+        run: julia --project --color=yes -e 'import Pkg; Pkg.test()'
+        shell: bash
+
+  
+  cross-platform-julia:
+    if: github.ref_name == 'master'
+    strategy:
+      fail-fast: true
+      matrix:
+        julia: ['1.6.4', '1.7.0']
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: checkout commit
+        uses: actions/checkout@master
+
+      - name: set up Julia
+        uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ matrix.julia }}
+      
+      - name: build package
+        uses: julia-actions/julia-buildpkg@latest
+      
+      - name: install dependencies
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add("Documenter")'
+        shell: bash
+      
+      - name: run tests
+        run: julia --project --color=yes -e 'import Pkg; Pkg.test()'
+        shell: bash
