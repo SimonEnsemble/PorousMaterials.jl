@@ -69,7 +69,7 @@ Bravais unit cell of a crystal.
 
 	# atoms = 960
 	# charges = 960
-	chemical formula: Dict(:H => 8, :S => 1, :Ca => 1, :O => 6, :C => 14)
+	chemical formula: Ca₃₂C₄₄₈H₂₅₆O₁₉₂S₃₂
 	space Group: P1
 	symmetry Operations:
 		'x, y, z'
@@ -85,12 +85,7 @@ rho = crystal_density(xtal)         # Crystal density of the crystal in kg/m^2
 mw = molecular_weight(xtal)         # The molecular weight of the unit cell in amu
 formula = chemical_formula(xtal)    # The irreducible chemical formula of the crystal
 # output
-Dict{Symbol, Int64} with 5 entries:
-  :H  => 8
-  :S  => 1
-  :Ca => 1
-  :O  => 6
-  :C  => 14
+"Ca₄C₅₆H₃₂O₂₄S₄"
 ```
 
 ## assigning new charges

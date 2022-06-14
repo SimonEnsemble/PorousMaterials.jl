@@ -1,7 +1,7 @@
 name = "PorousMaterials"
 uuid = "68953c7c-a3c7-538e-83d3-73516288599e"
 authors = ["SimonEnsemble <cory.simon@oregonstate.edu>"]
-version = "0.4.0"
+version = "0.4.1"
 
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -28,23 +28,22 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Xtals = "ede5f01d-793e-4c47-9885-c447d1f18d6d"
 
 [compat]
-Aqua = "0.5"
-CSV = "0.8"
+Aqua = "0.5.5"
+CSV = "0.10.4"
 DataFrames = "1"
-FIGlet = "0.2"
+FIGlet = "0.2.1"
 FileIO = "1"
 Graphs = "1"
-JLD2 = "0.4"
-OffsetArrays = "0.11"
+JLD2 = "0.4.22"
+OffsetArrays = "1"
 Optim = "1"
-Polynomials = "0.6"
+Polynomials = "3"
 ProgressMeter = "1"
 Reexport = "1"
-Roots = "0.8"
-SpecialFunctions = "0.10"
-StatsBase = "0.32"
-Xtals = "~0.3.0, ~0.4.0"
-julia = "1.6"
+Roots = "2"
+SpecialFunctions = "2"
+StatsBase = "0.33.16"
+Xtals = "0.4"
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

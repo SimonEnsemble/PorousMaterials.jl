@@ -32,7 +32,7 @@ function __init__()
     rc[:paths][:molecules] = ""
     rc[:paths][:grids] = ""
     rc[:paths][:simulations] = ""
-    set_paths(joinpath(pwd(), "data"))
+    set_paths(joinpath(pwd(), "data"), no_warn=true)
     append_atomic_masses()
 end
 
