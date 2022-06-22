@@ -1,7 +1,7 @@
 """
 ```
 result = henry_coefficient(crystal, molecule, temperature, ljforcefield,
-                            nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
+                            insertions_per_volume=200, verbose=true, ewald_precision=1e-6,
                             autosave=true)
 ```
 
