@@ -435,8 +435,8 @@ function electrostatic_potential_energy(molecules::Array{Molecule{Frac}, 1},
                                         eparams::EwaldParams, box::Box,
                                         eikr::Eikr)
     ϕ = GGEwaldSum()
-    for i = 1:length(molecules)
-        for j = 1:length(molecules)
+    for i = eachindex(molecules)
+        for j = eachindex(molecules)
             for c = 1:molecules[j].charges.n
                 # view here is that charges in molecules[i] create a potential field for charges in molecules[j]
                 ϕ_with_i = molecules[j].charges.q[c] * _ϕ(molecules[i].charges,
@@ -488,7 +488,7 @@ function electrostatic_potential_energy(molecules::Array{Molecule{Frac}, 1},
                                         eikr::Eikr)
     ϕ = GGEwaldSum()
     for c = 1:molecules[molecule_id].charges.n
-        for other_molecule_id = 1:length(molecules)
+        for other_molecule_id = eachindex(molecules)
             # view here is the molecules[other_molecule_id] creates potential field for
             #   charge cof molecules[molecule_id]
             ϕ_with_other_molecule_id = molecules[molecule_id].charges.q[c] * _ϕ(
@@ -534,7 +534,7 @@ function total_electrostatic_potential_energy(molecules::Array{Molecule{Frac}, 1
                                               box::Box,
                                               eikr::Eikr)
     ϕ = GGEwaldSum()
-    for i = 1:length(molecules)
+    for i = eachindex(molecules)
         ϕ += electrostatic_potential_energy(molecules, i, eparams, box, eikr)
     end
     ϕ.sr /= 2.0 # avoid double-counting

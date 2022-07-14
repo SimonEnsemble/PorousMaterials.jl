@@ -47,7 +47,7 @@ println("\t# of molecules: ", length(ms))
 @btime vdw_energy(1, ms, ljforcefield, box)
 @printf("Guest-Guest Van der Waals energy computation for all %i molecules:\n", num_molecules)
 @btime begin
-    for i = 1:length(ms)
+    for i = eachindex(ms)
         vdw_energy(i, ms, ljforcefield, box)
     end
 end

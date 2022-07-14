@@ -406,7 +406,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 end
             elseif (which_move == DELETION) && (length(molecules) != 0)
                 # propose which molecule to delete
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(eachindex(molecules))
 
                 # compute the potential energy of the molecule we propose to delete
                 ΔE = potential_energy(molecule_id, molecules, xtal, ljff,
@@ -424,7 +424,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 end
             elseif (which_move == TRANSLATION) && (length(molecules) != 0)
                 # propose which molecule whose coordinates we should perturb
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(eachindex(molecules))
 
                 # energy of the molecule before it was translated
                 energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
@@ -448,7 +448,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 end
             elseif (which_move == ROTATION) && (length(molecules) != 0)
                 # propose which molecule to rotate
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(eachindex(molecules))
 
                 # energy of the molecule before we rotate it
                 energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
@@ -476,7 +476,7 @@ function μVT_sim(xtal::Crystal, molecule::Molecule, temperature::Float64,
                 end
             elseif (which_move == REINSERTION) && (length(molecules) != 0)
                 # propose which molecule to re-insert
-                molecule_id = rand(1:length(molecules))
+                molecule_id = rand(eachindex(molecules))
 
                 # compute the potential energy of the molecule we propose to re-insert
                 energy_old = potential_energy(molecule_id, molecules, xtal, ljff,
@@ -910,7 +910,7 @@ function adsorption_isotherm(xtal::Crystal,
 
     # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
-    return results[[findall(x -> x==i, ids)[1] for i = 1:length(ids)]]
+    return results[[findall(x -> x==i, ids)[1] for i = eachindex(ids)]]
 end
 
 

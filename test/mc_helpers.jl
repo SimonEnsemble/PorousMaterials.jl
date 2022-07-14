@@ -127,7 +127,7 @@ CO2 = Molecule("CO2")
     charges_atoms_both_move_same = true
     # many random translations...
     for i = 1:5000
-        which_molecule = rand(1:length(molecules))
+        which_molecule = rand(eachindex(molecules))
         old_molecules = deepcopy(molecules)
         old_molecule = random_translation!(molecules[which_molecule], box)
         # do atoms and charges move by same vector?
@@ -151,7 +151,7 @@ CO2 = Molecule("CO2")
         end
         # is it inside the box? have all other molecule been untouched?
         apply_periodic_boundary_condition!(molecules[which_molecule])
-        for j = 1:length(molecules)
+        for j = eachindex(molecules)
             if j == which_molecule
                 continue
             end
