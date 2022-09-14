@@ -186,15 +186,17 @@ end
 """
     grid = read_cube(filename)
 
-Read a .cube file and return a populated `Grid` data structure.
+Read a .cube file and return a populated `Grid` data structure. 
+It will detect and skip over atomic information if it is present in the file.
 
 # Arguments
 - `filename::AbstractString`: name of .cube file to which we write the grid; this is relative to `rc[:paths][:grids]`
+- `has_units::Bool=true`: flag for function to read units from file header
 
 # Returns
 - `grid::Grid`: A grid data structure
 """
-function read_cube(filename::AbstractString)
+function read_cube(filename::AbstractString; has_units::Bool=true)
     if ! occursin(".cube", filename)
         filename *= ".cube"
     end
@@ -203,11 +205,16 @@ function read_cube(filename::AbstractString)
 
     # waste two lines
     line = readline(cubefile)
-    units = Symbol(split(line)[4])
+    if has_units
+        units = Symbol(split(line)[4])
+    else
+        units = :missing
+    end
     readline(cubefile)
 
     # read origin
     line = readline(cubefile)
+    number_of_atoms = parse(Int64, split(line)[1])
     origin = [parse(Float64, split(line)[1 + i]) for i = 1:3]
 
     # read box info
@@ -227,6 +234,13 @@ function read_cube(filename::AbstractString)
 
     # reconstruct box from f_to_c matrix
     box = Box(f_to_c)
+    
+    # skip over atomic information if present
+    if ! (number_of_atoms == 0)
+        for i in 1:number_of_atoms
+            line = readline(cubefile)
+        end
+    end
 
     # read in data
     data = zeros(Float64, n_pts...)

@@ -30,7 +30,7 @@ tests_to_run = Dict(
         temperature = 298.0
         fugacity = 10.0 .^ [2.0, 4.0, 5.0, 6.0, 7.0, 8.0] / 100000.0 # bar
         # according to ideal gas law, number of molecules in box should be:
-        n_ig = fugacity * empty_space.box.Ω / (PorousMaterials.KB * temperature) * 100000.0
+        n_ig = fugacity * empty_space.box.Ω / (BOLTZMANN * temperature) * 100000.0
         n_sim = similar(n_ig)
         for i = eachindex(fugacity)
             results, molecules = μVT_sim(empty_space, ideal_gas, temperature, fugacity[i], forcefield,

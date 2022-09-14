@@ -1,7 +1,7 @@
 """
 ```
 result = henry_coefficient(crystal, molecule, temperature, ljforcefield,
-                            nb_insertions=1e6, verbose=true, ewald_precision=1e-6,
+                            insertions_per_volume=200, verbose=true, ewald_precision=1e-6,
                             autosave=true)
 ```
 
@@ -25,7 +25,7 @@ average, per unit cell volume (Å³)
 - `verbose::Bool`: whether or not to print off information during the simulation.
 - `ewald_precision::Float64`: desired precision for Ewald summations; used to determine
 the replication factors in reciprocal space.
-- `autosave::Bool`: save results file as a .jld in rc[:paths][:data] * `sims`
+- `autosave::Bool`: save results file as a .jld2 in rc[:paths][:simulations]
 - `filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file.
 
 # Returns

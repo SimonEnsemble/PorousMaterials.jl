@@ -19,6 +19,7 @@ function append_atomic_masses()
         :O_zeo => 15.9994,
         :S_H2S => 32.065,
         :Si_zeo => 28.0855,
+        :ig => 1.0,
         :X => 1.0
     ))
 end
