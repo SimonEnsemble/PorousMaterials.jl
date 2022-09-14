@@ -53,7 +53,7 @@ using Random
                           Dict(["real"=> -1.96297e06, "fourier"=> 5.24461e03, "self"=> -8.53407e06, "intra" => 8.42998e06]),
                           Dict(["real"=> -3.57226e06, "fourier"=> 7.58785e03, "self"=> -1.42235e07, "intra" => 1.41483e07])]
     # loop over all four configurations provided by NIST
-    for c = 1:length(energies_should_be)
+    for c = eachindex(energies_should_be)
         # read in positions of atoms provided by NIST ("X" atoms)
         posfile = open("nist/electrostatics/spce_sample_config_periodic$c.txt")
         lines = readlines(posfile)

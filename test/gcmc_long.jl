@@ -32,7 +32,7 @@ tests_to_run = Dict(
         # according to ideal gas law, number of molecules in box should be:
         n_ig = fugacity * empty_space.box.Ω / (BOLTZMANN * temperature) * 100000.0
         n_sim = similar(n_ig)
-        for i = 1:length(fugacity)
+        for i = eachindex(fugacity)
             results, molecules = μVT_sim(empty_space, ideal_gas, temperature, fugacity[i], forcefield,
                         n_burn_cycles=100000, n_sample_cycles=100000, verbose=false)
             @printf("fugacity %f, n_ig = %f, n_sim = %f\n", fugacity[i], n_ig[i], results["⟨N⟩ (molecules/unit cell)"])
@@ -72,7 +72,7 @@ tests_to_run = Dict(
         results = stepwise_adsorption_isotherm(xtal, molecule, 298.0, test_fugacities, ljff,
                             n_burn_cycles=25000, n_sample_cycles=25000, verbose=true, sample_frequency=1, show_progress_bar=true)
 
-        for i = 1:length(test_fugacities)
+        for i = eachindex(test_fugacities)
             @test isapprox(results[i]["⟨N⟩ (molecules/unit cell)"], test_molec_unit_cell[i], rtol=0.025)
             @test isapprox(results[i]["⟨N⟩ (mmol/g)"], test_mmol_g[i], rtol=0.025)
         end

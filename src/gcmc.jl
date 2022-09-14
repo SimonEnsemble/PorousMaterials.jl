@@ -472,7 +472,7 @@ function μVT_sim(xtal::Crystal,
                 end
             elseif (which_move == DELETION) && (n_i != 0)
                 # propose which molecule to delete
-                molecule_id = rand(1:n_i)
+                molecule_id = rand(eachindex(molecules[which_species]))
 
                 # compute the potential energy of the molecule we propose to delete
                 ΔE = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -490,7 +490,7 @@ function μVT_sim(xtal::Crystal,
             elseif (which_move == TRANSLATION) && (n_i != 0)
                 adaptive_δ.nb_translations_proposed += 1
                 # propose which molecule whose coordinates we should perturb
-                molecule_id = rand(1:n_i)
+                molecule_id = rand(eachindex(molecules[which_species]))
 
                 # energy of the molecule before it was translated
                 energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -513,7 +513,7 @@ function μVT_sim(xtal::Crystal,
                 end
             elseif (which_move == ROTATION) && needs_rotations(molecule_templates[which_species]) && (n_i != 0) 
                 # propose which molecule to rotate
-                molecule_id = rand(1:n_i)
+                molecule_id = rand(eachindex(molecules[which_species]))
 
                 # energy of the molecule before we rotate it
                 energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -539,7 +539,7 @@ function μVT_sim(xtal::Crystal,
                 end
             elseif (which_move == REINSERTION) && (n_i != 0)
                 # propose which molecule to re-insert
-                molecule_id = rand(1:n_i)
+                molecule_id = rand(eachindex(molecules[which_species]))
 
                 # compute the potential energy of the molecule we propose to re-insert
                 energy_old = potential_energy(which_species, molecule_id, molecules, xtal, ljff)
@@ -1021,7 +1021,7 @@ function adsorption_isotherm(xtal::Crystal,
 
     # return results in same order as original pressure even though we permuted them for
     #  better load balancing.
-    return results[[findall(x -> x==i, ids)[1] for i = 1:length(ids)]]
+    return results[[findall(x -> x==i, ids)[1] for i = eachindex(ids)]]
 end
 
 # overload function for backward compatibility

@@ -631,7 +631,7 @@ end
 
 function _assign_inaccessible_pockets_minus_one!(segmented_grid::Grid,
             segment_classifiction::Array{Int, 1}; verbose::Bool=true)
-    for s = 1:length(segment_classifiction)
+    for s = eachindex(segment_classifiction)
         if segment_classifiction[s] == 1
             if verbose
                 @printf("Segment %s classified as accessible channel.\n", s)

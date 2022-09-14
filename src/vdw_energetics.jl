@@ -82,7 +82,7 @@ using the nearest image convention.
 function vdw_energy(molecule_id::Int, molecules::Array{<:Molecule, 1}, ljff::LJForceField, box::Box)
    energy = 0.0
    # loop over all other molecule
-   for other_molecule_id = 1:length(molecules)
+   for other_molecule_id = eachindex(molecules)
        # molecule cannot interact with itself
        if other_molecule_id == molecule_id
            continue
@@ -142,7 +142,7 @@ end
 
 function total_vdw_energy(molecules::Array{<:Molecule, 1}, ljff::LJForceField, box::Box)
    total_energy = 0.0
-   for i = 1:length(molecules)
+   for i = eachindex(molecules)
        total_energy += vdw_energy(i, molecules, ljff, box)
    end
    return total_energy / 2.0 # avoid double-counting pairs

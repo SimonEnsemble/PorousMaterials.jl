@@ -57,7 +57,7 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
     θ0 = _guess(_df, pressure_col_name, loading_col_name, model)
 
     if model == :langmuir
-        objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = 1:length(n)])
+        objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = eachindex(n)])
         res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead(), options)
         if !Optim.converged(res)
             error("Optimization algorithm failed!")
@@ -66,7 +66,7 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
         mse = res.minimum / length(n)
         return Dict("M" => M, "K" => K, "MSE" => mse)
     elseif model == :henry
-        objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = 1:length(n)])
+        objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = eachindex(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS(), options)
         if !Optim.converged(res)
             error("Optimization algorithm failed!")
