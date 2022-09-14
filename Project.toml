@@ -1,7 +1,7 @@
 name = "PorousMaterials"
 uuid = "68953c7c-a3c7-538e-83d3-73516288599e"
 authors = ["SimonEnsemble <cory.simon@oregonstate.edu>"]
-version = "0.4.1"
+version = "0.4.2"
 
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
