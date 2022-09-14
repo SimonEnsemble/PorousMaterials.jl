@@ -45,7 +45,6 @@ The coordinates of the crystals are stored in fractional coordinates. If one nee
 that can be done by using the unit cell information of the crystal.
 
 ```jldoctest crystal
-xtal = Crystal("SBMOF-1.cif")
 xtal.atoms.coords.xf                                    # array of fractional coordinates
 cart_coords = xtal.box.f_to_c * xtal.atoms.coords.xf    # array of cartesian coordinates
 # output
@@ -60,7 +59,6 @@ cart_coords = xtal.box.f_to_c * xtal.atoms.coords.xf    # array of cartesian coo
 For many simulations, one needs to replicate the unit cell multiple times to create a bigger super cell.
 
 ```jldoctest crystal
-xtal = Crystal("SBMOF-1.cif")
 super_xtal = replicate(xtal, (2,2,2))       # Replicates the original unit cell once in each dimension
 # output
 Name: SBMOF-1.cif
