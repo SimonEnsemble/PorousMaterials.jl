@@ -30,7 +30,7 @@ minimized_molecule, min_E = find_energy_minimum(xtal, minimized_molecule, ljff)
 Computing energy grid of Xe in SBMOF-1.cif
 	Regular grid (in fractional space) of 13 by 7 by 24 points superimposed over the unit cell.
 (Molecule species: Xe
-Center of mass (fractional coords): Frac([0.01749943805846959; 0.9372916114895011; 0.011192272400742498])
+Center of mass (fractional coords): Frac([0.01749943805846959; 0.9372916114895011; 0.011192272400742498;;])
 Atoms:
 
 	atom = Xe, xf = [0.017, 0.937, 0.011], -37.69376112588296)

@@ -169,6 +169,7 @@ proposals.
 - `density_grid_sim_box::Bool`: `true` if we wish for the density grid to be over the 
 entire simulation box as opposed to the box of the crystal passed in. `false` if we wish the
 density grid to be over the original `xtal.box`, before replication, passed in.
+- `autosave::Bool`: `true` if we wish to automatically save the simulation results to the standard path/filename.
 - `results_filename_comment::AbstractString`: An optional comment that will be appended to the name of the saved file (if autosaved)
 """
 function μVT_sim(xtal::Crystal, 

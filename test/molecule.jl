@@ -8,6 +8,11 @@ using JLD2
 using Statistics
 using Random
 
+SBMOF1 = Crystal("SBMOF-1.cif")
+CO2 = Molecule("CO2")
+H2S = Molecule("H2S")
+He = Molecule("He")
+
 function rand_point_on_unit_sphere()
     u = randn(3)
     u_norm = norm(u)
@@ -31,9 +36,10 @@ end
 function pairwise_distances(coords::Cart)
     n = size(coords)[2]
     pad = zeros(n, n)
+    box = unit_cube()
     for i = 1:n
         for j = 1:n
-            pad[i, j] = distance(coords, unit_cube(), i, j, false)
+            pad[i, j] = distance(coords, box, i, j, false)
         end
     end
     return pad
@@ -46,7 +52,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     ###
     #   molecule file reader
     ###
-    molecule = Molecule("CO2")
+    molecule = deepcopy(CO2)
     @test needs_rotations(molecule)
     @test has_charges(molecule)
     @test molecule.species == :CO2
@@ -69,38 +75,38 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     ###
     #  extremely basic: make sure these functions change the molecule and don't screw up bond distances
     ###
-    m = Molecule("CO2")
+    m = deepcopy(CO2)
     pad = pairwise_distances(m)
     dx = 4 * randn(3)
     translate_by!(m, Cart(dx))
-    @test ! isapprox(m.atoms, Molecule("CO2").atoms)
-    @test ! isapprox(m.charges, Molecule("CO2").charges)
-    @test ! isapprox(m.com, Molecule("CO2").com)
+    @test ! isapprox(m.atoms, CO2.atoms)
+    @test ! isapprox(m.charges, CO2.charges)
+    @test ! isapprox(m.com, CO2.com)
     @test isapprox(pad, pairwise_distances(m))
     translate_by!(m, Cart(-1 * dx))
-    @test isapprox(m, Molecule("CO2"))
+    @test isapprox(m, CO2)
     
-    m = Molecule("CO2")
+    m = deepcopy(CO2)
     x_new_com = 4 * randn(3)
     new_com = Cart(x_new_com)
     translate_to!(m, new_com)
-    @test ! isapprox(m.atoms, Molecule("CO2").atoms)
-    @test ! isapprox(m.charges, Molecule("CO2").charges)
-    @test ! isapprox(m.com, Molecule("CO2").com)
+    @test ! isapprox(m.atoms, CO2.atoms)
+    @test ! isapprox(m.charges, CO2.charges)
+    @test ! isapprox(m.com, CO2.com)
     @test isapprox(m.com, new_com)
     @test isapprox(pad, pairwise_distances(m))
     
-    m = Molecule("CO2")
+    m = deepcopy(CO2)
     random_rotation!(m)
-    @test ! isapprox(m.atoms, Molecule("CO2").atoms)
-    @test ! isapprox(m.charges, Molecule("CO2").charges)
-    @test isapprox(m.com, Molecule("CO2").com)
+    @test ! isapprox(m.atoms, CO2.atoms)
+    @test ! isapprox(m.charges, CO2.charges)
+    @test isapprox(m.com, CO2.com)
     @test isapprox(pad, pairwise_distances(m))
         
     # ... in frac coords
-    m = Molecule("H2S")
+    m = deepcopy(H2S)
     pad = pairwise_distances(m)
-    box = Crystal("SBMOF-1.cif").box
+    box = SBMOF1.box
     m = Frac(m, box)
     for i = 1:200
         translate_by!(m, Frac([randn(), randn(), randn()]))
@@ -115,22 +121,22 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     ###
     #   Frac to Cart converter
     ###
-    m = Molecule("CO2")
-    box = Crystal("SBMOF-1.cif").box
+    m = CO2
+    box = SBMOF1.box
     m = Frac(m, box)
     m = Cart(m, box)
-    @test isapprox(m, Molecule("CO2")) # should restore.
+    @test isapprox(m, CO2) # should restore.
     
     box = unit_cube()
-    m = Molecule("CO2")
+    m = CO2
     m = Frac(m, box)
-    @test isapprox(Cart(m, box), Molecule("CO2"))
+    @test isapprox(Cart(m, box), CO2)
     
     ###
     # make sure translate by/to preserve orientation 
     ###
     # ... in frac coords
-    m = Molecule("CO2")
+    m = deepcopy(CO2)
     m = Frac(m, box)
     for i = 1:10
         translate_by!(m, Frac([randn(), randn(), randn()]))
@@ -138,27 +144,27 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
         translate_to!(m, Frac([randn(), randn(), randn()]))
         translate_to!(m, Cart([randn(), randn(), randn()]), box)
     end
-    fresh_m = Molecule("CO2")
+    fresh_m = deepcopy(CO2)
     m = Cart(m, box)
     translate_to!(fresh_m, m.com)
     @test isapprox(m, fresh_m) # should restore and preserve orientation
     
     # ... in cart coords
-    m = Molecule("CO2")
+    m = deepcopy(CO2)
     for i = 1:10
         translate_by!(m, Cart([randn(), randn(), randn()]))
         translate_by!(m, Frac([randn(), randn(), randn()]), box)
         translate_to!(m, Cart([randn(), randn(), randn()]))
         translate_to!(m, Frac([randn(), randn(), randn()]), box)
     end
-    fresh_m = Molecule("CO2")
+    fresh_m = deepcopy(CO2)
     translate_to!(fresh_m, m.com)
     @test isapprox(m, fresh_m) # should restore and preserve orientation
 
     # test translate_to, translate_by
-    box = Crystal("SBMOF-1.cif").box
-    m1 = Molecule("H2S")
-    m2 = Molecule("H2S")
+    box = SBMOF1.box
+    m1 = deepcopy(H2S)
+    m2 = deepcopy(H2S)
     m1 = Frac(m1, box)
     m2 = Frac(m2, box)
     @test isapprox(m1, m2)
@@ -185,7 +191,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     # make sure random rotations preserve bond distances.
     ###
     #  ... rotations in cartesian space
-    m = Molecule("H2S")
+    m = deepcopy(H2S)
     com = Cart(10.0 * randn(3))
     translate_to!(m, com)
     pad = pairwise_distances(m)
@@ -196,9 +202,9 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test isapprox(m.com, com, atol=1e-12) # com should not change
     
     #  ... rotations in frac space
-    m = Molecule("H2S")
+    m = deepcopy(H2S)
     pad = pairwise_distances(m)
-    box = Crystal("SBMOF-1.cif").box
+    box = SBMOF1.box
     m = Frac(m, box)
     com = Frac(10.0 * randn(3))
     translate_to!(m, com)
@@ -209,7 +215,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test isapprox(m.com, com, atol=1e-12)
 
     # test unit vector on sphere generator
-    ms = [Molecule("He") for i = 1:10000]
+    ms = [He for i = 1:10000]
     for m in ms
         translate_to!(m, Cart(rand_point_on_unit_sphere()))
     end
@@ -241,7 +247,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     ###
     #   random rotation should place H in each half-quadrant equal amount of time...
     ###
-    m = Molecule("H2S")
+    m = deepcopy(H2S)
     translate_to!(m, origin(Cart))
     @assert m.atoms.species[2] == :H_H2S
     N = 10000000
@@ -282,7 +288,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test r_det_1
 
     # visually inspection that rotations are random
-    ms = [Molecule("CO2") for i = 1:1000]
+    ms = [deepcopy(CO2) for i = 1:1000]
     for m in ms
         random_rotation!(m)
     end
@@ -292,7 +298,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test ! needs_rotations(Molecule("Xe"))
     
     # frac and cart
-    m = Molecule("H2S")
+    m = H2S
     box = Box(2.0, 4.0, 8.0)
     m_f = Frac(m, box)
     @test isapprox(m_f.atoms.coords.xf[1, :], m.atoms.coords.x[1, :] / 2.0)
@@ -305,9 +311,9 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
 
     # distorted
     adaptive_δ = AdaptiveTranslationStepSize(2.0) # default is 2 Å
-    box = Crystal("SBMOF-1.cif").box
-    m = Frac(Molecule("H2S"), box)
-    m_ref = Frac(Molecule("H2S"), box)
+    box = SBMOF1.box
+    m = Frac(H2S, box)
+    m_ref = Frac(H2S, box)
     random_translation!(m, box, adaptive_δ)
     random_translation!(m_ref, box, adaptive_δ)
     random_rotation!(m, box)
