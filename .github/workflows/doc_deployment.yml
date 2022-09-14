@@ -38,6 +38,9 @@ jobs:
       
       - name: install dependencies
         run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Documenter"])'
+
+      - name: copy test data
+        run: cp -r ./test/data ./data
       
       - name: build and deploy docs
         run: julia --project --color=yes ./docs/make.jl
