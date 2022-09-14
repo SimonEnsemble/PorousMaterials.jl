@@ -2,7 +2,7 @@
 const R²_OVERLAP = 0.1 # Units: Angstrom²
 
 """
-	energy = lennard_jones(r², σ², ϵ)  (units: Kelvin)
+    energy = lennard_jones(r², σ², ϵ)  (units: Kelvin)
 
 Calculate the lennard jones potential energy given the square of the radius r between two
 lennard-jones spheres. σ and ϵ are specific to interaction between two elements. Return
@@ -17,13 +17,13 @@ the potential energy in units Kelvin (well, whatever the units of ϵ are).
 - `energy::Float64`: Lennard Jones potential energy
 """
 function lennard_jones(r²::Float64, σ²::Float64, ϵ::Float64)
-	ratio = (σ² / r²) ^ 3
-	return 4.0 * ϵ * ratio * (ratio - 1.0)
+    ratio = (σ² / r²) ^ 3
+    return 4.0 * ϵ * ratio * (ratio - 1.0)
 end
 
 # generic atoms-atoms van der waals energy function; pass bigger list of atoms second for speed
 function vdw_energy(atoms_i::Atoms{Frac}, atoms_j::Atoms{Frac}, box::Box, ljff::LJForceField)
-	energy = 0.0
+    energy = 0.0
     for i = 1:atoms_i.n
         # vectors from atom i to atoms_j in fractional space
         @inbounds dx = broadcast(-, atoms_j.coords.xf, atoms_i.coords.xf[:, i])
@@ -33,7 +33,7 @@ function vdw_energy(atoms_i::Atoms{Frac}, atoms_j::Atoms{Frac}, box::Box, ljff::
         for j = 1:atoms_j.n
             @inbounds r² = dx[1, j] ^ 2 + dx[2, j] ^ 2 + dx[3, j] ^ 2
             if r² < ljff.r²_cutoff # within cutoff radius
-            	if r² < R²_OVERLAP # overlapping atoms
+                if r² < R²_OVERLAP # overlapping atoms
                     return Inf # no sense in continuing to next atom and adding Inf
                 else # not overlapping
                     @inbounds energy += lennard_jones(r²,
@@ -43,7 +43,7 @@ function vdw_energy(atoms_i::Atoms{Frac}, atoms_j::Atoms{Frac}, box::Box, ljff::
             end
         end
     end
-	return energy
+    return energy
 end
 
 vdw_energy(atoms_i::Atoms{Cart}, atoms_j::Atoms{Cart}, box::Box, ljff::LJForceField) = vdw_energy(Frac(atoms_i, box), Frac(atoms_j, box), box, ljff)
@@ -92,6 +92,27 @@ function vdw_energy(molecule_id::Int, molecules::Array{<:Molecule, 1}, ljff::LJF
    return energy # units are the same as in ϵ for forcefield (Kelvin)
 end
 
+###
+#  for mixture simulations.
+#  compute potential energy of molecules[which_spcies][molecule_id] with all other molecules.
+###
+function vdw_energy(species_id::Int, molecule_id::Int, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
+    energy = 0.0
+    # loop over species
+    for s in 1:length(molecules)
+        # loop over molecules of this species, in molecules[s]
+        for m in 1:length(molecules[s])
+            # molecule cannot interact with itself (only relevant for molecules of the same species)
+            if (s == species_id) && (m == molecule_id)
+                continue
+            end
+
+            energy += vdw_energy(molecules[species_id][molecule_id].atoms, molecules[s][m].atoms, box, ljff)
+        end
+    end
+    return energy # units are the same as in ϵ for forcefield (Kelvin)
+end
+
 """
    total_gh_energy = total_vdw_energy(framework, molecules, ljforcefield) # guest-host
    total_gg_energy = total_vdw_energy(molecules, ljforcefield, simulation_box) # guest-guest
@@ -133,14 +154,14 @@ end
 compute vdw potential energy without periodic boundary conditions
 """
 function vdw_energy_no_PBC(atoms_i::Atoms{Cart}, atoms_j::Atoms{Cart}, ljff::LJForceField)
-	energy = 0.0
+    energy = 0.0
     for i = 1:atoms_i.n
         # vectors from atom i to atoms_j in fractional space
         @inbounds dx = broadcast(-, atoms_j.coords.x, atoms_i.coords.x[:, i])
         for j = 1:atoms_j.n
             @inbounds r² = dx[1, j] ^ 2 + dx[2, j] ^ 2 + dx[3, j] ^ 2
             if r² < ljff.r²_cutoff # within cutoff radius
-            	if r² < R²_OVERLAP # overlapping atoms
+                if r² < R²_OVERLAP # overlapping atoms
                     return Inf # no sense in continuing to next atom and adding Inf
                 else # not overlapping
                     @inbounds energy += lennard_jones(r²,
@@ -150,5 +171,23 @@ function vdw_energy_no_PBC(atoms_i::Atoms{Cart}, atoms_j::Atoms{Cart}, ljff::LJF
             end
         end
     end
-	return energy
+    return energy
+end
+
+function total_vdw_energy(crystal::Crystal, molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField)
+    total_energy = 0.0
+    for molecules_species in molecules
+        total_energy += total_vdw_energy(crystal, molecules_species, ljff)
+    end
+    return total_energy
+end
+
+function total_vdw_energy(molecules::Array{Array{Molecule{Frac}, 1}, 1}, ljff::LJForceField, box::Box)
+    total_energy = 0.0 
+    for (species_id, molecules_species) in enumerate(molecules)
+        for molecule_id in 1:length(molecules_species)
+            total_energy += vdw_energy(species_id, molecule_id, molecules, ljff, box)
+        end
+    end
+    return total_energy / 2.0 # avoid double-counting pairs 
 end

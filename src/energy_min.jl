@@ -18,7 +18,7 @@ if you don't have a good initial position, use [`find_energy_minimum_gridsearch`
 """
 function find_energy_minimum(xtal::Crystal,
                              molecule::Molecule,
-                             ljff::LJForceField,
+                             ljff::LJForceField
                              )
     if needs_rotations(molecule)
         @warn "needs rotations. does not optimize over configurations, only over center of mass"
@@ -58,7 +58,7 @@ function find_energy_minimum(xtal::Crystal,
 end
 
 """
-    xf₀ = find_energy_minimum_gridsearch(xtal, molecule, ljff; n_pts=(50, 50, 50))
+    xf₀ = find_energy_minimum_gridsearch(xtal, molecule, ljff; resolution=(50, 50, 50))
 
 perform an [`energy_grid`](@ref) calculation and, via a grid search, find the minimum energy position of a molecule.
 

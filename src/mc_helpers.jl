@@ -1,7 +1,3 @@
-# δ is half the maximal distance a particle is perturbed in a given coordinate
-#  during particle translations
-const δ = 2.0 # Å
-
 """
     needs_rotations(molecule) # true or false
 
@@ -18,6 +14,7 @@ const N_BLOCKS = 5
     random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart})
 
 Insert a molecule into the simulation box and perform a random rotation if needed.
+this function calls (`insert_w_random_orientation!`)[@ref], supplying it with a random position vector.
 
 # Arguments
 - `molecules::Array{Molecule{Frac}, 1}`: array containing the molecules in the simulation
@@ -25,6 +22,22 @@ Insert a molecule into the simulation box and perform a random rotation if neede
 - `template::Molecule{Cart}`: reference molecule of the type inserted
 """
 function random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart})
+    xf_com = Frac(rand(3))
+    insert_w_random_orientation!(molecules, box, template, xf_com)
+end
+
+"""
+    insert_w_random_orientation!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart}, xf_com::Frac)
+
+Insert a molecule into the simulation box at a specified location and with a random orientation.
+
+# Arguments
+- `molecules::Array{Molecule{Frac}, 1}`: array containing the molecules in the simulation
+- `box::Box`: the box  used for fractional coordinats
+- `template::Molecule{Cart}`: reference molecule of the type inserted
+- `xf_com`::Frac`: location where molecule will be inserted
+"""
+function insert_w_random_orientation!(molecules::Array{Molecule{Frac}, 1}, box::Box, template::Molecule{Cart}, xf_com::Frac)
     # copy template
     molecule = deepcopy(template)
     # rotate
@@ -33,9 +46,7 @@ function random_insertion!(molecules::Array{Molecule{Frac}, 1}, box::Box, templa
     end
     # convert to fractional
     molecule = Frac(molecule, box)
-    # translate to uniform random fractional coords in the box
-    com = Frac(rand(3))
-    translate_to!(molecule, com)
+    translate_to!(molecule, xf_com)
     # add the molecule to the array of molecules
     push!(molecules, molecule)
 end
@@ -87,6 +98,42 @@ function apply_periodic_boundary_condition!(molecule::Molecule{Frac})
     translate_to!(molecule, new_com)
 end
 
+###
+#   adaptive spatial step for translations
+###
+mutable struct AdaptiveTranslationStepSize
+    # δ is half the maximal distance a particle is perturbed in a given coordinate during particle translations
+    δ::Float64                        # half max step size, Å
+    nb_translations_proposed::Int
+    nb_translations_accepted::Int
+end
+AdaptiveTranslationStepSize(δ::Float64) = AdaptiveTranslationStepSize(δ, 0, 0)
+
+"""
+    adapt δx so that acceptance rate of translations is ~0.4
+"""
+function adjust!(adaptive_δ::AdaptiveTranslationStepSize)
+    r = 1.2 # factor by which to scale the step.
+    
+    # calculate current acceptance rate
+    acceptance_rate = adaptive_δ.nb_translations_accepted / adaptive_δ.nb_translations_proposed
+    
+    # adjust step if acceptance rate not in [0.4, 0.5]
+    if acceptance_rate > 0.5
+        # acceptance rate is too high. make step more aggressive.
+        adaptive_δ.δ = r * adaptive_δ.δ
+        println("\t\ttranslation step size adjusted to: ", adaptive_δ.δ, " Å")
+    elseif acceptance_rate < 0.4
+        # acceptance rate is too low. make step less aggressive.
+        adaptive_δ.δ = adaptive_δ.δ / r
+        println("\t\ttranslation step size adjusted to: ", adaptive_δ.δ, " Å")
+    end
+
+    # reset counter to only use translation acceptance stats for this block
+    adaptive_δ.nb_translations_proposed = 0
+    adaptive_δ.nb_translations_accepted = 0
+end
+
 """
     random_reinsertion!(molecule, box)
 
@@ -99,12 +146,12 @@ Perform a translational perturbation in Cartesian coordinates on a molecule, app
 # Returns
 - `old_molecule::Molecule{Frac}`: a copy of the original molecule
 """
-function random_translation!(molecule::Molecule{Frac}, box::Box)
+function random_translation!(molecule::Molecule{Frac}, box::Box, adaptive_δ::AdaptiveTranslationStepSize)
     # store old molecule and return at the end for possible restoration
     old_molecule = deepcopy(molecule)
 
     # peturb in Cartesian coords in a random cube centered at current coords.
-    dx = Cart(δ * (rand(3) .- 0.5)) # move every atom of the molecule by the same vector.
+    dx = Cart(adaptive_δ.δ * (rand(3) .- 0.5)) # move every atom of the molecule by the same vector.
     translate_by!(molecule, dx, box)
     
     # done, unless the molecule has moved outside of the box, then apply PBC

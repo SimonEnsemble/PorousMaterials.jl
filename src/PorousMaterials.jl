@@ -65,6 +65,7 @@ export
 
     # mc_helpers.jl
     random_insertion!, remove_molecule!, random_translation!, random_reinsertion!, needs_rotations,
+    AdaptiveTranslationStepSize,
 
     # Grid.jl
     apply_periodic_boundary_condition!,

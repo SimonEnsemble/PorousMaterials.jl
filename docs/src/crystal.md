@@ -35,8 +35,8 @@ It is important to use this function prior to GCMC or Henry coefficient calculat
 
 ```jldoctest crystal; output=false
 strip_numbers_from_atom_labels!(xtal)
-# output
 
+# output
 ```
 
 ## converting the coordinates to cartesian space

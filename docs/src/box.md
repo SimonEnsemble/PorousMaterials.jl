@@ -91,7 +91,7 @@ For visualization of the unit cell boundaries, the `Box` may be written out to a
 ```jldoctest box
 write_vtk(box, "box.vtk")
 # output
-See box.vtk
+
 ```
 
 

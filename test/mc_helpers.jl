@@ -62,6 +62,8 @@ CO2 = Molecule("CO2")
     ###
     #  random translations
     ###
+    adaptive_δ = AdaptiveTranslationStepSize(2.0) # default is 2 Å
+
     # first, test function to bring molecule inside a box.
     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
     molecule = deepcopy(He)
@@ -88,7 +90,7 @@ CO2 = Molecule("CO2")
     molecules = Frac.([deepcopy(He), deepcopy(He)], box)
     translate_to!(molecules[1], Frac([0.99, 0.99, 0.01]))
     translate_to!(molecules[2], Cart(box.f_to_c * [0.99, 0.99, 0.01]), box)
-    old_molecule = random_translation!(molecules[1], box)
+    old_molecule = random_translation!(molecules[1], box, adaptive_δ)
     if ! isapprox(old_molecule, molecules[2]) # constructed to be identitical!
         translation_old_molecule_stored_properly = false
     end
@@ -99,7 +101,7 @@ CO2 = Molecule("CO2")
     for i = 1:100
         which_molecule = rand(1:2) # choose molecule to move
         old_molecule_should_be = deepcopy(molecules[which_molecule])
-        old_molecule = random_translation!(molecules[which_molecule], box)
+        old_molecule = random_translation!(molecules[which_molecule], box, adaptive_δ)
         if ! isapprox(old_molecule, old_molecule_should_be)
             translation_coords_changed = false
         end
@@ -129,7 +131,7 @@ CO2 = Molecule("CO2")
     for i = 1:5000
         which_molecule = rand(1:length(molecules))
         old_molecules = deepcopy(molecules)
-        old_molecule = random_translation!(molecules[which_molecule], box)
+        old_molecule = random_translation!(molecules[which_molecule], box, adaptive_δ)
         # do atoms and charges move by same vector?
         dx_a = molecules[which_molecule].atoms.coords.xf - old_molecules[which_molecule].atoms.coords.xf
         dx_c = molecules[which_molecule].charges.coords.xf - old_molecules[which_molecule].charges.coords.xf

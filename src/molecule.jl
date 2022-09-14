@@ -107,10 +107,8 @@ Cart(molecule::Molecule{Frac}, box::Box) = Molecule(molecule.species,
                                                     Cart(molecule.charges, box),
                                                     Cart(molecule.com,     box)
                                                    )
-
-
 """
-  write_xyz(box, molecules, xyz_file)
+    write_xyz(box, molecules, xyz_file)
 
 Writes the coordinates of all atoms in molecules to the given xyz_file file object
 passing a file object around is faster for simulation because it can be opened
@@ -119,17 +117,20 @@ once at the beginning of the simulation and closed at the end.
 This writes the coordinates of the molecules in cartesian coordinates, so the box is needed for the conversion.
 
 # Arguments
-- `box::Box`: The box the molecules are in, to convert molecule positions to cartesian coordinates
-- `molecules::Array{Molecule{Frac}, 1}`: The array of molecules to be written to the file
-- `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
+ - `box::Box`: The box the molecules are in, to convert molecule positions
+        to cartesian coordinates
+ - `molecules::Array{Array{Molecule{Frac}, 1}, 1}`: The array containing arrays of molecules, separated by species, to be written to the file
+ - `xyz_file::IOStream`: The open 'write' file stream the data will be saved to
 """
-function write_xyz(box::Box, molecules::Array{Molecule{Frac}, 1}, xyz_file::IOStream)
-    num_atoms = sum([mol.atoms.n for mol in molecules])
+function write_xyz(box::Box, molecules::Array{Array{Molecule{Frac}, 1}, 1}, xyz_file::IOStream)
+    num_atoms = sum([sum([mol.atoms.n for mol in sp]) for sp in molecules])
     @printf(xyz_file, "%s\n", num_atoms)
-    for molecule in molecules
-        for i = 1:molecule.atoms.n
-            x = Cart(molecule.atoms[i].coords, box)
-            @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i], x.x...)
+    for molecules_species in molecules
+        for molecule in molecules_species
+            for i = 1:molecule.atoms.n
+                x = Cart(molecule.atoms[i].coords, box)
+                @printf(xyz_file, "\n%s %f %f %f", molecule.atoms.species[i], x.x...)
+            end
         end
     end
 end
@@ -310,6 +311,11 @@ function write_xyz(molecules::Array{Molecule{Frac}, 1}, box::Box, filename::Abst
     write_xyz(molecules, filename, comment=comment) # above
 end
 
+function write_xyz(molecules::Array{Array{Molecule{Frac}, 1}, 1}, box::Box, filename::AbstractString)
+    all_molecules = [molecule for molecules_species in molecules for molecule in molecules_species]
+
+    write_xyz(all_molecules, box, filename) # above
+end
 
 # documented in crystal.jl
 import Xtals.has_charges
