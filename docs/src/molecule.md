@@ -14,7 +14,7 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_MOLECULES`. Each mol
 molecule = Molecule("CO2")
 # output
 Molecule species: CO2
-Center of mass (fractional coords): Cart([0.0; 0.0; 0.0])
+Center of mass (fractional coords): Cart([0.0; 0.0; 0.0;;])
 Atoms:
 
 	atom = C_CO2, x = [0.000, 0.000, 0.000]

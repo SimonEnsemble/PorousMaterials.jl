@@ -29,7 +29,7 @@ B(T::Float64, P::Float64, fluid::PengRobinsonFluid) = b(fluid) * P / (UNIV_GAS_C
 # root closest to unity.
 function compressibility_factor(fluid::PengRobinsonFluid, T::Float64, P::Float64)
     # construct cubic polynomial in z
-    p = Poly([-(A(T, P, fluid) * B(T, P, fluid) - B(T, P, fluid) ^ 2 - B(T, P, fluid) ^ 3),
+    p = Polynomial([-(A(T, P, fluid) * B(T, P, fluid) - B(T, P, fluid) ^ 2 - B(T, P, fluid) ^ 3),
               A(T, P, fluid) - 2 * B(T, P, fluid) - 3 * B(T, P, fluid) ^ 2,
               -(1.0 - B(T, P, fluid)),
               1.0])
@@ -114,7 +114,7 @@ function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
     A = P
 
     # Creates polynomial in ρ the VdW cubic function
-    p = Poly([A, B, C, D])
+    p = Polynomial([A, B, C, D])
     # Finds roots of polynomial
     rho = roots(p)
     # assigns rho to be the real root(s) and then makes it real to get rid of the 0im

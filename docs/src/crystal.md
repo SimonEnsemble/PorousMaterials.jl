@@ -24,7 +24,7 @@ xtal.bonds                          # Bonding information in the structure. By d
 xtal.symmetry                       # Symmetry information of the crystal. By default converts the symmetry to P1 symmetry.
                                     #  Use `convert_to_p1=false` argument in `Crystal` to keep original symmetry
 # output
-Xtals.SymmetryInfo(["x"; "y"; "z"], "P1", true)
+Xtals.SymmetryInfo(["x"; "y"; "z";;], "P1", true)
 ```
 
 ## fixing atom species
@@ -71,10 +71,13 @@ Bravais unit cell of a crystal.
 
 	# atoms = 960
 	# charges = 960
-	chemical formula: Dict(:H => 8, :S => 1, :Ca => 1, :O => 6, :C => 14)
+	chemical formula: Ca₃₂C₄₄₈H₂₅₆O₁₉₂S₃₂
 	space Group: P1
 	symmetry Operations:
 		'x, y, z'
+	bonding graph:
+		# vertices = 960
+		# edges = 0
 ```
 
 ## finding other properties
@@ -84,12 +87,7 @@ rho = crystal_density(xtal)         # Crystal density of the crystal in kg/m^2
 mw = molecular_weight(xtal)         # The molecular weight of the unit cell in amu
 formula = chemical_formula(xtal)    # The irreducible chemical formula of the crystal
 # output
-Dict{Symbol, Int64} with 5 entries:
-  :H  => 8
-  :S  => 1
-  :Ca => 1
-  :O  => 6
-  :C  => 14
+"Ca₄C₅₆H₃₂O₂₄S₄"
 ```
 
 ## assigning new charges

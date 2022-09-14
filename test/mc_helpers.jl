@@ -8,8 +8,12 @@ using JLD2
 using Statistics
 using Random
 
+SBMOF1 = Crystal("SBMOF-1.cif")
+He = Molecule("He")
+CO2 = Molecule("CO2")
+
 @testset "MCHelpers Tests" begin
-    box = Crystal("SBMOF-1.cif").box
+    box = SBMOF1.box
 
     ###
     #   random insertions
@@ -20,7 +24,7 @@ using Random
 
     molecules = Array{Molecule{Frac}}(undef, 0)
 
-    m = Molecule("He")
+    m = deepcopy(He)
     for i = 1:100
         random_insertion!(molecules, box, m)
         if ! inside(molecules[i])
@@ -62,7 +66,7 @@ using Random
 
     # first, test function to bring molecule inside a box.
     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
-    molecule = Molecule("He")
+    molecule = deepcopy(He)
     molecule = Frac(molecule, box)
     translate_to!(molecule, Cart([26.0, -0.2, 12.]), box)
     @test ! inside(molecule)
@@ -71,7 +75,7 @@ using Random
     @test isapprox(box.f_to_c * molecule.atoms.coords.xf[:, 1], [1.0, 24.8, 12.0])
     @test inside(molecule)
 
-    molecule = Molecule("CO2")
+    molecule = deepcopy(CO2)
     translate_to!(molecule, Cart([0.0, 0.0, 0.0]))
     @test isapprox(molecule.atoms.coords, molecule.charges.coords)
     box = Box(25.0, 5.0, 10.0, π/2, π/2, π/2)
@@ -83,7 +87,7 @@ using Random
     translation_old_molecule_stored_properly = true
     translation_coords_changed = true
     translation_inside_box = true
-    molecules = Frac.([Molecule("He"), Molecule("He")], box)
+    molecules = Frac.([deepcopy(He), deepcopy(He)], box)
     translate_to!(molecules[1], Frac([0.99, 0.99, 0.01]))
     translate_to!(molecules[2], Cart(box.f_to_c * [0.99, 0.99, 0.01]), box)
     old_molecule = random_translation!(molecules[1], box, adaptive_δ)
@@ -111,7 +115,7 @@ using Random
     
     # now try for a molecule with both charges and atoms.
     molecules = Molecule{Frac}[]
-    box = Crystal("SBMOF-1.cif").box
+    box = SBMOF1.box
     m = Molecule("H2S")
     @test needs_rotations(m)
     for i = 1:10
@@ -173,7 +177,7 @@ using Random
     #  random reinsertions
     ###
     box = Box(25.0, 25.0, 25.0, π/2, π/2, π/2)
-    molecules = Frac.([Molecule("He"), Molecule("CO2"), Molecule("He"), Molecule("CO2")], box)
+    molecules = Frac.([deepcopy(He), deepcopy(CO2), deepcopy(He), deepcopy(CO2)], box)
     old_he = random_reinsertion!(molecules[1], box)
     old_co2 = random_reinsertion!(molecules[2], box)
     @test (inside(molecules[1]) && inside(molecules[2]))

@@ -8,6 +8,9 @@ using JLD2
 using Statistics
 using Random
 
+CH4 = Molecule("CH4")
+UFF = LJForceField("UFF")
+
 @testset "Grid Tests" begin
     # required number of pts
     box = Box(1.0, 10.0, 5.0, π/2, π/2, π/2)
@@ -40,8 +43,8 @@ using Random
     for zeolite in ["LTA", "SOD"]
         crystal = Crystal(zeolite * ".cif")
         write_xyz(crystal)
-        molecule = Molecule("CH4")
-        forcefield = LJForceField("UFF")
+        molecule = deepcopy(CH4)
+        forcefield = deepcopy(UFF)
         grid = energy_grid(crystal, molecule, forcefield, resolution=5.)
 
         # endpoints included, ensure periodic since endpoints of grid pts included
@@ -98,8 +101,8 @@ using Random
 
     # test accessibility interpolator when there are replications
     crystal = Crystal("LTA.cif")
-    molecule = Molecule("CH4")
-    forcefield = LJForceField("UFF")
+    molecule = deepcopy(CH4)
+    forcefield = deepcopy(UFF)
     accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
         molecule, forcefield, resolution=2., energy_tol=0.0, verbose=false,
         write_b4_after_grids=true)
@@ -122,8 +125,8 @@ using Random
     @test same_accessibility_repfactors
 
     # SBMOF-1, CAXVILL_clean hv no pockets blocked. test accessibility grid w./o pocket blocking
-    molecule = Molecule("CH4")
-    forcefield = LJForceField("UFF")
+    molecule = deepcopy(CH4)
+    forcefield = deepcopy(UFF)
     for crystal in [Crystal("SBMOF-1.cif"), Crystal("CAXVII_clean.cif")]
 
         # w./ blocking

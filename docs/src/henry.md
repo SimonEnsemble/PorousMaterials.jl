@@ -22,7 +22,7 @@ widom_insertions = 2000                 # Number of insertions per unit volume
 results = henry_coefficient(xtal, methane, temp, ljff, insertions_per_volume=widom_insertions)
 ```
 
-The results are also saved to `rc[:paths][:sims]` as a `.jld2` file that can be read using the `JLD2` package.
+The results are also saved to `rc[:paths][:simulations]` as a `.jld2` file that can be read using the `JLD2` package.
 
 The output (and saved file) is a dictionary:
 
@@ -56,7 +56,7 @@ using JLD2
 # determine the canonical filename for the simulation
 result_filename = henry_result_savename(xtal, methane, temp, ljff, widom_insertions)
 # load the results dictionary
-@load joinpath(rc[:paths][:sims], result_filename) results
+@load joinpath(rc[:paths][:simulations], result_filename) results
 ```
 
 # detailed docs
