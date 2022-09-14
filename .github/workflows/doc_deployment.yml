@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  julia_version: '1.7.2'
+  julia_version: '1.8.1'
 
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
         uses: julia-actions/julia-buildpkg@latest
       
       - name: install dependencies
-        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["FIGlet"])'
+        run: julia --project --color=yes -e 'import Pkg; Pkg.add.(["Documenter"])'
       
       - name: build and deploy docs
         run: julia --project --color=yes ./docs/make.jl
