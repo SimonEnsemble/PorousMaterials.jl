@@ -7,6 +7,7 @@ using CSV, DataFrames, Distributed, FIGlet, Graphs, JLD2, LinearAlgebra, OffsetA
 using Reexport
 @reexport using Xtals
 import Xtals.Cart, Xtals.Frac, Xtals.write_xyz
+using PrecompileSignatures: @precompile_signatures
 
 # physical constants
 const UNIV_GAS_CONST = 8.3144598e-5 # m³-bar/(K-mol)
@@ -84,4 +85,7 @@ export
 
     # energy_min.jl
     find_energy_minimum, find_energy_minimum_gridsearch
+
+@precompile_signatures(PorousMaterials)
+
 end
