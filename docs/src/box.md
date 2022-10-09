@@ -1,6 +1,6 @@
 ```@meta
 DocTestSetup = quote
-  using Xtals
+  using PorousMaterials
 end
 ```
 
@@ -28,9 +28,9 @@ c = 6.722028
 box = Box(a, b, c, α, β, γ)
 # output
 Bravais unit cell of a crystal.
-	Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 120.000000 deg.
-	Unit cell dimensions a = 26.131730 Å. b = 26.131730 Å, c = 6.722028 Å
-	Volume of unit cell: 3975.275878 Å³
+    Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 120.000000 deg.
+    Unit cell dimensions a = 26.131730 Å. b = 26.131730 Å, c = 6.722028 Å
+    Volume of unit cell: 3975.275878 Å³
 ```
 
 A `Box` may also be defined by providing only the `Frac`tional-to-`Cart`esian conversion
@@ -39,9 +39,9 @@ matrix:
 box = Box([26.1317 -13.0659 0; 0 22.6307 0; 0 0 6.72203])
 # output
 Bravais unit cell of a crystal.
-	Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 120.000113 deg.
-	Unit cell dimensions a = 26.131700 Å. b = 26.131711 Å, c = 6.722030 Å
-	Volume of unit cell: 3975.265115 Å³
+    Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 120.000113 deg.
+    Unit cell dimensions a = 26.131700 Å. b = 26.131711 Å, c = 6.722030 Å
+    Volume of unit cell: 3975.265115 Å³
 ```
 
 To quickly get a simple unit-cubic `Box`, use the `unit_cube` function.
@@ -49,9 +49,9 @@ To quickly get a simple unit-cubic `Box`, use the `unit_cube` function.
 unit_cube()
 # output
 Bravais unit cell of a crystal.
-	Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 90.000000 deg.
-	Unit cell dimensions a = 1.000000 Å. b = 1.000000 Å, c = 1.000000 Å
-	Volume of unit cell: 1.000000 Å³
+    Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 90.000000 deg.
+    Unit cell dimensions a = 1.000000 Å. b = 1.000000 Å, c = 1.000000 Å
+    Volume of unit cell: 1.000000 Å³
 ```
 
 
@@ -77,9 +77,9 @@ For simulations in larger volumes than a single crystallograhic unit cell, the
 replicated_box = replicate(box, (2,2,2))
 # output
 Bravais unit cell of a crystal.
-	Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 120.000113 deg.
-	Unit cell dimensions a = 52.263400 Å. b = 52.263422 Å, c = 13.444060 Å
-	Volume of unit cell: 31802.120923 Å³
+    Unit cell angles α = 90.000000 deg. β = 90.000000 deg. γ = 120.000113 deg.
+    Unit cell dimensions a = 52.263400 Å. b = 52.263422 Å, c = 13.444060 Å
+    Volume of unit cell: 31802.120923 Å³
 ```
 
 
