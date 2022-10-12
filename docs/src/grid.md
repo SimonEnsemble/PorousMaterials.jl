@@ -17,9 +17,10 @@ xtal = Crystal("SBMOF-1.cif")
 strip_numbers_from_atom_labels!(xtal)
 molecule = Molecule("Xe")
 ljforcefield = LJForceField("UFF")
-grid = energy_grid(xtal, molecule, ljforcefield, 
-                   resolution=0.5, units=:kJ_mol) 
+grid = energy_grid(xtal, molecule, ljforcefield; resolution=0.5, units=:kJ_mol)
+
 # output
+
 Computing energy grid of Xe in SBMOF-1.cif
 	Regular grid (in fractional space) of 25 by 13 by 47 points superimposed over the unit cell.
 Regular grid of 25 by 13 by 47 points superimposed over a unit cell and associated data.
@@ -35,9 +36,11 @@ grid.data     # 3 dim array containing data for each point
 grid.n_pts    # number of grid points in x, y, z
 grid.origin   # the origin of the grid
 grid.units    # units associated with each data point
+
 # output
+
 :kJ_mol
-``` 
+```
 
 ### Saving and Retrieving Grids
 
@@ -55,7 +58,9 @@ grid = read_cube(filename)
 ```
 
 # detailed docs
+
 ## Grids
+
 ```@docs
     Grid
     energy_grid
