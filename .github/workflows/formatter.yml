@@ -1,0 +1,87 @@
+name: formatter
+
+on:
+  pull_request:
+    branches: [ main ]
+
+concurrency: # only allow the most recent workflow to execute
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env: # environment variables
+  julia_version: '1.8.2' # julia version to use on all runners (except cross-platform-julia)
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mdecoleman/pr-branch-name@1.2.0
+        id: vars
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ env.julia_version }}
+
+      - uses: actions/checkout@main
+      
+      - name: Install JuliaFormatter
+        run: julia  -e 'using Pkg; Pkg.add("JuliaFormatter")'
+      
+      - name: Run JuliaFormatter
+        run: | 
+          julia  -e '
+            using JuliaFormatter; 
+            format(
+              ".", 
+              verbose=true,
+              always_for_in=true,
+              whitespace_typedefs=true,
+              whitespace_ops_in_indices=true,
+              remove_extra_newlines=true,
+              short_to_long_function_def=true,
+              long_to_short_function_def=true,
+              always_use_return=true,
+              whitespace_in_kwargs=false,
+              format_docstrings=true,
+              conditional_to_if=true,
+              normalize_line_endings="unix",
+              trailing_comma=false,
+              separate_kwargs_with_semicolon=true,
+              format_markdown=true
+            )'
+          
+      - name: Formatting Check
+        run: |
+          julia -e '
+          out = Cmd(`git diff --name-only`) |> read |> String
+          if out == ""
+              exit(0)
+          else
+              @error "Some files have not been formatted !!!"
+              write(stdout, out)
+              exit(1)
+          end'
+
+      - if: ${{ failure() }}
+        id: cpr
+        name: Formatting PR
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ steps.vars.outputs.branch }}
+          commit-message: JuliaFormatter Action Bot
+          title: 'Automatic JuliaFormatter.jl run'
+          branch: auto-juliaformatter-pr
+          delete-branch: true
+          labels: formatting, automated pr, no changelog
+          
+      - if: ${{ failure() }}
+        name: comment on PR
+        uses: thollander/actions-comment-pull-request@v1
+        with:
+          message: 'Code formatting requirements not met.  See PR #${{ steps.cpr.outputs.pull-request-number }}'
+          pr_number: ${{ github.event.issue.number }}
+          comment_includes: "Code formatting requirements not met.  See PR #"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
