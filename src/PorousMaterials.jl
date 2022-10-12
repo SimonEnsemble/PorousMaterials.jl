@@ -1,7 +1,21 @@
 module PorousMaterials
 
-using CSV, DataFrames, Distributed, FIGlet, Graphs, JLD2, LinearAlgebra, OffsetArrays, Optim, 
-    Polynomials, Printf, ProgressMeter, Roots, SpecialFunctions, Statistics, StatsBase
+using CSV,
+    DataFrames,
+    Distributed,
+    FIGlet,
+    Graphs,
+    JLD2,
+    LinearAlgebra,
+    OffsetArrays,
+    Optim,
+    Polynomials,
+    Printf,
+    ProgressMeter,
+    Roots,
+    SpecialFunctions,
+    Statistics,
+    StatsBase
 
 # extend Xtals
 using Reexport
@@ -32,56 +46,93 @@ function __init__()
     rc[:paths][:molecules] = ""
     rc[:paths][:grids] = ""
     rc[:paths][:simulations] = ""
-    set_paths(joinpath(pwd(), "data"), no_warn=true)
-    append_atomic_masses()
+    set_paths(joinpath(pwd(), "data"); no_warn=true)
+    return append_atomic_masses()
 end
 
 function banner()
     font_num = 579
     FIGlet.render("Porous", FIGlet.availablefonts()[font_num])
-    FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
+    return FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
 end
-
 
 export
     # isotherm_fitting.jl
     fit_adsorption_isotherm,
 
     # molecule.jl
-    Molecule, translate_by!, translate_to!, random_rotation!, random_rotation_matrix, ion, distortion,
+    Molecule,
+    translate_by!,
+    translate_to!,
+    random_rotation!,
+    random_rotation_matrix,
+    ion,
+    distortion,
 
     # forcefield.jl
-    LJForceField, replication_factors, forcefield_coverage,
+    LJForceField,
+    replication_factors,
+    forcefield_coverage,
 
     # energy_utilities.jl
-    PotentialEnergy, SystemPotentialEnergy,
+    PotentialEnergy,
+    SystemPotentialEnergy,
 
     # vdw_energetics.jl
-    lennard_jones, vdw_energy, vdw_energy_no_PBC,
+    lennard_jones,
+    vdw_energy,
+    vdw_energy_no_PBC,
 
     # electrostatics.jl
-    electrostatic_potential_energy, precompute_kvec_wts,
-    setup_Ewald_sum, total, Eikr, total_electrostatic_potential_energy,
+    electrostatic_potential_energy,
+    precompute_kvec_wts,
+    setup_Ewald_sum,
+    total,
+    Eikr,
+    total_electrostatic_potential_energy,
 
     # mc_helpers.jl
-    random_insertion!, remove_molecule!, random_translation!, random_reinsertion!, needs_rotations,
+    random_insertion!,
+    remove_molecule!,
+    random_translation!,
+    random_reinsertion!,
+    needs_rotations,
     AdaptiveTranslationStepSize,
 
     # Grid.jl
     apply_periodic_boundary_condition!,
-    Grid, write_cube, read_cube, energy_grid, compute_accessibility_grid, accessible,
-    required_n_pts, xf_to_id, id_to_xf, update_density!, find_energy_minimum, origin,
- 
+    Grid,
+    write_cube,
+    read_cube,
+    energy_grid,
+    compute_accessibility_grid,
+    accessible,
+    required_n_pts,
+    xf_to_id,
+    id_to_xf,
+    update_density!,
+    find_energy_minimum,
+    origin,
+
     # EOS.jl
-    calculate_properties, PengRobinsonFluid, VdWFluid,
+    calculate_properties,
+    PengRobinsonFluid,
+    VdWFluid,
 
     # gcmc.jl
-    μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
-    μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
- 
+    μVT_sim,
+    adsorption_isotherm,
+    stepwise_adsorption_isotherm,
+    μVT_output_filename,
+    GCMCstats,
+    MarkovCounts,
+    isotherm_sim_results_to_dataframe,
+
     # henry.jl
-    henry_coefficient, henry_result_savename,
+    henry_coefficient,
+    henry_result_savename,
 
     # energy_min.jl
-    find_energy_minimum, find_energy_minimum_gridsearch
+    find_energy_minimum,
+    find_energy_minimum_gridsearch
 end

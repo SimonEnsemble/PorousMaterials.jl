@@ -13,12 +13,17 @@ UFF = LJForceField("UFF")
 
 @testset "Grid Tests" begin
     # required number of pts
-    box = Box(1.0, 10.0, 5.0, π/2, π/2, π/2)
+    box = Box(1.0, 10.0, 5.0, π / 2, π / 2, π / 2)
     @test required_n_pts(box, 0.1) == (11, 101, 51)
 
     # test read and write
-    grid = Grid(Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7), (3, 3, 3), rand(Float64, (3, 3, 3)),
-        :kJ_mol, [1., 2., 3.])
+    grid = Grid(
+        Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7),
+        (3, 3, 3),
+        rand(Float64, (3, 3, 3)),
+        :kJ_mol,
+        [1.0, 2.0, 3.0]
+    )
     write_cube(grid, "test_grid.cube")
     grid2 = read_cube("test_grid.cube")
     @test isapprox(grid, grid2, atol=1e-5) # atol b/c loose precision when reading/writing to file
@@ -26,7 +31,8 @@ UFF = LJForceField("UFF")
     # nearest neighbor ID checker
     n_pts = (10, 20, 30)
     @test PorousMaterials._arg_nearest_neighbor(n_pts, [0.001, 0.001, 0.001]) == [1, 1, 1]
-    @test PorousMaterials._arg_nearest_neighbor(n_pts, [0.999, 0.999, 0.999]) == [10, 20, 30]
+    @test PorousMaterials._arg_nearest_neighbor(n_pts, [0.999, 0.999, 0.999]) ==
+          [10, 20, 30]
     idx = [0, 21, 31]
     PorousMaterials._apply_pbc_to_index!(idx, n_pts)
     @test idx == [10, 1, 1]
@@ -45,7 +51,7 @@ UFF = LJForceField("UFF")
         write_xyz(crystal)
         molecule = deepcopy(CH4)
         forcefield = deepcopy(UFF)
-        grid = energy_grid(crystal, molecule, forcefield, resolution=5.)
+        grid = energy_grid(crystal, molecule, forcefield; resolution=5.0)
 
         # endpoints included, ensure periodic since endpoints of grid pts included
         #   first cut out huge values. 1e46 == 1.00001e46
@@ -54,9 +60,15 @@ UFF = LJForceField("UFF")
         @test isapprox(grid.data[:, 1, :], grid.data[:, end, :], atol=1e-7)
         @test isapprox(grid.data[:, :, 1], grid.data[:, :, end], atol=1e-7)
 
-        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
-            molecule, forcefield, resolution=2., energy_tol=0.0, verbose=false,
-            write_b4_after_grids=true)
+        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(
+            crystal,
+            molecule,
+            forcefield;
+            resolution=2.0,
+            energy_tol=0.0,
+            verbose=false,
+            write_b4_after_grids=true
+        )
         @test nb_segments_blocked > 0
         if zeolite == "LTA"
             @test nb_segments_blocked == 8
@@ -66,19 +78,19 @@ UFF = LJForceField("UFF")
         @test isapprox(crystal.box, accessibility_grid.box)
 
         if zeolite == "SOD"
-            @test all(.! accessibility_grid.data)
+            @test all(.!accessibility_grid.data)
         end
 
         # test accessibility by inserting random particles and writing to .xyz only if not accessible
         nb_insertions = 100000
         x = zeros(3, 0)
-        for i = 1:nb_insertions
+        for i in 1:nb_insertions
             xf = rand(3)
             if accessible(accessibility_grid, xf)
                 x = hcat(x, crystal.box.f_to_c * xf)
                 @assert accessible(accessibility_grid, xf, (1, 1, 1))
             else
-                @assert ! accessible(accessibility_grid, xf, (1, 1, 1))
+                @assert !accessible(accessibility_grid, xf, (1, 1, 1))
             end
         end
         if zeolite == "SOD"
@@ -86,14 +98,22 @@ UFF = LJForceField("UFF")
             @test length(x) == 0
         else
             xyzfilename = zeolite * "accessible_inertions.xyz"
-            write_xyz(Atoms([:CH4 for i = 1:size(x)[2]], Cart(x)), xyzfilename)
+            write_xyz(Atoms([:CH4 for i in 1:size(x)[2]], Cart(x)), xyzfilename)
             println("See ", xyzfilename)
         end
 
         # w./o blocking (nb = no blocking)
-        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(crystal,
-            molecule, forcefield, resolution=2., energy_tol=0.0, verbose=false,
-            write_b4_after_grids=false, block_inaccessible_pockets=false)
+        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb =
+            compute_accessibility_grid(
+                crystal,
+                molecule,
+                forcefield;
+                resolution=2.0,
+                energy_tol=0.0,
+                verbose=false,
+                write_b4_after_grids=false,
+                block_inaccessible_pockets=false
+            )
         @test nb_segments_blocked_nb == 0
         @test porosity_nb > porosity[:after_blocking]
         @test isapprox(porosity_nb, porosity[:b4_blocking])
@@ -103,22 +123,37 @@ UFF = LJForceField("UFF")
     crystal = Crystal("LTA.cif")
     molecule = deepcopy(CH4)
     forcefield = deepcopy(UFF)
-    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
-        molecule, forcefield, resolution=2., energy_tol=0.0, verbose=false,
-        write_b4_after_grids=true)
+    accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(
+        crystal,
+        molecule,
+        forcefield;
+        resolution=2.0,
+        energy_tol=0.0,
+        verbose=false,
+        write_b4_after_grids=true
+    )
 
     # replicate crystal and build accessibility grid that includes the other accessibility grid in a corner
     repfactors = (2, 3, 1)
     crystal = replicate(crystal, repfactors)
-    rep_accessibility_grid, rep_nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
-        molecule, forcefield, resolution=2., energy_tol=0.0, verbose=false,
-        write_b4_after_grids=true)
+    rep_accessibility_grid, rep_nb_segments_blocked, porosity = compute_accessibility_grid(
+        crystal,
+        molecule,
+        forcefield;
+        resolution=2.0,
+        energy_tol=0.0,
+        verbose=false,
+        write_b4_after_grids=true
+    )
     @test all(accessibility_grid.data .== rep_accessibility_grid.data[1:7, 1:7, 1:7])
     @test rep_nb_segments_blocked > 0
     same_accessibility_repfactors = true
-    for i = 1:10000
+    for i in 1:10000
         xf = rand(3) # in (2, 3, 1) box
-        if ! (accessible(rep_accessibility_grid, xf) == accessible(accessibility_grid, xf, repfactors))
+        if !(
+            accessible(rep_accessibility_grid, xf) ==
+            accessible(accessibility_grid, xf, repfactors)
+        )
             same_accessibility_repfactors = false
         end
     end
@@ -130,15 +165,29 @@ UFF = LJForceField("UFF")
     for crystal in [Crystal("SBMOF-1.cif"), Crystal("CAXVII_clean.cif")]
 
         # w./ blocking
-        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(crystal,
-            molecule, forcefield, energy_tol=5.0, verbose=false,
-            write_b4_after_grids=true, energy_units=:kJ_mol)
+        accessibility_grid, nb_segments_blocked, porosity = compute_accessibility_grid(
+            crystal,
+            molecule,
+            forcefield;
+            energy_tol=5.0,
+            verbose=false,
+            write_b4_after_grids=true,
+            energy_units=:kJ_mol
+        )
         @test nb_segments_blocked == 0
 
         # w./o blocking (nb = no blocking)
-        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb = compute_accessibility_grid(crystal,
-            molecule, forcefield, energy_tol=5.0, verbose=false, energy_units=:kJ_mol,
-            write_b4_after_grids=true, block_inaccessible_pockets=false)
+        accessibility_grid_nb, nb_segments_blocked_nb, porosity_nb =
+            compute_accessibility_grid(
+                crystal,
+                molecule,
+                forcefield;
+                energy_tol=5.0,
+                verbose=false,
+                energy_units=:kJ_mol,
+                write_b4_after_grids=true,
+                block_inaccessible_pockets=false
+            )
 
         @test isapprox(porosity_nb, porosity[:b4_blocking])
         @test nb_segments_blocked_nb == 0
@@ -175,6 +224,5 @@ UFF = LJForceField("UFF")
     @test isapprox(id_to_xf((1, 1, 1), (10, 12, 14)), zeros(3))
     @test isapprox(id_to_xf((10, 12, 14), (10, 12, 14)), ones(3))
     @test isapprox(id_to_xf((2, 2, 2), (3, 3, 3)), [0.5, 0.5, 0.5])
-
 end
 end

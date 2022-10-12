@@ -12,7 +12,9 @@ Molecule input files are stored in `PorousMaterials.PATH_TO_MOLECULES`. Each mol
 
 ```jldoctest molecule
 molecule = Molecule("CO2")
+
 # output
+
 Molecule species: CO2
 Center of mass (fractional coords): Cart([0.0; 0.0; 0.0;;])
 Atoms:
@@ -34,13 +36,16 @@ molecule.species   # molecule species
 molecule.com       # center-of-mass
 molecule.atoms     # Lennard-Jones spheres
 molecule.charges   # point charges 
+
 # output
+
 Charges{Cart}(3, [0.7, -0.35, -0.35], Cart([0.0 -1.16 1.16; 0.0 0.0 0.0; 0.0 0.0 0.0]))
 ```
 
 To see specific information about the atoms and charges attributes of the molecule see [`Atoms`](@ref) and [`Charges`](@ref).
 
 ## Moving Molecules
+
 We can translate and roatate a molecule:
 
 ```julia
@@ -56,12 +61,13 @@ dx = Cart([0.1, 0.0, 0.0])
 translate_by!(molecule, dx, unit_cube())
 
 # conduct a uniform random rotation about the center-of-mass
-random_rotation!(molecule, unit_cube()) 
+random_rotation!(molecule, unit_cube())
 ```
 
 # detailed docs
 
 ## Molecules
+
 ```@docs
     Molecule
     translate_to!
@@ -72,6 +78,7 @@ random_rotation!(molecule, unit_cube())
 ```
 
 ## Molecular Movement
+
 ```@docs
     apply_periodic_boundary_condition!
     random_insertion!

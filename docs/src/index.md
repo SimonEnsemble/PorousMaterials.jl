@@ -15,22 +15,23 @@ Designed for high-throughput computations to minimize input files and querying r
 
 ## Installation
 
-1. Download and install the [Julia programming language](https://julialang.org/), v1.5 or higher.
+ 1. Download and install the [Julia programming language](https://julialang.org/), v1.5 or higher.
 
-2. Open the REPL and enter the following:
+ 2. Open the REPL and enter the following:
 
 ```julia
-julia> import Pkg
-julia> Pkg.add(PorousMaterials)
+import Pkg
+Pkg.add(PorousMaterials)
 ```
 
-3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
+ 3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
 
 ```julia
-julia> using PorousMaterials # that's it
+using PorousMaterials # that's it
 ```
 
 ## Tests
+
 Run the tests in the script `tests/runtests.jl` manually or by `] test PorousMaterials` in the Julia REPL.
 
 Direct tests for Henry coefficients and grand-canonical Monte Carlo simulations take much longer and must be run separately; they are found in `tests/henry.jl` and `tests/gcmc_long.jl`.
