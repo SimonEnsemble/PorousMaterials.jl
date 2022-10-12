@@ -1,6 +1,11 @@
 # obtain a reasonable initial guess for the optimization route in fitting adsorption 
 #  models to adsorption isotherm data
-function _guess(df::DataFrame, pressure_col_name::Symbol, loading_col_name::Symbol, model::Symbol)
+function _guess(
+    df::DataFrame,
+    pressure_col_name::Symbol,
+    loading_col_name::Symbol,
+    model::Symbol
+)
     n = df[!, loading_col_name]
     p = df[!, pressure_col_name]
     if model == :langmuir || model == :henry
@@ -27,7 +32,7 @@ end
 """
     params = fit_adsorption_isotherm(df, pressure_col_name, loading_col_name, model)
 
-Takes in a DataFrame `df` containing adsorption isotherm data and fits an analytical model 
+Takes in a DataFrame `df` containing adsorption isotherm data and fits an analytical model
 to the data to identify its parameters of best fit, returned as a dictionary.
 Available models are `:henry` and `:langmuir`
 
@@ -40,25 +45,40 @@ N = (MKP)/(1+KP)
 where N is the total adsorption, M is the maximum monolayer coverage, K is the Langmuir constant. and P is the pressure of the gas.
 
 # Arguments
-- `df::DataFrame`: The DataFrame containing the pressure and adsorption data for the isotherm
-- `pressure_col_name::Symbol`: The header of the pressure column. Can be found with `names(df)`
-- `loading_col_name::Symbol`: The header of the loading/adsorption column. Can be found with `names(df)`
-- `model::Symbol`: The model chosen to fit to the adsorption isotherm data
+
+  - `df::DataFrame`: The DataFrame containing the pressure and adsorption data for the isotherm
+  - `pressure_col_name::Symbol`: The header of the pressure column. Can be found with `names(df)`
+  - `loading_col_name::Symbol`: The header of the loading/adsorption column. Can be found with `names(df)`
+  - `model::Symbol`: The model chosen to fit to the adsorption isotherm data
 
 # Returns
-- `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "H".
+
+  - `params::Dict{AbstractString, Float64}`: A Dictionary with the parameters corresponding to each model along with the MSE of the fit. `:langmuir` contains "M" and "K". `:henry` contains "H".
 """
-function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol, 
-                                 loading_col_name::Symbol, model::Symbol, 
-                                 options::Optim.Options=Optim.Options())
+function fit_adsorption_isotherm(
+    df::DataFrame,
+    pressure_col_name::Symbol,
+    loading_col_name::Symbol,
+    model::Symbol,
+    options::Optim.Options=Optim.Options()
+)
     _df = sort(df, [pressure_col_name])
     n = _df[!, loading_col_name]
     p = _df[!, pressure_col_name]
     θ0 = _guess(_df, pressure_col_name, loading_col_name, model)
 
     if model == :langmuir
-        objective_function_langmuir(θ) = return sum([(n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i = eachindex(n)])
-        res = optimize(objective_function_langmuir, [θ0["M0"], θ0["K0"]], NelderMead(), options)
+        function objective_function_langmuir(θ)
+            return sum([
+                (n[i] - θ[1] * θ[2] * p[i] / (1 + θ[2] * p[i]))^2 for i in eachindex(n)
+            ])
+        end
+        res = optimize(
+            objective_function_langmuir,
+            [θ0["M0"], θ0["K0"]],
+            NelderMead(),
+            options
+        )
         if !Optim.converged(res)
             error("Optimization algorithm failed!")
         end
@@ -66,7 +86,7 @@ function fit_adsorption_isotherm(df::DataFrame, pressure_col_name::Symbol,
         mse = res.minimum / length(n)
         return Dict("M" => M, "K" => K, "MSE" => mse)
     elseif model == :henry
-        objective_function_henry(θ) = return sum([(n[i] - θ[1] * p[i])^2 for i = eachindex(n)])
+        objective_function_henry(θ) = sum([(n[i] - θ[1] * p[i])^2 for i in eachindex(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS(), options)
         if !Optim.converged(res)
             error("Optimization algorithm failed!")

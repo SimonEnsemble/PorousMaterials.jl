@@ -20,10 +20,12 @@ xtal.box                            # The unit cell information
 xtal.atoms                          # The atom coordinates (in fractional space) and the atom identities
 xtal.charges                        # The charge magnitude and coordinates (in fractional space)
 xtal.bonds                          # Bonding information in the structure. By default this is an empty graph,
-                                    #  but use `read_bonds_from_file=true` argument in `Crystal` to read from crystal structure file
+#  but use `read_bonds_from_file=true` argument in `Crystal` to read from crystal structure file
 xtal.symmetry                       # Symmetry information of the crystal. By default converts the symmetry to P1 symmetry.
-                                    #  Use `convert_to_p1=false` argument in `Crystal` to keep original symmetry
+#  Use `convert_to_p1=false` argument in `Crystal` to keep original symmetry
+
 # output
+
 Xtals.SymmetryInfo(["x"; "y"; "z";;], "P1", true)
 ```
 
@@ -37,6 +39,7 @@ It is important to use this function prior to GCMC or Henry coefficient calculat
 strip_numbers_from_atom_labels!(xtal)
 
 # output
+
 ```
 
 ## converting the coordinates to cartesian space
@@ -47,7 +50,9 @@ that can be done by using the unit cell information of the crystal.
 ```jldoctest crystal
 xtal.atoms.coords.xf                                    # array of fractional coordinates
 cart_coords = xtal.box.f_to_c * xtal.atoms.coords.xf    # array of cartesian coordinates
+
 # output
+
 3×120 Matrix{Float64}:
  4.59487  -0.95272   2.68943   8.23701  …  8.8164    0.839249  -1.53211
  1.43955   4.2229    4.12715   1.3438      1.35443   1.42892    4.21227
@@ -59,8 +64,10 @@ cart_coords = xtal.box.f_to_c * xtal.atoms.coords.xf    # array of cartesian coo
 For many simulations, one needs to replicate the unit cell multiple times to create a bigger super cell.
 
 ```jldoctest crystal
-super_xtal = replicate(xtal, (2,2,2))       # Replicates the original unit cell once in each dimension
+super_xtal = replicate(xtal, (2, 2, 2))       # Replicates the original unit cell once in each dimension
+
 # output
+
 Name: SBMOF-1.cif
 Bravais unit cell of a crystal.
 	Unit cell angles α = 90.000000 deg. β = 100.897000 deg. γ = 90.000000 deg.
@@ -84,7 +91,9 @@ Bravais unit cell of a crystal.
 rho = crystal_density(xtal)         # Crystal density of the crystal in kg/m^2
 mw = molecular_weight(xtal)         # The molecular weight of the unit cell in amu
 formula = chemical_formula(xtal)    # The irreducible chemical formula of the crystal
+
 # output
+
 "Ca₄C₅₆H₃₂O₂₄S₄"
 ```
 
@@ -95,11 +104,17 @@ If the crystal structure file does not contains partial charges, we provide meth
 ```julia
 species_to_charges = Dict(:Ca => 2.0, :C => 1.0, :H => -1.0)                # This method assigns a static charge to atom species
 charged_xtal = assign_charges(xtal, species_to_charges, 1e-5)                # This function creates a new charged `Crystal` object.
-                                                                            #   The function checks for charge neutrality with a tolerance of 1e-5
+#   The function checks for charge neutrality with a tolerance of 1e-5
 new_charges = Charges([2.0, 1.0, -1.0, -1.0, ...], xtal.atoms.coords)
-other_charged_xtal = Crystal(xtal.name, xtal.box, xtal.atoms,               # Here we create a new `Charges` object using an array of new charges.
-                             new_charges, xtal.bonds, xtal.symmetry)        #   The number of charges in the array has to be equal to the number of atoms
-                                                                            #   and finally a new `Crystal` object is manually created
+other_charged_xtal = Crystal(
+    xtal.name,
+    xtal.box,
+    xtal.atoms,               # Here we create a new `Charges` object using an array of new charges.
+    new_charges,
+    xtal.bonds,
+    xtal.symmetry
+)        #   The number of charges in the array has to be equal to the number of atoms
+#   and finally a new `Crystal` object is manually created
 ```
 
 ## writing crystal files
@@ -109,10 +124,10 @@ We provide methods to write both `.xyz` and `.cif` files
 ```jldoctest crystal; output=false
 write_cif(xtal, "my_new_cif_file.cif")      # Stored in the current directory
 write_xyz(xtal, "my_new_xyz_file.xyz")      # stored in the current directory
+
 # output
 
 ```
-
 
 # detailed docs
 

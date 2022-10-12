@@ -23,8 +23,18 @@ strip_numbers_from_atom_labels!(xtal)
 adsorbate = Molecule(gasname)
 
 # run the simulation
-results = gcmc_simulation(xtal, temperature, pressure, adsorbate, ljff, 
-                          n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles, 
-                          verbose=true, sample_frequency=1, eos=:PengRobinson, autosave=true)
+results = gcmc_simulation(
+    xtal,
+    temperature,
+    pressure,
+    adsorbate,
+    ljff;
+    n_burn_cycles=n_burn_cycles,
+    n_sample_cycles=n_sample_cycles,
+    verbose=true,
+    sample_frequency=1,
+    eos=:PengRobinson,
+    autosave=true
+)
 
 # results dictionary autosaved in data/gcmc_sims
