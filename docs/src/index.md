@@ -20,15 +20,14 @@ Designed for high-throughput computations to minimize input files and querying r
  2. Open the REPL and enter the following:
 
 ```julia
-julia> Pkg.add(PorousMaterials)
 import Pkg
+Pkg.add(PorousMaterials)
 ```
 
  3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
 
 ```julia
-julia> using PorousMaterials # that's it
-
+using PorousMaterials # that's it
 ```
 
 ## Tests
