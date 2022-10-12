@@ -17,10 +17,11 @@ Designed for high-throughput computations to minimize input files and querying r
 
 1. Download and install the [Julia programming language](https://julialang.org/), v1.5 or higher.
 
-2. In Julia, open the package manager (using `]`) and enter the following:
+2. Open the REPL and enter the following:
 
 ```julia
-pkg> add PorousMaterials
+julia> import Pkg
+julia> Pkg.add(PorousMaterials)
 ```
 
 3. In Julia, load all functions in `PorousMaterials.jl` into the namespace:
