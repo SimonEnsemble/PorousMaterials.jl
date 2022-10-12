@@ -2,7 +2,7 @@ name: formatter
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 concurrency: # only allow the most recent workflow to execute
   group: ${{ github.workflow }}-${{ github.ref }}
