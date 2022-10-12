@@ -22,8 +22,10 @@ Reading in Lennard-Jones force field parameters is made easy with the [`LJForceF
 
 ```jldoctest force_field
 # read in Lennard-Jones force field parameters from the Universal Force Field
-ljforcefield = LJForceField("UFF", r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
+ljforcefield = LJForceField("UFF"; r_cutoff=14.0, mixing_rules="Lorentz-Berthelot")
+
 # output
+
 Force field: UFF
 Number of atoms included: 108
 Cut-off radius (Å) = 14.0
@@ -137,7 +139,7 @@ O_CO2-O_CO2 ϵ =   79.00000 K, σ =    3.05000 Å
    He-   He ϵ =   28.18319 K, σ =    2.10430 Å
 ```
 
-This also prints all of the atoms included in the loaded forcefield with their given ϵ and σ. This was excluded because it would use too much space on this page. 
+This also prints all of the atoms included in the loaded forcefield with their given ϵ and σ. This was excluded because it would use too much space on this page.
 
 We can access attributes `LJForceField` such as `pure_σ`, `pure_ϵ`, and interaction values:
 
@@ -149,7 +151,9 @@ ljforcefield.pure_σ[:Xe] # Å
 # access the Lennard-Jones epsilon & sigma for Xe-C interactions
 ljforcefield.ϵ[:Xe][:C]  # K
 ljforcefield.σ²[:Xe][:C] # Å (store σ² for faster computation)
+
 # output
+
 13.521685546424905
 ```
 
@@ -165,7 +169,9 @@ forcefield_coverage(xtal, ljforcefield)
 # check if the atoms in a molecule are covered
 molecule = Molecule("CO2")
 forcefield_coverage(molecule, ljforcefield)
+
 # output
+
 true
 ```
 
@@ -175,8 +181,10 @@ Find the replication factors needed to make a supercell big enough to fit a sphe
 
 ```jldoctest force_field
 r_cutoff = 14.0 # Å
-repfactors = replication_factors(xtal.box, r_cutoff) 
+repfactors = replication_factors(xtal.box, r_cutoff)
+
 # output
+
 (3, 6, 2)
 ```
 
@@ -187,16 +195,19 @@ What is the van der Waals potential energy of a Xe adsorbate inside SBMOF-1 at C
 ```jldoctest force_field
 # load molecule and convert it to fractional
 molecule = Molecule("Xe")
-molecule = Frac(molecule, xtal.box) 
+molecule = Frac(molecule, xtal.box)
 translate_to!(molecule, Cart([0.0, 1.0, 3.0]), xtal.box) # need box b/c we're in Cartesian
 energy = vdw_energy(xtal, molecule, ljforcefield) # K
+
 # output
+
 5.73882798944654e6
 ```
 
 # detailed docs
 
 ## Forcefields
+
 ```@docs
     LJForceField
     replication_factors
@@ -204,17 +215,20 @@ energy = vdw_energy(xtal, molecule, ljforcefield) # K
 ```
 
 ## Potential Energy
+
 ```@docs
     PotentialEnergy
     SystemPotentialEnergy
 ```
 
 ## Nearest Image Conventions
+
 ```@docs
     nearest_image!
 ```
 
 ## Electrostatics Energy
+
 ```@docs
     Eikr
     total
@@ -226,6 +240,7 @@ energy = vdw_energy(xtal, molecule, ljforcefield) # K
 ```
 
 ## Van der Waals Energy
+
 ```@docs
     lennard_jones
     vdw_energy
