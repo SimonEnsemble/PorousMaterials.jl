@@ -11,6 +11,24 @@ using Random
 CH4 = Molecule("CH4")
 UFF = LJForceField("UFF")
 
+raw"""
+to test distributed calculation of energy grid, use:
+bash$ TEST_DISTRIB= julia --project grid.jl
+"""
+if "TEST_DISTRIB" in keys(ENV)
+    @testset "Distributed Grid Calculation" begin
+        crystal = Crystal("LTA.cif")
+        molecule = deepcopy(CH4)
+        forcefield = deepcopy(UFF)
+
+        _, nb_segments_blocked, porosity = compute_accessibility_grid(
+            crystal, molecule, forcefield; verbose=true, write_b4_after_grids=true
+        )
+        @test nb_segments_blocked == 8
+        @test porosity[:b4_blocking] > porosity[:after_blocking]
+    end
+end
+
 @testset "Grid Tests" begin
     # required number of pts
     box = Box(1.0, 10.0, 5.0, π/2, π/2, π/2)
@@ -63,7 +81,8 @@ UFF = LJForceField("UFF")
         end
         @test porosity[:b4_blocking] > porosity[:after_blocking]
 
-        @test isapprox(crystal.box, accessibility_grid.box)
+        # this test is no good b/c compute_accessibility_grid determines its own repfactors!
+        # @test isapprox(crystal.box, accessibility_grid.box) 
 
         if zeolite == "SOD"
             @test all(.! accessibility_grid.data)
