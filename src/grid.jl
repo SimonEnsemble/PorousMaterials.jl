@@ -1,3 +1,5 @@
+using Distributed
+
 """
 Data structure for a regular [equal spacing between points in each coordinate] grid of points superimposed on a unit cell box (`Box`).
 Each grid point has data, `data`, associated with it, of type `T`, stored in a 3D array.
@@ -312,9 +314,6 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
     # grid of voxel centers (each axis at least).
     grid_pts = [collect(range(0.0; stop=1.0, length=n_pts[i])) for i = 1:3]
 
-    grid = Grid(crystal.box, n_pts, zeros(Float64, n_pts...), units,
-        center ? crystal.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0])
-
     if verbose
         @printf("Computing energy grid of %s in %s\n", molecule.species, crystal.name)
         @printf("\tRegular grid (in fractional space) of %d by %d by %d points superimposed over the unit cell.\n", n_pts[1], n_pts[2], n_pts[3])
@@ -331,11 +330,18 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
     repfactors = replication_factors(crystal.box, ljforcefield)
     crystal = replicate(crystal, repfactors)
 
-	for (i, xf) in enumerate(grid_pts[1]), (j, yf) in enumerate(grid_pts[2]), (k, zf) in enumerate(grid_pts[3])
+    # compute grid (K units)
+    grid_data = pmap(
+        (i, xf, j, yf, k, zf)
+        for (i, xf) in enumerate(grid_pts[1]), 
+            (j, yf) in enumerate(grid_pts[2]), 
+            (k, zf) in enumerate(grid_pts[3])
+    ) do vars
+        i, xf, j, yf, k, zf = vars
         # must account for fact that crystal is now replicated; use coords in home box
         translate_to!(molecule, Frac([xf, yf, zf] ./ repfactors))
         if ! rotations_required
-            ensemble_average_energy = vdw_energy(crystal, molecule, ljforcefield)
+            return vdw_energy(crystal, molecule, ljforcefield)
         else
             boltzmann_factor_sum = 0.0
             for _ ∈ 1:n_rotations
@@ -344,21 +350,27 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
                 energy = PotentialEnergy(0.0, 0.0)
                 energy.vdw = vdw_energy(crystal, molecule, ljforcefield)
                 if charged_system
-                    energy.coulomb = total(electrostatic_potential_energy(crystal, molecule,
-                                                                         eparams, eikr))
+                    energy.coulomb = total(
+                        electrostatic_potential_energy(crystal, molecule, eparams, eikr)
+                    )
                 end
                 boltzmann_factor_sum += exp(-sum(energy) / temperature)
             end
-            ensemble_average_energy = -temperature * log(boltzmann_factor_sum / n_rotations)
+            return -temperature * log(boltzmann_factor_sum / n_rotations)
         end
-		grid.data[i, j, k] = ensemble_average_energy # K
-	end
-
-    if units == :kJ_mol # K - kJ/mol
-        grid.data[:] = grid.data[:] * 8.314 / 1000.0
     end
 
-	return grid
+    if units == :kJ_mol # K - kJ/mol
+        grid_data[:] = grid_data[:] * 8.314 / 1000.0
+    end
+
+    return Grid(
+        crystal.box, 
+        n_pts, 
+        grid_data, 
+        units,
+        center ? crystal.box.f_to_c * [-0.5, -0.5, -0.5] : [0.0, 0.0, 0.0]
+    )
 end
 
 
