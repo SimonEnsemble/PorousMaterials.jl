@@ -60,6 +60,11 @@ length(coords)                 # number of particles, (5)
 coords.x = rand(3, 5)
 # output
 ERROR: setfield!: immutable struct of type Cart cannot be changed
+Stacktrace:
+ [1] setproperty!(x::Cart, f::Symbol, v::Matrix{Float64})
+   @ Base ./Base.jl:41
+ [2] top-level scope
+   @ none:1
 ```
 but we can manipulate the values of `Array{Float64, 2}` where coordinates (through `coords.x` or `coords.xf`) are stored:
 
