@@ -8,7 +8,13 @@ end
 
 ## Loading Molecule Files
 
-Molecule input files are stored in `PorousMaterials.PATH_TO_MOLECULES`. Each molecule possesses its own directory containing two files: `charges.csv` and `atoms.csv`, comma-separated-value files, which describe the point charges and Lennard Jones spheres, respectively, that compose the molecule. Only rigid molecules are currently supported. Units of length are in Angstroms ($\AA$); units of charges are electrons.
+Molecule input files are stored in the path indicated by the `Xtals`/`PorousMaterials` global dictionary `rc`. 
+
+```julia
+rc[:paths][:molecules] # absolute or relative path
+```
+
+Each molecule possesses its own directory containing two files: `charges.csv` and `atoms.csv`, comma-separated-value files, which describe the point charges and Lennard Jones spheres, respectively, that compose the molecule. Only rigid molecules are currently supported. Units of length are in Angstroms ($\AA$); units of charges are electrons.
 
 ```jldoctest molecule
 molecule = Molecule("CO2")
