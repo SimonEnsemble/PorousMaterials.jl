@@ -62,9 +62,9 @@ for file in readdir(dir)
 end
 # output
 ┌ Info: atoms.csv
-└   data = "atom,x,y,z\r\nN_in_N2,0,0,0.55\r\nPSEUDOATOM_LABEL,0,0,0\r\nN_in_N2,0,0,-0.55"
+└   data = "atom,x,y,z\nN_in_N2,0,0,0.55\nPSEUDOATOM_LABEL,0,0,0\nN_in_N2,0,0,-0.55"
 ┌ Info: charges.csv
-└   data = "q,x,y,z\r\n-0.482,0,0,0.55\r\n0.964,0,0,0\r\n-0.482,0,0,-0.55"
+└   data = "q,x,y,z\n-0.482,0,0,0.55\n0.964,0,0,0\n-0.482,0,0,-0.55"
 ```
 
 **atoms.csv**
