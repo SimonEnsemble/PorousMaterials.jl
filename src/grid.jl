@@ -344,7 +344,7 @@ function energy_grid(crystal::Crystal, molecule::Molecule{Cart}, ljforcefield::L
                 energy = PotentialEnergy(0.0, 0.0)
                 energy.vdw = vdw_energy(crystal, molecule, ljforcefield)
                 if charged_system
-                    energy.coulomb = total(electrostatic_potential_energy(crystal, molecule,
+                    energy.es = total(electrostatic_potential_energy(crystal, molecule,
                                                                          eparams, eikr))
                 end
                 boltzmann_factor_sum += exp(-sum(energy) / temperature)
