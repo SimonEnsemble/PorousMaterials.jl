@@ -57,14 +57,14 @@ length(coords)                 # number of particles, (5)
 `Coords` are immutable:
 
 ```jldoctest matter
-coords.x = rand(3, 5)
+try
+  coords.x = rand(3, 5)
+catch exception
+  @error "Immutable!"
+end
 # output
-ERROR: setfield!: immutable struct of type Cart cannot be changed
-Stacktrace:
- [1] setproperty!(x::Cart, f::Symbol, v::Matrix{Float64})
-   @ Base ./Base.jl:41
- [2] top-level scope
-   @ none:1
+┌ Error: Immutable!
+└ @ Main none:4
 ```
 but we can manipulate the values of `Array{Float64, 2}` where coordinates (through `coords.x` or `coords.xf`) are stored:
 
