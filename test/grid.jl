@@ -12,12 +12,12 @@ CH4 = Molecule("CH4")
 UFF = LJForceField("UFF")
 
 @testset "Grid Tests" verbose=true begin
-    @testset "required_n_pts" begin
+    @testset "required_n_pts" verbose=true begin
         box = Box(1.0, 10.0, 5.0, π/2, π/2, π/2)
         @test required_n_pts(box, 0.1) == (11, 101, 51)
     end
 
-    @testset "read/write" begin
+    @testset "read/write" verbose=true begin
         grid = Grid(Box(0.7, 0.8, 0.9, 1.5, 1.6, 1.7), (3, 3, 3), rand(Float64, (3, 3, 3)),
             :kJ_mol, [1., 2., 3.])
         write_cube(grid, "test_grid.cube")
