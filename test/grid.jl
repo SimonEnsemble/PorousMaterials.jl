@@ -186,5 +186,20 @@ UFF = LJForceField("UFF")
         @test isapprox(id_to_xf((2, 2, 2), (3, 3, 3)), [0.5, 0.5, 0.5])
     end
 
+    @testset "charges and rotations" verbose=true begin
+        xtal = Crystal("zif71_bogus_charges.cif")
+        strip_numbers_from_atom_labels!(xtal)
+        molecule = Molecule("CO2")
+        ljforcefield = deepcopy(UFF)
+        grid = energy_grid(xtal, molecule, ljforcefield, resolution=3., units=:kJ_mol, temperature=300.0, n_rotations=2, verbose=false)
+        @test isapprox(grid.box.a, 28.5539)
+        @test isapprox(grid.box.α, 1.5707963267948966)
+        @test grid.n_pts == (11, 11, 11)
+        @test all(grid.n_pts .== size(grid.data))
+        @test isa(grid.data, Array{Float64, 3})
+        @test !any(isnan, grid.data)
+        @test grid.units == :kJ_mol
+    end
+
 end
 end
