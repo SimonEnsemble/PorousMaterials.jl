@@ -18,12 +18,12 @@ ljff = jobs_to_run[structurename]["forcefield"]
 n_burn_cycles = jobs_to_run[structurename]["n_burn_cycles"]
 n_sample_cycles = jobs_to_run[structurename]["n_sample_cycles"]
 
-xtal = Framework(structurename * ".cif")
+xtal = Crystal(structurename * ".cif")
 strip_numbers_from_atom_labels!(xtal)
 adsorbate = Molecule(gasname)
 
 # run the simulation
-results = gcmc_simulation(
+results = muVT_sim(
     xtal,
     temperature,
     pressure,

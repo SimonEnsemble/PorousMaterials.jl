@@ -1,4 +1,6 @@
-import Base: +, /
+module NVT
+
+import ..Molecule, ..Frac, ..Crystal, ..LJForceField, ..@printf, ..@sprintf, ..@save, ..Cart, ..EwaldParams, ..Eikr
 
 const KB = 1.38064852e7 # Boltmann constant (Pa-m3/K --> Pa-A3/K)
 
@@ -14,12 +16,6 @@ const N_PROPOSAL_TYPES = length(keys(PROPOSAL_ENCODINGS))
 const TRANSLATION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["translation"]
 const ROTATION    = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["rotation"]
 const REINSERTION = Dict([v => k for (k, v) in PROPOSAL_ENCODINGS])["reinsertion"]
-
- # count proposed/accepted for each subtype
-mutable struct MarkovCounts
-    n_proposed::Array{Int, 1}
-    n_accepted::Array{Int, 1}
-end
 
 # TODO move this to MC helpers? but not sure if it will inline. so wait after test with @time
 # potential energy change after inserting/deleting/perturbing coordinates of molecules[molecule_id]
@@ -260,4 +256,8 @@ function NVT_sim(xtal::Crystal,
     molecules = Cart.(molecules, xtal.box)
 
     return molecules # summary of statistics and ending configuration of molecules
-end # μVT_sim
+end # NVT_sim
+
+export NVT_sim
+
+end # module NVT

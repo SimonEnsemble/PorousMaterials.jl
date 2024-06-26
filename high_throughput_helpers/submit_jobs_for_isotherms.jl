@@ -40,7 +40,8 @@ function write_gcmc_submit_script(
         #\$ -e %s.e                                                                          
                                                                                                     
         ## select queue - if needed; mime5 is SimonEnsemble priority queue but is restrictive.       
-        ##\$ -q mime5                                                                                 
+        ##\$ -q mime5
+        ##\$ -A simongrp                                                                                 
                                                                                                     
         # print date and time
         date

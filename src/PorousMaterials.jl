@@ -28,7 +28,6 @@ include("gcmc.jl")
 include("energy_min.jl")
 include("atomic_masses.jl")
 include("banner.jl")
-include("nvt.jl")
 
 function __init__()
     rc[:paths][:forcefields] = ""
@@ -38,6 +37,10 @@ function __init__()
     set_paths(joinpath(pwd(), "data"), no_warn=true)
     append_atomic_masses()
 end
+
+# overload unicode names w/ pure-ASCII forms
+muVT_sim = μVT_sim
+muVT_output_filename = μVT_output_filename
 
 export
     # isotherm_fitting.jl
@@ -72,8 +75,8 @@ export
     calculate_properties, PengRobinsonFluid, VdWFluid,
 
     # gcmc.jl
-    μVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
-    μVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
+    μVT_sim, muVT_sim, adsorption_isotherm, stepwise_adsorption_isotherm,
+    μVT_output_filename, muVT_output_filename, GCMCstats, MarkovCounts, isotherm_sim_results_to_dataframe,
  
     # henry.jl
     henry_coefficient, henry_result_savename,
