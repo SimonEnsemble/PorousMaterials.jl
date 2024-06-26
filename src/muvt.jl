@@ -1,6 +1,15 @@
 module MuVT
 
-import ..Molecule, ..Frac, ..Crystal, ..LJForceField, ..@printf, ..@sprintf, ..@save, ..Cart, ..EwaldParams, ..Eikr
+import ..Molecule,
+    ..Frac,
+    ..Crystal,
+    ..LJForceField,
+    ..@printf,
+    ..@sprintf,
+    ..@save,
+    ..Cart,
+    ..EwaldParams,
+    ..Eikr
 
 ###
 #   Markov chain proposals
