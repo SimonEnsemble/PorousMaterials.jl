@@ -1,6 +1,6 @@
 module PorousMaterials
 
-using CSV, DataFrames, Distributed, FIGlet, Graphs, JLD2, LinearAlgebra, OffsetArrays, Optim, 
+using CSV, DataFrames, Distributed, Graphs, JLD2, LinearAlgebra, OffsetArrays, Optim, 
     Polynomials, Printf, ProgressMeter, Roots, SpecialFunctions, Statistics, StatsBase
 
 # extend Xtals
@@ -27,6 +27,7 @@ include("henry.jl")
 include("gcmc.jl")
 include("energy_min.jl")
 include("atomic_masses.jl")
+include("banner.jl")
 
 function __init__()
     rc[:paths][:forcefields] = ""
@@ -36,13 +37,6 @@ function __init__()
     set_paths(joinpath(pwd(), "data"), no_warn=true)
     append_atomic_masses()
 end
-
-function banner()
-    font_num = 579
-    FIGlet.render("Porous", FIGlet.availablefonts()[font_num])
-    FIGlet.render("Materials", FIGlet.availablefonts()[font_num])
-end
-
 
 export
     # isotherm_fitting.jl
