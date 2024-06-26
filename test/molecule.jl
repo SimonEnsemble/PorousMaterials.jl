@@ -25,8 +25,8 @@ end
 function pairwise_distances(coords::Frac, box::Box)
     n = size(coords)[2]
     pad = zeros(n, n)
-    for i = 1:n
-        for j = 1:n
+    for i in 1:n
+        for j in 1:n
             pad[i, j] = distance(coords, box, i, j, false)
         end
     end
@@ -37,16 +37,23 @@ function pairwise_distances(coords::Cart)
     n = size(coords)[2]
     pad = zeros(n, n)
     box = unit_cube()
-    for i = 1:n
-        for j = 1:n
+    for i in 1:n
+        for j in 1:n
             pad[i, j] = distance(coords, box, i, j, false)
         end
     end
     return pad
 end
 
-pairwise_distances(m::Molecule{Cart}) = [pairwise_distances(m.atoms.coords), pairwise_distances(m.charges.coords)]
-pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.coords, box), pairwise_distances(m.charges.coords, box)]
+function pairwise_distances(m::Molecule{Cart})
+    return [pairwise_distances(m.atoms.coords), pairwise_distances(m.charges.coords)]
+end
+function pairwise_distances(m::Molecule{Frac}, box::Box)
+    return [
+        pairwise_distances(m.atoms.coords, box),
+        pairwise_distances(m.charges.coords, box)
+    ]
+end
 
 @testset "Molecules Tests" begin
     ###
@@ -60,18 +67,18 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test molecule.atoms.species[1] == :C_CO2
     @test molecule.atoms.species[2] == :O_CO2
     @test molecule.atoms.species[3] == :O_CO2
-    @test all(molecule.atoms.coords.x[:,1] .≈ [0.0, 0.0, 0.0])
-    @test all(molecule.atoms.coords.x[:,2] .≈ [-1.16, 0.0, 0.0])
-    @test all(molecule.atoms.coords.x[:,3] .≈ [1.16, 0.0, 0.0])
+    @test all(molecule.atoms.coords.x[:, 1] .≈ [0.0, 0.0, 0.0])
+    @test all(molecule.atoms.coords.x[:, 2] .≈ [-1.16, 0.0, 0.0])
+    @test all(molecule.atoms.coords.x[:, 3] .≈ [1.16, 0.0, 0.0])
     @test all(molecule.com.x .≈ [0.0, 0.0, 0.0])
     @test molecule.charges.n == 3
     @test molecule.charges.q[1] ≈ 0.7
     @test molecule.charges.q[2] ≈ -0.35
     @test molecule.charges.q[3] ≈ -0.35
-    for i = 1:3
+    for i in 1:3
         @test all(molecule.charges.coords.x[i] ≈ molecule.atoms.coords.x[i])
     end
-    
+
     ###
     #  extremely basic: make sure these functions change the molecule and don't screw up bond distances
     ###
@@ -79,36 +86,36 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     pad = pairwise_distances(m)
     dx = 4 * randn(3)
     translate_by!(m, Cart(dx))
-    @test ! isapprox(m.atoms, CO2.atoms)
-    @test ! isapprox(m.charges, CO2.charges)
-    @test ! isapprox(m.com, CO2.com)
+    @test !isapprox(m.atoms, CO2.atoms)
+    @test !isapprox(m.charges, CO2.charges)
+    @test !isapprox(m.com, CO2.com)
     @test isapprox(pad, pairwise_distances(m))
     translate_by!(m, Cart(-1 * dx))
     @test isapprox(m, CO2)
-    
+
     m = deepcopy(CO2)
     x_new_com = 4 * randn(3)
     new_com = Cart(x_new_com)
     translate_to!(m, new_com)
-    @test ! isapprox(m.atoms, CO2.atoms)
-    @test ! isapprox(m.charges, CO2.charges)
-    @test ! isapprox(m.com, CO2.com)
+    @test !isapprox(m.atoms, CO2.atoms)
+    @test !isapprox(m.charges, CO2.charges)
+    @test !isapprox(m.com, CO2.com)
     @test isapprox(m.com, new_com)
     @test isapprox(pad, pairwise_distances(m))
-    
+
     m = deepcopy(CO2)
     random_rotation!(m)
-    @test ! isapprox(m.atoms, CO2.atoms)
-    @test ! isapprox(m.charges, CO2.charges)
+    @test !isapprox(m.atoms, CO2.atoms)
+    @test !isapprox(m.charges, CO2.charges)
     @test isapprox(m.com, CO2.com)
     @test isapprox(pad, pairwise_distances(m))
-        
+
     # ... in frac coords
     m = deepcopy(H2S)
     pad = pairwise_distances(m)
     box = SBMOF1.box
     m = Frac(m, box)
-    for i = 1:200
+    for i in 1:200
         translate_by!(m, Frac([randn(), randn(), randn()]))
         translate_by!(m, Cart([randn(), randn(), randn()]), box)
         translate_to!(m, Frac([randn(), randn(), randn()]))
@@ -117,7 +124,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     end
     pad_after = pairwise_distances(m, box)
     @test isapprox(pad, pad_after)
-    
+
     ###
     #   Frac to Cart converter
     ###
@@ -126,19 +133,19 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     m = Frac(m, box)
     m = Cart(m, box)
     @test isapprox(m, CO2) # should restore.
-    
+
     box = unit_cube()
     m = CO2
     m = Frac(m, box)
     @test isapprox(Cart(m, box), CO2)
-    
+
     ###
     # make sure translate by/to preserve orientation 
     ###
     # ... in frac coords
     m = deepcopy(CO2)
     m = Frac(m, box)
-    for i = 1:10
+    for i in 1:10
         translate_by!(m, Frac([randn(), randn(), randn()]))
         translate_by!(m, Cart([randn(), randn(), randn()]), box)
         translate_to!(m, Frac([randn(), randn(), randn()]))
@@ -148,10 +155,10 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     m = Cart(m, box)
     translate_to!(fresh_m, m.com)
     @test isapprox(m, fresh_m) # should restore and preserve orientation
-    
+
     # ... in cart coords
     m = deepcopy(CO2)
-    for i = 1:10
+    for i in 1:10
         translate_by!(m, Cart([randn(), randn(), randn()]))
         translate_by!(m, Frac([randn(), randn(), randn()]), box)
         translate_to!(m, Cart([randn(), randn(), randn()]))
@@ -171,7 +178,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     translate_by!(m2, Frac([0.0, 0.0, 0.0]))
     @test isapprox(m1, m2)
     translate_by!(m2, Frac([0.0, 1.2, 0.0]))
-    @test ! isapprox(m1, m2)
+    @test !isapprox(m1, m2)
     translate_to!(m2, m1.com)
     @test isapprox(m1, m2)
     translate_to!(m2, Cart([50.0, 100.0, 150.0]), box)
@@ -180,13 +187,13 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     translate_to!(m1, Frac([0.1, 0.2, 1.4]))
     translate_to!(m2, Cart(box.f_to_c * [0.1, 0.2, 1.4]), box)
     @test isapprox(m1, m2)
-    
+
     translate_by!(m1, Frac([-0.1, -0.2, -1.1]))
     translate_by!(m2, Cart(box.f_to_c * [-0.1, -0.2, -1.1]), box)
     @test isapprox(m1, m2)
     random_rotation!(m2, box)
     random_rotation!(m1, box)
-    
+
     ###
     # make sure random rotations preserve bond distances.
     ###
@@ -195,12 +202,12 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     com = Cart(10.0 * randn(3))
     translate_to!(m, com)
     pad = pairwise_distances(m)
-    for i = 1:1000
+    for i in 1:1000
         random_rotation!(m)
     end
     @test isapprox(pad, pairwise_distances(m))
     @test isapprox(m.com, com, atol=1e-12) # com should not change
-    
+
     #  ... rotations in frac space
     m = deepcopy(H2S)
     pad = pairwise_distances(m)
@@ -208,14 +215,14 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     m = Frac(m, box)
     com = Frac(10.0 * randn(3))
     translate_to!(m, com)
-    for i = 1:1000
+    for i in 1:1000
         random_rotation!(m, box)
     end
     @test isapprox(pad, pairwise_distances(m, box))
     @test isapprox(m.com, com, atol=1e-12)
 
     # test unit vector on sphere generator
-    ms = [He for i = 1:10000]
+    ms = [He for i in 1:10000]
     for m in ms
         translate_to!(m, Cart(rand_point_on_unit_sphere()))
     end
@@ -226,16 +233,16 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     # Test to see if random_rotation_matrix() is random and uniform on sphere surface
     N = 1000000
     points = Array{Float64, 2}(undef, 3, N)
-    for i = 1:N
-        points[:, i] = random_rotation_matrix() * [0., 0., 1.]
+    for i in 1:N
+        points[:, i] = random_rotation_matrix() * [0.0, 0.0, 1.0]
     end
 
-    for i = 1:3
+    for i in 1:3
         r = rand()
         count = zeros(10)
-        for j = 1:10
-            for k = 1:N
-                if points[1, k] > 0 && points[2, k] ^ 2 + points[3, k] ^ 2 <= r ^ 2
+        for j in 1:10
+            for k in 1:N
+                if points[1, k] > 0 && points[2, k]^2 + points[3, k]^2 <= r^2
                     count[j] += 1
                 end
             end
@@ -254,7 +261,7 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     up = 0 # H in upper half-sphere
     left = 0 # H in left half-sphere
     back = 0 # H in back half-sphere
-    for i = 1:N
+    for i in 1:N
         random_rotation!(m)
         if m.atoms.coords.x[3, 2] > 0.0
             up += 1
@@ -269,18 +276,18 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test isapprox(up / N, 0.5, atol=0.01)
     @test isapprox(left / N, 0.5, atol=0.01)
     @test isapprox(back / N, 0.5, atol=0.01)
-    
+
     ###
     #   rotation matrix should be orthogonal
     ###
     r_orthogonal = true
     r_det_1 = true
-    for i = 1:300
+    for i in 1:300
         r = random_rotation_matrix()
-        if ! isapprox(r * transpose(r), Matrix{Float64}(I, 3, 3))
+        if !isapprox(r * transpose(r), Matrix{Float64}(I, 3, 3))
             r_orthogonal = false
         end
-        if ! isapprox(det(r), 1.0)
+        if !isapprox(det(r), 1.0)
             r_det_1 = false
         end
     end
@@ -288,15 +295,15 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     @test r_det_1
 
     # visually inspection that rotations are random
-    ms = [deepcopy(CO2) for i = 1:1000]
+    ms = [deepcopy(CO2) for i in 1:1000]
     for m in ms
         random_rotation!(m)
     end
     write_xyz(ms, "co2s")
     @info "see co2s.xyz for dist'n of rotations"
 
-    @test ! needs_rotations(Molecule("Xe"))
-    
+    @test !needs_rotations(Molecule("Xe"))
+
     # frac and cart
     m = H2S
     box = Box(2.0, 4.0, 8.0)
@@ -318,13 +325,13 @@ pairwise_distances(m::Molecule{Frac}, box::Box) = [pairwise_distances(m.atoms.co
     random_translation!(m_ref, box, adaptive_δ)
     random_rotation!(m, box)
     random_rotation!(m_ref, box)
-    @test ! PorousMaterials.distortion(m, m_ref, box)
+    @test !PorousMaterials.distortion(m, m_ref, box)
     m.atoms.coords.xf[:, 1] += randn(3)
     @test PorousMaterials.distortion(m, m_ref, box)
 
     # "center of mass" for massless molecules
     rc[:atomic_masses][:null] = 0.0
     molecule = Molecule("com_test")
-    @test isapprox(molecule.com, Cart([0.;0.;0.]))
+    @test isapprox(molecule.com, Cart([0.0; 0.0; 0.0]))
 end
 end

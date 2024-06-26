@@ -13,26 +13,28 @@ struct PengRobinsonFluid
     ω::Float64
 end
 
-
 # Parameters in the Peng-Robinson Equation of State
 # T in Kelvin, P in bar
-a(fluid::PengRobinsonFluid) = (0.457235 * UNIV_GAS_CONST ^ 2 * fluid.Tc ^ 2) / fluid.Pc
+a(fluid::PengRobinsonFluid) = (0.457235 * UNIV_GAS_CONST^2 * fluid.Tc^2) / fluid.Pc
 b(fluid::PengRobinsonFluid) = (0.0777961 * UNIV_GAS_CONST * fluid.Tc) / fluid.Pc
-κ(fluid::PengRobinsonFluid) = 0.37464 + (1.54226 * fluid.ω) - (0.26992 * fluid.ω ^ 2)
-α(κ::Float64, Tr::Float64) = (1 + κ * (1 - √Tr)) ^ 2
-A(T::Float64, P::Float64, fluid::PengRobinsonFluid) = α(κ(fluid), T / fluid.Tc) * a(fluid) * P / (UNIV_GAS_CONST ^ 2 * T ^ 2)
+κ(fluid::PengRobinsonFluid) = 0.37464 + (1.54226 * fluid.ω) - (0.26992 * fluid.ω^2)
+α(κ::Float64, Tr::Float64) = (1 + κ * (1 - √Tr))^2
+function A(T::Float64, P::Float64, fluid::PengRobinsonFluid)
+    return α(κ(fluid), T / fluid.Tc) * a(fluid) * P / (UNIV_GAS_CONST^2 * T^2)
+end
 B(T::Float64, P::Float64, fluid::PengRobinsonFluid) = b(fluid) * P / (UNIV_GAS_CONST * T)
-
 
 # Calculates three outputs for compressibility factor using the polynomial form of
 # the Peng-Robinson Equation of State. Filters for only real roots and returns the
 # root closest to unity.
 function compressibility_factor(fluid::PengRobinsonFluid, T::Float64, P::Float64)
     # construct cubic polynomial in z
-    p = Polynomial([-(A(T, P, fluid) * B(T, P, fluid) - B(T, P, fluid) ^ 2 - B(T, P, fluid) ^ 3),
-              A(T, P, fluid) - 2 * B(T, P, fluid) - 3 * B(T, P, fluid) ^ 2,
-              -(1.0 - B(T, P, fluid)),
-              1.0])
+    p = Polynomial([
+        -(A(T, P, fluid) * B(T, P, fluid) - B(T, P, fluid)^2 - B(T, P, fluid)^3),
+        A(T, P, fluid) - 2 * B(T, P, fluid) - 3 * B(T, P, fluid)^2,
+        -(1.0 - B(T, P, fluid)),
+        1.0
+    ])
     # solve for the roots of the cubic polynomial
     z_roots = roots(p)
     # select real roots only.
@@ -43,16 +45,15 @@ function compressibility_factor(fluid::PengRobinsonFluid, T::Float64, P::Float64
     return real(z_factor[id_closest_to_unity])
 end
 
-
 # Calculating for fugacity coefficient from an integration (bar).
 function calculate_ϕ(fluid::PengRobinsonFluid, T::Float64, P::Float64)
     z = compressibility_factor(fluid, T, P)
-    log_ϕ = z - 1.0 - log(z - B(T, P, fluid)) +
-            - A(T, P, fluid) / (√8 * B(T, P, fluid)) * log(
-            (z + (1 + √2) * B(T, P, fluid)) / (z + (1 - √(2)) * B(T, P, fluid)))
+    log_ϕ =
+        z - 1.0 - log(z - B(T, P, fluid)) +
+        -A(T, P, fluid) / (√8 * B(T, P, fluid)) *
+        log((z + (1 + √2) * B(T, P, fluid)) / (z + (1 - √(2)) * B(T, P, fluid)))
     return exp(log_ϕ)
 end
-
 
 """
     fluid = PengRobinsonFluid(fluid)
@@ -63,16 +64,29 @@ and returns a complete `PengRobinsonFluid` data structure.
 **NOTE: Do not delete the last three comment lines in PengRobinson_fluid_props.csv
 
 # Arguments
-- `fluid::Symbol`: The fluid molecule you wish to construct a PengRobinsonFluid struct for
+
+  - `fluid::Symbol`: The fluid molecule you wish to construct a PengRobinsonFluid struct for
 
 # Returns
-- `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters.
+
+  - `PengRobinsonFluid::struct`: Data structure containing Peng-Robinson fluid parameters.
 """
 function PengRobinsonFluid(fluid::Symbol)
-    df = CSV.read(joinpath(rc[:paths][:data], "PengRobinson_fluid_props.csv"), DataFrame, copycols=true, comment="#")
+    df = CSV.read(
+        joinpath(rc[:paths][:data], "PengRobinson_fluid_props.csv"),
+        DataFrame;
+        copycols=true,
+        comment="#"
+    )
     filter!(row -> row[:fluid] == string(fluid), df)
     if nrow(df) == 0
-        error(@sprintf("fluid %s properties not found in %sPengRobinson_fluid_props.csv", fluid, rc[:paths][:data]))
+        error(
+            @sprintf(
+                "fluid %s properties not found in %sPengRobinson_fluid_props.csv",
+                fluid,
+                rc[:paths][:data]
+            )
+        )
     end
     Tc = df[1, Symbol("Tc(K)")]
     Pc = df[1, Symbol("Pc(bar)")]
@@ -80,15 +94,13 @@ function PengRobinsonFluid(fluid::Symbol)
     return PengRobinsonFluid(fluid, Tc, Pc, ω)
 end
 
-
 # Prints resulting values for Peng-Robinson fluid properties
 function Base.show(io::IO, fluid::PengRobinsonFluid)
     println(io, "fluid species: ", fluid.fluid)
     println(io, "\tCritical temperature (K): ", fluid.Tc)
     println(io, "\tCritical pressure (bar): ", fluid.Pc)
-    println(io, "\tAcenteric factor: ", fluid.ω)
+    return println(io, "\tAcenteric factor: ", fluid.ω)
 end
-
 
 # Data structure stating characteristics of a van der Waals fluid
 struct VdWFluid
@@ -100,7 +112,6 @@ struct VdWFluid
     b::Float64
 end
 
-
 # Calculates the compressibility factor Z for fluids
 function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
     # build polynomial in ρ: D ρ³ + C ρ² + B ρ + A = 0
@@ -108,9 +119,9 @@ function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
     # McQuarrie, Donald A., and John D. Simon. Molecular Thermodynamics.
     # University Science Books, 1999. pg. 57 example 2-2
 
-    D = - fluid.a * fluid.b
+    D = -fluid.a * fluid.b
     C = fluid.a
-    B = - (P * fluid.b + UNIV_GAS_CONST * T)
+    B = -(P * fluid.b + UNIV_GAS_CONST * T)
     A = P
 
     # Creates polynomial in ρ the VdW cubic function
@@ -127,7 +138,6 @@ function compressibility_factor(fluid::VdWFluid, T::Float64, P::Float64)
     return z
 end
 
-
 # Calculates for fugacity using derivation of van der Waals EOS
 function calculate_ϕ(fluid::VdWFluid, T::Float64, P::Float64)
     log_f = log(P) + (fluid.b - fluid.a / (UNIV_GAS_CONST * T)) * (P / (UNIV_GAS_CONST * T))
@@ -135,7 +145,6 @@ function calculate_ϕ(fluid::VdWFluid, T::Float64, P::Float64)
     ϕ = exp(log_f) / P
     return ϕ
 end
-
 
 """
     fluid = VdWFluid(fluid)
@@ -146,30 +155,41 @@ and returns a complete `VdWFluid` data structure.
 ***NOTE: Do not delete the last three comment lines in VdW_fluid_props.csv
 
 # Arguments
-- `fluid::Symbol`: The fluid you wish to construct a VdWFluid struct for
+
+  - `fluid::Symbol`: The fluid you wish to construct a VdWFluid struct for
 
 # Returns
-- `VdWFluid::struct`: Data structure containing van der Waals constants
+
+  - `VdWFluid::struct`: Data structure containing van der Waals constants
 """
 function VdWFluid(fluid::Symbol)
-    df = CSV.read(joinpath(rc[:paths][:data], "VdW_fluid_props.csv"), DataFrame, copycols=true, comment="#")
+    df = CSV.read(
+        joinpath(rc[:paths][:data], "VdW_fluid_props.csv"),
+        DataFrame;
+        copycols=true,
+        comment="#"
+    )
     filter!(row -> row[:fluid] == string(fluid), df)
     if nrow(df) == 0
-        error(@sprintf("Fluid %s constants not found in %sVdW_fluidops.csv", fluid, rc[:paths][:data]))
+        error(
+            @sprintf(
+                "Fluid %s constants not found in %sVdW_fluidops.csv",
+                fluid,
+                rc[:paths][:data]
+            )
+        )
     end
     a = df[1, Symbol("a(bar*m^6/mol^2)")]
     b = df[1, Symbol("b(m^3/mol)")]
     return VdWFluid(fluid, a, b)
 end
 
-
 # Prints resulting values for van der Waals constants
 function Base.show(io::IO, fluid::VdWFluid)
     println(io, "Fluid species: ", fluid.fluid)
     println(io, "Constant a (bar*m⁶/mol²): ", fluid.a)
-    println(io, "Constant b (m³/mol): ", fluid.b)
+    return println(io, "Constant b (m³/mol): ", fluid.b)
 end
-
 
 """
     props = calculate_properties(fluid, T, P, verbose=true)
@@ -178,15 +198,22 @@ Use equation of state to calculate density, fugacity, and molar volume of a real
 given temperature and pressure.
 
 # Arguments
-- `fluid::Union{PengRobinsonFluid, VdWFluid}`: Peng-Robinson/ van der Waals fluid data structure
-- `T::Float64`: Temperature (units: Kelvin)
-- `P::Float64`: Pressure (units: bar)
-- `verbose::Bool`: will print results if `true`
+
+  - `fluid::Union{PengRobinsonFluid, VdWFluid}`: Peng-Robinson/ van der Waals fluid data structure
+  - `T::Float64`: Temperature (units: Kelvin)
+  - `P::Float64`: Pressure (units: bar)
+  - `verbose::Bool`: will print results if `true`
 
 # Returns
-- `prop_dict::Dict`: Dictionary of Peng-Robinson/ van der Waals fluid properties
+
+  - `prop_dict::Dict`: Dictionary of Peng-Robinson/ van der Waals fluid properties
 """
-function calculate_properties(fluid::Union{PengRobinsonFluid, VdWFluid}, T::Float64, P::Float64; verbose::Bool=true)
+function calculate_properties(
+    fluid::Union{PengRobinsonFluid, VdWFluid},
+    T::Float64,
+    P::Float64;
+    verbose::Bool=true
+)
     # Compressbility factor (unitless)
     z = compressibility_factor(fluid, T, P)
     # Density (mol/m^3)
@@ -198,9 +225,13 @@ function calculate_properties(fluid::Union{PengRobinsonFluid, VdWFluid}, T::Floa
     f = ϕ * P
     # Prints a dictionary holding values for compressibility factor, molar volume,
     # density, and fugacity.
-    prop_dict = Dict("compressibility factor" => z, "molar volume (L/mol)"=> Vm ,
-                     "density (mol/m³)" => ρ, "fugacity (bar)" => f,
-                     "fugacity coefficient" => ϕ)
+    prop_dict = Dict(
+        "compressibility factor" => z,
+        "molar volume (L/mol)" => Vm,
+        "density (mol/m³)" => ρ,
+        "fugacity (bar)" => f,
+        "fugacity coefficient" => ϕ
+    )
     if verbose
         @printf("%s properties at T = %f K, P = %f bar:\n", fluid.fluid, T, P)
         for (property, value) in prop_dict

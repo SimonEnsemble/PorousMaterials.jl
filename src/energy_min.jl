@@ -3,41 +3,40 @@
 
 find the minimum energy position, and associated minimum energy, of a molecule in a crystal.
 n.b. if molecule has more than one atom, it will *not* minimize over the orientation (rotations).
-the optimizer needs an initial estimate of the minimum energy position. 
+the optimizer needs an initial estimate of the minimum energy position.
 pass molecule with good initial position.
 if you don't have a good initial position, use [`find_energy_minimum_gridsearch`](@ref).
 
 # Arguments
-- `xtal::Crystal`: the crystal
-- `molecule::Molecule`: the molecule, whose position we seek to tune until we reach a local minimum. must start at a good initial position close to the minimum.
-- `ljff::LJForceField`: the force field used to calculate crystal-molecule interaction energies
+
+  - `xtal::Crystal`: the crystal
+  - `molecule::Molecule`: the molecule, whose position we seek to tune until we reach a local minimum. must start at a good initial position close to the minimum.
+  - `ljff::LJForceField`: the force field used to calculate crystal-molecule interaction energies
 
 # Returns
-- `minimized_molecule::Molecule{Frac}`: the molecule at its minimum energy position
-- `min_energy::Float64`: the associated minimum molecule-crystal interaciton energy (kJ/mol)
+
+  - `minimized_molecule::Molecule{Frac}`: the molecule at its minimum energy position
+  - `min_energy::Float64`: the associated minimum molecule-crystal interaciton energy (kJ/mol)
 """
-function find_energy_minimum(xtal::Crystal,
-                             molecule::Molecule,
-                             ljff::LJForceField
-                             )
+function find_energy_minimum(xtal::Crystal, molecule::Molecule, ljff::LJForceField)
     if needs_rotations(molecule)
         @warn "needs rotations. does not optimize over configurations, only over center of mass"
     end
     if has_charges(molecule) && has_charges(xtal)
         error("cannot handle electrostatics")
     end
-    
+
     # make sure replication factors sufficient
     rep_factors = replication_factors(xtal, sqrt(ljff.r²_cutoff))
     xtal = replicate(xtal, rep_factors)
-    
+
     # make sure molecule is in fractional coords
     if isa(molecule, Molecule{Cart})
         molecule = Frac(molecule, xtal.box)
     else
         translate_to!(molecule, Frac(molecule.com.xf ./ rep_factors))
     end
-    
+
     # xf::Array{Float64, 1}
     function energy(xf)
         # make sure the coords are fractional
@@ -53,7 +52,7 @@ function find_energy_minimum(xtal::Crystal,
     xf_min = mod.(mod.(res.minimizer, 1.0) .* rep_factors, 1.0)
     # translate molecule to min energy position to return it.
     translate_to!(molecule, Frac(xf_min))
-    
+
     return molecule, res.minimum
 end
 
@@ -63,17 +62,23 @@ end
 perform an [`energy_grid`](@ref) calculation and, via a grid search, find the minimum energy position of a molecule.
 
 # Arguments
-- `xtal::Crystal`: The crystal being investigated
-- `molecule::Molecule{Cart}`: The molecule used to probe energy surface
-- `ljff::LJForceField`: The force field used to calculate interaction energies
-- `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
+
+  - `xtal::Crystal`: The crystal being investigated
+  - `molecule::Molecule{Cart}`: The molecule used to probe energy surface
+  - `ljff::LJForceField`: The force field used to calculate interaction energies
+  - `resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0`: maximum distance between grid points, in Å, or a tuple specifying the number of grid points in each dimension.
 
 # Returns
-- `minimized_molecule::Molecule{Frac}`: the molecule at its minimum energy position
-- `min_energy::Float64`: the associated minimum molecule-crystal interaciton energy (kJ/mol)
+
+  - `minimized_molecule::Molecule{Frac}`: the molecule at its minimum energy position
+  - `min_energy::Float64`: the associated minimum molecule-crystal interaciton energy (kJ/mol)
 """
-function find_energy_minimum_gridsearch(xtal::Crystal, molecule::Molecule{Cart}, ljff::LJForceField; 
-    resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0)::Tuple{Molecule{Frac}, Float64}
+function find_energy_minimum_gridsearch(
+    xtal::Crystal,
+    molecule::Molecule{Cart},
+    ljff::LJForceField;
+    resolution::Union{Float64, Tuple{Int, Int, Int}}=1.0
+)::Tuple{Molecule{Frac}, Float64}
     # Perform an energy grid calculation on a course grid to get initial estimate.
     grid = energy_grid(xtal, molecule, ljff; resolution=resolution)
     E_min, idx_min = findmin(grid.data)

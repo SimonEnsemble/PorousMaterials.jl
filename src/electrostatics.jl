@@ -3,7 +3,7 @@ import Base: +, *
 # Vacuum permittivity eps0 = 8.854187817e-12 # C^2/(J-m)
 # 1 m = 1e10 A, 1 e = 1.602176e-19 C, kb = 1.3806488e-23 J/K
 # 8.854187817e-12 C^2/(J-m) [1 m / 1e10 A] [1 e / 1.602176e-19 C]^2 [kb = 1.3806488e-23 J/K]
-const ϵ₀ = 8.854187817e-12 / (1.602176565e-19 ^ 2) / 1.0e10 * 1.3806488e-23  # \epsilon_0 vacuum permittivity units: electron charge^2 /(A - K)
+const ϵ₀ = 8.854187817e-12 / (1.602176565e-19^2) / 1.0e10 * 1.3806488e-23  # \epsilon_0 vacuum permittivity units: electron charge^2 /(A - K)
 const FOUR_π_ϵ₀ = 4.0 * π * ϵ₀
 
 mutable struct EwaldSum
@@ -22,17 +22,27 @@ mutable struct GGEwaldSum # for guest-guest interactions
     self::Float64 # spurious self-interaction
     intra::Float64 # intramolecular interactions
 end
-total(ews::GGEwaldSum) = ews.sr + ews.lr_excluding_own_images + ews.lr_own_images + ews.self + ews.intra
-+(e1::GGEwaldSum, e2::GGEwaldSum) = GGEwaldSum(e1.sr                      + e2.sr,
-                                               e1.lr_excluding_own_images + e2.lr_excluding_own_images,
-                                               e1.lr_own_images           + e2.lr_own_images,
-                                               e1.self                    + e2.self,
-                                               e1.intra                   + e2.intra)
-*(a::Float64, ews::GGEwaldSum) = GGEwaldSum(a * ews.sr,
-                                            a * ews.lr_excluding_own_images,
-                                            a * ews.lr_own_images,
-                                            a * ews.self,
-                                            a * ews.intra)
+function total(ews::GGEwaldSum)
+    return ews.sr + ews.lr_excluding_own_images + ews.lr_own_images + ews.self + ews.intra
+end
+function +(e1::GGEwaldSum, e2::GGEwaldSum)
+    return GGEwaldSum(
+        e1.sr + e2.sr,
+        e1.lr_excluding_own_images + e2.lr_excluding_own_images,
+        e1.lr_own_images + e2.lr_own_images,
+        e1.self + e2.self,
+        e1.intra + e2.intra
+    )
+end
+function *(a::Float64, ews::GGEwaldSum)
+    return GGEwaldSum(
+        a * ews.sr,
+        a * ews.lr_excluding_own_images,
+        a * ews.lr_own_images,
+        a * ews.self,
+        a * ews.intra
+    )
+end
 GGEwaldSum() = GGEwaldSum(0.0, 0.0, 0.0, 0.0, 0.0)
 
 """
@@ -50,7 +60,9 @@ struct Kvector
     wt::Float64
 end
 
-"Data structure for storing Ewald summation settings"
+"""
+Data structure for storing Ewald summation settings
+"""
 struct EwaldParams
     "number of replications in k-space in a, b, c directions"
     kreps::Tuple{Int, Int, Int}
@@ -64,7 +76,13 @@ end
 
 function Base.print(io::IO, eparams::EwaldParams)
     @printf(io, "\tEwald summation parameters:\n")
-    @printf(io, "\t\tk-replication factors: %d %d %d\n", eparams.kreps[1], eparams.kreps[2], eparams.kreps[3])
+    @printf(
+        io,
+        "\t\tk-replication factors: %d %d %d\n",
+        eparams.kreps[1],
+        eparams.kreps[2],
+        eparams.kreps[3]
+    )
     @printf(io, "\t\tEwald convergence param. α = %f\n", eparams.α)
     @printf(io, "\t\tshort-range cutoff radius (Å): %f\n", eparams.sr_cutoff_r)
     @printf(io, "\t\t%d kvectors\n", length(eparams.kvecs))
@@ -80,11 +98,12 @@ end
 mutable struct for holding the eikr vectors
 
 # Attributes
-- `eikar::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
+
+  - `eikar::OffsetArray{Complex{Float64}}`: array for storing e^{i * ka ⋅ r}; has indices
     0:kreps[1] and corresponds to recip. vectors in a-direction
-- `eikbr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
+  - `eikbr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kb ⋅ r}; has indices
     -kreps[2]:kreps[2] and corresponds to recip. vectors in b-direction
-- `eikcr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
+  - `eikcr::OffsetArray{Complex{Float64}}`: array for storing e^{i * kc ⋅ r}; has indices
     -kreps[2]:kreps[1] and corresponds to recip. vectors in c-direction
 """
 mutable struct Eikr
@@ -92,11 +111,13 @@ mutable struct Eikr
     eikbr::OffsetArray{Complex{Float64}, 2, Array{Complex{Float64}, 2}}
     eikcr::OffsetArray{Complex{Float64}, 2, Array{Complex{Float64}, 2}}
 end
-Eikr(n_charges::Int, kreps::Tuple{Int, Int, Int}) = Eikr(
+function Eikr(n_charges::Int, kreps::Tuple{Int, Int, Int})
+    return Eikr(
         OffsetArray{Complex{Float64}}(undef, 1:n_charges, 0:kreps[1]), # remove negative kreps[1] and take advantage of symmetry
-        OffsetArray{Complex{Float64}}(undef, 1:n_charges, -kreps[2]:kreps[2]),
-        OffsetArray{Complex{Float64}}(undef, 1:n_charges, -kreps[3]:kreps[3])
+        OffsetArray{Complex{Float64}}(undef, 1:n_charges, (-kreps[2]):kreps[2]),
+        OffsetArray{Complex{Float64}}(undef, 1:n_charges, (-kreps[3]):kreps[3])
     )
+end
 Eikr(crystal::Crystal, eparams::EwaldParams) = Eikr(crystal.charges.n, eparams.kreps)
 Eikr(molecule::Molecule, eparams::EwaldParams) = Eikr(molecule.charges.n, eparams.kreps)
 
@@ -107,18 +128,20 @@ Compute the Ewald summation convergence parameter α and the cutoff value for |k
 reciprocal space.
 
 # Arguments
-- `sr_cutoff_r::Float64`: cutoff-radius (units: Å) for short-range contributions to Ewald
-sum. This must be consistent with the number of replication factors used to apply the
-nearest image convention, so typically this is chosen to be the same as for short-range
-van-der Waals interactions.
-- `ϵ::Float64`: desired level of precision. Typical value is 1e-6, but this does not
-guarentee this precision technically since that depends on the charges in the system, but
-it is very helpful to think of this as the weight on contributions near the edge of the
-short-range cutoff radius or max |k|².
+
+  - `sr_cutoff_r::Float64`: cutoff-radius (units: Å) for short-range contributions to Ewald
+    sum. This must be consistent with the number of replication factors used to apply the
+    nearest image convention, so typically this is chosen to be the same as for short-range
+    van-der Waals interactions.
+  - `ϵ::Float64`: desired level of precision. Typical value is 1e-6, but this does not
+    guarentee this precision technically since that depends on the charges in the system, but
+    it is very helpful to think of this as the weight on contributions near the edge of the
+    short-range cutoff radius or max |k|².
 
 # Returns
-- `α::Float64`: Ewald sum convergence parameter (units: inverse Å)
-- `max_mag_k_sqrd::Float64`: cutoff for |k|², where k is a k-vector, in the Fourier sum.
+
+  - `α::Float64`: Ewald sum convergence parameter (units: inverse Å)
+  - `max_mag_k_sqrd::Float64`: cutoff for |k|², where k is a k-vector, in the Fourier sum.
 """
 function determine_ewald_params(sr_cutoff_r::Float64, ϵ::Float64)
     # α is Ewald sum convergence parameter. It determines how fast the long- and short-
@@ -135,7 +158,7 @@ function determine_ewald_params(sr_cutoff_r::Float64, ϵ::Float64)
     α = fzero(sr_error, 0.0, 25.0) # 25.0 should be safe bracket.
     # solve for the max squre norm of the k-vectors required to allow long-range
     #   interactions in Fourier space to decay beyond for k-vectors longer than this.
-    lr_error(mag_k_sqrd) = 2 * exp(- mag_k_sqrd / (4.0 * α ^ 2)) / mag_k_sqrd - ϵ
+    lr_error(mag_k_sqrd) = 2 * exp(-mag_k_sqrd / (4.0 * α^2)) / mag_k_sqrd - ϵ
     max_mag_k_sqrd = fzero(lr_error, 0.0, 100.0)
     return α, max_mag_k_sqrd
 end
@@ -147,17 +170,19 @@ Determine replications of k-vectors in Fourier sum, `kreps`, a Tuple of Ints, re
 assert all k-vectors with square magnitude less than |k|² (`max_mag_k_sqrd`) are included.
 
 # Arguments
-- `box::Box`: the simulation box containing the reciprocal lattice.
-- `max_mag_k_sqrd::Float64`: cutoff value for |k|² in reciprocal space sum.
+
+  - `box::Box`: the simulation box containing the reciprocal lattice.
+  - `max_mag_k_sqrd::Float64`: cutoff value for |k|² in reciprocal space sum.
 
 # Returns
-- `kreps::Tuple{Int, Int, Int}`: number of k-vector replications required in a, b, c
-directions.
+
+  - `kreps::Tuple{Int, Int, Int}`: number of k-vector replications required in a, b, c
+    directions.
 """
 function required_kreps(box::Box, max_mag_k_sqrd::Float64)
     # fill in later
     kreps = [0, 0, 0]
-    for abc = 1:3
+    for abc in 1:3
         n = [0, 0, 0]
         while true
             n[abc] += 1
@@ -179,29 +204,35 @@ end
 
 For speed, pre-compute the weights for each reciprocal lattice vector for the Ewald sum in
 Fourier space. This function takes advantage of the symmetry:
-    cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
+cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
 
 If `max_mag_k_sqrd` is passed, k-vectors with a magnitude greater than `max_mag_k_sqrd` are
 not included.
 
 # Arguments
-- `kreps::Tuple{Int, Int, Int}`: number of k-vector replications required in a, b, c
-- `box::Box`: the simulation box containing the reciprocal lattice.
-- `α::Float64`: Ewald sum convergence parameter (units: inverse Å)
-- `max_mag_k_sqrd::Float64`: cutoff for |k|² in Fourier sum; if passed, do not include
-k-vectors with magnitude squared greater than this.
+
+  - `kreps::Tuple{Int, Int, Int}`: number of k-vector replications required in a, b, c
+  - `box::Box`: the simulation box containing the reciprocal lattice.
+  - `α::Float64`: Ewald sum convergence parameter (units: inverse Å)
+  - `max_mag_k_sqrd::Float64`: cutoff for |k|² in Fourier sum; if passed, do not include
+    k-vectors with magnitude squared greater than this.
 
 # Returns
-- `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
-corresponding weights indicating the contribution to the Fourier sum.
+
+  - `kvectors::Array{Kvector, 1}`: array of k-vectors to include in the Fourier sum and their
+    corresponding weights indicating the contribution to the Fourier sum.
 """
-function precompute_kvec_wts(kreps::Tuple{Int, Int, Int}, box::Box, α::Float64,
-                             max_mag_k_sqrd::Float64=Inf)
+function precompute_kvec_wts(
+    kreps::Tuple{Int, Int, Int},
+    box::Box,
+    α::Float64,
+    max_mag_k_sqrd::Float64=Inf
+)
     kvecs = Kvector[]
     # take advantage of symmetry. cos(k ⋅ dx) = cos( (-k) ⋅ dx)
     #   don't include both [ka kb kc] [-ka -kb -kc] for all kb, kc
     #   hence ka goes from 0:k_repfactors[1]
-    for ka = 0:kreps[1], kb = -kreps[2]:kreps[2], kc=-kreps[3]:kreps[3]
+    for ka in 0:kreps[1], kb in (-kreps[2]):kreps[2], kc in (-kreps[3]):kreps[3]
         # don't include the home unit cell
         if (ka == 0) && (kb == 0) && (kc == 0)
             continue
@@ -224,7 +255,7 @@ function precompute_kvec_wts(kreps::Tuple{Int, Int, Int}, box::Box, α::Float64,
         # factor of 2 from cos(-k⋅(x-xᵢ)) + cos(k⋅(x-xᵢ)) = 2 cos(k⋅(x-xᵢ))
         #  and how we include ka>=0 only and the two if statements above
         if mag_k_sqrd < max_mag_k_sqrd
-            wt = 2.0 * exp(-mag_k_sqrd / (4.0 * α ^ 2)) / mag_k_sqrd / ϵ₀ / box.Ω
+            wt = 2.0 * exp(-mag_k_sqrd / (4.0 * α^2)) / mag_k_sqrd / ϵ₀ / box.Ω
             push!(kvecs, Kvector(ka, kb, kc, wt))
         end
     end
@@ -244,17 +275,23 @@ Also, allocate OffsetArrays for storing e^{i * k ⋅ r} where r = x - xⱼ and k
 lattice vector.
 
 # Arguments
-- `box::Box`: the simulation box containing the reciprocal lattice.
-- `sr_cutoff_r::Float64`: cutoff-radius (units: Å) for short-range contributions to Ewald
-- `ϵ::Float64`: desired level of precision. Typical value is 1e-6, but this does not
-- `verbose::Bool`: If `true` will print results
+
+  - `box::Box`: the simulation box containing the reciprocal lattice.
+  - `sr_cutoff_r::Float64`: cutoff-radius (units: Å) for short-range contributions to Ewald
+  - `ϵ::Float64`: desired level of precision. Typical value is 1e-6, but this does not
+  - `verbose::Bool`: If `true` will print results
 
 # Returns
-- `eparams::EwaldParams`: data structure containing Ewald summation settings
-corresponding weights indicating the contribution to the Fourier sum.
+
+  - `eparams::EwaldParams`: data structure containing Ewald summation settings
+    corresponding weights indicating the contribution to the Fourier sum.
 """
-function setup_Ewald_sum(box::Box, sr_cutoff_r::Float64;
-                         ϵ::Float64=1e-6, verbose::Bool=false)
+function setup_Ewald_sum(
+    box::Box,
+    sr_cutoff_r::Float64;
+    ϵ::Float64=1e-6,
+    verbose::Bool=false
+)
     # determine Ewald convergence parameter and cutoff for |k|² for sum in Fourier space
     α, max_mag_k_sqrd = determine_ewald_params(sr_cutoff_r, ϵ)
     # determine kreps required to assert all k-vectors with magnitude less than |k|² are included.
@@ -280,25 +317,30 @@ Given k ⋅ r, where r = x - xⱼ, compute e^{i n k ⋅ r} for n = 0:krep to fil
 columns of eikr correspond to different k's; rows are charges
 
 # Arguments
-- `eikr::OffsetArray{Complex{Float64}, 2, Array{Complex{Float64}, 2}}: An offset array containing charges, then kreps, then abc (direction)
-- `k_dot_dc::Array{Float64, 1}`: k ⋅ r, where r = x - xⱼ
-- `krep::Int`: number of k-vector replications required in a, b or c
-- `include_neg_reps::Bool`: If `true` will include negative replications
+
+  - `eikr::OffsetArray{Complex{Float64}, 2, Array{Complex{Float64}, 2}}: An offset array containing charges, then kreps, then abc (direction)
+  - `k_dot_dc::Array{Float64, 1}`: k ⋅ r, where r = x - xⱼ
+  - `krep::Int`: number of k-vector replications required in a, b or c
+  - `include_neg_reps::Bool`: If `true` will include negative replications
 """
-@inline function fill_eikr!(eikr::OffsetArray{Complex{Float64}, 2, Array{Complex{Float64}, 2}},
-                            k_dot_dx::Array{Float64, 1}, krep::Int, incl_neg_reps::Bool)
+@inline function fill_eikr!(
+    eikr::OffsetArray{Complex{Float64}, 2, Array{Complex{Float64}, 2}},
+    k_dot_dx::Array{Float64, 1},
+    krep::Int,
+    incl_neg_reps::Bool
+)
     # explicitly compute for k = 1, k = 0
     @inbounds eikr[:, 0] .= exp(0.0 * im)
     @inbounds eikr[:, 1] .= exp.(im * k_dot_dx)
     # recursion relation for higher frequencies to avoid expensive computing of cosine.
     #  e^{3 * i * k_dot_r} = e^{2 * i * k_dot_r} * e^{ i * k_dot_r}
-    for k = 2:krep
+    for k in 2:krep
         @inbounds eikr[:, k] .= eikr[:, k - 1] .* eikr[:, 1]
     end
     # negative kreps are complex conjugate of positive ones.
     #  e^{2 * i * k_dot_r} = conj(e^{-2 * i * k_dot_dr})
     if incl_neg_reps
-        for k = -krep:-1
+        for k in (-krep):-1
             @inbounds eikr[:, k] .= conj.(eikr[:, -k])
         end
     end
@@ -306,7 +348,6 @@ columns of eikr correspond to different k's; rows are charges
 end
 """
     ϕ = electrostatic_potential_energy(crystal, molecule, eparams, eikr)
-
 
 Compute the electrostatic potential energy of a molecule inside a crystal.
 
@@ -320,23 +361,29 @@ image convention can be applied for the short-range cutoff radius supplied in
 `eparams.sr_cutoff_r`.
 
 # Arguments
-- `crystal::Crystal`: Crystal structure (see `crystal.charges` for charges)
-- `molecule::Molecule`: The molecule being compared to the atoms in the crystal.
-- `eparams::EwaldParams`: data structure containing Ewald summation settings
-- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
+
+  - `crystal::Crystal`: Crystal structure (see `crystal.charges` for charges)
+  - `molecule::Molecule`: The molecule being compared to the atoms in the crystal.
+  - `eparams::EwaldParams`: data structure containing Ewald summation settings
+  - `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 
 # Returns
-- `pot::EwaldSum`: Electrostatic potential between `crystal` and `molecule` (units: K)
+
+  - `pot::EwaldSum`: Electrostatic potential between `crystal` and `molecule` (units: K)
 """
-function electrostatic_potential_energy(crystal::Crystal,
-                                        molecule::Molecule{Frac},
-                                        eparams::EwaldParams,
-                                        eikr::Eikr)
+function electrostatic_potential_energy(
+    crystal::Crystal,
+    molecule::Molecule{Frac},
+    eparams::EwaldParams,
+    eikr::Eikr
+)
     pot = EwaldSum()
     # loop over charges of the molecule
-    for c = 1:molecule.charges.n
+    for c in 1:(molecule.charges.n)
         # compute electrostatic potential generated by crystal at molecule's charge location
-        @inbounds pot += molecule.charges.q[c] * _ϕ(crystal.charges, molecule.charges.coords[c], eparams, crystal.box, eikr)
+        @inbounds pot +=
+            molecule.charges.q[c] *
+            _ϕ(crystal.charges, molecule.charges.coords[c], eparams, crystal.box, eikr)
     end
     return pot::EwaldSum
 end
@@ -344,7 +391,13 @@ end
 """
 Electrostatic potential at point x due to charges
 """
-@inline function _ϕ(charges::Charges{Frac}, xf::Frac, eparams::EwaldParams, box::Box, eikr::Eikr)
+@inline function _ϕ(
+    charges::Charges{Frac},
+    xf::Frac,
+    eparams::EwaldParams,
+    box::Box,
+    eikr::Eikr
+)
     pot = EwaldSum()
     @inbounds dxf = broadcast(-, charges.coords.xf, xf.xf)
 
@@ -365,8 +418,13 @@ Electrostatic potential at point x due to charges
         #     e^{i kb r * vec(kb)} *
         #     e^{i kb r * vec(kc)} where r = x - xᵢ
         #   and eikar[ka], eikbr[kb], eikcr[kc] contain exactly the above components.
-        @simd for c = 1:charges.n
-            @inbounds kvec_pot += charges.q[c] * real(eikr.eikar[c, kvec.ka] * eikr.eikbr[c, kvec.kb] * eikr.eikcr[c, kvec.kc])
+        @simd for c in 1:(charges.n)
+            @inbounds kvec_pot +=
+                charges.q[c] * real(
+                    eikr.eikar[c, kvec.ka] *
+                    eikr.eikbr[c, kvec.kb] *
+                    eikr.eikcr[c, kvec.kc]
+                )
         end
         pot.lr += kvec.wt * kvec_pot
     end
@@ -378,7 +436,7 @@ Electrostatic potential at point x due to charges
     dxf .= box.f_to_c * dxf
     dxf .= dxf .^ 2
     # convert to Cartesian coords
-    for c = 1:charges.n
+    for c in 1:(charges.n)
         @fastmath @inbounds r = sqrt(dxf[1, c] + dxf[2, c] + dxf[3, c])
         if r < eparams.sr_cutoff_r
             @inbounds @fastmath pot.sr += charges.q[c] / r * erfc(r * eparams.α) / FOUR_π_ϵ₀
@@ -396,13 +454,14 @@ end
 # allows molecule to be split accross periodic boundary by applying nearest image convention
 function _intramolecular_energy(molecule::Molecule{Frac}, eparams::EwaldParams, box::Box)
     ϕ_intra = 0.0
-    for i = 1:molecule.charges.n
-        for j = (i + 1):molecule.charges.n
+    for i in 1:(molecule.charges.n)
+        for j in (i + 1):(molecule.charges.n)
             dxf = molecule.charges.coords.xf[:, i] - molecule.charges.coords.xf[:, j]
             nearest_image!(dxf)
             dx = box.f_to_c * dxf
             r = sqrt(dx[1] * dx[1] + dx[2] * dx[2] + dx[3] * dx[3])
-            ϕ_intra -= molecule.charges.q[i] * molecule.charges.q[j] * erf(eparams.α * r) / r
+            ϕ_intra -=
+                molecule.charges.q[i] * molecule.charges.q[j] * erf(eparams.α * r) / r
         end
     end
     return ϕ_intra / FOUR_π_ϵ₀
@@ -423,24 +482,35 @@ sum as well as the spurious self-interaction and intramolecular interactions. Ac
 Units of energy: Kelvin
 
 # Arguments
-- `molecules::Array{Molecules, 1}`: array of molecules comprising the system.
-- `eparams::EwaldParams`: data structure containing Ewald summation settings
-- `box::Box`: the box the energy is being computed in
-- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
+
+  - `molecules::Array{Molecules, 1}`: array of molecules comprising the system.
+  - `eparams::EwaldParams`: data structure containing Ewald summation settings
+  - `box::Box`: the box the energy is being computed in
+  - `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 
 # Returns
-- `ϕ::GGEwaldSum`: The total electrostatic potential energy
+
+  - `ϕ::GGEwaldSum`: The total electrostatic potential energy
 """
-function electrostatic_potential_energy(molecules::Array{Molecule{Frac}, 1},
-                                        eparams::EwaldParams, box::Box,
-                                        eikr::Eikr)
+function electrostatic_potential_energy(
+    molecules::Array{Molecule{Frac}, 1},
+    eparams::EwaldParams,
+    box::Box,
+    eikr::Eikr
+)
     ϕ = GGEwaldSum()
-    for i = eachindex(molecules)
-        for j = eachindex(molecules)
-            for c = 1:molecules[j].charges.n
+    for i in eachindex(molecules)
+        for j in eachindex(molecules)
+            for c in 1:(molecules[j].charges.n)
                 # view here is that charges in molecules[i] create a potential field for charges in molecules[j]
-                ϕ_with_i = molecules[j].charges.q[c] * _ϕ(molecules[i].charges,
-                    molecules[j].charges.coords[c], eparams, box, eikr)
+                ϕ_with_i =
+                    molecules[j].charges.q[c] * _ϕ(
+                        molecules[i].charges,
+                        molecules[j].charges.coords[c],
+                        eparams,
+                        box,
+                        eikr
+                    )
                 ###
                 #  Long-range contribution
                 ###
@@ -481,19 +551,26 @@ end
 
 # for use in MC simulations
 # V(entire system (incl. molecule i)) - V(entire system (excl. molecule i))
-function electrostatic_potential_energy(molecules::Array{Molecule{Frac}, 1},
-                                        molecule_id::Int,
-                                        eparams::EwaldParams,
-                                        box::Box,
-                                        eikr::Eikr)
+function electrostatic_potential_energy(
+    molecules::Array{Molecule{Frac}, 1},
+    molecule_id::Int,
+    eparams::EwaldParams,
+    box::Box,
+    eikr::Eikr
+)
     ϕ = GGEwaldSum()
-    for c = 1:molecules[molecule_id].charges.n
-        for other_molecule_id = eachindex(molecules)
+    for c in 1:(molecules[molecule_id].charges.n)
+        for other_molecule_id in eachindex(molecules)
             # view here is the molecules[other_molecule_id] creates potential field for
             #   charge cof molecules[molecule_id]
-            ϕ_with_other_molecule_id = molecules[molecule_id].charges.q[c] * _ϕ(
-                molecules[other_molecule_id].charges, molecules[molecule_id].charges.coords[c],
-                eparams, box, eikr)
+            ϕ_with_other_molecule_id =
+                molecules[molecule_id].charges.q[c] * _ϕ(
+                    molecules[other_molecule_id].charges,
+                    molecules[molecule_id].charges.coords[c],
+                    eparams,
+                    box,
+                    eikr
+                )
 
             if other_molecule_id != molecule_id
                 ϕ.sr += ϕ_with_other_molecule_id.sr
@@ -516,25 +593,28 @@ end
 """
     total_ϕ = total_electrostatic_potential_energy(molecules, eparams, box, eikr)
 
-
 Calculates the total electrostatic potential energy of an array of `Molecule`s using a Grand Canonical Monte Carlo (GCMC) algorithm.
 #TODO add to this
 
 # Arguments
-- `molecules::Array{Molecule, 1}`: The molecules comprising the system.
-- `eparams::EwaldParams`: data structure containing Ewald summation settings
-- `box::Box`: The box the energy is being computed in.
-- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
+
+  - `molecules::Array{Molecule, 1}`: The molecules comprising the system.
+  - `eparams::EwaldParams`: data structure containing Ewald summation settings
+  - `box::Box`: The box the energy is being computed in.
+  - `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 
 # Returns
-- `ϕ::GGEwaldSum`: The total electrostatic potential energy
+
+  - `ϕ::GGEwaldSum`: The total electrostatic potential energy
 """
-function total_electrostatic_potential_energy(molecules::Array{Molecule{Frac}, 1},
-                                              eparams::EwaldParams,
-                                              box::Box,
-                                              eikr::Eikr)
+function total_electrostatic_potential_energy(
+    molecules::Array{Molecule{Frac}, 1},
+    eparams::EwaldParams,
+    box::Box,
+    eikr::Eikr
+)
     ϕ = GGEwaldSum()
-    for i = eachindex(molecules)
+    for i in eachindex(molecules)
         ϕ += electrostatic_potential_energy(molecules, i, eparams, box, eikr)
     end
     ϕ.sr /= 2.0 # avoid double-counting
@@ -546,23 +626,24 @@ end
 """
     total_ϕ = total_electrostatic_potential_energy(crystal, molecules, eparams, eikr)
 
-
 Explanation of total_electrostatic_potential_energy that uses crystal
 
 # Arguments
-- `crystal::Crystal`: Crystal structure (see `crystal.charges` for charges)
-- `molecules::Array{Molecule, 1}`: The molecules comprising the system.
-- `eparams::EwaldParams`: data structure containing Ewald summation settings
-- `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
+
+  - `crystal::Crystal`: Crystal structure (see `crystal.charges` for charges)
+  - `molecules::Array{Molecule, 1}`: The molecules comprising the system.
+  - `eparams::EwaldParams`: data structure containing Ewald summation settings
+  - `eikr::Eikr`: Stores the eikar, eikbr, and eikcr OffsetArrays used in this calculation.
 """
-function total_electrostatic_potential_energy(crystal::Crystal,
-                                              molecules::Array{Molecule{Frac}, 1},
-                                              eparams::EwaldParams,
-                                              eikr::Eikr)
+function total_electrostatic_potential_energy(
+    crystal::Crystal,
+    molecules::Array{Molecule{Frac}, 1},
+    eparams::EwaldParams,
+    eikr::Eikr
+)
     ϕ = EwaldSum()
     for molecule in molecules
-        ϕ += electrostatic_potential_energy(crystal, molecule, eparams,
-                                            eikr)
+        ϕ += electrostatic_potential_energy(crystal, molecule, eparams, eikr)
     end
     return ϕ::EwaldSum
 end

@@ -5,9 +5,10 @@
 ## Preparing the Henry coefficient simulation
 
 The simulation requires the following `PorousMaterials.jl` objects:
-* `Crystal` structure
-* `Molecule` adsorbate
-* `LJForceField` forcefield
+
+  - `Crystal` structure
+  - `Molecule` adsorbate
+  - `LJForceField` forcefield
 
 In addition the the list above, one has to specify the temperature (in K) and the number of Widom insertions per unit volume (in Angstrom).
 
@@ -19,7 +20,8 @@ ljff = LJForceField("UFF")              # We will use the Universal Force Field 
 temp = 298.0                            # Standard temperature (K)
 widom_insertions = 2000                 # Number of insertions per unit volume
 
-results = henry_coefficient(xtal, methane, temp, ljff, insertions_per_volume=widom_insertions)
+results =
+    henry_coefficient(xtal, methane, temp, ljff; insertions_per_volume=widom_insertions)
 ```
 
 The results are also saved to `rc[:paths][:simulations]` as a `.jld2` file that can be read using the `JLD2` package.
@@ -28,7 +30,9 @@ The output (and saved file) is a dictionary:
 
 ```julia
 results
+
 # output
+
 Dict{String, Any} with 16 entries:
   "⟨U⟩ (K)"                              => -3623.51
   "err Qst (kJ/mol)"                     => 0.0917643
@@ -51,6 +55,7 @@ Dict{String, Any} with 16 entries:
 ## locating the saved results
 
 The name of the result filenames follow a convention outlined in `henry_result_savename`.
+
 ```julia
 using JLD2
 # determine the canonical filename for the simulation

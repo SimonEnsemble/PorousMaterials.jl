@@ -11,7 +11,9 @@ variable dictionary `rc` is part of the `PorousMaterials` namespace.  This is wh
 
 ```jldoctest
 keys(rc)
+
 # output
+
 KeySet for a Dict{Symbol, Any} with 5 entries. Keys:
   :covalent_radii
   :bonding_rules
@@ -25,7 +27,9 @@ the present working directory when the module is imported.  All the other paths 
 
 ```jldoctest
 keys(rc[:paths])
+
 # output
+
 KeySet for a Dict{Symbol, String} with 6 entries. Keys:
   :forcefields
   :grids
