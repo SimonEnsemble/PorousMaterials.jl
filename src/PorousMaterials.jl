@@ -28,6 +28,7 @@ include("gcmc.jl")
 include("energy_min.jl")
 include("atomic_masses.jl")
 include("banner.jl")
+include("nvt.jl")
 
 function __init__()
     rc[:paths][:forcefields] = ""
@@ -78,7 +79,10 @@ export
     henry_coefficient, henry_result_savename,
 
     # energy_min.jl
-    find_energy_minimum, find_energy_minimum_gridsearch
+    find_energy_minimum, find_energy_minimum_gridsearch,
+
+    # nvt.jl
+    NVT_sim
 
 @precompile_signatures(PorousMaterials)
 
