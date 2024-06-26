@@ -8,7 +8,7 @@ end
 
 ## Loading Molecule Files
 
-Molecule input files are stored in the path indicated by the `Xtals`/`PorousMaterials` global dictionary `rc`. 
+Molecule input files are stored in the path indicated by the `Xtals`/`PorousMaterials` global dictionary `rc`.
 
 ```julia
 rc[:paths][:molecules] # absolute or relative path
@@ -62,9 +62,11 @@ The atoms and charges input data for this "N2_TraPPE" molecule are like so:
 ```jldoctest molecule
 dir = joinpath(rc[:paths][:molecules], "N2_TraPPE")
 for file in readdir(dir)
-  @info file data=String(read(joinpath(dir, file)))
+    @info file data = String(read(joinpath(dir, file)))
 end
+
 # output
+
 ┌ Info: atoms.csv
 └   data = "atom,x,y,z\nN_in_N2,0,0,0.55\nPSEUDOATOM_LABEL,0,0,0\nN_in_N2,0,0,-0.55"
 ┌ Info: charges.csv
@@ -94,7 +96,7 @@ In this example, `PSEUDOATOM_LABEL` is the label for the pseudo-atom; there are 
 Before loading these data by calling `Molecule`, we need to add our (massless) pseudo-atom to the mass dictionary:
 
 ```juliadoctest
-rc[:atomic_masses][:PSEUDOATOM_LABEL] = 0.
+rc[:atomic_masses][:PSEUDOATOM_LABEL] = 0.0
 Molecule("N2_TraPPE")
 # ouput
 asdf
