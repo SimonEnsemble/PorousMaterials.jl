@@ -2,17 +2,17 @@ using PorousMaterials
 using Test
 using BenchmarkTools
 using Profile
- # using ProfileView
+# using ProfileView
 
 framework = Framework("NU-1000_Greg.cif")
 
- # kreps = (11, 11, 9)
- # α = 0.265058
+# kreps = (11, 11, 9)
+# α = 0.265058
 sr_cutoff_r = 12.5
 rep_factors = replication_factors(framework, sr_cutoff_r)
 sim_box = replicate(framework.box, rep_factors)
 framework = replicate(framework, rep_factors)
-eparams = setup_Ewald_sum(framework.box, sr_cutoff_r, verbose=false, ϵ=1e-6)
+eparams = setup_Ewald_sum(framework.box, sr_cutoff_r; verbose=false, ϵ=1e-6)
 eikr = Eikr(framework.charges.n_charges, eparams.kreps)
 q_test = 0.8096
 
@@ -25,7 +25,7 @@ q_test = 0.8096
     @test eparams.kreps == (9, 9, 9)
     @test isapprox(eparams.α, 0.2471, atol=0.05)
     # construct box so recip. lattice is dimension (2, 10, 5)
-    box = Box(0.5*2*π, 0.1*2*π, 0.2*2*π, π/2, π/2, π/2)
+    box = Box(0.5 * 2 * π, 0.1 * 2 * π, 0.2 * 2 * π, π / 2, π / 2, π / 2)
     @test PorousMaterials.required_kreps(box, 2.1^2) == (1, 0, 0)
     @test PorousMaterials.required_kreps(box, 5.1^2) == (2, 0, 1)
     @test PorousMaterials.required_kreps(box, 10.1^2) == (5, 1, 2)
@@ -52,11 +52,11 @@ m = Ion(q_test, xf)
 ϕ = electrostatic_potential_energy(framework, m, eparams, eikr)
 @btime electrostatic_potential_energy(framework, m, eparams, eikr)
 
- # @profile electrostatic_potential_energy(framework, m, eparams, eikar, eikbr, eikcr)
- # ProfileView.view()
+# @profile electrostatic_potential_energy(framework, m, eparams, eikar, eikbr, eikcr)
+# ProfileView.view()
 
- # ϕ = ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
- # @btime ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
- #
- # ϕ = ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
- # @btime ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
+# ϕ = ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
+# @btime ϕ_sr(framework, x, rep_factors, sr_cutoff, α)
+#
+# ϕ = ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)
+# @btime ϕ_lr(framework, x, sim_box, rep_factors, kvectors, α)

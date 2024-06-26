@@ -1,30 +1,25 @@
-# Details from http://www.stochasticlifestyle.com/finalizing-julia-package-documentation-testing-coverage-publishing/
+testfiles = [
+    "molecule.jl",
+    "gcmc_quick.jl",
+    "grid.jl",
+    "misc.jl",
+    "forcefield.jl",
+    "vdw_energetics.jl",
+    "energy_utilities.jl",
+    "electrostatics.jl",
+    "mc_helpers.jl",
+    "eos.jl"
+]
 
-function runtest(testfile::String)
-    @info "Testing $(testfile)"
-    try
-        include(testfile)
-    catch exception
-        @error "Exception in $(testfile)" exception
-    end
+using Test, Documenter, PorousMaterials
+
+PorousMaterials.banner()
+
+for testfile in testfiles
+    @info "Running test/$testfile"
+    @time include(testfile)
 end
 
-testfiles = ["box.jl",
-             "matter.jl",
-             "crystal.jl",
-             "distance.jl",
-             "misc.jl",
-             "forcefield.jl",
-             "molecule.jl",
-             "vdw_energetics.jl",
-             "energy_utilities.jl",
-             "electrostatics.jl",
-             "mc_helpers.jl",
-             "eos.jl",
-             "assert_p1_symmetry.jl",
-             "grid.jl",
-             "gcmc_quick.jl",
-             "paths.jl" # must be last so as to not interfere with reading in files
-             ]
+doctest(PorousMaterials)
 
-[runtest(testfile) for testfile in testfiles]
+@info "Tests complete!"

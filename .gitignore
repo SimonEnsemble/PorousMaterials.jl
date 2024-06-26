@@ -9,3 +9,5 @@
 docs/build/
 docs/site/
 *checkpoint.ipynb
+.vscode
+Manifest.toml
