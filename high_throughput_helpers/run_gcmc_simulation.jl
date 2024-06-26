@@ -18,13 +18,23 @@ ljff = jobs_to_run[structurename]["forcefield"]
 n_burn_cycles = jobs_to_run[structurename]["n_burn_cycles"]
 n_sample_cycles = jobs_to_run[structurename]["n_sample_cycles"]
 
-xtal = Framework(structurename * ".cif")
+xtal = Crystal(structurename * ".cif")
 strip_numbers_from_atom_labels!(xtal)
 adsorbate = Molecule(gasname)
 
 # run the simulation
-results = gcmc_simulation(xtal, temperature, pressure, adsorbate, ljff, 
-                          n_burn_cycles=n_burn_cycles, n_sample_cycles=n_sample_cycles, 
-                          verbose=true, sample_frequency=1, eos=:PengRobinson, autosave=true)
+results = muVT_sim(
+    xtal,
+    temperature,
+    pressure,
+    adsorbate,
+    ljff;
+    n_burn_cycles=n_burn_cycles,
+    n_sample_cycles=n_sample_cycles,
+    verbose=true,
+    sample_frequency=1,
+    eos=:PengRobinson,
+    autosave=true
+)
 
 # results dictionary autosaved in data/gcmc_sims

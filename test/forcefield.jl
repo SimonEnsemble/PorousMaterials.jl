@@ -9,16 +9,15 @@ using Statistics
 using Random
 
 @testset "Forcefield Tests" begin
-    ljforcefield = LJForceField("Dreiding", r_cutoff=12.5,
-        mixing_rules="Lorentz-Berthelot") # Dreiding
+    ljforcefield = LJForceField("Dreiding"; r_cutoff=12.5, mixing_rules="Lorentz-Berthelot") # Dreiding
     # test reading of force field
     @test ljforcefield.pure_σ[:He] == 1.0
     @test ljforcefield.pure_ϵ[:Zn] == 12.0
-    @test ljforcefield.σ²[:Zn][:He] == ((1.0 + 3.0) / 2) ^ 2
+    @test ljforcefield.σ²[:Zn][:He] == ((1.0 + 3.0) / 2)^2
     @test ljforcefield.ϵ[:He][:Zn] == sqrt(12.0 * 3.0)
     @test ljforcefield.ϵ[:He][:Zn] == ljforcefield.ϵ[:Zn][:He] # symmetry
     @test ljforcefield.σ²[:He][:Zn] == ljforcefield.σ²[:Zn][:He] # symmetry
-    @test ljforcefield.r²_cutoff == 12.5 ^ 2
+    @test ljforcefield.r²_cutoff == 12.5^2
 
     # TODO test two other mixing rules
     # TODO test rep factors better
@@ -33,6 +32,6 @@ using Random
     SBMOF1 = Crystal("SBMOF-1.cif")
     @test forcefield_coverage(SBMOF1.atoms, ljforcefield)
     @test forcefield_coverage(SBMOF1, ljforcefield)
-    @test ! forcefield_coverage(SBMOF1.atoms, LJForceField("bogus"))
+    @test !forcefield_coverage(SBMOF1.atoms, LJForceField("bogus"))
 end
 end

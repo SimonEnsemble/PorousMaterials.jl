@@ -12,7 +12,7 @@ end
 
 The Peng-Robinson equation of state can be written as:
 
-![PREOS](https://latex.codecogs.com/gif.latex?P%20%3D%5Cfrac%7BRT%7D%7BV%7Bm%7D-b%7D-%5Cfrac%7Ba%5Calpha%7D%7BV%7B%7Bm%7D%7D%5E%7B2%7D&plus;2bV%7Bm%7D-b%5E%7B2%7D%7D)
+![PREOS](https://latex.codecogs.com/gif.latex?P%20%3D%5Cfrac%7BRT%7D%7BV%7Bm%7D-b%7D-%5Cfrac%7Ba%5Calpha%7D%7BV%7B%7Bm%7D%7D%5E%7B2%7D+2bV%7Bm%7D-b%5E%7B2%7D%7D)
 
 where $V_{m}$ is the molar volume, $R$ is the gas constant, and $T$ is temperature.
 
@@ -28,7 +28,7 @@ and $\alpha$ can be calculated using acentric factor $\omega$ and critical tempe
 
 where
 
-![PREOS_kappa](https://latex.codecogs.com/gif.latex?%5Ckappa%20%5Capprox%200.37464&plus;1.54226%5Comega-0.26992%5Comega%5E%7B2%7D)
+![PREOS_kappa](https://latex.codecogs.com/gif.latex?%5Ckappa%20%5Capprox%200.37464+1.54226%5Comega-0.26992%5Comega%5E%7B2%7D)
 
 and
 
@@ -62,7 +62,9 @@ fluid.fluid                          # The name of the fluid
 fluid.Pc                             # The critical pressure of the fluid
 fluid.Tc                             # The critical temperature of the fluid
 fluid.ω                              # The acentric factor of the fluid
+
 # output
+
 0.00363
 ```
 
@@ -73,17 +75,23 @@ fluid = VdWFluid(:Xe)                # Input fluid as a symbol. The fluids reade
 fluid.fluid                          # The name of the fluid
 fluid.a                              # The van der Waals constant a of the fluid
 fluid.b                              # The van der Waals constant b of the fluid
+
 # output
+
 5.105e-5
 ```
 
 ## calculating density, fugacity, and molar volume
+
 Using a given temperature and pressure, `PorousMaterials.jl` the equation of state can be used to calculate the dnesity, fugacity, and molar volume of a real fluid, stored as a dictionary.
+
 ```jldoctest eos
 T = 298.0 # K                        # The temperature in Kelvin of interest type Float64.
 P = 1.0 # bar                        # The pressure in bar of interest type Float64.
-props = calculate_properties(fluid, T, P, verbose=true) # verbose::Bool will print results if `true`
+props = calculate_properties(fluid, T, P; verbose=true) # verbose::Bool will print results if `true`
+
 # output
+
 Xe properties at T = 298.000000 K, P = 1.000000 bar:
 	compressibility factor: 0.995117906779058
 	fugacity coefficient: 0.9951492697826048
@@ -99,13 +107,16 @@ Dict{String, Float64} with 5 entries:
 ```
 
 The output is a dictionary containing the following keys:
+
 ```jldoctest eos; output=false
 props["compressibility factor"]    # the compressibility factor
 props["density (mol/m³)"]          # fluid density in mol/m³
 props["fugacity (bar)"]            # the fugacity in bar
 props["fugacity coefficient"]      # the fugacity coefficient
 props["molar volume (L/mol)"]      # the molar volume in L/mol
+
 # output
+
 24.65612613988038
 ```
 
@@ -116,4 +127,3 @@ props["molar volume (L/mol)"]      # the molar volume in L/mol
     VdWFluid
     calculate_properties
 ```
-
