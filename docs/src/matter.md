@@ -65,7 +65,11 @@ length(coords)                 # number of particles, (5)
 `Coords` are immutable:
 
 ```jldoctest matter
-coords.x = rand(3, 5)
+try
+  coords.x = rand(3, 5)
+catch ex
+  @error "Immutable!"
+end
 
 # output
 
