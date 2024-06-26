@@ -68,21 +68,10 @@ super_xtal = replicate(xtal, (2, 2, 2))       # Replicates the original unit cel
 
 # output
 
-Name: SBMOF-1.cif
-Bravais unit cell of a crystal.
-	Unit cell angles α = 90.000000 deg. β = 100.897000 deg. γ = 90.000000 deg.
-	Unit cell dimensions a = 23.238600 Å. b = 11.133400 Å, c = 45.862400 Å
-	Volume of unit cell: 11651.776815 Å³
-
-	# atoms = 960
-	# charges = 960
-	chemical formula: Ca₃₂C₄₄₈H₂₅₆O₁₉₂S₃₂
-	space Group: P1
-	symmetry Operations:
-		'x, y, z'
-	bonding graph:
-		# vertices = 960
-		# edges = 0
+Crystal(Ca₃₂C₄₄₈H₂₅₆O₁₉₂S₃₂, periodic = TTT):
+    bounding_box      : [ 23.2386        0        0;
+                         6.81724e-16  11.1334        0;
+                         -8.67001 3.33915e-15  45.0354]u"Å"
 ```
 
 ## finding other properties

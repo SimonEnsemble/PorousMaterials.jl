@@ -385,12 +385,12 @@ function energy_grid(
         else
             boltzmann_factor_sum = 0.0
             for _ in 1:n_rotations
-                random_rotation!(molecule)
+                random_rotation!(molecule, crystal.box)
 
                 energy = PotentialEnergy(0.0, 0.0)
                 energy.vdw = vdw_energy(crystal, molecule, ljforcefield)
                 if charged_system
-                    energy.coulomb = total(
+                    energy.es = total(
                         electrostatic_potential_energy(crystal, molecule, eparams, eikr)
                     )
                 end
