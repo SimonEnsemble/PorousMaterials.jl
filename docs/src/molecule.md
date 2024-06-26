@@ -8,7 +8,7 @@ end
 
 ## Loading Molecule Files
 
-Molecule input files are stored in the path indicated by the `Xtals`/`PorousMaterials` global dictionary `rc`. 
+Molecule input files are stored in the path indicated by the `Xtals`/`PorousMaterials` global dictionary `rc`.
 
 ```julia
 rc[:paths][:molecules] # absolute or relative path
@@ -18,7 +18,9 @@ Each molecule possesses its own directory containing two files: `charges.csv` an
 
 ```jldoctest molecule
 molecule = Molecule("CO2")
+
 # output
+
 Molecule species: CO2
 Center of mass (fractional coords): Cart([0.0; 0.0; 0.0;;])
 Atoms:
@@ -40,7 +42,9 @@ molecule.species   # molecule species
 molecule.com       # center-of-mass
 molecule.atoms     # Lennard-Jones spheres
 molecule.charges   # point charges 
+
 # output
+
 Charges{Cart}(3, [0.7, -0.35, -0.35], Cart([0.0 -1.16 1.16; 0.0 0.0 0.0; 0.0 0.0 0.0]))
 ```
 
@@ -58,9 +62,11 @@ The atoms and charges input data for this "N2_TraPPE" molecule are like so:
 ```jldoctest molecule
 dir = joinpath(rc[:paths][:molecules], "N2_TraPPE")
 for file in readdir(dir)
-  @info file data=String(read(joinpath(dir, file)))
+    @info file data = String(read(joinpath(dir, file)))
 end
+
 # output
+
 ┌ Info: atoms.csv
 └   data = "atom,x,y,z\nN_in_N2,0,0,0.55\nPSEUDOATOM_LABEL,0,0,0\nN_in_N2,0,0,-0.55"
 ┌ Info: charges.csv
@@ -90,13 +96,14 @@ In this example, `PSEUDOATOM_LABEL` is the label for the pseudo-atom; there are 
 Before loading these data by calling `Molecule`, we need to add our (massless) pseudo-atom to the mass dictionary:
 
 ```juliadoctest
-rc[:atomic_masses][:PSEUDOATOM_LABEL] = 0.
+rc[:atomic_masses][:PSEUDOATOM_LABEL] = 0.0
 Molecule("N2_TraPPE")
 # ouput
 asdf
 ```
 
 ## Moving Molecules
+
 We can translate and roatate a molecule:
 
 ```julia
@@ -112,12 +119,13 @@ dx = Cart([0.1, 0.0, 0.0])
 translate_by!(molecule, dx, unit_cube())
 
 # conduct a uniform random rotation about the center-of-mass
-random_rotation!(molecule, unit_cube()) 
+random_rotation!(molecule, unit_cube())
 ```
 
 # detailed docs
 
 ## Molecules
+
 ```@docs
     Molecule
     translate_to!
@@ -128,6 +136,7 @@ random_rotation!(molecule, unit_cube())
 ```
 
 ## Molecular Movement
+
 ```@docs
     apply_periodic_boundary_condition!
     random_insertion!

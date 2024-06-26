@@ -9,13 +9,13 @@ testfiles = [
     "electrostatics.jl",
     "mc_helpers.jl",
     "eos.jl"
-    ]
+]
 
 using Test, Documenter, PorousMaterials
 
 PorousMaterials.banner()
 
-for testfile ∈ testfiles
+for testfile in testfiles
     @info "Running test/$testfile"
     @time include(testfile)
 end
