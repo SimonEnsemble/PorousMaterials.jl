@@ -1,3 +1,8 @@
+struct FitError <: Exception
+    method::AbstractString # will be Henry or Langmuir
+end
+Base.showerror(io::IO, e::FitError) = print(io, e.method, " fitting failed!")
+
 # obtain a reasonable initial guess for the optimization route in fitting adsorption 
 #  models to adsorption isotherm data
 function _guess(
@@ -80,7 +85,7 @@ function fit_adsorption_isotherm(
             options
         )
         if !Optim.converged(res)
-            error("Optimization algorithm failed!")
+            throw(FitError(String(model)))
         end
         M, K = res.minimizer
         mse = res.minimum / length(n)
@@ -89,7 +94,7 @@ function fit_adsorption_isotherm(
         objective_function_henry(θ) = sum([(n[i] - θ[1] * p[i])^2 for i in eachindex(n)])
         res = optimize(objective_function_henry, [θ0["H0"]], LBFGS(), options)
         if !Optim.converged(res)
-            error("Optimization algorithm failed!")
+            throw(FitError(String(model)))
         end
         H = res.minimizer
         mse = res.minimum / length(n)
